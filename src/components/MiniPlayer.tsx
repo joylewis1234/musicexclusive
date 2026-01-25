@@ -20,10 +20,10 @@ const MiniPlayer = () => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 px-4 pb-safe">
+    <div className="w-full px-4">
       {/* Outer glow */}
       <div 
-        className="absolute inset-x-4 bottom-safe h-16 rounded-t-xl bg-primary/20 blur-xl opacity-50"
+        className="absolute inset-x-4 bottom-0 h-16 rounded-t-xl bg-primary/20 blur-xl opacity-50"
         aria-hidden="true"
       />
       
