@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
 import { ArtistCard } from "@/components/ArtistCard"
 import { StepCard } from "@/components/StepCard"
+import { BenefitCard } from "@/components/BenefitCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
 import { KeyRound, Send, RotateCcw } from "lucide-react"
 import vaultPortal from "@/assets/vault-portal.png"
@@ -33,6 +34,24 @@ const steps = [
     title: "TRY AGAIN TOMORROW",
     description: "If you win, the Vault opens — revealing exclusive music and artist experiences. If you lose, you're automatically re-entered for the next draw.",
     icon: RotateCcw,
+  },
+]
+
+const benefits = [
+  {
+    number: 1,
+    title: "Be the First",
+    description: "Hear exclusive music before it's released to the world.",
+  },
+  {
+    number: 2,
+    title: "Support Artists Directly",
+    description: "Every stream directly supports the artist you're listening to.",
+  },
+  {
+    number: 3,
+    title: "Exclusive Access",
+    description: "Private releases, early drops, and Vault-only experiences.",
   },
 ]
 
@@ -109,7 +128,7 @@ const Index = () => {
             {/* Add padding spacer for centering on mobile */}
             <div className="flex-shrink-0 w-2 md:w-[calc((100vw-768px)/2)]" />
             
-            {artists.map((artist, index) => (
+            {artists.map((artist) => (
               <ArtistCard
                 key={artist.name}
                 name={artist.name}
@@ -119,7 +138,7 @@ const Index = () => {
             ))}
             
             {/* Duplicate for more cards */}
-            {artists.map((artist, index) => (
+            {artists.map((artist) => (
               <ArtistCard
                 key={`${artist.name}-2`}
                 name={artist.name}
@@ -150,6 +169,28 @@ const Index = () => {
                 title={step.title}
                 description={step.description}
                 icon={step.icon}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits Section */}
+      <section className="px-4 py-16">
+        <div className="container max-w-lg md:max-w-2xl mx-auto">
+          <SectionHeader
+            title="Benefits — For Fans"
+            align="left"
+            glowColor="primary"
+          />
+          
+          <div className="flex flex-col gap-4 mt-8">
+            {benefits.map((benefit) => (
+              <BenefitCard
+                key={benefit.number}
+                number={benefit.number}
+                title={benefit.title}
+                description={benefit.description}
               />
             ))}
           </div>
