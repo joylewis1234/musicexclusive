@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   ChevronDown, 
@@ -12,41 +12,7 @@ import {
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-
-import artist1 from "@/assets/artist-1.jpg";
-import artist2 from "@/assets/artist-2.jpg";
-import artist3 from "@/assets/artist-3.jpg";
-
-// Mock track data - would come from API/state in production
-const mockTracks: Record<string, {
-  title: string;
-  artist: string;
-  album: string;
-  artwork: string;
-  duration: number; // in seconds
-}> = {
-  "1": {
-    title: "Midnight Protocol",
-    artist: "NOVA",
-    album: "Digital Dreams",
-    artwork: artist1,
-    duration: 234,
-  },
-  "2": {
-    title: "Velvet Skies",
-    artist: "AURA",
-    album: "Ethereal",
-    artwork: artist2,
-    duration: 198,
-  },
-  "3": {
-    title: "Lost Frequency",
-    artist: "ECHO",
-    album: "Signals",
-    artwork: artist3,
-    duration: 267,
-  },
-};
+import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
 
 const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -57,47 +23,70 @@ const formatTime = (seconds: number): string => {
 const MusicPlayer = () => {
   const navigate = useNavigate();
   const { trackId } = useParams();
+  const { 
+    currentTrack, 
+    isPlaying, 
+    currentTime, 
+    volume: globalVolume,
+    playTrack, 
+    togglePlayPause, 
+    setCurrentTime,
+    setVolume: setGlobalVolume 
+  } = usePlayer();
   
-  // Player state
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [volume, setVolume] = useState([75]);
+  // Local UI state
+  const [localVolume, setLocalVolume] = useState([globalVolume]);
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
 
-  // Get track data (fallback to first track)
-  const track = mockTracks[trackId || "1"] || mockTracks["1"];
-  const progress = (currentTime / track.duration) * 100;
+  // Load track from URL param if no current track or different track
+  useEffect(() => {
+    if (trackId && tracksLibrary[trackId]) {
+      if (!currentTrack || currentTrack.id !== trackId) {
+        playTrack(tracksLibrary[trackId]);
+      }
+    } else if (!currentTrack) {
+      // Default to first track if nothing is playing
+      playTrack(tracksLibrary["1"]);
+    }
+  }, [trackId, currentTrack, playTrack]);
 
-  const handlePlayPause = () => {
-    setIsPlaying(!isPlaying);
-    // Simulate progress when playing
-    if (!isPlaying) {
-      const interval = setInterval(() => {
-        setCurrentTime((prev) => {
-          if (prev >= track.duration) {
-            clearInterval(interval);
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1000);
+  // Use current track or fallback
+  const track = currentTrack || tracksLibrary["1"];
+  const progress = track ? (currentTime / track.duration) * 100 : 0;
+
+  // Simulate progress when playing
+  useEffect(() => {
+    if (!isPlaying || !track) return;
+    
+    const interval = setInterval(() => {
+      setCurrentTime(currentTime + 1);
+      if (currentTime >= track.duration) {
+        togglePlayPause();
+        setCurrentTime(0);
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isPlaying, currentTime, track, setCurrentTime, togglePlayPause]);
+
+  const handleProgressChange = (value: number[]) => {
+    if (track) {
+      setCurrentTime((value[0] / 100) * track.duration);
     }
   };
 
-  const handleProgressChange = (value: number[]) => {
-    setCurrentTime((value[0] / 100) * track.duration);
-  };
-
   const handleVolumeChange = (value: number[]) => {
-    setVolume(value);
+    setLocalVolume(value);
+    setGlobalVolume(value[0]);
     if (value[0] > 0) setIsMuted(false);
   };
 
   const toggleMute = () => {
     setIsMuted(!isMuted);
   };
+
+  if (!track) return null;
 
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-hidden">
@@ -203,7 +192,7 @@ const MusicPlayer = () => {
           </button>
           
           <button
-            onClick={handlePlayPause}
+            onClick={togglePlayPause}
             className={cn(
               "w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300",
               "bg-primary text-primary-foreground shadow-cyan-md hover:shadow-cyan-lg hover:scale-105 active:scale-95"
@@ -232,14 +221,14 @@ const MusicPlayer = () => {
             className="p-2 text-muted-foreground hover:text-foreground transition-colors"
             aria-label={isMuted ? "Unmute" : "Mute"}
           >
-            {isMuted || volume[0] === 0 ? (
+            {isMuted || localVolume[0] === 0 ? (
               <VolumeX className="w-5 h-5" />
             ) : (
               <Volume2 className="w-5 h-5" />
             )}
           </button>
           <Slider
-            value={isMuted ? [0] : volume}
+            value={isMuted ? [0] : localVolume}
             onValueChange={handleVolumeChange}
             max={100}
             step={1}
