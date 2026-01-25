@@ -113,11 +113,18 @@ const Index = () => {
             <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
             <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
             
-            {/* Breathing vault portal */}
+            {/* Inner energy lightning effect - animated gradients */}
+            <div className="absolute inset-[15%] rounded-full overflow-hidden">
+              <div className="absolute inset-0 animate-vault-lightning-1 opacity-60" />
+              <div className="absolute inset-0 animate-vault-lightning-2 opacity-50" />
+              <div className="absolute inset-0 animate-vault-lightning-3 opacity-40" />
+            </div>
+            
+            {/* Static vault portal image */}
             <img
               src={vaultPortal}
               alt="Vault Portal"
-              className="relative w-full h-full object-contain vault-glow"
+              className="relative w-full h-full object-contain drop-shadow-[0_0_30px_hsl(var(--primary)/0.5)]"
             />
           </div>
           
