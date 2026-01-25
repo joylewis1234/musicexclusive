@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import EnterVault from "./pages/EnterVault";
 import SubmitVaultCode from "./pages/SubmitVaultCode";
+import VaultStatus from "./pages/VaultStatus";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -20,6 +21,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/enter-vault" element={<EnterVault />} />
           <Route path="/submit-vault-code" element={<SubmitVaultCode />} />
+          <Route path="/vault-status" element={<VaultStatus />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
