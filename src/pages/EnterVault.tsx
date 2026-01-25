@@ -261,9 +261,9 @@ const EnterVault = () => {
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
 
-                  {/* Email confirmation message */}
+                  {/* Helper text */}
                   <p className="text-sm text-muted-foreground font-body">
-                    We've also emailed this code to you.
+                    We also emailed your code (if enabled). Your code expires in 30 minutes.
                   </p>
                 </div>
               ) : (
