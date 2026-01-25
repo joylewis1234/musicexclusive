@@ -8,6 +8,7 @@ import EnterVault from "./pages/EnterVault";
 import SubmitVaultCode from "./pages/SubmitVaultCode";
 import VaultStatus from "./pages/VaultStatus";
 import Agreements from "./pages/Agreements";
+import ChooseAccess from "./pages/ChooseAccess";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/submit-vault-code" element={<SubmitVaultCode />} />
           <Route path="/vault-status" element={<VaultStatus />} />
           <Route path="/agreements" element={<Agreements />} />
+          <Route path="/choose-access" element={<ChooseAccess />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
