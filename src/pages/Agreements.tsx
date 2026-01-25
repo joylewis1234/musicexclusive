@@ -178,8 +178,8 @@ const Agreements = () => {
         if (error) throw error;
       }
 
-      // Navigate to the fan dashboard after accepting agreements
-      navigate("/fan/dashboard");
+      // Navigate to access choice after accepting agreements
+      navigate("/fan/access-choice");
     } catch (error) {
       console.error("Error saving agreement:", error);
       toast({
