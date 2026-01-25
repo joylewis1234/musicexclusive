@@ -8,11 +8,13 @@ import {
   SkipForward, 
   Volume2, 
   VolumeX,
-  Heart
+  Heart,
+  Share2
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
+import { ShareTrackModal } from "@/components/ShareTrackModal";
 
 const formatTime = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
@@ -38,6 +40,7 @@ const MusicPlayer = () => {
   const [localVolume, setLocalVolume] = useState([globalVolume]);
   const [isMuted, setIsMuted] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
 
   // Load track from URL param if no current track or different track
   useEffect(() => {
@@ -112,16 +115,25 @@ const MusicPlayer = () => {
             Now Playing
           </p>
         </div>
-        <button
-          onClick={() => setIsLiked(!isLiked)}
-          className={cn(
-            "p-2 transition-colors",
-            isLiked ? "text-pink-500" : "text-muted-foreground hover:text-foreground"
-          )}
-          aria-label={isLiked ? "Unlike" : "Like"}
-        >
-          <Heart className={cn("w-6 h-6", isLiked && "fill-current")} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setIsShareModalOpen(true)}
+            className="p-2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Share track"
+          >
+            <Share2 className="w-6 h-6" />
+          </button>
+          <button
+            onClick={() => setIsLiked(!isLiked)}
+            className={cn(
+              "p-2 transition-colors",
+              isLiked ? "text-pink-500" : "text-muted-foreground hover:text-foreground"
+            )}
+            aria-label={isLiked ? "Unlike" : "Like"}
+          >
+            <Heart className={cn("w-6 h-6", isLiked && "fill-current")} />
+          </button>
+        </div>
       </header>
 
       {/* Main content */}
@@ -253,6 +265,13 @@ const MusicPlayer = () => {
           </p>
         </div>
       </footer>
+
+      {/* Share Modal */}
+      <ShareTrackModal
+        open={isShareModalOpen}
+        onOpenChange={setIsShareModalOpen}
+        track={track}
+      />
     </div>
   );
 };
