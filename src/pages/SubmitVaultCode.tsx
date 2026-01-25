@@ -12,16 +12,23 @@ import {
   FormControl,
   FormField,
   FormItem,
+  FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Unlock, ChevronLeft, Home } from "lucide-react";
+import { Unlock, ChevronLeft, Home, Loader2, AlertTriangle } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
-// Temporary: accept any non-empty code for client-side demo
 const formSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Please enter a valid email" }),
   vaultCode: z
     .string()
     .trim()
-    .min(1, { message: "Please enter your vault code" }),
+    .length(4, { message: "Code must be exactly 4 digits" })
+    .regex(/^\d{4}$/, { message: "Code must be 4 digits (0-9)" }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -34,6 +41,8 @@ interface LocationState {
 
 const SubmitVaultCode = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
@@ -41,36 +50,134 @@ const SubmitVaultCode = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      email: "",
       vaultCode: "",
     },
   });
 
-  // Auto-fill vault code from navigation state or session storage
+  // Auto-fill from navigation state or session storage
   useEffect(() => {
+    const emailFromState = state?.email;
+    const emailFromSession = sessionStorage.getItem("vaultEmail");
+    const email = emailFromState || emailFromSession;
+    
     const codeFromState = state?.vaultCode;
     const codeFromSession = sessionStorage.getItem("vaultCode");
     const code = codeFromState || codeFromSession;
     
+    if (email) {
+      form.setValue("email", email);
+    }
     if (code) {
       form.setValue("vaultCode", code);
     }
-  }, [state?.vaultCode, form]);
+  }, [state?.email, state?.vaultCode, form]);
 
-  // Temporary client-side only submission
-  const onSubmit = (values: FormValues) => {
+  const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
+    setErrorMessage(null);
     
-    // Simulate a brief delay for UX
-    setTimeout(() => {
-      // Navigate to vault status with "in_draw" state
+    try {
+      // Find matching vault code record
+      const { data: vaultRecord, error: fetchError } = await supabase
+        .from("vault_codes")
+        .select("*")
+        .eq("email", values.email)
+        .eq("code", values.vaultCode)
+        .is("used_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      
+      if (fetchError) {
+        console.error("Error fetching vault code:", fetchError);
+        toast.error("Something went wrong. Please try again.");
+        return;
+      }
+      
+      if (!vaultRecord) {
+        // Invalid code - need to increment attempts
+        // First, find any record with this email to track attempts
+        const { data: emailRecord } = await supabase
+          .from("vault_codes")
+          .select("id, attempts_count, last_attempt_at")
+          .eq("email", values.email)
+          .order("issued_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        
+        if (emailRecord) {
+          const now = new Date();
+          const lastAttempt = emailRecord.last_attempt_at 
+            ? new Date(emailRecord.last_attempt_at) 
+            : null;
+          
+          // Check if blocked (5+ attempts within 10 minutes)
+          const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+          const recentAttempts = lastAttempt && lastAttempt > tenMinutesAgo 
+            ? emailRecord.attempts_count 
+            : 0;
+          
+          if (recentAttempts >= 5) {
+            setIsBlocked(true);
+            setErrorMessage("Too many attempts. Please try again later.");
+            return;
+          }
+          
+          // Increment attempts
+          const newAttemptsCount = lastAttempt && lastAttempt > tenMinutesAgo 
+            ? emailRecord.attempts_count + 1 
+            : 1;
+          
+          await supabase
+            .from("vault_codes")
+            .update({ 
+              attempts_count: newAttemptsCount,
+              last_attempt_at: now.toISOString()
+            })
+            .eq("id", emailRecord.id);
+          
+          if (newAttemptsCount >= 5) {
+            setIsBlocked(true);
+            setErrorMessage("Too many attempts. Please try again later.");
+            return;
+          }
+        }
+        
+        setErrorMessage("Invalid code or email. Please check and try again.");
+        return;
+      }
+      
+      // Valid code - mark as used
+      const { error: updateError } = await supabase
+        .from("vault_codes")
+        .update({ 
+          used_at: new Date().toISOString(),
+          attempts_count: 0 // Reset attempts on successful use
+        })
+        .eq("id", vaultRecord.id);
+      
+      if (updateError) {
+        console.error("Error updating vault code:", updateError);
+        toast.error("Something went wrong. Please try again.");
+        return;
+      }
+      
+      toast.success("Code verified! Welcome to the vault.");
+      
+      // Navigate to vault status
       navigate("/vault/status", { 
         state: { 
-          email: state?.email || sessionStorage.getItem("vaultEmail") || "demo@example.com", 
-          name: state?.name || sessionStorage.getItem("vaultName") || "Vault Member",
+          email: values.email, 
+          name: vaultRecord.name,
           vaultState: "in_draw"
         } 
       });
-    }, 500);
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -104,52 +211,119 @@ const SubmitVaultCode = () => {
                 className="mb-8"
               />
 
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="w-full space-y-6"
-                >
-                  <FormField
-                    control={form.control}
-                    name="vaultCode"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter your code"
-                            {...field}
-                            className="h-14 text-center text-xl tracking-[0.3em] font-display uppercase bg-muted/30 border-border focus:border-primary/50 placeholder:tracking-normal placeholder:text-sm"
-                            autoComplete="off"
-                          />
-                        </FormControl>
-                        <FormMessage className="text-center" />
-                      </FormItem>
-                    )}
-                  />
-
+              {isBlocked ? (
+                <div className="text-center space-y-4">
+                  <div className="flex justify-center">
+                    <div className="rounded-full bg-destructive/10 p-4">
+                      <AlertTriangle className="h-10 w-10 text-destructive" />
+                    </div>
+                  </div>
+                  <p className="text-lg font-display text-foreground">
+                    Too many attempts
+                  </p>
+                  <p className="text-muted-foreground font-body">
+                    Please try again later.
+                  </p>
                   <Button
-                    type="submit"
-                    className="w-full"
-                    size="lg"
-                    disabled={isLoading}
+                    variant="outline"
+                    onClick={() => navigate("/")}
+                    className="mt-4"
                   >
-                    <Unlock className="mr-2 h-5 w-5" />
-                    {isLoading ? "Validating..." : "Unlock Access"}
+                    Return Home
                   </Button>
-                </form>
-              </Form>
+                </div>
+              ) : (
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="w-full space-y-6"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-muted-foreground">Email</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="your@email.com"
+                              {...field}
+                              className="h-14 bg-muted/30 border-border focus:border-primary/50"
+                              autoComplete="email"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
 
-              <p className="mt-6 text-muted-foreground text-sm text-center font-body">
-                Each code keeps you eligible for future draws.
-              </p>
+                    <FormField
+                      control={form.control}
+                      name="vaultCode"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-muted-foreground">4-Digit Code</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="0000"
+                              {...field}
+                              className="h-14 text-center text-2xl tracking-[0.5em] font-display bg-muted/30 border-border focus:border-primary/50"
+                              autoComplete="off"
+                              maxLength={4}
+                              inputMode="numeric"
+                              pattern="[0-9]*"
+                            />
+                          </FormControl>
+                          <FormMessage className="text-center" />
+                        </FormItem>
+                      )}
+                    />
 
-              {/* Helper link */}
-              <Link 
-                to="/vault/enter" 
-                className="mt-4 text-primary/80 hover:text-primary text-sm text-center font-body underline underline-offset-4 transition-colors"
-              >
-                Didn't get an email? Go back to view your code.
-              </Link>
+                    {errorMessage && (
+                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <p className="text-sm text-destructive text-center font-body">
+                          {errorMessage}
+                        </p>
+                      </div>
+                    )}
+
+                    <Button
+                      type="submit"
+                      className="w-full"
+                      size="lg"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Validating...
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="mr-2 h-5 w-5" />
+                          Unlock Access
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              )}
+
+              {!isBlocked && (
+                <>
+                  <p className="mt-6 text-muted-foreground text-sm text-center font-body">
+                    Codes expire 30 minutes after issue.
+                  </p>
+
+                  <Link 
+                    to="/vault/enter" 
+                    className="mt-4 text-primary/80 hover:text-primary text-sm text-center font-body underline underline-offset-4 transition-colors"
+                  >
+                    Need a new code? Go back to get one.
+                  </Link>
+                </>
+              )}
             </div>
           </GlowCard>
         </div>

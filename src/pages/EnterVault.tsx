@@ -34,14 +34,10 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Generate 4-character vault code (uppercase letters + numbers)
+// Generate 4-digit numeric code with leading zeros
 const generateVaultCode = (): string => {
-  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let code = "";
-  for (let i = 0; i < 4; i++) {
-    code += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return code;
+  const num = Math.floor(Math.random() * 10000);
+  return num.toString().padStart(4, "0");
 };
 
 const EnterVault = () => {
@@ -64,10 +60,31 @@ const EnterVault = () => {
     setIsSubmitting(true);
     
     try {
-      // Generate unique 4-character code
+      // Check if email already has an unexpired, unused code
+      const { data: existingCode } = await supabase
+        .from("vault_codes")
+        .select("code, expires_at, used_at")
+        .eq("email", values.email)
+        .is("used_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      
+      if (existingCode) {
+        // Reuse existing valid code
+        setVaultCode(existingCode.code);
+        setSubmittedData(values);
+        setIsSubmitted(true);
+        sessionStorage.setItem("vaultCode", existingCode.code);
+        sessionStorage.setItem("vaultEmail", values.email);
+        sessionStorage.setItem("vaultName", values.name);
+        toast.info("Your existing vault code is still valid!");
+        return;
+      }
+      
+      // Generate unique 4-digit code
       let generatedCode = generateVaultCode();
       let attempts = 0;
-      const maxAttempts = 10;
+      const maxAttempts = 20;
       
       // Retry if code already exists (collision handling)
       while (attempts < maxAttempts) {
@@ -75,6 +92,8 @@ const EnterVault = () => {
           .from("vault_codes")
           .select("code")
           .eq("code", generatedCode)
+          .is("used_at", null)
+          .gt("expires_at", new Date().toISOString())
           .maybeSingle();
         
         if (!existing) break;
@@ -82,32 +101,22 @@ const EnterVault = () => {
         attempts++;
       }
       
-      // Check if email already has a code
-      const { data: existingEmail } = await supabase
+      // Delete any old expired/used codes for this email first
+      await supabase
         .from("vault_codes")
-        .select("code")
-        .eq("email", values.email)
-        .maybeSingle();
+        .delete()
+        .eq("email", values.email);
       
-      if (existingEmail) {
-        // Email already has a code, show it
-        setVaultCode(existingEmail.code);
-        setSubmittedData(values);
-        setIsSubmitted(true);
-        sessionStorage.setItem("vaultCode", existingEmail.code);
-        sessionStorage.setItem("vaultEmail", values.email);
-        sessionStorage.setItem("vaultName", values.name);
-        toast.info("You already have a vault code!");
-        return;
-      }
+      // Insert new vault code with expiration
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutes
       
-      // Insert new vault code
       const { error } = await supabase
         .from("vault_codes")
         .insert({
           name: values.name,
           email: values.email,
           code: generatedCode,
+          expires_at: expiresAt,
         });
       
       if (error) {
