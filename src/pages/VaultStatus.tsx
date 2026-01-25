@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
-import { Lock, Unlock, Clock, Users, Sparkles, ChevronLeft, RotateCcw } from "lucide-react";
+import { Lock, Unlock, Clock, Users, Sparkles, ChevronLeft, RotateCcw, Home } from "lucide-react";
 import vaultPortal from "@/assets/vault-portal.png";
 
 type VaultState = "in_draw" | "winner" | "not_selected";
@@ -181,14 +181,21 @@ const VaultStatus = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-12">
-      {/* Back Link */}
-      <header className="w-full max-w-md mx-auto mb-4">
+      {/* Navigation Header */}
+      <header className="w-full max-w-md mx-auto mb-4 flex items-center justify-between">
         <button
           onClick={() => navigate("/vault/submit")}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
           <span className="text-sm uppercase tracking-wider">Back</span>
+        </button>
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Home className="w-5 h-5" />
+          <span className="text-sm uppercase tracking-wider">Home</span>
         </button>
       </header>
 
