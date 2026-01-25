@@ -7,31 +7,40 @@ export const useUnlockFeedback = () => {
     try {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       
-      // Create oscillator for low-frequency tone
+      // Create oscillator for clean low-frequency tone
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
+      const filter = audioContext.createBiquadFilter();
       
-      // Low frequency sweep: 80Hz -> 120Hz (subtle unlock feel)
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(80, audioContext.currentTime);
-      oscillator.frequency.exponentialRampToValueAtTime(120, audioContext.currentTime + 0.15);
+      // Use triangle wave for softer, cleaner tone
+      oscillator.type = 'triangle';
+      oscillator.frequency.setValueAtTime(100, audioContext.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(140, audioContext.currentTime + 0.2);
       
-      // Quick fade in and out for smooth, non-jarring sound
-      gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.05);
-      gainNode.gain.linearRampToValueAtTime(0.12, audioContext.currentTime + 0.2);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.5);
+      // Low-pass filter to remove any harshness
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(200, audioContext.currentTime);
+      filter.Q.setValueAtTime(1, audioContext.currentTime);
       
-      // Connect and play
-      oscillator.connect(gainNode);
+      // Smooth envelope: gentle fade in, sustain, smooth fade out
+      const now = audioContext.currentTime;
+      gainNode.gain.setValueAtTime(0.001, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.08, now + 0.08);
+      gainNode.gain.setValueAtTime(0.08, now + 0.15);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      
+      // Connect: oscillator -> filter -> gain -> output
+      oscillator.connect(filter);
+      filter.connect(gainNode);
       gainNode.connect(audioContext.destination);
       
-      oscillator.start(audioContext.currentTime);
-      oscillator.stop(audioContext.currentTime + 0.5);
+      oscillator.start(now);
+      oscillator.stop(now + 0.45);
       
       // Cleanup
       oscillator.onended = () => {
         oscillator.disconnect();
+        filter.disconnect();
         gainNode.disconnect();
         audioContext.close();
       };
