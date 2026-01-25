@@ -9,6 +9,7 @@ import SubmitVaultCode from "./pages/SubmitVaultCode";
 import VaultStatus from "./pages/VaultStatus";
 import Agreements from "./pages/Agreements";
 import ChooseAccess from "./pages/ChooseAccess";
+import FanDashboard from "./pages/FanDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/vault/status" element={<VaultStatus />} />
           <Route path="/agreements/fan" element={<Agreements />} />
           <Route path="/onboarding/listen" element={<ChooseAccess />} />
+          <Route path="/fan/dashboard" element={<FanDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
