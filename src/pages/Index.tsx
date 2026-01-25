@@ -123,7 +123,7 @@ const Index = () => {
           
           {/* MUSIC EXCLUSIVE Text */}
           <h2 className="text-center mt-4 text-3xl md:text-5xl font-display font-black tracking-[0.15em] gradient-text text-glow">
-            MUSIC EXCLUSIVE
+            MUSIC EXCLUSIVE<span className="text-muted-foreground text-xs md:text-sm align-super ml-1">™</span>
           </h2>
         </div>
       </section>
