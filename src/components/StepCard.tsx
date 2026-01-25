@@ -1,33 +1,32 @@
-import { Music } from "lucide-react"
+import { LucideIcon } from "lucide-react"
 import { GlowCard } from "@/components/ui/GlowCard"
 
 interface StepCardProps {
   stepNumber: number
   title: string
   description: string
+  icon: LucideIcon
 }
 
-const StepCard = ({ stepNumber, title, description }: StepCardProps) => {
+const StepCard = ({ stepNumber, title, description, icon: Icon }: StepCardProps) => {
   return (
-    <GlowCard glowColor="gradient" className="w-full">
-      <div className="p-5">
+    <GlowCard glowColor="gradient" className="w-full group">
+      <div className="p-5 transition-all duration-300 group-hover:bg-card-hover/30">
         {/* Step Header */}
-        <div className="flex items-center gap-3 mb-3">
-          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-            <Music className="w-5 h-5 text-primary" />
+        <div className="flex items-start gap-4 mb-3">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center flex-shrink-0 group-hover:from-primary/30 group-hover:to-accent/30 transition-all duration-300">
+            <Icon className="w-6 h-6 text-primary group-hover:text-primary-glow transition-colors" />
           </div>
-          <span className="font-display text-sm text-muted-foreground tracking-wider">
-            STEP {stepNumber}
-          </span>
-          <span className="font-display text-sm text-foreground font-bold tracking-wider">
-            {title}
-          </span>
+          <div className="flex-1">
+            <h3 className="font-display text-base text-foreground font-bold tracking-wider mb-2">
+              STEP {stepNumber} — {title}
+            </h3>
+            {/* Description */}
+            <p className="text-muted-foreground text-sm font-body leading-relaxed">
+              {description}
+            </p>
+          </div>
         </div>
-
-        {/* Description */}
-        <p className="text-muted-foreground text-sm font-body uppercase tracking-wide leading-relaxed">
-          {description}
-        </p>
       </div>
     </GlowCard>
   )
