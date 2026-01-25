@@ -5,8 +5,8 @@ import { ArtistCard } from "@/components/ArtistCard"
 import { StepCard } from "@/components/StepCard"
 import { BenefitCard } from "@/components/BenefitCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
-import { VaultPortal } from "@/components/VaultPortal"
 import { KeyRound, Send, RotateCcw } from "lucide-react"
+import vaultPortal from "@/assets/vault-portal.png"
 import artist1 from "@/assets/artist-1.jpg"
 import artist2 from "@/assets/artist-2.jpg"
 import artist3 from "@/assets/artist-3.jpg"
@@ -106,9 +106,19 @@ const Index = () => {
       {/* Vault Portal Section */}
       <section className="relative px-4 py-8 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
-          {/* Animated Vault Portal with video */}
-          <div className="flex justify-center">
-            <VaultPortal size="xl" />
+          {/* Vault Portal Image */}
+          <div className="relative mx-auto w-full max-w-md aspect-square">
+            {/* Animated glow orbs behind */}
+            <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
+            <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
+            <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
+            
+            {/* Breathing vault portal */}
+            <img
+              src={vaultPortal}
+              alt="Vault Portal"
+              className="relative w-full h-full object-contain vault-glow"
+            />
           </div>
           
           {/* MUSIC EXCLUSIVE Text */}
