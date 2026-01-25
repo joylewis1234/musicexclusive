@@ -8,8 +8,8 @@
 @layer base {
   :root {
     /* Core Background Colors */
-    --background: 220 20% 4%;
-    --background-elevated: 220 18% 7%;
+    --background: 0 0% 0%;
+    --background-elevated: 0 0% 3%;
     --foreground: 0 0% 96%;
 
     /* Card & Surface Colors */
