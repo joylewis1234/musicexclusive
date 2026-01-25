@@ -196,6 +196,30 @@
   /* Vault Portal Glow */
   .vault-glow {
     filter: drop-shadow(0 0 30px hsl(210 100% 55% / 0.5)) drop-shadow(0 0 60px hsl(265 90% 60% / 0.3));
+    animation: vault-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes vault-pulse {
+    0%, 100% {
+      filter: drop-shadow(0 0 30px hsl(210 100% 55% / 0.5)) drop-shadow(0 0 60px hsl(265 90% 60% / 0.3));
+    }
+    50% {
+      filter: drop-shadow(0 0 50px hsl(175 85% 45% / 0.7)) drop-shadow(0 0 80px hsl(265 90% 60% / 0.5)) drop-shadow(0 0 100px hsl(210 100% 55% / 0.3));
+    }
+  }
+
+  /* Vault Spin Animation */
+  .vault-spin {
+    animation: vault-rotate 20s linear infinite;
+  }
+
+  @keyframes vault-rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 }
 

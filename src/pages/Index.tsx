@@ -78,15 +78,17 @@ const Index = () => {
       <section className="relative px-4 py-8 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
           {/* Vault Portal Image */}
-          <div className="relative mx-auto w-full max-w-md aspect-square animate-float">
-            {/* Glow effect behind */}
-            <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75" />
-            <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90" />
+          <div className="relative mx-auto w-full max-w-md aspect-square">
+            {/* Animated glow orbs behind */}
+            <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
+            <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
+            <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
             
+            {/* Rotating vault portal */}
             <img
               src={vaultPortal}
               alt="Vault Portal"
-              className="relative w-full h-full object-contain vault-glow"
+              className="relative w-full h-full object-contain vault-glow vault-spin"
             />
           </div>
           
