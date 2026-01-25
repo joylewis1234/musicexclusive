@@ -49,25 +49,28 @@ export type Database = {
       }
       vault_codes: {
         Row: {
-          created_at: string
+          code: string
           email: string
           id: string
+          issued_at: string
           name: string
-          vault_code: string
+          used_at: string | null
         }
         Insert: {
-          created_at?: string
+          code: string
           email: string
           id?: string
+          issued_at?: string
           name: string
-          vault_code?: string
+          used_at?: string | null
         }
         Update: {
-          created_at?: string
+          code?: string
           email?: string
           id?: string
+          issued_at?: string
           name?: string
-          vault_code?: string
+          used_at?: string | null
         }
         Relationships: []
       }
