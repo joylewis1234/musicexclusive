@@ -18,6 +18,7 @@ import FanProfile from "./pages/FanProfile";
 import FanInbox from "./pages/FanInbox";
 import Discovery from "./pages/Discovery";
 import ArtistProfile from "./pages/ArtistProfile";
+import ArtistUpload from "./pages/ArtistUpload";
 import MusicPlayer from "./pages/MusicPlayer";
 import NotFound from "./pages/NotFound";
 
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/fan/inbox" element={<FanInbox />} />
               <Route path="/discovery" element={<Discovery />} />
               <Route path="/artist/:artistId" element={<ArtistProfile />} />
+              <Route path="/artist/upload" element={<ArtistUpload />} />
             </Route>
             
             {/* Full player (no mini-player) */}
