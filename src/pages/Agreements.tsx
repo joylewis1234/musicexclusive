@@ -5,7 +5,9 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 // =============================================================================
 // LEGAL CONTENT - Replace placeholder text below with actual legal documents
@@ -145,27 +147,62 @@ interface LocationState {
 const Agreements = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { toast } = useToast();
   const state = location.state as LocationState | null;
   
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canContinue = termsAccepted && privacyAccepted;
 
-  const handleAccept = () => {
-    // TODO: Store agreement acceptance in database
-    // - user_id
-    // - terms_version: TERMS_VERSION
-    // - privacy_version: PRIVACY_VERSION
-    // - accepted_at: timestamp
-    
-    navigate("/vault-status", { 
-      state: { 
-        ...state,
-        vaultState: "winner",
-        agreementsAccepted: true 
-      } 
-    });
+  const handleAccept = async () => {
+    if (!state?.email || !state?.name) {
+      toast({
+        title: "Missing Information",
+        description: "Please start from the Enter Vault page.",
+        variant: "destructive",
+      });
+      navigate("/enter-vault");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Upsert agreement acceptance (update if email exists, insert if new)
+      const { error } = await supabase
+        .from("agreement_acceptances")
+        .upsert(
+          {
+            email: state.email,
+            name: state.name,
+            terms_version: TERMS_VERSION,
+            privacy_version: PRIVACY_VERSION,
+            accepted_at: new Date().toISOString(),
+          },
+          { onConflict: "email" }
+        );
+
+      if (error) throw error;
+
+      navigate("/vault-status", { 
+        state: { 
+          ...state,
+          vaultState: "winner",
+          agreementsAccepted: true 
+        } 
+      });
+    } catch (error) {
+      console.error("Error saving agreement:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save your agreement. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -255,12 +292,19 @@ const Agreements = () => {
             {/* CTA Button */}
             <Button
               onClick={handleAccept}
-              disabled={!canContinue}
+              disabled={!canContinue || isSubmitting}
               className="w-full"
               variant="primary"
               size="lg"
             >
-              Accept & Continue
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Accept & Continue"
+              )}
             </Button>
 
             {!canContinue && (
