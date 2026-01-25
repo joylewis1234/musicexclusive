@@ -49,26 +49,35 @@ export type Database = {
       }
       vault_codes: {
         Row: {
+          attempts_count: number | null
           code: string
           email: string
+          expires_at: string | null
           id: string
           issued_at: string
+          last_attempt_at: string | null
           name: string
           used_at: string | null
         }
         Insert: {
+          attempts_count?: number | null
           code: string
           email: string
+          expires_at?: string | null
           id?: string
           issued_at?: string
+          last_attempt_at?: string | null
           name: string
           used_at?: string | null
         }
         Update: {
+          attempts_count?: number | null
           code?: string
           email?: string
+          expires_at?: string | null
           id?: string
           issued_at?: string
+          last_attempt_at?: string | null
           name?: string
           used_at?: string | null
         }
