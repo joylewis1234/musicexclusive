@@ -163,7 +163,7 @@ const Agreements = () => {
         description: "Please start from the Enter Vault page.",
         variant: "destructive",
       });
-      navigate("/enter-vault");
+      navigate("/vault/enter");
       return;
     }
 
@@ -186,7 +186,7 @@ const Agreements = () => {
 
       if (error) throw error;
 
-      navigate("/vault-status", { 
+      navigate("/vault/status", { 
         state: { 
           ...state,
           vaultState: "winner",
