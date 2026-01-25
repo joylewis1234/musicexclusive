@@ -158,7 +158,7 @@ const Index = () => {
           <SectionHeader
             title="How It Works"
             align="left"
-            glowColor="gradient"
+            framed
           />
           
           <div className="flex flex-col gap-4 mt-8">
@@ -181,7 +181,7 @@ const Index = () => {
           <SectionHeader
             title="Benefits — For Fans"
             align="left"
-            glowColor="primary"
+            framed
           />
           
           <div className="flex flex-col gap-4 mt-8">
