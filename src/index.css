@@ -252,6 +252,42 @@
       box-shadow: 0 0 20px hsl(175 85% 45% / 0.3);
     }
   }
+
+  /* Frame glow pulse - synchronized with shake */
+  .animate-frame-glow-pulse {
+    animation: frame-glow-pulse 0.5s ease-out forwards;
+  }
+
+  .animate-frame-border-pulse {
+    animation: frame-border-pulse 0.5s ease-out forwards;
+  }
+
+  @keyframes frame-glow-pulse {
+    0% {
+      opacity: 0.4;
+      filter: blur(8px);
+    }
+    40% {
+      opacity: 0.85;
+      filter: blur(12px);
+    }
+    100% {
+      opacity: 0.4;
+      filter: blur(8px);
+    }
+  }
+
+  @keyframes frame-border-pulse {
+    0% {
+      opacity: 0.6;
+    }
+    40% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0.6;
+    }
+  }
 }
 
 @layer utilities {

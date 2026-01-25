@@ -26,6 +26,8 @@ const VaultStatus = () => {
   const [demoState, setDemoState] = useState<VaultState | null>(null);
   // Track if unlock animation has played
   const [hasAnimated, setHasAnimated] = useState(false);
+  // Track if currently unlocking (for frame glow)
+  const [isUnlocking, setIsUnlocking] = useState(false);
   
   // Use demo state if set, otherwise use location state, default to "winner"
   const vaultState: VaultState = demoState || state?.vaultState || "winner";
@@ -35,6 +37,7 @@ const VaultStatus = () => {
   useEffect(() => {
     if (vaultState === "winner") {
       setHasAnimated(false);
+      setIsUnlocking(true);
       // Trigger animation after a brief delay to ensure state is set
       const timer = setTimeout(() => {
         setHasAnimated(true);
@@ -43,7 +46,14 @@ const VaultStatus = () => {
           navigator.vibrate(20);
         }
       }, 50);
-      return () => clearTimeout(timer);
+      // End unlocking state after animations complete
+      const unlockTimer = setTimeout(() => {
+        setIsUnlocking(false);
+      }, 600);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(unlockTimer);
+      };
     }
   }, [vaultState, demoState]);
 
@@ -197,6 +207,7 @@ const VaultStatus = () => {
               vaultState === "winner" && !hasAnimated && "animate-vault-unlock"
             )}
             glowColor={vaultState === "winner" ? "primary" : "secondary"}
+            unlocking={vaultState === "winner" && isUnlocking}
           >
             <div className="p-8 md:p-10">{renderContent()}</div>
           </GlowCard>
