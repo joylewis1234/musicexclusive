@@ -209,6 +209,79 @@
     }
   }
 
+  /* === VAULT INNER LIGHTNING ANIMATIONS === */
+  
+  /* Lightning layer 1 - slow rotating gradient */
+  .animate-vault-lightning-1 {
+    background: conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg,
+      hsl(var(--primary) / 0.4) 60deg,
+      transparent 120deg,
+      hsl(var(--secondary) / 0.3) 180deg,
+      transparent 240deg,
+      hsl(var(--accent) / 0.4) 300deg,
+      transparent 360deg
+    );
+    animation: vault-lightning-rotate 8s linear infinite;
+  }
+
+  /* Lightning layer 2 - counter-rotating */
+  .animate-vault-lightning-2 {
+    background: conic-gradient(
+      from 180deg at 50% 50%,
+      transparent 0deg,
+      hsl(var(--accent) / 0.5) 45deg,
+      transparent 90deg,
+      hsl(var(--primary) / 0.4) 180deg,
+      transparent 270deg,
+      hsl(var(--secondary) / 0.5) 315deg,
+      transparent 360deg
+    );
+    animation: vault-lightning-rotate-reverse 6s linear infinite;
+  }
+
+  /* Lightning layer 3 - pulsing radial energy */
+  .animate-vault-lightning-3 {
+    background: radial-gradient(
+      circle at 50% 50%,
+      hsl(var(--primary) / 0.6) 0%,
+      transparent 30%,
+      hsl(var(--accent) / 0.3) 50%,
+      transparent 70%
+    );
+    animation: vault-lightning-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes vault-lightning-rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  @keyframes vault-lightning-rotate-reverse {
+    from {
+      transform: rotate(360deg);
+    }
+    to {
+      transform: rotate(0deg);
+    }
+  }
+
+  @keyframes vault-lightning-pulse {
+    0%, 100% {
+      opacity: 0.3;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 0.6;
+      transform: scale(1.1);
+    }
+  }
+
   /* === VAULT PORTAL ENHANCED ANIMATIONS === */
 
   /* 1. Slow rotation for outer ring (30s full rotation) */
