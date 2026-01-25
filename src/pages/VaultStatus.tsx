@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { VaultPortal } from "@/components/VaultPortal";
 import { Button } from "@/components/ui/button";
 import { Unlock, Sparkles, ChevronLeft, Home } from "lucide-react";
-import vaultPortal from "@/assets/vault-portal.png";
 import { cn } from "@/lib/utils";
 import { useUnlockFeedback } from "@/hooks/useUnlockFeedback";
 
@@ -74,23 +74,14 @@ const VaultStatus = () => {
     <div className="flex flex-col items-center text-center animate-fade-in">
       {/* Vault Portal with intense glow - "opening" effect */}
       <div className="relative mb-8">
-        {/* Outer glow rings */}
-        <div className="absolute inset-[-20px] bg-primary/30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute inset-[-10px] bg-gradient-to-r from-primary via-purple-500 to-primary rounded-full blur-xl opacity-60 animate-pulse" />
-
-        <div className="relative w-36 h-36 md:w-44 md:h-44 flex items-center justify-center">
-          <img
-            src={vaultPortal}
-            alt="Vault Portal Open"
-            className="w-full h-full object-contain drop-shadow-[0_0_30px_hsl(var(--primary))]"
-          />
-          <Unlock className="absolute w-12 h-12 text-primary drop-shadow-[0_0_15px_hsl(var(--primary))] animate-pulse" />
-        </div>
+        <VaultPortal size="md" intensify={isUnlocking}>
+          <Unlock className="w-12 h-12 text-primary drop-shadow-[0_0_15px_hsl(var(--primary))] animate-pulse" />
+        </VaultPortal>
 
         {/* Sparkle effects */}
-        <Sparkles className="absolute top-0 right-0 w-6 h-6 text-primary/80 animate-pulse" />
-        <Sparkles className="absolute bottom-4 left-0 w-5 h-5 text-purple-400/80 animate-pulse delay-150" />
-        <Sparkles className="absolute top-8 left-2 w-4 h-4 text-pink-400/70 animate-pulse delay-300" />
+        <Sparkles className="absolute top-0 right-0 w-6 h-6 text-primary/80 animate-pulse z-30" />
+        <Sparkles className="absolute bottom-4 left-0 w-5 h-5 text-purple-400/80 animate-pulse delay-150 z-30" />
+        <Sparkles className="absolute top-8 left-2 w-4 h-4 text-pink-400/70 animate-pulse delay-300 z-30" />
       </div>
 
       {/* Header with emoji and strong glow */}
@@ -129,16 +120,10 @@ const VaultStatus = () => {
   const renderNotSelected = () => (
     <div className="flex flex-col items-center text-center animate-fade-in">
       {/* Vault Portal - soft glow, hopeful */}
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl" />
-        <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
-          <img
-            src={vaultPortal}
-            alt="Vault Portal"
-            className="w-full h-full object-contain opacity-80 drop-shadow-[0_0_15px_hsl(var(--primary)/0.4)]"
-          />
-          <Sparkles className="absolute w-8 h-8 text-primary/60" />
-        </div>
+      <div className="relative mb-8 opacity-80">
+        <VaultPortal size="sm">
+          <Sparkles className="w-8 h-8 text-primary/60" />
+        </VaultPortal>
       </div>
 
       {/* Header - calm, not failure */}
