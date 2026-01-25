@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { Menu, X, Home, HelpCircle, KeyRound, Star, User, LogIn } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
@@ -7,19 +8,40 @@ import { NavLink } from "@/components/NavLink"
 const mainNavItems = [
   { title: "Home", href: "/", icon: Home },
   { title: "How It Works", href: "/#how-it-works", icon: HelpCircle },
-  { title: "Enter the Vault", href: "/vault", icon: KeyRound },
-  { title: "Superfan", href: "/superfan", icon: Star },
-]
-
-// Future dashboard items - can be conditionally rendered based on auth
-const dashboardNavItems = [
-  { title: "Fan Dashboard", href: "/fan-dashboard", icon: User },
-  { title: "Artist Dashboard", href: "/artist-dashboard", icon: User },
-  { title: "Profile", href: "/profile", icon: User },
+  { title: "Enter the Vault", href: "/vault/enter", icon: KeyRound },
+  { title: "Superfan", href: "/choose-access", icon: Star },
 ]
 
 const Header = () => {
   const [open, setOpen] = useState(false)
+  const navigate = useNavigate()
+
+  const handleNavigation = (href: string) => {
+    setOpen(false)
+    
+    // Handle hash links for same-page navigation
+    if (href.startsWith("/#")) {
+      const hash = href.substring(1) // Remove leading /
+      if (window.location.pathname === "/") {
+        // Already on home page, just scroll to section
+        const element = document.querySelector(hash)
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth" })
+        }
+      } else {
+        // Navigate to home page then scroll
+        navigate("/")
+        setTimeout(() => {
+          const element = document.querySelector(hash)
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth" })
+          }
+        }, 100)
+      }
+    } else {
+      navigate(href)
+    }
+  }
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
@@ -60,15 +82,13 @@ const Header = () => {
               <ul className="space-y-1">
                 {mainNavItems.map((item) => (
                   <li key={item.title}>
-                    <NavLink
-                      to={item.href}
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 font-body text-sm"
-                      activeClassName="text-primary bg-primary/10"
+                    <button
+                      onClick={() => handleNavigation(item.href)}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 font-body text-sm text-left"
                     >
                       <item.icon className="w-5 h-5" />
                       <span>{item.title}</span>
-                    </NavLink>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -90,27 +110,6 @@ const Header = () => {
                   </NavLink>
                 </li>
               </ul>
-
-              {/* Future: Dashboard Items (conditionally rendered when authenticated) */}
-              {/* 
-              <div className="my-4 border-t border-border/30" />
-              <p className="px-4 text-xs text-muted-foreground uppercase tracking-wider mb-2">Dashboard</p>
-              <ul className="space-y-1">
-                {dashboardNavItems.map((item) => (
-                  <li key={item.title}>
-                    <NavLink
-                      to={item.href}
-                      onClick={() => setOpen(false)}
-                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 font-body text-sm"
-                      activeClassName="text-primary bg-primary/10"
-                    >
-                      <item.icon className="w-5 h-5" />
-                      <span>{item.title}</span>
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-              */}
             </nav>
 
             {/* Bottom CTA */}
@@ -118,7 +117,7 @@ const Header = () => {
               <Button 
                 size="lg" 
                 className="w-full"
-                onClick={() => setOpen(false)}
+                onClick={() => handleNavigation("/vault/enter")}
               >
                 Enter the Vault
               </Button>
@@ -127,16 +126,24 @@ const Header = () => {
         </Sheet>
 
         {/* Logo (centered) */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1">
+        <button 
+          onClick={() => navigate("/")}
+          className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1"
+        >
           <span className="font-display text-xl font-bold tracking-wider">
             <span className="text-foreground">M</span>
             <span className="text-primary">E</span>
             <span className="text-foreground">.</span>
           </span>
-        </div>
+        </button>
 
         {/* Login Button */}
-        <Button variant="outline" size="sm" className="h-9 px-4 rounded-full text-xs">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-9 px-4 rounded-full text-xs"
+          onClick={() => navigate("/login")}
+        >
           Log In
         </Button>
       </div>
