@@ -15,7 +15,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { ChevronLeft, ArrowRight } from "lucide-react";
+import { ChevronLeft, ArrowRight, Home } from "lucide-react";
 
 const formSchema = z.object({
   name: z
@@ -54,14 +54,21 @@ const EnterVault = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-12">
-      {/* Back Link */}
-      <header className="w-full max-w-md mx-auto mb-4">
+      {/* Navigation Header */}
+      <header className="w-full max-w-md mx-auto mb-4 flex items-center justify-between">
         <button
           onClick={() => navigate("/")}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
           <span className="text-sm uppercase tracking-wider">Back</span>
+        </button>
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Home className="w-5 h-5" />
+          <span className="text-sm uppercase tracking-wider">Home</span>
         </button>
       </header>
 

@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Crown, Zap, Star, Users, CreditCard } from "lucide-react";
+import { ChevronLeft, Crown, Zap, Star, Users, CreditCard, Home } from "lucide-react";
 
 interface LocationState {
   email?: string;
@@ -26,14 +26,21 @@ const ChooseAccess = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="p-4">
+      {/* Navigation Header */}
+      <header className="p-4 flex items-center justify-between max-w-4xl mx-auto w-full">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
           <ChevronLeft className="w-5 h-5" />
           <span className="text-sm uppercase tracking-wider">Back</span>
+        </button>
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Home className="w-5 h-5" />
+          <span className="text-sm uppercase tracking-wider">Home</span>
         </button>
       </header>
 
