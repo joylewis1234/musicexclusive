@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,7 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Unlock, ChevronLeft, Home, Loader2, AlertTriangle } from "lucide-react";
+import { Unlock, ChevronLeft, Home, Loader2, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -41,8 +41,7 @@ interface LocationState {
 
 const SubmitVaultCode = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showError, setShowError] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
@@ -55,7 +54,7 @@ const SubmitVaultCode = () => {
     },
   });
 
-  // Auto-fill from navigation state or session storage
+  // Auto-fill email from navigation state or session storage
   useEffect(() => {
     const emailFromState = state?.email;
     const emailFromSession = sessionStorage.getItem("vaultEmail");
@@ -75,7 +74,7 @@ const SubmitVaultCode = () => {
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
-    setErrorMessage(null);
+    setShowError(false);
     
     try {
       // Find matching vault code record
@@ -95,65 +94,15 @@ const SubmitVaultCode = () => {
       }
       
       if (!vaultRecord) {
-        // Invalid code - need to increment attempts
-        // First, find any record with this email to track attempts
-        const { data: emailRecord } = await supabase
-          .from("vault_codes")
-          .select("id, attempts_count, last_attempt_at")
-          .eq("email", values.email)
-          .order("issued_at", { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (emailRecord) {
-          const now = new Date();
-          const lastAttempt = emailRecord.last_attempt_at 
-            ? new Date(emailRecord.last_attempt_at) 
-            : null;
-          
-          // Check if blocked (5+ attempts within 10 minutes)
-          const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
-          const recentAttempts = lastAttempt && lastAttempt > tenMinutesAgo 
-            ? emailRecord.attempts_count 
-            : 0;
-          
-          if (recentAttempts >= 5) {
-            setIsBlocked(true);
-            setErrorMessage("Too many attempts. Please try again later.");
-            return;
-          }
-          
-          // Increment attempts
-          const newAttemptsCount = lastAttempt && lastAttempt > tenMinutesAgo 
-            ? emailRecord.attempts_count + 1 
-            : 1;
-          
-          await supabase
-            .from("vault_codes")
-            .update({ 
-              attempts_count: newAttemptsCount,
-              last_attempt_at: now.toISOString()
-            })
-            .eq("id", emailRecord.id);
-          
-          if (newAttemptsCount >= 5) {
-            setIsBlocked(true);
-            setErrorMessage("Too many attempts. Please try again later.");
-            return;
-          }
-        }
-        
-        setErrorMessage("Invalid code or email. Please check and try again.");
+        // Invalid or expired code
+        setShowError(true);
         return;
       }
       
       // Valid code - mark as used
       const { error: updateError } = await supabase
         .from("vault_codes")
-        .update({ 
-          used_at: new Date().toISOString(),
-          attempts_count: 0 // Reset attempts on successful use
-        })
+        .update({ used_at: new Date().toISOString() })
         .eq("id", vaultRecord.id);
       
       if (updateError) {
@@ -200,39 +149,60 @@ const SubmitVaultCode = () => {
         </button>
       </header>
 
+      {/* Background glow effect */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0, 212, 255, 0.08) 0%, transparent 70%)",
+        }}
+        aria-hidden="true"
+      />
+
       <div className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-md">
-          <GlowCard className="group">
-            <div className="p-6 md:p-8 flex flex-col items-center">
-              <SectionHeader
-                title="Submit Your Vault Code"
-                align="center"
-                framed
-                className="mb-8"
-              />
+          <GlowCard glowColor="gradient" hover={false} className="group">
+            <div className="p-8 md:p-10 flex flex-col items-center">
+              <div className="flex justify-center mb-8">
+                <SectionHeader
+                  title="SUBMIT YOUR VAULT CODE"
+                  align="center"
+                  framed
+                />
+              </div>
 
-              {isBlocked ? (
-                <div className="text-center space-y-4">
-                  <div className="flex justify-center">
-                    <div className="rounded-full bg-destructive/10 p-4">
-                      <AlertTriangle className="h-10 w-10 text-destructive" />
-                    </div>
+              {showError ? (
+                /* Error State */
+                <div className="text-center space-y-6 w-full">
+                  <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                    <p className="text-foreground font-display text-lg mb-2">
+                      Invalid or expired code
+                    </p>
+                    <p className="text-muted-foreground font-body text-sm">
+                      Please request a new Vault Code.
+                    </p>
                   </div>
-                  <p className="text-lg font-display text-foreground">
-                    Too many attempts
-                  </p>
-                  <p className="text-muted-foreground font-body">
-                    Please try again later.
-                  </p>
+
+                  <Button
+                    size="lg"
+                    className="w-full"
+                    onClick={() => navigate("/vault/enter")}
+                  >
+                    <RefreshCw className="mr-2 h-5 w-5" />
+                    REQUEST NEW CODE
+                  </Button>
+
                   <Button
                     variant="outline"
-                    onClick={() => navigate("/")}
-                    className="mt-4"
+                    size="lg"
+                    className="w-full"
+                    onClick={() => setShowError(false)}
                   >
-                    Return Home
+                    TRY AGAIN
                   </Button>
                 </div>
               ) : (
+                /* Form State */
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(onSubmit)}
@@ -243,13 +213,15 @@ const SubmitVaultCode = () => {
                       name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-muted-foreground">Email</FormLabel>
+                          <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">
+                            Email
+                          </FormLabel>
                           <FormControl>
                             <Input
                               type="email"
                               placeholder="your@email.com"
                               {...field}
-                              className="h-14 bg-muted/30 border-border focus:border-primary/50"
+                              className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
                               autoComplete="email"
                             />
                           </FormControl>
@@ -263,12 +235,14 @@ const SubmitVaultCode = () => {
                       name="vaultCode"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-muted-foreground">4-Digit Code</FormLabel>
+                          <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">
+                            4-Digit Vault Code
+                          </FormLabel>
                           <FormControl>
                             <Input
                               placeholder="0000"
                               {...field}
-                              className="h-14 text-center text-2xl tracking-[0.5em] font-display bg-muted/30 border-border focus:border-primary/50"
+                              className="h-14 text-center text-2xl tracking-[0.5em] font-display bg-muted/30 border-border/50 focus:border-primary/50 text-foreground rounded-xl"
                               autoComplete="off"
                               maxLength={4}
                               inputMode="numeric"
@@ -280,14 +254,6 @@ const SubmitVaultCode = () => {
                       )}
                     />
 
-                    {errorMessage && (
-                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-                        <p className="text-sm text-destructive text-center font-body">
-                          {errorMessage}
-                        </p>
-                      </div>
-                    )}
-
                     <Button
                       type="submit"
                       className="w-full"
@@ -297,12 +263,12 @@ const SubmitVaultCode = () => {
                       {isLoading ? (
                         <>
                           <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Validating...
+                          VALIDATING...
                         </>
                       ) : (
                         <>
                           <Unlock className="mr-2 h-5 w-5" />
-                          Unlock Access
+                          UNLOCK ACCESS
                         </>
                       )}
                     </Button>
@@ -310,19 +276,10 @@ const SubmitVaultCode = () => {
                 </Form>
               )}
 
-              {!isBlocked && (
-                <>
-                  <p className="mt-6 text-muted-foreground text-sm text-center font-body">
-                    Codes expire 30 minutes after issue.
-                  </p>
-
-                  <Link 
-                    to="/vault/enter" 
-                    className="mt-4 text-primary/80 hover:text-primary text-sm text-center font-body underline underline-offset-4 transition-colors"
-                  >
-                    Need a new code? Go back to get one.
-                  </Link>
-                </>
+              {!showError && (
+                <p className="mt-6 text-muted-foreground text-sm text-center font-body">
+                  Codes expire 30 minutes after issue.
+                </p>
               )}
             </div>
           </GlowCard>
