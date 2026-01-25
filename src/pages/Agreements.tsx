@@ -157,34 +157,26 @@ const Agreements = () => {
   const canContinue = termsAccepted && privacyAccepted;
 
   const handleAccept = async () => {
-    if (!state?.email || !state?.name) {
-      toast({
-        title: "Missing Information",
-        description: "Please start from the Enter Vault page.",
-        variant: "destructive",
-      });
-      navigate("/vault/enter");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
-      // Upsert agreement acceptance (update if email exists, insert if new)
-      const { error } = await supabase
-        .from("agreement_acceptances")
-        .upsert(
-          {
-            email: state.email,
-            name: state.name,
-            terms_version: TERMS_VERSION,
-            privacy_version: PRIVACY_VERSION,
-            accepted_at: new Date().toISOString(),
-          },
-          { onConflict: "email" }
-        );
+      // Only save to database if we have user info from the vault flow
+      if (state?.email && state?.name) {
+        const { error } = await supabase
+          .from("agreement_acceptances")
+          .upsert(
+            {
+              email: state.email,
+              name: state.name,
+              terms_version: TERMS_VERSION,
+              privacy_version: PRIVACY_VERSION,
+              accepted_at: new Date().toISOString(),
+            },
+            { onConflict: "email" }
+          );
 
-      if (error) throw error;
+        if (error) throw error;
+      }
 
       // Navigate to the fan dashboard after accepting agreements
       navigate("/fan/dashboard");
