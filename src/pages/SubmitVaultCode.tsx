@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,6 +29,7 @@ type FormValues = z.infer<typeof formSchema>;
 interface LocationState {
   email?: string;
   name?: string;
+  vaultCode?: string;
 }
 
 const SubmitVaultCode = () => {
@@ -44,6 +45,17 @@ const SubmitVaultCode = () => {
     },
   });
 
+  // Auto-fill vault code from navigation state or session storage
+  useEffect(() => {
+    const codeFromState = state?.vaultCode;
+    const codeFromSession = sessionStorage.getItem("vaultCode");
+    const code = codeFromState || codeFromSession;
+    
+    if (code) {
+      form.setValue("vaultCode", code);
+    }
+  }, [state?.vaultCode, form]);
+
   // Temporary client-side only submission
   const onSubmit = (values: FormValues) => {
     setIsLoading(true);
@@ -53,8 +65,8 @@ const SubmitVaultCode = () => {
       // Navigate to vault status with "in_draw" state
       navigate("/vault/status", { 
         state: { 
-          email: state?.email || "demo@example.com", 
-          name: state?.name || "Vault Member",
+          email: state?.email || sessionStorage.getItem("vaultEmail") || "demo@example.com", 
+          name: state?.name || sessionStorage.getItem("vaultName") || "Vault Member",
           vaultState: "in_draw"
         } 
       });
@@ -92,49 +104,57 @@ const SubmitVaultCode = () => {
                 className="mb-8"
               />
 
-            <Form {...form}>
-              <form
-                onSubmit={form.handleSubmit(onSubmit)}
-                className="w-full space-y-6"
-              >
-                <FormField
-                  control={form.control}
-                  name="vaultCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          placeholder="Enter your code"
-                          {...field}
-                          className="h-14 text-center text-xl tracking-[0.3em] font-display uppercase bg-muted/30 border-border focus:border-primary/50 placeholder:tracking-normal placeholder:text-sm"
-                          autoComplete="off"
-                        />
-                      </FormControl>
-                      <FormMessage className="text-center" />
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  size="lg"
-                  disabled={isLoading}
+              <Form {...form}>
+                <form
+                  onSubmit={form.handleSubmit(onSubmit)}
+                  className="w-full space-y-6"
                 >
-                  <Unlock className="mr-2 h-5 w-5" />
-                  {isLoading ? "Validating..." : "Unlock Access"}
-                </Button>
-              </form>
-            </Form>
+                  <FormField
+                    control={form.control}
+                    name="vaultCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            placeholder="Enter your code"
+                            {...field}
+                            className="h-14 text-center text-xl tracking-[0.3em] font-display uppercase bg-muted/30 border-border focus:border-primary/50 placeholder:tracking-normal placeholder:text-sm"
+                            autoComplete="off"
+                          />
+                        </FormControl>
+                        <FormMessage className="text-center" />
+                      </FormItem>
+                    )}
+                  />
 
-            <p className="mt-6 text-muted-foreground text-sm text-center font-body">
-              Each code keeps you eligible for future draws.
-            </p>
-          </div>
-        </GlowCard>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    size="lg"
+                    disabled={isLoading}
+                  >
+                    <Unlock className="mr-2 h-5 w-5" />
+                    {isLoading ? "Validating..." : "Unlock Access"}
+                  </Button>
+                </form>
+              </Form>
+
+              <p className="mt-6 text-muted-foreground text-sm text-center font-body">
+                Each code keeps you eligible for future draws.
+              </p>
+
+              {/* Helper link */}
+              <Link 
+                to="/vault/enter" 
+                className="mt-4 text-primary/80 hover:text-primary text-sm text-center font-body underline underline-offset-4 transition-colors"
+              >
+                Didn't get an email? Go back to view your code.
+              </Link>
+            </div>
+          </GlowCard>
+        </div>
       </div>
     </div>
-  </div>
   );
 };
 
