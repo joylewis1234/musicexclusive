@@ -186,13 +186,8 @@ const Agreements = () => {
 
       if (error) throw error;
 
-      navigate("/vault/status", { 
-        state: { 
-          ...state,
-          vaultState: "winner",
-          agreementsAccepted: true 
-        } 
-      });
+      // Navigate to the fan dashboard after accepting agreements
+      navigate("/fan/dashboard");
     } catch (error) {
       console.error("Error saving agreement:", error);
       toast({
