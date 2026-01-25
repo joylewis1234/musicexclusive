@@ -11,6 +11,7 @@ import Agreements from "./pages/Agreements";
 import ChooseAccess from "./pages/ChooseAccess";
 import FanDashboard from "./pages/FanDashboard";
 import Discovery from "./pages/Discovery";
+import MusicPlayer from "./pages/MusicPlayer";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,8 @@ const App = () => (
           <Route path="/onboarding/listen" element={<ChooseAccess />} />
           <Route path="/fan/dashboard" element={<FanDashboard />} />
           <Route path="/discovery" element={<Discovery />} />
+          <Route path="/player/:trackId" element={<MusicPlayer />} />
+          <Route path="/player" element={<MusicPlayer />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
