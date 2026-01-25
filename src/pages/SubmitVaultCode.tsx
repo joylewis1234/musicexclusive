@@ -1,10 +1,8 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
@@ -18,21 +16,26 @@ import {
 } from "@/components/ui/form";
 import { Unlock, ChevronLeft } from "lucide-react";
 
+// Temporary: accept any non-empty code for client-side demo
 const formSchema = z.object({
   vaultCode: z
     .string()
     .trim()
-    .length(6, { message: "Vault code must be 6 digits" })
-    .regex(/^\d{6}$/, { message: "Vault code must contain only digits" }),
+    .min(1, { message: "Please enter your vault code" }),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
+interface LocationState {
+  email?: string;
+  name?: string;
+}
+
 const SubmitVaultCode = () => {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const state = location.state as LocationState | null;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -41,45 +44,21 @@ const SubmitVaultCode = () => {
     },
   });
 
-  const onSubmit = async (values: FormValues) => {
+  // Temporary client-side only submission
+  const onSubmit = (values: FormValues) => {
     setIsLoading(true);
-    setErrorMessage(null);
-
-    try {
-      // Check if the vault code exists
-      const { data, error } = await supabase
-        .from("vault_codes")
-        .select("id, email, name")
-        .eq("vault_code", values.vaultCode)
-        .maybeSingle();
-
-      if (error) {
-        throw error;
-      }
-
-      if (!data) {
-        setErrorMessage("Invalid Vault Code. Please check and try again.");
-        setIsLoading(false);
-        return;
-      }
-
-      // Valid code - navigate to vault status
-      toast({
-        title: "Access Granted",
-        description: "You've been added to the draw pool.",
+    
+    // Simulate a brief delay for UX
+    setTimeout(() => {
+      // Navigate to vault status with "in_draw" state
+      navigate("/vault/status", { 
+        state: { 
+          email: state?.email || "demo@example.com", 
+          name: state?.name || "Vault Member",
+          vaultState: "in_draw"
+        } 
       });
-
-      navigate("/vault/status", { state: { email: data.email, name: data.name } });
-    } catch (error) {
-      console.error("Error validating vault code:", error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Something went wrong. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    }, 500);
   };
 
   return (
@@ -118,11 +97,9 @@ const SubmitVaultCode = () => {
                     <FormItem>
                       <FormControl>
                         <Input
-                          placeholder="Enter 6-digit code"
+                          placeholder="Enter your code"
                           {...field}
                           className="h-14 text-center text-xl tracking-[0.3em] font-display uppercase bg-muted/30 border-border focus:border-primary/50 placeholder:tracking-normal placeholder:text-sm"
-                          maxLength={6}
-                          inputMode="numeric"
                           autoComplete="off"
                         />
                       </FormControl>
@@ -130,19 +107,6 @@ const SubmitVaultCode = () => {
                     </FormItem>
                   )}
                 />
-
-                {/* Error message with glow styling */}
-                {errorMessage && (
-                  <div className="relative">
-                    <div
-                      className="absolute -inset-1 rounded-lg bg-destructive/20 blur-md"
-                      aria-hidden="true"
-                    />
-                    <p className="relative text-center text-sm text-destructive bg-destructive/10 rounded-lg py-3 px-4 border border-destructive/30">
-                      {errorMessage}
-                    </p>
-                  </div>
-                )}
 
                 <Button
                   type="submit"

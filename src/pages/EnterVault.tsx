@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { supabase } from "@/integrations/supabase/client";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
@@ -16,8 +15,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ArrowRight } from "lucide-react";
 
 const formSchema = z.object({
   name: z
@@ -36,8 +34,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 const EnterVault = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+  const [submittedData, setSubmittedData] = useState<FormValues | null>(null);
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -48,38 +45,11 @@ const EnterVault = () => {
     },
   });
 
-  const onSubmit = async (values: FormValues) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.from("vault_codes").insert({
-        name: values.name,
-        email: values.email,
-      });
-
-      if (error) {
-        if (error.code === "23505") {
-          // Unique constraint violation
-          toast({
-            title: "Already registered",
-            description: "This email is already in the Vault.",
-            variant: "default",
-          });
-          setIsSubmitted(true);
-        } else {
-          throw error;
-        }
-      } else {
-        setIsSubmitted(true);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  // Temporary client-side only submission
+  const onSubmit = (values: FormValues) => {
+    // Store the submitted data for navigation state
+    setSubmittedData(values);
+    setIsSubmitted(true);
   };
 
   return (
@@ -150,6 +120,21 @@ const EnterVault = () => {
                 <p className="text-sm text-muted-foreground">
                   Check your inbox for your exclusive access code.
                 </p>
+                
+                {/* Navigate to submit code */}
+                <Button
+                  size="lg"
+                  className="w-full mt-4"
+                  onClick={() => navigate("/vault/submit", { 
+                    state: { 
+                      email: submittedData?.email, 
+                      name: submittedData?.name 
+                    } 
+                  })}
+                >
+                  I Have a Code
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
               </div>
             ) : (
               /* Form State */
@@ -197,9 +182,8 @@ const EnterVault = () => {
                     type="submit"
                     size="lg"
                     className="w-full"
-                    disabled={isLoading}
                   >
-                    {isLoading ? "Processing..." : "GET MY VAULT CODE"}
+                    GET MY VAULT CODE
                   </Button>
                 </form>
               </Form>
