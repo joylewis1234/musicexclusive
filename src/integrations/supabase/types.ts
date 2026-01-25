@@ -47,6 +47,54 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_tracks: {
+        Row: {
+          artist_id: string
+          created_at: string
+          id: string
+          listened_at: string | null
+          note: string | null
+          recipient_id: string
+          sender_id: string
+          track_id: string
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string
+          id?: string
+          listened_at?: string | null
+          note?: string | null
+          recipient_id: string
+          sender_id: string
+          track_id: string
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string
+          id?: string
+          listened_at?: string | null
+          note?: string | null
+          recipient_id?: string
+          sender_id?: string
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_tracks_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "vault_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_tracks_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "vault_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vault_codes: {
         Row: {
           attempts_count: number | null
@@ -80,6 +128,33 @@ export type Database = {
           last_attempt_at?: string | null
           name?: string
           used_at?: string | null
+        }
+        Relationships: []
+      }
+      vault_members: {
+        Row: {
+          display_name: string
+          email: string
+          id: string
+          joined_at: string
+          updated_at: string
+          vault_access_active: boolean
+        }
+        Insert: {
+          display_name: string
+          email: string
+          id?: string
+          joined_at?: string
+          updated_at?: string
+          vault_access_active?: boolean
+        }
+        Update: {
+          display_name?: string
+          email?: string
+          id?: string
+          joined_at?: string
+          updated_at?: string
+          vault_access_active?: boolean
         }
         Relationships: []
       }
