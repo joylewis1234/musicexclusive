@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DiscoveryHeader } from "@/components/discovery/DiscoveryHeader";
 import { SearchFilterBar } from "@/components/discovery/SearchFilterBar";
@@ -6,10 +6,11 @@ import { HotNewArtists } from "@/components/discovery/HotNewArtists";
 import { DiscoveryArtistCard } from "@/components/discovery/DiscoveryArtistCard";
 import { ShareTrackModal } from "@/components/ShareTrackModal";
 import { useAudioPreview } from "@/hooks/useAudioPreview";
+import { useTracks, getArtistPreviewTrack } from "@/hooks/useTracks";
 import { discoveryArtists, Genre } from "@/data/discoveryArtists";
 import { Track } from "@/contexts/PlayerContext";
 
-// Mock track for sharing (since we're sharing artists, we create a placeholder track)
+// Create a Track object for sharing
 const createMockTrackForArtist = (artistId: string, artistName: string): Track => ({
   id: `${artistId}-featured`,
   title: "Featured Track",
@@ -30,7 +31,18 @@ const Discovery = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [selectedArtistForShare, setSelectedArtistForShare] = useState<Track | null>(null);
 
-  const { currentPreviewId, previewProgress, startPreview, stopPreview } = useAudioPreview();
+  const { 
+    currentPreviewId, 
+    previewProgress, 
+    isPlaying,
+    isLoading: isPreviewLoading,
+    error: previewError,
+    startPreview, 
+    stopPreview 
+  } = useAudioPreview();
+
+  // Fetch tracks from database
+  const { tracks } = useTracks();
 
   // Filter artists based on search and genre
   const filteredArtists = useMemo(() => {
@@ -46,11 +58,6 @@ const Discovery = () => {
       return matchesSearch && matchesGenre;
     });
   }, [searchQuery, selectedGenre]);
-
-  // Non-featured artists for the main grid
-  const gridArtists = useMemo(() => {
-    return filteredArtists.filter(a => !a.isFeatured || !featuredArtists.some(f => f.id === a.id));
-  }, [filteredArtists, featuredArtists]);
 
   // Filtered featured artists
   const displayedFeaturedArtists = useMemo(() => {
@@ -90,10 +97,13 @@ const Discovery = () => {
   };
 
   const handlePreview = (artistId: string) => {
-    if (currentPreviewId === artistId) {
+    if (currentPreviewId === artistId && isPlaying) {
       stopPreview();
     } else {
-      startPreview(artistId);
+      // Find the preview track for this artist
+      const previewTrack = getArtistPreviewTrack(tracks, artistId);
+      const previewUrl = previewTrack?.preview_audio_url || null;
+      startPreview(artistId, previewUrl);
     }
   };
 
@@ -102,6 +112,19 @@ const Discovery = () => {
     setSelectedArtistForShare(mockTrack);
     setIsShareModalOpen(true);
   };
+
+  // Check if an artist has a preview available
+  const hasPreviewAvailable = (artistId: string): boolean => {
+    const track = getArtistPreviewTrack(tracks, artistId);
+    return !!track?.preview_audio_url;
+  };
+
+  // Stop preview when navigating away
+  useEffect(() => {
+    return () => {
+      stopPreview();
+    };
+  }, [stopPreview]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">
@@ -149,8 +172,11 @@ const Discovery = () => {
               <DiscoveryArtistCard
                 key={artist.id}
                 artist={artist}
-                isPreviewPlaying={currentPreviewId === artist.id}
+                isPreviewPlaying={currentPreviewId === artist.id && isPlaying}
+                isPreviewLoading={currentPreviewId === artist.id && isPreviewLoading}
                 previewProgress={currentPreviewId === artist.id ? previewProgress : 0}
+                previewError={currentPreviewId === artist.id ? previewError : null}
+                hasPreviewAvailable={hasPreviewAvailable(artist.id)}
                 onPreview={() => handlePreview(artist.id)}
                 onStream={() => handleArtistClick(artist.id)}
                 onShare={() => handleShare(artist)}
