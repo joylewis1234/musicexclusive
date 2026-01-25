@@ -1,128 +1,187 @@
 import { Button } from "@/components/ui/button"
-import { GlowCard } from "@/components/ui/GlowCard"
-import { StatusBadge } from "@/components/ui/StatusBadge"
+import { Header } from "@/components/Header"
+import { ArtistCard } from "@/components/ArtistCard"
+import { StepCard } from "@/components/StepCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
-import { Play, Lock, Headphones, Star } from "lucide-react"
+import vaultPortal from "@/assets/vault-portal.png"
+import artist1 from "@/assets/artist-1.jpg"
+import artist2 from "@/assets/artist-2.jpg"
+import artist3 from "@/assets/artist-3.jpg"
+
+const artists = [
+  { name: "Maranda B.", genre: "Hip Hop", imageUrl: artist1 },
+  { name: "Rico Flames", genre: "Trap", imageUrl: artist2 },
+  { name: "DJ Kyra", genre: "Electronic", imageUrl: artist3 },
+]
+
+const steps = [
+  {
+    stepNumber: 1,
+    title: "ENTER THE VAULT",
+    description: "Enter your name & email to receive your vault code.",
+  },
+  {
+    stepNumber: 2,
+    title: "UNLOCK TRACKS",
+    description: "Use your code to access exclusive unreleased music.",
+  },
+  {
+    stepNumber: 3,
+    title: "BECOME A SUPERFAN",
+    description: "Upgrade for direct artist access and VIP perks.",
+  },
+]
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background main-content">
+    <div className="min-h-screen bg-background">
+      <Header />
+      
       {/* Hero Section */}
-      <section className="relative px-4 pt-16 pb-20 overflow-hidden">
-        {/* Background Glow Effect */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/20 rounded-full blur-[120px] -z-10" />
-        <div className="absolute top-20 right-0 w-[300px] h-[300px] bg-secondary/15 rounded-full blur-[100px] -z-10" />
-        
-        <div className="container max-w-lg md:max-w-4xl mx-auto text-center">
-          <StatusBadge variant="vault" size="lg" className="mb-6 animate-fade-up">
-            The Vault is Open
-          </StatusBadge>
-          
-          <h1 className="text-foreground mb-4 animate-fade-up [animation-delay:100ms] opacity-0">
-            <span className="gradient-text">Music</span>{" "}
-            <span className="text-glow">Exclusive</span>
+      <section className="relative px-4 pt-24 pb-8 overflow-hidden text-center">
+        <div className="container max-w-lg md:max-w-2xl mx-auto">
+          {/* Hero Text */}
+          <h1 className="text-foreground mb-4 animate-fade-up opacity-0">
+            <span className="text-foreground">Step Inside the</span>
+            <br />
+            <span className="text-foreground">Vault: </span>
+            <span className="text-muted-foreground">The Future</span>
+            <br />
+            <span className="text-muted-foreground">of Music is Here.</span>
           </h1>
           
-          <p className="text-muted-foreground text-lg md:text-xl mb-8 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-md mx-auto">
-            Unlock unreleased tracks, behind-the-scenes content, and direct artist access.
+          <p className="text-muted-foreground text-base md:text-lg mb-6 font-body animate-fade-up [animation-delay:100ms] opacity-0 max-w-sm mx-auto">
+            Unlock early access to exclusive music, before the world hears it.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-up [animation-delay:300ms] opacity-0">
-            <Button size="lg">
-              <Play className="w-5 h-5" />
-              Enter the Vault
+          {/* Primary CTA */}
+          <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:200ms] opacity-0">
+            <Button size="lg" className="w-full max-w-xs">
+              Try Your Luck – Enter the Vault
             </Button>
-            <Button variant="secondary" size="lg">
-              <Lock className="w-5 h-5" />
-              Become a Member
+            
+            <p className="text-muted-foreground text-sm font-body mt-2">
+              Want guaranteed access?
+              <br />
+              Skip the line and become a<br />
+              Superfan today
+            </p>
+            
+            <Button variant="secondary" size="default" className="w-full max-w-xs">
+              Unlock Superfan Access
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="px-4 py-16 bg-background-elevated">
+      {/* Vault Portal Section */}
+      <section className="relative px-4 py-8 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
+          {/* Vault Portal Image */}
+          <div className="relative mx-auto w-full max-w-md aspect-square animate-float">
+            {/* Glow effect behind */}
+            <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75" />
+            <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90" />
+            
+            <img
+              src={vaultPortal}
+              alt="Vault Portal"
+              className="relative w-full h-full object-contain vault-glow"
+            />
+          </div>
+          
+          {/* MUSIC EXCLUSIVE Text */}
+          <h2 className="text-center mt-4 text-3xl md:text-5xl font-display font-black tracking-[0.15em] gradient-text text-glow">
+            MUSIC EXCLUSIVE
+          </h2>
+        </div>
+      </section>
+
+      {/* Artists Section */}
+      <section className="py-12 overflow-hidden">
+        <div className="container max-w-lg md:max-w-4xl mx-auto px-4 mb-6">
+          {/* No header needed - just the carousel */}
+        </div>
+        
+        {/* Horizontal Scroll */}
+        <div className="relative">
+          <div className="flex gap-4 px-4 overflow-x-auto scrollbar-hide pb-4">
+            {/* Add padding spacer for centering on mobile */}
+            <div className="flex-shrink-0 w-2 md:w-[calc((100vw-768px)/2)]" />
+            
+            {artists.map((artist, index) => (
+              <ArtistCard
+                key={artist.name}
+                name={artist.name}
+                genre={artist.genre}
+                imageUrl={artist.imageUrl}
+              />
+            ))}
+            
+            {/* Duplicate for more cards */}
+            {artists.map((artist, index) => (
+              <ArtistCard
+                key={`${artist.name}-2`}
+                name={artist.name}
+                genre={artist.genre}
+                imageUrl={artist.imageUrl}
+              />
+            ))}
+            
+            <div className="flex-shrink-0 w-4" />
+          </div>
+        </div>
+      </section>
+
+      {/* How It Works Section */}
+      <section className="px-4 py-16 bg-background-elevated">
+        <div className="container max-w-lg md:max-w-2xl mx-auto">
           <SectionHeader
-            title="Exclusive Access"
-            subtitle="Experience music like never before with premium features designed for true fans."
-            align="center"
+            title="How It Works"
+            align="left"
             glowColor="gradient"
           />
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
-            <GlowCard glowColor="primary" className="animate-fade-up opacity-0 [animation-delay:100ms]">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-xl bg-primary/20 flex items-center justify-center mb-4">
-                  <Lock className="w-7 h-7 text-primary" />
-                </div>
-                <h3 className="text-lg mb-2 text-foreground">Vault Tracks</h3>
-                <p className="text-muted-foreground text-sm font-body">
-                  Access unreleased music and demos before anyone else.
-                </p>
-                <StatusBadge variant="exclusive" className="mt-4">
-                  Exclusive
-                </StatusBadge>
-              </div>
-            </GlowCard>
-
-            <GlowCard glowColor="secondary" className="animate-fade-up opacity-0 [animation-delay:200ms]">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-xl bg-secondary/20 flex items-center justify-center mb-4">
-                  <Headphones className="w-7 h-7 text-secondary" />
-                </div>
-                <h3 className="text-lg mb-2 text-foreground">Lossless Audio</h3>
-                <p className="text-muted-foreground text-sm font-body">
-                  Studio-quality sound with no compression artifacts.
-                </p>
-                <StatusBadge variant="member" className="mt-4">
-                  Vault Member
-                </StatusBadge>
-              </div>
-            </GlowCard>
-
-            <GlowCard glowColor="accent" className="animate-fade-up opacity-0 [animation-delay:300ms]">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-xl bg-accent/20 flex items-center justify-center mb-4">
-                  <Star className="w-7 h-7 text-accent" />
-                </div>
-                <h3 className="text-lg mb-2 text-foreground">Artist Access</h3>
-                <p className="text-muted-foreground text-sm font-body">
-                  Direct connection with your favorite artists.
-                </p>
-                <StatusBadge variant="superfan" className="mt-4">
-                  Superfan
-                </StatusBadge>
-              </div>
-            </GlowCard>
+          <div className="flex flex-col gap-4 mt-8">
+            {steps.map((step) => (
+              <StepCard
+                key={step.stepNumber}
+                stepNumber={step.stepNumber}
+                title={step.title}
+                description={step.description}
+              />
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="px-4 py-20">
-        <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
-          <SectionHeader
-            title="Ready to Join?"
-            subtitle="Get instant access to the vault and unlock exclusive content."
-            align="center"
-            glowColor="accent"
-          />
+      {/* Bottom CTA Section */}
+      <section className="px-4 py-16">
+        <div className="container max-w-lg md:max-w-md mx-auto text-center">
+          <h2 className="text-foreground mb-4">
+            Ready to Enter?
+          </h2>
+          <p className="text-muted-foreground text-sm font-body mb-8">
+            Get instant access to the vault and unlock exclusive content from top artists.
+          </p>
           
-          <div className="mt-10 flex flex-col gap-4">
-            <Button variant="primary" size="xl" className="w-full animate-glow-pulse">
-              Unlock Full Access
+          <div className="flex flex-col gap-3">
+            <Button size="lg" className="w-full animate-glow-pulse">
+              Enter the Vault
             </Button>
-            <Button variant="ghost" size="lg" className="w-full">
-              Browse Free Content
+            <Button variant="ghost" size="default" className="w-full">
+              Learn More
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Mini Player Space Indicator (visual placeholder) */}
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-card/80 backdrop-blur-xl border-t border-border/50 flex items-center justify-center z-50">
-        <p className="text-muted-foreground text-sm font-display uppercase tracking-wider">
+      {/* Spacer for mini player */}
+      <div className="h-24" />
+
+      {/* Mini Player Space Placeholder */}
+      <div className="fixed bottom-0 left-0 right-0 h-20 bg-card/95 backdrop-blur-xl border-t border-border/40 flex items-center justify-center z-50 shadow-card">
+        <p className="text-muted-foreground text-xs font-display uppercase tracking-widest">
           Mini Player Area
         </p>
       </div>
