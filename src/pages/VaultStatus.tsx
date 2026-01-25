@@ -36,7 +36,13 @@ const VaultStatus = () => {
     if (vaultState === "winner") {
       setHasAnimated(false);
       // Trigger animation after a brief delay to ensure state is set
-      const timer = setTimeout(() => setHasAnimated(true), 50);
+      const timer = setTimeout(() => {
+        setHasAnimated(true);
+        // Trigger light haptic vibration on mobile (20ms = light tap)
+        if (navigator.vibrate) {
+          navigator.vibrate(20);
+        }
+      }, 50);
       return () => clearTimeout(timer);
     }
   }, [vaultState, demoState]);
