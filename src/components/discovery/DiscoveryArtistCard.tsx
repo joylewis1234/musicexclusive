@@ -1,4 +1,4 @@
-import { Play, Pause, Share2, Headphones } from "lucide-react";
+import { Play, Pause, Share2, Headphones, Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DiscoveryArtist } from "@/data/discoveryArtists";
@@ -6,7 +6,10 @@ import { DiscoveryArtist } from "@/data/discoveryArtists";
 interface DiscoveryArtistCardProps {
   artist: DiscoveryArtist;
   isPreviewPlaying: boolean;
+  isPreviewLoading: boolean;
   previewProgress: number;
+  previewError: string | null;
+  hasPreviewAvailable: boolean;
   onPreview: () => void;
   onStream: () => void;
   onShare: () => void;
@@ -15,7 +18,10 @@ interface DiscoveryArtistCardProps {
 export const DiscoveryArtistCard = ({
   artist,
   isPreviewPlaying,
+  isPreviewLoading,
   previewProgress,
+  previewError,
+  hasPreviewAvailable,
   onPreview,
   onStream,
   onShare,
@@ -25,6 +31,8 @@ export const DiscoveryArtistCard = ({
     : artist.badge === "Trending" 
     ? "superfan" 
     : "vault";
+
+  const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
 
   return (
     <div 
@@ -36,7 +44,7 @@ export const DiscoveryArtistCard = ({
       }}
     >
       {/* Preview Progress Bar */}
-      {isPreviewPlaying && (
+      {(isPreviewPlaying || isPreviewLoading) && (
         <div className="absolute top-0 left-0 right-0 h-1 bg-muted/30 z-20">
           <div 
             className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-100"
@@ -77,16 +85,20 @@ export const DiscoveryArtistCard = ({
           <Share2 className="w-4 h-4" />
         </button>
 
-        {/* Playing Indicator */}
-        {isPreviewPlaying && (
+        {/* Playing/Loading Indicator */}
+        {(isPreviewPlaying || isPreviewLoading) && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div 
-              className="w-16 h-16 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center animate-pulse"
+              className={`w-16 h-16 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center ${isPreviewPlaying ? "animate-pulse" : ""}`}
               style={{
                 boxShadow: "0 0 40px hsl(var(--primary) / 0.5)",
               }}
             >
-              <Headphones className="w-8 h-8 text-primary" />
+              {isPreviewLoading ? (
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+              ) : (
+                <Headphones className="w-8 h-8 text-primary" />
+              )}
             </div>
           </div>
         )}
@@ -97,9 +109,17 @@ export const DiscoveryArtistCard = ({
         <h3 className="font-display text-lg font-bold text-foreground tracking-wide mb-1">
           {artist.name}
         </h3>
-        <p className="text-primary text-xs font-display uppercase tracking-wider mb-4">
+        <p className="text-primary text-xs font-display uppercase tracking-wider mb-3">
           {artist.genre}
         </p>
+
+        {/* Error Message */}
+        {showError && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 p-2 rounded-lg bg-muted/20 border border-border/50">
+            <AlertCircle className="w-4 h-4 text-accent flex-shrink-0" />
+            <span>{previewError}</span>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex gap-2">
@@ -107,12 +127,20 @@ export const DiscoveryArtistCard = ({
             variant="outline"
             size="sm"
             onClick={onPreview}
-            className="flex-1 gap-1.5 text-xs uppercase tracking-wider border-border/50 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300"
+            disabled={isPreviewLoading}
+            className={`flex-1 gap-1.5 text-xs uppercase tracking-wider border-border/50 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 ${
+              showError ? "opacity-50" : ""
+            }`}
             style={{
               boxShadow: isPreviewPlaying ? "0 0 15px hsl(var(--primary) / 0.3)" : undefined,
             }}
           >
-            {isPreviewPlaying ? (
+            {isPreviewLoading ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Loading
+              </>
+            ) : isPreviewPlaying ? (
               <>
                 <Pause className="w-3.5 h-3.5" />
                 Stop
@@ -128,7 +156,9 @@ export const DiscoveryArtistCard = ({
             variant="accent"
             size="sm"
             onClick={onStream}
-            className="flex-1 gap-1.5 text-xs uppercase tracking-wider"
+            className={`flex-1 gap-1.5 text-xs uppercase tracking-wider ${
+              showError ? "ring-2 ring-accent/50 animate-pulse" : ""
+            }`}
           >
             <Headphones className="w-3.5 h-3.5" />
             Stream
