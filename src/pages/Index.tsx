@@ -41,17 +41,14 @@ const Index = () => {
       <section className="relative px-4 pt-24 pb-8 overflow-hidden text-center">
         <div className="container max-w-lg md:max-w-2xl mx-auto">
           {/* Hero Text */}
-          <h1 className="text-foreground mb-4 animate-fade-up opacity-0">
-            <span className="text-foreground">Step Inside the</span>
+          <h1 className="text-foreground mb-6 animate-fade-up opacity-0">
+            STEP INSIDE THE VAULT:
             <br />
-            <span className="text-foreground">Vault: </span>
-            <span className="text-muted-foreground">The Future</span>
-            <br />
-            <span className="text-muted-foreground">of Music is Here.</span>
+            <span className="text-muted-foreground">THE FUTURE OF MUSIC IS HERE.</span>
           </h1>
           
-          <p className="text-muted-foreground text-base md:text-lg mb-6 font-body animate-fade-up [animation-delay:100ms] opacity-0 max-w-sm mx-auto">
-            Unlock early access to exclusive music, before the world hears it.
+          <p className="text-muted-foreground text-base md:text-lg mb-8 font-body animate-fade-up [animation-delay:100ms] opacity-0 max-w-sm mx-auto">
+            Unlock early access to exclusive music before it hits Spotify and Apple Music.
           </p>
           
           {/* Primary CTA */}
@@ -60,16 +57,13 @@ const Index = () => {
               Try Your Luck – Enter the Vault
             </Button>
             
-            <p className="text-muted-foreground text-sm font-body mt-2">
-              Want guaranteed access?
-              <br />
-              Skip the line and become a<br />
-              Superfan today
-            </p>
-            
-            <Button variant="secondary" size="default" className="w-full max-w-xs">
+            <Button variant="secondary" size="lg" className="w-full max-w-xs">
               Unlock Superfan Access
             </Button>
+            
+            <p className="text-muted-foreground text-sm font-body mt-4 max-w-xs">
+              Want guaranteed access? Skip the line and become a Superfan today.
+            </p>
           </div>
         </div>
       </section>
