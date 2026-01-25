@@ -3,6 +3,7 @@ import { Header } from "@/components/Header"
 import { ArtistCard } from "@/components/ArtistCard"
 import { StepCard } from "@/components/StepCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
+import { KeyRound, Send, RotateCcw } from "lucide-react"
 import vaultPortal from "@/assets/vault-portal.png"
 import artist1 from "@/assets/artist-1.jpg"
 import artist2 from "@/assets/artist-2.jpg"
@@ -18,17 +19,20 @@ const steps = [
   {
     stepNumber: 1,
     title: "ENTER THE VAULT",
-    description: "Enter your name & email to receive your vault code.",
+    description: "Enter your name and email to receive your Vault code.",
+    icon: KeyRound,
   },
   {
     stepNumber: 2,
-    title: "UNLOCK TRACKS",
-    description: "Use your code to access exclusive unreleased music.",
+    title: "SUBMIT",
+    description: "Enter your Vault code and attempt to unlock access.",
+    icon: Send,
   },
   {
     stepNumber: 3,
-    title: "BECOME A SUPERFAN",
-    description: "Upgrade for direct artist access and VIP perks.",
+    title: "TRY AGAIN TOMORROW",
+    description: "If you win, the Vault opens — revealing exclusive music and artist experiences. If you lose, you're automatically re-entered for the next draw.",
+    icon: RotateCcw,
   },
 ]
 
@@ -145,6 +149,7 @@ const Index = () => {
                 stepNumber={step.stepNumber}
                 title={step.title}
                 description={step.description}
+                icon={step.icon}
               />
             ))}
           </div>
