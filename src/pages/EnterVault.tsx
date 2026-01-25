@@ -15,7 +15,8 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { ChevronLeft, ArrowRight, Home } from "lucide-react";
+import { ChevronLeft, ArrowRight, Home, Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 
 const formSchema = z.object({
   name: z
@@ -32,9 +33,21 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+// Generate 8-character vault code (uppercase letters + numbers)
+const generateVaultCode = (): string => {
+  const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return code;
+};
+
 const EnterVault = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submittedData, setSubmittedData] = useState<FormValues | null>(null);
+  const [vaultCode, setVaultCode] = useState<string>("");
+  const [isCopied, setIsCopied] = useState(false);
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -45,11 +58,27 @@ const EnterVault = () => {
     },
   });
 
-  // Temporary client-side only submission
   const onSubmit = (values: FormValues) => {
-    // Store the submitted data for navigation state
+    const generatedCode = generateVaultCode();
+    setVaultCode(generatedCode);
     setSubmittedData(values);
     setIsSubmitted(true);
+    
+    // Store in sessionStorage for persistence across navigation
+    sessionStorage.setItem("vaultCode", generatedCode);
+    sessionStorage.setItem("vaultEmail", values.email);
+    sessionStorage.setItem("vaultName", values.name);
+  };
+
+  const handleCopyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(vaultCode);
+      setIsCopied(true);
+      toast.success("Code copied to clipboard!");
+      setTimeout(() => setIsCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy code");
+    }
   };
 
   return (
@@ -88,125 +117,146 @@ const EnterVault = () => {
             <div className="p-8 md:p-10">
               {/* Header */}
               <div className="flex justify-center mb-8">
-                <SectionHeader title="ENTER THE VAULT" framed align="center" />
+                <SectionHeader 
+                  title={isSubmitted ? "YOUR VAULT CODE" : "ENTER THE VAULT"} 
+                  framed 
+                  align="center" 
+                />
               </div>
 
-            {isSubmitted ? (
-              /* Confirmation State */
-              <div className="text-center space-y-6">
-                <div
-                  className="w-20 h-20 mx-auto rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 flex items-center justify-center"
-                  style={{
-                    boxShadow:
-                      "0 0 30px rgba(0, 212, 255, 0.4), 0 0 60px rgba(139, 92, 246, 0.3)",
-                  }}
-                >
-                  <svg
-                    className="w-10 h-10 text-white"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
+              {isSubmitted ? (
+                /* Success State with Vault Code */
+                <div className="text-center space-y-6">
+                  {/* Vault Code Display with Neon Frame */}
+                  <div className="relative">
+                    {/* Outer glow */}
+                    <div 
+                      className="absolute -inset-[3px] rounded-xl bg-gradient-to-r from-primary via-purple-500 to-pink-500 opacity-50 blur-lg"
+                      aria-hidden="true"
                     />
-                  </svg>
-                </div>
-                <p
-                  className="text-lg font-display uppercase tracking-wider text-foreground"
-                  style={{
-                    textShadow:
-                      "0 0 20px rgba(255, 255, 255, 0.4)",
-                  }}
-                >
-                  Your Vault code has been sent.
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  Check your inbox for your exclusive access code.
-                </p>
-                
-                {/* Navigate to submit code */}
-                <Button
-                  size="lg"
-                  className="w-full mt-4"
-                  onClick={() => navigate("/vault/submit", { 
-                    state: { 
-                      email: submittedData?.email, 
-                      name: submittedData?.name 
-                    } 
-                  })}
-                >
-                  I Have a Code
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </div>
-            ) : (
-              /* Form State */
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className="space-y-6"
-                >
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            placeholder="Your name"
-                            className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                    {/* Gradient border */}
+                    <div 
+                      className="absolute -inset-[2px] rounded-xl bg-gradient-to-r from-primary via-purple-500 to-pink-500"
+                      aria-hidden="true"
+                    />
+                    {/* Code container */}
+                    <div className="relative rounded-xl bg-background p-6">
+                      <p 
+                        className="text-3xl md:text-4xl font-display font-bold tracking-[0.3em] text-foreground select-all"
+                        style={{
+                          textShadow: "0 0 20px rgba(0, 212, 255, 0.5), 0 0 40px rgba(139, 92, 246, 0.3)",
+                        }}
+                      >
+                        {vaultCode}
+                      </p>
+                    </div>
+                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="email"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            type="email"
-                            placeholder="Your email"
-                            className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
+                  {/* Copy Button */}
                   <Button
-                    type="submit"
+                    variant="outline"
                     size="lg"
                     className="w-full"
+                    onClick={handleCopyCode}
                   >
-                    GET MY VAULT CODE
+                    {isCopied ? (
+                      <>
+                        <Check className="mr-2 h-5 w-5 text-green-500" />
+                        COPIED!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="mr-2 h-5 w-5" />
+                        COPY CODE
+                      </>
+                    )}
                   </Button>
-                </form>
-              </Form>
-            )}
 
-            {/* Helper text */}
-            {!isSubmitted && (
-              <p className="mt-6 text-center text-sm text-muted-foreground font-body">
-                Access is limited. Winners enter. Everyone else stays eligible.
-              </p>
-            )}
-          </div>
-        </GlowCard>
+                  {/* Submit Code Button */}
+                  <Button
+                    size="lg"
+                    className="w-full"
+                    onClick={() => navigate("/vault/submit", { 
+                      state: { 
+                        email: submittedData?.email, 
+                        name: submittedData?.name,
+                        vaultCode: vaultCode
+                      } 
+                    })}
+                  >
+                    SUBMIT CODE
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+
+                  {/* Email confirmation message */}
+                  <p className="text-sm text-muted-foreground font-body">
+                    We've also emailed this code to you.
+                  </p>
+                </div>
+              ) : (
+                /* Form State */
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit)}
+                    className="space-y-6"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              placeholder="Your name"
+                              className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input
+                              type="email"
+                              placeholder="Your email"
+                              className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full"
+                    >
+                      GET MY VAULT CODE
+                    </Button>
+                  </form>
+                </Form>
+              )}
+
+              {/* Helper text */}
+              {!isSubmitted && (
+                <p className="mt-6 text-center text-sm text-muted-foreground font-body">
+                  Access is limited. Winners enter. Everyone else stays eligible.
+                </p>
+              )}
+            </div>
+          </GlowCard>
+        </div>
       </div>
     </div>
-  </div>
   );
 };
 
