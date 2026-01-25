@@ -15,7 +15,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Unlock, ChevronLeft, Home, Loader2, RefreshCw } from "lucide-react";
+import { Unlock, ChevronLeft, Home, Loader2, RefreshCw, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -42,6 +42,7 @@ interface LocationState {
 const SubmitVaultCode = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
@@ -75,8 +76,33 @@ const SubmitVaultCode = () => {
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     setShowError(false);
+    setIsBlocked(false);
     
     try {
+      const now = new Date();
+      const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+      
+      // First check if this email is rate-limited
+      const { data: emailRecord } = await supabase
+        .from("vault_codes")
+        .select("id, attempts_count, last_attempt_at")
+        .eq("email", values.email)
+        .order("issued_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (emailRecord) {
+        const lastAttempt = emailRecord.last_attempt_at 
+          ? new Date(emailRecord.last_attempt_at) 
+          : null;
+        
+        // Check if blocked (5+ attempts within 10 minutes)
+        if (lastAttempt && lastAttempt > tenMinutesAgo && emailRecord.attempts_count >= 5) {
+          setIsBlocked(true);
+          return;
+        }
+      }
+      
       // Find matching vault code record
       const { data: vaultRecord, error: fetchError } = await supabase
         .from("vault_codes")
@@ -84,7 +110,7 @@ const SubmitVaultCode = () => {
         .eq("email", values.email)
         .eq("code", values.vaultCode)
         .is("used_at", null)
-        .gt("expires_at", new Date().toISOString())
+        .gt("expires_at", now.toISOString())
         .maybeSingle();
       
       if (fetchError) {
@@ -94,15 +120,44 @@ const SubmitVaultCode = () => {
       }
       
       if (!vaultRecord) {
-        // Invalid or expired code
+        // Invalid or expired code - increment attempts
+        if (emailRecord) {
+          const lastAttempt = emailRecord.last_attempt_at 
+            ? new Date(emailRecord.last_attempt_at) 
+            : null;
+          
+          // Reset count if last attempt was more than 10 minutes ago
+          const newAttemptsCount = lastAttempt && lastAttempt > tenMinutesAgo 
+            ? emailRecord.attempts_count + 1 
+            : 1;
+          
+          await supabase
+            .from("vault_codes")
+            .update({ 
+              attempts_count: newAttemptsCount,
+              last_attempt_at: now.toISOString()
+            })
+            .eq("id", emailRecord.id);
+          
+          // Check if now blocked
+          if (newAttemptsCount >= 5) {
+            setIsBlocked(true);
+            return;
+          }
+        }
+        
         setShowError(true);
         return;
       }
       
-      // Valid code - mark as used
+      // Valid code - mark as used and reset attempts
       const { error: updateError } = await supabase
         .from("vault_codes")
-        .update({ used_at: new Date().toISOString() })
+        .update({ 
+          used_at: now.toISOString(),
+          attempts_count: 0,
+          last_attempt_at: null
+        })
         .eq("id", vaultRecord.id);
       
       if (updateError) {
@@ -171,7 +226,30 @@ const SubmitVaultCode = () => {
                 />
               </div>
 
-              {showError ? (
+              {isBlocked ? (
+                /* Blocked State */
+                <div className="text-center space-y-6 w-full">
+                  <div className="flex justify-center mb-4">
+                    <div className="rounded-full bg-destructive/10 p-4">
+                      <Clock className="h-10 w-10 text-destructive" />
+                    </div>
+                  </div>
+                  <p className="text-foreground font-display text-lg">
+                    Too many attempts
+                  </p>
+                  <p className="text-muted-foreground font-body text-sm">
+                    Please try again in 10 minutes.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    onClick={() => navigate("/")}
+                  >
+                    RETURN HOME
+                  </Button>
+                </div>
+              ) : showError ? (
                 /* Error State */
                 <div className="text-center space-y-6 w-full">
                   <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20">
@@ -276,7 +354,7 @@ const SubmitVaultCode = () => {
                 </Form>
               )}
 
-              {!showError && (
+              {!showError && !isBlocked && (
                 <p className="mt-6 text-muted-foreground text-sm text-center font-body">
                   Codes expire 30 minutes after issue.
                 </p>
