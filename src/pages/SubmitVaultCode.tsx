@@ -16,7 +16,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { Unlock } from "lucide-react";
+import { Unlock, ChevronLeft } from "lucide-react";
 
 const formSchema = z.object({
   vaultCode: z
@@ -69,7 +69,7 @@ const SubmitVaultCode = () => {
         description: "You've been added to the draw pool.",
       });
 
-      navigate("/vault-status", { state: { email: data.email, name: data.name } });
+      navigate("/vault/status", { state: { email: data.email, name: data.name } });
     } catch (error) {
       console.error("Error validating vault code:", error);
       toast({
@@ -83,16 +83,28 @@ const SubmitVaultCode = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <GlowCard className="group">
-          <div className="p-6 md:p-8 flex flex-col items-center">
-            <SectionHeader
-              title="Submit Your Vault Code"
-              align="center"
-              framed
-              className="mb-8"
-            />
+    <div className="min-h-screen bg-background flex flex-col px-4 py-12">
+      {/* Back Link */}
+      <header className="w-full max-w-md mx-auto mb-4">
+        <button
+          onClick={() => navigate("/vault/enter")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span className="text-sm uppercase tracking-wider">Back</span>
+        </button>
+      </header>
+
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-full max-w-md">
+          <GlowCard className="group">
+            <div className="p-6 md:p-8 flex flex-col items-center">
+              <SectionHeader
+                title="Submit Your Vault Code"
+                align="center"
+                framed
+                className="mb-8"
+              />
 
             <Form {...form}>
               <form
@@ -151,6 +163,7 @@ const SubmitVaultCode = () => {
         </GlowCard>
       </div>
     </div>
+  </div>
   );
 };
 

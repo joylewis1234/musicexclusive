@@ -1,5 +1,6 @@
 import * as React from "react";
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,6 +17,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import { ChevronLeft } from "lucide-react";
 
 const formSchema = z.object({
   name: z
@@ -36,6 +38,7 @@ const EnterVault = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -80,7 +83,18 @@ const EnterVault = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-background flex flex-col px-4 py-12">
+      {/* Back Link */}
+      <header className="w-full max-w-md mx-auto mb-4">
+        <button
+          onClick={() => navigate("/")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronLeft className="w-5 h-5" />
+          <span className="text-sm uppercase tracking-wider">Back</span>
+        </button>
+      </header>
+
       {/* Background glow effect */}
       <div
         className="fixed inset-0 pointer-events-none"
@@ -91,13 +105,14 @@ const EnterVault = () => {
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-md">
-        <GlowCard glowColor="gradient" hover={false} className="group">
-          <div className="p-8 md:p-10">
-            {/* Header */}
-            <div className="flex justify-center mb-8">
-              <SectionHeader title="ENTER THE VAULT" framed align="center" />
-            </div>
+      <div className="flex-1 flex items-center justify-center">
+        <div className="relative w-full max-w-md">
+          <GlowCard glowColor="gradient" hover={false} className="group">
+            <div className="p-8 md:p-10">
+              {/* Header */}
+              <div className="flex justify-center mb-8">
+                <SectionHeader title="ENTER THE VAULT" framed align="center" />
+              </div>
 
             {isSubmitted ? (
               /* Confirmation State */
@@ -200,6 +215,7 @@ const EnterVault = () => {
         </GlowCard>
       </div>
     </div>
+  </div>
   );
 };
 
