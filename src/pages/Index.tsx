@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
 import { ArtistCard } from "@/components/ArtistCard"
+import { ArtistPreviewStrip } from "@/components/ArtistPreviewStrip"
 import { StepCard } from "@/components/StepCard"
 import { BenefitCard } from "@/components/BenefitCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
@@ -63,22 +64,35 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <Header />
       
+      {/* Artist Preview Strip - Social Proof */}
+      <section className="pt-20 pb-4 overflow-hidden">
+        <ArtistPreviewStrip artists={artists} />
+      </section>
+      
       {/* Hero Section */}
-      <section className="relative px-4 pt-24 pb-8 overflow-hidden text-center">
+      <section className="relative px-4 pt-4 pb-8 overflow-hidden text-center">
         <div className="container max-w-lg md:max-w-2xl mx-auto">
+          {/* Micro-Explainer */}
+          <p 
+            className="text-sm md:text-base font-display uppercase tracking-[0.2em] mb-6 animate-fade-up opacity-0 gradient-text"
+            style={{ textShadow: '0 0 30px hsl(var(--primary) / 0.4)' }}
+          >
+            Where artists release music before the world hears it.
+          </p>
+          
           {/* Hero Text */}
-          <h1 className="text-foreground mb-6 animate-fade-up opacity-0">
+          <h1 className="text-foreground mb-6 animate-fade-up [animation-delay:100ms] opacity-0">
             STEP INSIDE THE VAULT:
             <br />
             <span className="text-muted-foreground">THE FUTURE OF MUSIC IS HERE.</span>
           </h1>
           
-          <p className="text-muted-foreground text-base md:text-lg mb-8 font-body animate-fade-up [animation-delay:100ms] opacity-0 max-w-sm mx-auto">
+          <p className="text-muted-foreground text-base md:text-lg mb-8 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto">
             Unlock early access to exclusive music before it hits Spotify and Apple Music.
           </p>
           
           {/* Primary CTA */}
-          <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:200ms] opacity-0">
+          <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
             <Button 
               size="lg" 
               className="w-full max-w-xs"
