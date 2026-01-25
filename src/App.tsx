@@ -12,6 +12,7 @@ import VaultStatus from "./pages/VaultStatus";
 import Agreements from "./pages/Agreements";
 import ChooseAccess from "./pages/ChooseAccess";
 import FanDashboard from "./pages/FanDashboard";
+import FanProfile from "./pages/FanProfile";
 import Discovery from "./pages/Discovery";
 import MusicPlayer from "./pages/MusicPlayer";
 import NotFound from "./pages/NotFound";
@@ -37,6 +38,7 @@ const App = () => (
             {/* Fan routes with persistent mini-player */}
             <Route element={<FanLayout />}>
               <Route path="/fan/dashboard" element={<FanDashboard />} />
+              <Route path="/fan/profile" element={<FanProfile />} />
               <Route path="/discovery" element={<Discovery />} />
             </Route>
             
