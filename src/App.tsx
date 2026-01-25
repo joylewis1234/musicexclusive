@@ -21,11 +21,11 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path="/enter-vault" element={<EnterVault />} />
-          <Route path="/submit-vault-code" element={<SubmitVaultCode />} />
-          <Route path="/vault-status" element={<VaultStatus />} />
-          <Route path="/agreements" element={<Agreements />} />
-          <Route path="/choose-access" element={<ChooseAccess />} />
+          <Route path="/vault/enter" element={<EnterVault />} />
+          <Route path="/vault/submit" element={<SubmitVaultCode />} />
+          <Route path="/vault/status" element={<VaultStatus />} />
+          <Route path="/agreements/fan" element={<Agreements />} />
+          <Route path="/onboarding/listen" element={<ChooseAccess />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
 import { ArtistCard } from "@/components/ArtistCard"
@@ -56,6 +57,8 @@ const benefits = [
 ]
 
 const Index = () => {
+  const navigate = useNavigate()
+  
   return (
     <div className="min-h-screen bg-background">
       <Header />
@@ -76,11 +79,20 @@ const Index = () => {
           
           {/* Primary CTA */}
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:200ms] opacity-0">
-            <Button size="lg" className="w-full max-w-xs">
+            <Button 
+              size="lg" 
+              className="w-full max-w-xs"
+              onClick={() => navigate("/vault/enter")}
+            >
               Try Your Luck – Enter the Vault
             </Button>
             
-            <Button variant="secondary" size="lg" className="w-full max-w-xs">
+            <Button 
+              variant="secondary" 
+              size="lg" 
+              className="w-full max-w-xs"
+              onClick={() => navigate("/onboarding/listen")}
+            >
               Unlock Superfan Access
             </Button>
             
@@ -208,7 +220,11 @@ const Index = () => {
           </p>
           
           <div className="flex flex-col gap-3">
-            <Button size="lg" className="w-full animate-glow-pulse">
+            <Button 
+              size="lg" 
+              className="w-full animate-glow-pulse"
+              onClick={() => navigate("/vault/enter")}
+            >
               Enter the Vault
             </Button>
             <Button variant="ghost" size="default" className="w-full">

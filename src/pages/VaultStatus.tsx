@@ -1,7 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
-import { Lock, Unlock, Clock, Users, Sparkles } from "lucide-react";
+import { Lock, Unlock, Clock, Users, Sparkles, ChevronLeft } from "lucide-react";
 import vaultPortal from "@/assets/vault-portal.png";
 
 type VaultState = "in_draw" | "winner" | "not_selected";
@@ -166,20 +166,33 @@ const VaultStatus = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4 py-12">
-      <div className="w-full max-w-md">
-        <GlowCard
-          className="group"
-          glowColor={
-            vaultState === "winner"
-              ? "primary"
-              : vaultState === "not_selected"
-              ? "secondary"
-              : "gradient"
-          }
+    <div className="min-h-screen bg-background flex flex-col px-4 py-12">
+      {/* Back Link */}
+      <header className="w-full max-w-md mx-auto mb-4">
+        <button
+          onClick={() => navigate("/vault/submit")}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <div className="p-8 md:p-10">{renderContent()}</div>
-        </GlowCard>
+          <ChevronLeft className="w-5 h-5" />
+          <span className="text-sm uppercase tracking-wider">Back</span>
+        </button>
+      </header>
+
+      <div className="flex-1 flex items-center justify-center">
+        <div className="w-full max-w-md">
+          <GlowCard
+            className="group"
+            glowColor={
+              vaultState === "winner"
+                ? "primary"
+                : vaultState === "not_selected"
+                ? "secondary"
+                : "gradient"
+            }
+          >
+            <div className="p-8 md:p-10">{renderContent()}</div>
+          </GlowCard>
+        </div>
       </div>
     </div>
   );
