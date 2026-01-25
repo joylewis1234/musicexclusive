@@ -67,6 +67,7 @@ const Header = () => {
                 <span className="text-foreground">M</span>
                 <span className="text-primary">E</span>
                 <span className="text-foreground">.</span>
+                <span className="text-muted-foreground text-[8px] align-super ml-0.5">™</span>
               </span>
               <button 
                 onClick={() => setOpen(false)}
@@ -134,6 +135,7 @@ const Header = () => {
             <span className="text-foreground">M</span>
             <span className="text-primary">E</span>
             <span className="text-foreground">.</span>
+            <span className="text-muted-foreground text-[8px] align-super ml-0.5">™</span>
           </span>
         </button>
 
