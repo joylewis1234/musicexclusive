@@ -10,6 +10,7 @@ import VaultStatus from "./pages/VaultStatus";
 import Agreements from "./pages/Agreements";
 import ChooseAccess from "./pages/ChooseAccess";
 import FanDashboard from "./pages/FanDashboard";
+import Discovery from "./pages/Discovery";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/agreements/fan" element={<Agreements />} />
           <Route path="/onboarding/listen" element={<ChooseAccess />} />
           <Route path="/fan/dashboard" element={<FanDashboard />} />
+          <Route path="/discovery" element={<Discovery />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
