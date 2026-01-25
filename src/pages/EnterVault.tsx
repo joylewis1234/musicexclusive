@@ -268,63 +268,91 @@ const EnterVault = () => {
                 </div>
               ) : (
                 /* Form State */
-                <Form {...form}>
-                  <form
-                    onSubmit={form.handleSubmit(onSubmit)}
-                    className="space-y-6"
-                  >
-                    <FormField
-                      control={form.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input
-                              placeholder="Your name"
-                              className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="Your email"
-                              className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="w-full"
-                      disabled={isSubmitting}
+                <div className="space-y-8">
+                  {/* Explanatory Section */}
+                  <div className="text-center space-y-4">
+                    <h3 
+                      className="text-lg md:text-xl font-display uppercase tracking-widest text-foreground"
+                      style={{
+                        textShadow: '0 0 15px rgba(0, 212, 255, 0.4), 0 0 30px rgba(0, 212, 255, 0.2)'
+                      }}
                     >
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          CREATING...
-                        </>
-                      ) : (
-                        "GET MY VAULT CODE"
-                      )}
-                    </Button>
-                  </form>
-                </Form>
+                      How the Vault Works
+                    </h3>
+                    <div className="space-y-3 text-sm md:text-base text-muted-foreground font-body leading-relaxed">
+                      <p>
+                        Enter your email to generate a Vault Code.
+                        Your code gives you a chance to unlock access to Music Exclusive — a private space where fans hear music before it hits the world.
+                      </p>
+                      <p>
+                        If your code is selected, the Vault opens and you're in.
+                        If not, no worries — your code stays active and you're automatically entered into the next draw.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="w-16 h-px mx-auto bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+
+                  {/* Form */}
+                  <Form {...form}>
+                    <form
+                      onSubmit={form.handleSubmit(onSubmit)}
+                      className="space-y-6"
+                    >
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                placeholder="Your name"
+                                className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input
+                                type="email"
+                                placeholder="Your email"
+                                className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="w-full"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            CREATING...
+                          </>
+                        ) : (
+                          "GET MY VAULT CODE"
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </div>
               )}
 
               {/* Helper text */}
