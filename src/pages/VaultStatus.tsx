@@ -30,6 +30,8 @@ const VaultStatus = () => {
   const [hasAnimated, setHasAnimated] = useState(false);
   // Track if currently unlocking (for frame glow)
   const [isUnlocking, setIsUnlocking] = useState(false);
+  // Track screen flash state
+  const [showFlash, setShowFlash] = useState(false);
   
   // Use demo state if set, otherwise use location state, default to "winner"
   const vaultState: VaultState = demoState || state?.vaultState || "winner";
@@ -40,18 +42,29 @@ const VaultStatus = () => {
     if (vaultState === "winner") {
       setHasAnimated(false);
       setIsUnlocking(true);
+      setShowFlash(false);
+      
       // Trigger animation after a brief delay to ensure state is set
       const timer = setTimeout(() => {
         setHasAnimated(true);
+        setShowFlash(true);
         // Trigger haptic + sound feedback
         triggerUnlockFeedback();
       }, 50);
+      
+      // End flash after 400ms (synced with 808 decay)
+      const flashTimer = setTimeout(() => {
+        setShowFlash(false);
+      }, 450);
+      
       // End unlocking state after animations complete
       const unlockTimer = setTimeout(() => {
         setIsUnlocking(false);
       }, 600);
+      
       return () => {
         clearTimeout(timer);
+        clearTimeout(flashTimer);
         clearTimeout(unlockTimer);
       };
     }
@@ -180,7 +193,16 @@ const VaultStatus = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-4 py-12">
+    <div className="min-h-screen bg-background flex flex-col px-4 py-12 relative overflow-hidden">
+      {/* Screen flash overlay - synced with 808 bass hit */}
+      <div 
+        className={cn(
+          "fixed inset-0 pointer-events-none z-50 transition-opacity",
+          "bg-gradient-radial from-primary/20 via-primary/5 to-transparent",
+          showFlash ? "animate-screen-flash" : "opacity-0"
+        )}
+        aria-hidden="true"
+      />
       {/* Navigation Header */}
       <header className="w-full max-w-md mx-auto mb-4 flex items-center justify-between">
         <button
