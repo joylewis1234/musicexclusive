@@ -95,6 +95,45 @@ export type Database = {
           },
         ]
       }
+      tracks: {
+        Row: {
+          album: string | null
+          artist_id: string
+          artwork_url: string | null
+          created_at: string
+          duration: number
+          full_audio_url: string | null
+          id: string
+          preview_audio_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          album?: string | null
+          artist_id: string
+          artwork_url?: string | null
+          created_at?: string
+          duration?: number
+          full_audio_url?: string | null
+          id?: string
+          preview_audio_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          album?: string | null
+          artist_id?: string
+          artwork_url?: string | null
+          created_at?: string
+          duration?: number
+          full_audio_url?: string | null
+          id?: string
+          preview_audio_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       vault_codes: {
         Row: {
           attempts_count: number | null
