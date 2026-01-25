@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
 import { Unlock, Sparkles, ChevronLeft, Home } from "lucide-react";
 import vaultPortal from "@/assets/vault-portal.png";
+import { cn } from "@/lib/utils";
 
 type VaultState = "winner" | "not_selected";
 
@@ -23,10 +24,22 @@ const VaultStatus = () => {
 
   // Use local state for demo controls
   const [demoState, setDemoState] = useState<VaultState | null>(null);
+  // Track if unlock animation has played
+  const [hasAnimated, setHasAnimated] = useState(false);
   
   // Use demo state if set, otherwise use location state, default to "winner"
   const vaultState: VaultState = demoState || state?.vaultState || "winner";
   const userName = state?.name || "Vault Member";
+
+  // Reset animation state when switching to winner state
+  useEffect(() => {
+    if (vaultState === "winner") {
+      setHasAnimated(false);
+      // Trigger animation after a brief delay to ensure state is set
+      const timer = setTimeout(() => setHasAnimated(true), 50);
+      return () => clearTimeout(timer);
+    }
+  }, [vaultState, demoState]);
 
   const renderWinner = () => (
     <div className="flex flex-col items-center text-center animate-fade-in">
@@ -173,7 +186,10 @@ const VaultStatus = () => {
       <div className="flex-1 flex items-center justify-center">
         <div className="w-full max-w-md">
           <GlowCard
-            className="group"
+            className={cn(
+              "group",
+              vaultState === "winner" && !hasAnimated && "animate-vault-unlock"
+            )}
             glowColor={vaultState === "winner" ? "primary" : "secondary"}
           >
             <div className="p-8 md:p-10">{renderContent()}</div>

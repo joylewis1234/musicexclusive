@@ -208,6 +208,50 @@
       transform: scale(1.03);
     }
   }
+
+  /* Vault Unlock Animation - Premium shake + glow pulse */
+  .animate-vault-unlock {
+    animation: vault-shake 0.5s ease-out, vault-glow-pulse 0.8s ease-in-out 0.5s;
+  }
+
+  @keyframes vault-shake {
+    0% {
+      transform: translateX(0);
+    }
+    10% {
+      transform: translateX(-6px);
+    }
+    25% {
+      transform: translateX(5px);
+    }
+    40% {
+      transform: translateX(-4px);
+    }
+    55% {
+      transform: translateX(3px);
+    }
+    70% {
+      transform: translateX(-2px);
+    }
+    85% {
+      transform: translateX(1px);
+    }
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes vault-glow-pulse {
+    0% {
+      box-shadow: 0 0 20px hsl(175 85% 45% / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px hsl(175 85% 45% / 0.6), 0 0 80px hsl(265 90% 60% / 0.4), 0 0 120px hsl(210 100% 55% / 0.2);
+    }
+    100% {
+      box-shadow: 0 0 20px hsl(175 85% 45% / 0.3);
+    }
+  }
 }
 
 @layer utilities {
