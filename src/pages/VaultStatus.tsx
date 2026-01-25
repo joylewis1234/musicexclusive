@@ -2,10 +2,10 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
-import { Lock, Unlock, Clock, Users, Sparkles, ChevronLeft, RotateCcw, Home } from "lucide-react";
+import { Unlock, Sparkles, ChevronLeft, Home } from "lucide-react";
 import vaultPortal from "@/assets/vault-portal.png";
 
-type VaultState = "in_draw" | "winner" | "not_selected";
+type VaultState = "winner" | "not_selected";
 
 interface LocationState {
   email?: string;
@@ -24,58 +24,9 @@ const VaultStatus = () => {
   // Use local state for demo controls
   const [demoState, setDemoState] = useState<VaultState | null>(null);
   
-  // Use demo state if set, otherwise use location state
-  const vaultState: VaultState = demoState || state?.vaultState || "in_draw";
+  // Use demo state if set, otherwise use location state, default to "winner"
+  const vaultState: VaultState = demoState || state?.vaultState || "winner";
   const userName = state?.name || "Vault Member";
-
-  const renderInDraw = () => (
-    <div className="flex flex-col items-center text-center animate-fade-in">
-      {/* Vault Portal with breathing animation */}
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-primary/20 rounded-full blur-3xl vault-glow" />
-        <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
-          <img
-            src={vaultPortal}
-            alt="Vault Portal"
-            className="w-full h-full object-contain vault-glow"
-          />
-          <Clock className="absolute w-10 h-10 text-primary drop-shadow-[0_0_10px_hsl(var(--primary))]" />
-        </div>
-      </div>
-
-      {/* Header */}
-      <h1
-        className="font-display text-2xl md:text-3xl lg:text-4xl uppercase tracking-[0.15em] text-foreground mb-4"
-        style={{
-          textShadow:
-            "0 0 20px rgba(255, 255, 255, 0.3), 0 0 40px rgba(0, 255, 255, 0.2)",
-        }}
-      >
-        You're In The Draw
-      </h1>
-
-      {/* Subtext */}
-      <p className="text-muted-foreground font-body text-sm md:text-base max-w-xs mb-6">
-        Access is limited. Check back after the next draw.
-      </p>
-
-      {/* Countdown placeholder */}
-      <div className="relative">
-        <div
-          className="absolute -inset-1 rounded-lg bg-gradient-to-r from-primary/30 via-purple-500/30 to-pink-500/30 blur-sm"
-          aria-hidden="true"
-        />
-        <div className="relative bg-card/80 rounded-lg px-6 py-4 border border-border">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
-            Next Draw
-          </p>
-          <p className="font-display text-lg text-foreground tracking-wide">
-            Coming Soon
-          </p>
-        </div>
-      </div>
-    </div>
-  );
 
   const renderWinner = () => (
     <div className="flex flex-col items-center text-center animate-fade-in">
@@ -97,72 +48,94 @@ const VaultStatus = () => {
         {/* Sparkle effects */}
         <Sparkles className="absolute top-0 right-0 w-6 h-6 text-primary/80 animate-pulse" />
         <Sparkles className="absolute bottom-4 left-0 w-5 h-5 text-purple-400/80 animate-pulse delay-150" />
+        <Sparkles className="absolute top-8 left-2 w-4 h-4 text-pink-400/70 animate-pulse delay-300" />
       </div>
 
-      {/* Header with stronger glow */}
+      {/* Header with emoji and strong glow */}
       <h1
-        className="font-display text-2xl md:text-3xl lg:text-4xl uppercase tracking-[0.15em] text-foreground mb-4"
+        className="font-display text-xl md:text-2xl lg:text-3xl uppercase tracking-[0.12em] text-foreground mb-3"
         style={{
           textShadow:
             "0 0 30px rgba(0, 255, 255, 0.5), 0 0 60px rgba(0, 255, 255, 0.3), 0 0 90px rgba(128, 0, 255, 0.2)",
         }}
       >
-        Access Granted
+        🎉 Congratulations — You're In
       </h1>
 
-      {/* Subtext */}
-      <p className="text-muted-foreground font-body text-sm md:text-base max-w-xs mb-8">
-        Welcome inside Music Exclusive, {userName}.
+      {/* Subheadline */}
+      <p className="font-display text-lg md:text-xl text-primary uppercase tracking-wider mb-6">
+        The Vault is open.
       </p>
 
-      {/* CTA - Navigate to agreements */}
+      {/* Body Copy */}
+      <div className="text-muted-foreground font-body text-sm md:text-base max-w-sm mb-8 space-y-4">
+        <p>
+          You've unlocked access to Music Exclusive™ — a private space where fans hear music before it hits Spotify or Apple Music.
+        </p>
+        <p>
+          This is your chance to experience exclusive releases, support artists directly, and be part of something only a few get to access.
+        </p>
+      </div>
+
+      {/* CTA - Navigate to fan dashboard */}
       <Button size="lg" onClick={() => navigate("/agreements/fan", { state })}>
-        Continue
+        Enter The Vault
       </Button>
     </div>
   );
 
   const renderNotSelected = () => (
     <div className="flex flex-col items-center text-center animate-fade-in">
-      {/* Vault Portal - dimmed but hopeful */}
+      {/* Vault Portal - soft glow, hopeful */}
       <div className="relative mb-8">
-        <div className="absolute inset-0 bg-muted/20 rounded-full blur-2xl" />
-        <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center opacity-70">
+        <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl" />
+        <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
           <img
             src={vaultPortal}
             alt="Vault Portal"
-            className="w-full h-full object-contain grayscale-[30%]"
+            className="w-full h-full object-contain opacity-80 drop-shadow-[0_0_15px_hsl(var(--primary)/0.4)]"
           />
-          <Lock className="absolute w-10 h-10 text-muted-foreground" />
+          <Sparkles className="absolute w-8 h-8 text-primary/60" />
         </div>
       </div>
 
-      {/* Header - calm, not harsh */}
+      {/* Header - calm, not failure */}
       <h1
-        className="font-display text-2xl md:text-3xl lg:text-4xl uppercase tracking-[0.15em] text-foreground mb-4"
+        className="font-display text-xl md:text-2xl lg:text-3xl uppercase tracking-[0.12em] text-foreground mb-6"
         style={{
-          textShadow: "0 0 20px rgba(255, 255, 255, 0.2)",
+          textShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
         }}
       >
-        Not This Time
+        ✨ Not This Time — But You're Still In
       </h1>
 
-      {/* Subtext - encouraging */}
-      <p className="text-muted-foreground font-body text-sm md:text-base max-w-xs mb-6">
-        You're automatically re-entered for the next draw.
+      {/* Body Copy */}
+      <div className="text-muted-foreground font-body text-sm md:text-base max-w-sm mb-6 space-y-4">
+        <p>
+          No worries — access is limited, and you didn't get selected in this draw.
+        </p>
+        <p>
+          The good news? You're already entered into the next draw, and your Vault code remains eligible.
+        </p>
+      </div>
+
+      {/* Secondary Copy */}
+      <p className="text-muted-foreground/80 font-body text-xs md:text-sm max-w-xs mb-8 italic">
+        Keep an eye on your email — we'll let you know as soon as the Vault opens for you.
       </p>
 
       {/* CTAs */}
       <div className="flex flex-col gap-3 w-full max-w-xs">
-        <Button size="lg" onClick={() => navigate("/vault/submit", { state })}>
-          <RotateCcw className="mr-2 h-5 w-5" />
-          Try Again
+        <Button size="lg" onClick={() => navigate("/")}>
+          OK
         </Button>
         
-        <Button variant="secondary" size="lg" className="group">
-          <Users className="mr-2 h-5 w-5 group-hover:text-primary transition-colors" />
-          Invite a Friend
-        </Button>
+        <button
+          onClick={() => navigate("/vault/enter")}
+          className="text-sm text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
+        >
+          Request a new code
+        </button>
       </div>
     </div>
   );
@@ -172,10 +145,8 @@ const VaultStatus = () => {
       case "winner":
         return renderWinner();
       case "not_selected":
-        return renderNotSelected();
-      case "in_draw":
       default:
-        return renderInDraw();
+        return renderNotSelected();
     }
   };
 
@@ -203,13 +174,7 @@ const VaultStatus = () => {
         <div className="w-full max-w-md">
           <GlowCard
             className="group"
-            glowColor={
-              vaultState === "winner"
-                ? "primary"
-                : vaultState === "not_selected"
-                ? "secondary"
-                : "gradient"
-            }
+            glowColor={vaultState === "winner" ? "primary" : "secondary"}
           >
             <div className="p-8 md:p-10">{renderContent()}</div>
           </GlowCard>
@@ -221,24 +186,16 @@ const VaultStatus = () => {
         <div className="w-full max-w-md mx-auto mt-8">
           <div className="border border-dashed border-yellow-500/50 rounded-lg p-4 bg-yellow-500/5">
             <p className="text-xs text-yellow-500 uppercase tracking-wider mb-3 text-center font-medium">
-              Demo Controls (Dev Only)
+              Developer Test Controls (Dev Only)
             </p>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button
-                variant={vaultState === "in_draw" ? "default" : "outline"}
-                size="sm"
-                className="flex-1 text-xs"
-                onClick={() => setDemoState("in_draw")}
-              >
-                Preview: In Draw
-              </Button>
+            <div className="flex gap-2">
               <Button
                 variant={vaultState === "winner" ? "default" : "outline"}
                 size="sm"
                 className="flex-1 text-xs"
                 onClick={() => setDemoState("winner")}
               >
-                Preview: Winner
+                Force WIN
               </Button>
               <Button
                 variant={vaultState === "not_selected" ? "default" : "outline"}
@@ -246,7 +203,7 @@ const VaultStatus = () => {
                 className="flex-1 text-xs"
                 onClick={() => setDemoState("not_selected")}
               >
-                Preview: Not Selected
+                Force NOT SELECTED
               </Button>
             </div>
           </div>
