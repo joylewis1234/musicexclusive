@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      agreement_acceptances: {
+        Row: {
+          accepted_at: string
+          email: string
+          id: string
+          ip_address: string | null
+          name: string
+          privacy_version: string
+          terms_version: string
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          name: string
+          privacy_version: string
+          terms_version: string
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          name?: string
+          privacy_version?: string
+          terms_version?: string
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       vault_codes: {
         Row: {
           created_at: string
