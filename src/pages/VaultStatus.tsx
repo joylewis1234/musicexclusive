@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
-import { Lock, Unlock, Clock, Users, Sparkles, ChevronLeft } from "lucide-react";
+import { Lock, Unlock, Clock, Users, Sparkles, ChevronLeft, RotateCcw } from "lucide-react";
 import vaultPortal from "@/assets/vault-portal.png";
 
 type VaultState = "in_draw" | "winner" | "not_selected";
@@ -12,13 +13,19 @@ interface LocationState {
   vaultState?: VaultState;
 }
 
+// Check if we're in development mode
+const isDev = import.meta.env.DEV;
+
 const VaultStatus = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as LocationState | null;
 
-  // Default to "in_draw" state for demo - in production, this would come from DB
-  const vaultState: VaultState = state?.vaultState || "in_draw";
+  // Use local state for demo controls
+  const [demoState, setDemoState] = useState<VaultState | null>(null);
+  
+  // Use demo state if set, otherwise use location state
+  const vaultState: VaultState = demoState || state?.vaultState || "in_draw";
   const userName = state?.name || "Vault Member";
 
   const renderInDraw = () => (
@@ -108,8 +115,8 @@ const VaultStatus = () => {
         Welcome inside Music Exclusive, {userName}.
       </p>
 
-      {/* CTA */}
-      <Button size="lg" onClick={() => navigate("/")}>
+      {/* CTA - Navigate to agreements */}
+      <Button size="lg" onClick={() => navigate("/agreements/fan", { state })}>
         Continue
       </Button>
     </div>
@@ -141,15 +148,22 @@ const VaultStatus = () => {
       </h1>
 
       {/* Subtext - encouraging */}
-      <p className="text-muted-foreground font-body text-sm md:text-base max-w-xs mb-8">
+      <p className="text-muted-foreground font-body text-sm md:text-base max-w-xs mb-6">
         You're automatically re-entered for the next draw.
       </p>
 
-      {/* Optional CTA */}
-      <Button variant="secondary" size="lg" className="group">
-        <Users className="mr-2 h-5 w-5 group-hover:text-primary transition-colors" />
-        Invite a Friend to Boost Your Odds
-      </Button>
+      {/* CTAs */}
+      <div className="flex flex-col gap-3 w-full max-w-xs">
+        <Button size="lg" onClick={() => navigate("/vault/submit", { state })}>
+          <RotateCcw className="mr-2 h-5 w-5" />
+          Try Again
+        </Button>
+        
+        <Button variant="secondary" size="lg" className="group">
+          <Users className="mr-2 h-5 w-5 group-hover:text-primary transition-colors" />
+          Invite a Friend
+        </Button>
+      </div>
     </div>
   );
 
@@ -194,6 +208,43 @@ const VaultStatus = () => {
           </GlowCard>
         </div>
       </div>
+
+      {/* Demo Controls - Only visible in development */}
+      {isDev && (
+        <div className="w-full max-w-md mx-auto mt-8">
+          <div className="border border-dashed border-yellow-500/50 rounded-lg p-4 bg-yellow-500/5">
+            <p className="text-xs text-yellow-500 uppercase tracking-wider mb-3 text-center font-medium">
+              Demo Controls (Dev Only)
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button
+                variant={vaultState === "in_draw" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => setDemoState("in_draw")}
+              >
+                Preview: In Draw
+              </Button>
+              <Button
+                variant={vaultState === "winner" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => setDemoState("winner")}
+              >
+                Preview: Winner
+              </Button>
+              <Button
+                variant={vaultState === "not_selected" ? "default" : "outline"}
+                size="sm"
+                className="flex-1 text-xs"
+                onClick={() => setDemoState("not_selected")}
+              >
+                Preview: Not Selected
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
