@@ -9,25 +9,41 @@ interface GlowCardProps extends React.HTMLAttributes<HTMLDivElement> {
 const GlowCard = React.forwardRef<HTMLDivElement, GlowCardProps>(
   ({ className, glowColor = "gradient", hover = true, children, ...props }, ref) => {
     const glowStyles = {
-      primary: "before:bg-primary hover:shadow-cyan-md",
-      secondary: "before:bg-secondary hover:shadow-blue-glow",
-      accent: "before:bg-accent hover:shadow-neon-md",
-      gradient: "before:bg-gradient-frame hover:shadow-cyan-md",
+      primary: "from-primary via-purple-500 to-pink-500",
+      secondary: "from-secondary via-primary to-accent",
+      accent: "from-accent via-primary to-purple-500",
+      gradient: "from-primary via-purple-500 to-pink-500",
     }
 
     return (
       <div
         ref={ref}
         className={cn(
-          "relative rounded-xl bg-card overflow-hidden transition-all duration-300",
-          "before:absolute before:inset-0 before:rounded-xl before:p-[2px] before:opacity-50 before:transition-opacity before:duration-300",
-          "before:-z-10 before:[mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] before:[mask-composite:exclude]",
-          hover && "hover:before:opacity-90 hover:-translate-y-1",
-          glowStyles[glowColor],
+          "relative rounded-xl transition-all duration-300",
+          hover && "hover:-translate-y-1",
           className
         )}
         {...props}
       >
+        {/* Soft outer glow */}
+        <div 
+          className={cn(
+            "absolute -inset-[2px] rounded-xl bg-gradient-to-r opacity-40 blur-md transition-opacity duration-300",
+            glowStyles[glowColor],
+            hover && "group-hover:opacity-60"
+          )}
+          aria-hidden="true"
+        />
+        {/* Crisp gradient border */}
+        <div 
+          className={cn(
+            "absolute -inset-[1px] rounded-xl bg-gradient-to-r opacity-60 transition-opacity duration-300",
+            glowStyles[glowColor],
+            hover && "group-hover:opacity-90"
+          )}
+          aria-hidden="true"
+        />
+        {/* Inner content */}
         <div className="relative rounded-xl bg-card h-full">
           {children}
         </div>
