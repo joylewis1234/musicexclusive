@@ -9,12 +9,12 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        // Primary CTA - Cyan filled with glow
+        // Primary CTA - Gradient outline with dark fill
         default:
-          "bg-primary text-primary-foreground shadow-cyan-sm hover:shadow-cyan-md hover:bg-primary-glow active:scale-[0.98]",
-        // Primary filled (same as default)
+          "relative bg-card text-foreground active:scale-[0.98] before:absolute before:-inset-[1px] before:rounded-full before:bg-gradient-to-r before:from-primary before:via-purple-500 before:to-pink-500 before:-z-10 before:transition-opacity before:duration-300 hover:before:opacity-100 before:opacity-70 after:absolute after:-inset-[2px] after:rounded-full after:bg-gradient-to-r after:from-primary after:via-purple-500 after:to-pink-500 after:blur-sm after:-z-20 after:opacity-0 hover:after:opacity-50 after:transition-opacity after:duration-300",
+        // Primary filled
         primary:
-          "bg-primary text-primary-foreground shadow-cyan-sm hover:shadow-cyan-md hover:bg-primary-glow active:scale-[0.98]",
+          "relative bg-card text-foreground active:scale-[0.98] before:absolute before:-inset-[1px] before:rounded-full before:bg-gradient-to-r before:from-primary before:via-purple-500 before:to-pink-500 before:-z-10 before:transition-opacity before:duration-300 hover:before:opacity-100 before:opacity-70 after:absolute after:-inset-[2px] after:rounded-full after:bg-gradient-to-r after:from-primary after:via-purple-500 after:to-pink-500 after:blur-sm after:-z-20 after:opacity-0 hover:after:opacity-50 after:transition-opacity after:duration-300",
         // Secondary - Dark with border
         secondary:
           "bg-card text-foreground border border-border hover:border-muted-foreground hover:bg-card-hover active:scale-[0.98]",
@@ -30,9 +30,9 @@ const buttonVariants = cva(
         // Link style
         link:
           "text-primary underline-offset-4 hover:underline",
-        // Accent - purple glow
+        // Accent - Solid filled cyan
         accent:
-          "bg-accent text-accent-foreground shadow-neon-sm hover:shadow-neon-md active:scale-[0.98]",
+          "bg-primary text-primary-foreground shadow-cyan-sm hover:shadow-cyan-md hover:bg-primary-glow active:scale-[0.98]",
       },
       size: {
         default: "h-12 px-7 py-2",
