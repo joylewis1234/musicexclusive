@@ -15,8 +15,9 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { ChevronLeft, ArrowRight, Home, Copy, Check } from "lucide-react";
+import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const formSchema = z.object({
   name: z
@@ -33,11 +34,11 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Generate 8-character vault code (uppercase letters + numbers)
+// Generate 4-character vault code (uppercase letters + numbers)
 const generateVaultCode = (): string => {
   const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
   let code = "";
-  for (let i = 0; i < 8; i++) {
+  for (let i = 0; i < 4; i++) {
     code += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return code;
@@ -45,6 +46,7 @@ const generateVaultCode = (): string => {
 
 const EnterVault = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedData, setSubmittedData] = useState<FormValues | null>(null);
   const [vaultCode, setVaultCode] = useState<string>("");
   const [isCopied, setIsCopied] = useState(false);
@@ -58,16 +60,78 @@ const EnterVault = () => {
     },
   });
 
-  const onSubmit = (values: FormValues) => {
-    const generatedCode = generateVaultCode();
-    setVaultCode(generatedCode);
-    setSubmittedData(values);
-    setIsSubmitted(true);
+  const onSubmit = async (values: FormValues) => {
+    setIsSubmitting(true);
     
-    // Store in sessionStorage for persistence across navigation
-    sessionStorage.setItem("vaultCode", generatedCode);
-    sessionStorage.setItem("vaultEmail", values.email);
-    sessionStorage.setItem("vaultName", values.name);
+    try {
+      // Generate unique 4-character code
+      let generatedCode = generateVaultCode();
+      let attempts = 0;
+      const maxAttempts = 10;
+      
+      // Retry if code already exists (collision handling)
+      while (attempts < maxAttempts) {
+        const { data: existing } = await supabase
+          .from("vault_codes")
+          .select("code")
+          .eq("code", generatedCode)
+          .maybeSingle();
+        
+        if (!existing) break;
+        generatedCode = generateVaultCode();
+        attempts++;
+      }
+      
+      // Check if email already has a code
+      const { data: existingEmail } = await supabase
+        .from("vault_codes")
+        .select("code")
+        .eq("email", values.email)
+        .maybeSingle();
+      
+      if (existingEmail) {
+        // Email already has a code, show it
+        setVaultCode(existingEmail.code);
+        setSubmittedData(values);
+        setIsSubmitted(true);
+        sessionStorage.setItem("vaultCode", existingEmail.code);
+        sessionStorage.setItem("vaultEmail", values.email);
+        sessionStorage.setItem("vaultName", values.name);
+        toast.info("You already have a vault code!");
+        return;
+      }
+      
+      // Insert new vault code
+      const { error } = await supabase
+        .from("vault_codes")
+        .insert({
+          name: values.name,
+          email: values.email,
+          code: generatedCode,
+        });
+      
+      if (error) {
+        console.error("Error inserting vault code:", error);
+        toast.error("Something went wrong. Please try again.");
+        return;
+      }
+      
+      setVaultCode(generatedCode);
+      setSubmittedData(values);
+      setIsSubmitted(true);
+      
+      // Store in sessionStorage for persistence across navigation
+      sessionStorage.setItem("vaultCode", generatedCode);
+      sessionStorage.setItem("vaultEmail", values.email);
+      sessionStorage.setItem("vaultName", values.name);
+      
+      toast.success("Your vault code has been created!");
+    } catch (err) {
+      console.error("Unexpected error:", err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCopyCode = async () => {
@@ -239,8 +303,16 @@ const EnterVault = () => {
                       type="submit"
                       size="lg"
                       className="w-full"
+                      disabled={isSubmitting}
                     >
-                      GET MY VAULT CODE
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          CREATING...
+                        </>
+                      ) : (
+                        "GET MY VAULT CODE"
+                      )}
                     </Button>
                   </form>
                 </Form>
