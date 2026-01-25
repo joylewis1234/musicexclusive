@@ -8,11 +8,11 @@ const badgeVariants = cva(
     variants: {
       variant: {
         exclusive:
-          "bg-primary/20 text-primary border border-primary/40 shadow-neon-sm",
+          "bg-primary/20 text-primary border border-primary/40 shadow-cyan-sm",
         vault:
-          "bg-gradient-neon text-primary-foreground shadow-neon-sm",
+          "bg-gradient-cyan text-primary-foreground shadow-cyan-sm",
         superfan:
-          "bg-accent/20 text-accent border border-accent/40 shadow-cyan-glow",
+          "bg-accent/20 text-accent border border-accent/40 shadow-neon-sm",
         member:
           "bg-secondary/20 text-secondary border border-secondary/40 shadow-blue-glow",
         default:

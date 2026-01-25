@@ -5,39 +5,39 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-semibold font-display uppercase tracking-wide transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full text-sm font-semibold font-display uppercase tracking-wider transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        // Primary CTA - Glowing gradient outline
+        // Primary CTA - Cyan filled with glow
         default:
-          "relative bg-transparent border-0 text-foreground before:absolute before:inset-0 before:rounded-lg before:p-[2px] before:bg-gradient-neon before:-z-10 before:transition-opacity before:duration-300 after:absolute after:inset-[2px] after:rounded-[6px] after:bg-background after:-z-[5] hover:shadow-neon-md hover:before:opacity-100 active:scale-[0.98]",
-        // Primary filled with glow
+          "bg-primary text-primary-foreground shadow-cyan-sm hover:shadow-cyan-md hover:bg-primary-glow active:scale-[0.98]",
+        // Primary filled (same as default)
         primary:
-          "bg-primary text-primary-foreground shadow-neon-sm hover:shadow-neon-md hover:bg-primary-glow active:scale-[0.98]",
-        // Secondary - subtle glow effect
+          "bg-primary text-primary-foreground shadow-cyan-sm hover:shadow-cyan-md hover:bg-primary-glow active:scale-[0.98]",
+        // Secondary - Dark with border
         secondary:
-          "bg-muted text-foreground border border-border hover:border-primary/50 hover:shadow-neon-sm hover:bg-muted/80 active:scale-[0.98]",
-        // Accent - cyan glow
-        accent:
-          "bg-accent text-accent-foreground shadow-cyan-glow hover:shadow-[0_0_30px_hsl(180_100%_50%/0.5)] active:scale-[0.98]",
+          "bg-card text-foreground border border-border hover:border-muted-foreground hover:bg-card-hover active:scale-[0.98]",
+        // Outline - transparent with border
+        outline:
+          "bg-transparent text-foreground border border-border hover:border-primary/50 hover:bg-muted/20 active:scale-[0.98]",
         // Ghost
         ghost:
-          "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+          "text-muted-foreground hover:text-foreground hover:bg-muted/30",
         // Destructive
         destructive:
           "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        // Outline
-        outline:
-          "border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-muted/30",
         // Link style
         link:
           "text-primary underline-offset-4 hover:underline",
+        // Accent - purple glow
+        accent:
+          "bg-accent text-accent-foreground shadow-neon-sm hover:shadow-neon-md active:scale-[0.98]",
       },
       size: {
-        default: "h-11 px-6 py-2",
-        sm: "h-9 px-4 text-xs",
-        lg: "h-14 px-8 text-base",
+        default: "h-12 px-7 py-2",
+        sm: "h-10 px-5 text-xs",
+        lg: "h-14 px-9 text-base",
         xl: "h-16 px-10 text-lg",
         icon: "h-10 w-10",
       },
