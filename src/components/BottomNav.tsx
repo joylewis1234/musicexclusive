@@ -1,10 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Compass, User } from "lucide-react";
+import { LayoutDashboard, Compass, Inbox, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/fan/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/discovery", label: "Discover", icon: Compass },
+  { path: "/fan/inbox", label: "Inbox", icon: Inbox },
   { path: "/fan/profile", label: "Profile", icon: User },
 ];
 

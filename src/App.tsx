@@ -15,7 +15,9 @@ import AccessChoice from "./pages/AccessChoice";
 import Payment from "./pages/Payment";
 import FanDashboard from "./pages/FanDashboard";
 import FanProfile from "./pages/FanProfile";
+import FanInbox from "./pages/FanInbox";
 import Discovery from "./pages/Discovery";
+import ArtistProfile from "./pages/ArtistProfile";
 import MusicPlayer from "./pages/MusicPlayer";
 import NotFound from "./pages/NotFound";
 
@@ -43,7 +45,9 @@ const App = () => (
             <Route element={<FanLayout />}>
               <Route path="/fan/dashboard" element={<FanDashboard />} />
               <Route path="/fan/profile" element={<FanProfile />} />
+              <Route path="/fan/inbox" element={<FanInbox />} />
               <Route path="/discovery" element={<Discovery />} />
+              <Route path="/artist/:artistId" element={<ArtistProfile />} />
             </Route>
             
             {/* Full player (no mini-player) */}
