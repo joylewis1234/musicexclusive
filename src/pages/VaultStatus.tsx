@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Unlock, Sparkles, ChevronLeft, Home } from "lucide-react";
 import vaultPortal from "@/assets/vault-portal.png";
 import { cn } from "@/lib/utils";
+import { useUnlockFeedback } from "@/hooks/useUnlockFeedback";
 
 type VaultState = "winner" | "not_selected";
 
@@ -21,6 +22,7 @@ const VaultStatus = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const state = location.state as LocationState | null;
+  const { triggerUnlockFeedback } = useUnlockFeedback();
 
   // Use local state for demo controls
   const [demoState, setDemoState] = useState<VaultState | null>(null);
@@ -41,10 +43,8 @@ const VaultStatus = () => {
       // Trigger animation after a brief delay to ensure state is set
       const timer = setTimeout(() => {
         setHasAnimated(true);
-        // Trigger light haptic vibration on mobile (20ms = light tap)
-        if (navigator.vibrate) {
-          navigator.vibrate(20);
-        }
+        // Trigger haptic + sound feedback
+        triggerUnlockFeedback();
       }, 50);
       // End unlocking state after animations complete
       const unlockTimer = setTimeout(() => {
@@ -55,7 +55,7 @@ const VaultStatus = () => {
         clearTimeout(unlockTimer);
       };
     }
-  }, [vaultState, demoState]);
+  }, [vaultState, demoState, triggerUnlockFeedback]);
 
   const renderWinner = () => (
     <div className="flex flex-col items-center text-center animate-fade-in">
