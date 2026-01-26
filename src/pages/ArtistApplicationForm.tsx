@@ -172,18 +172,17 @@ const ArtistApplicationForm = () => {
               </h3>
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="artistName" className="text-sm">Artist Name *</Label>
+                  <Label htmlFor="artistName" className="text-sm">Artist Name</Label>
                   <Input
                     id="artistName"
                     value={artistName}
                     onChange={(e) => setArtistName(e.target.value)}
                     placeholder="Your artist/stage name"
                     className="h-12 text-base"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contactEmail" className="text-sm">Contact Email *</Label>
+                  <Label htmlFor="contactEmail" className="text-sm">Contact Email</Label>
                   <Input
                     id="contactEmail"
                     type="email"
@@ -191,7 +190,6 @@ const ArtistApplicationForm = () => {
                     onChange={(e) => setContactEmail(e.target.value)}
                     placeholder="artist@email.com"
                     className="h-12 text-base"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
@@ -234,7 +232,7 @@ const ArtistApplicationForm = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm">Years Releasing Music *</Label>
+                  <Label className="text-sm">Years Releasing Music</Label>
                   <Select value={yearsReleasing} onValueChange={setYearsReleasing}>
                     <SelectTrigger className="bg-card h-12 text-base">
                       <SelectValue placeholder="Select experience" />
@@ -249,14 +247,13 @@ const ArtistApplicationForm = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="genres" className="text-sm">Genre(s) *</Label>
+                  <Label htmlFor="genres" className="text-sm">Genre(s)</Label>
                   <Input
                     id="genres"
                     value={genres}
                     onChange={(e) => setGenres(e.target.value)}
                     placeholder="Hip-Hop, R&B, Pop..."
                     className="h-12 text-base"
-                    required
                   />
                 </div>
               </div>
@@ -269,7 +266,7 @@ const ArtistApplicationForm = () => {
               </h3>
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-sm">Primary Social Platform *</Label>
+                  <Label className="text-sm">Primary Social Platform</Label>
                   <Select value={primarySocialPlatform} onValueChange={setPrimarySocialPlatform}>
                     <SelectTrigger className="bg-card h-12 text-base">
                       <SelectValue placeholder="Select platform" />
@@ -284,18 +281,17 @@ const ArtistApplicationForm = () => {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="socialProfileUrl" className="text-sm">Social Profile URL *</Label>
+                  <Label htmlFor="socialProfileUrl" className="text-sm">Social Profile URL</Label>
                   <Input
                     id="socialProfileUrl"
                     value={socialProfileUrl}
                     onChange={(e) => setSocialProfileUrl(e.target.value)}
                     placeholder="https://instagram.com/yourhandle"
                     className="h-12 text-base"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="followerCount" className="text-sm">Approximate Follower Count *</Label>
+                  <Label htmlFor="followerCount" className="text-sm">Approximate Follower Count</Label>
                   <Input
                     id="followerCount"
                     type="number"
@@ -304,7 +300,6 @@ const ArtistApplicationForm = () => {
                     onChange={(e) => setFollowerCount(e.target.value)}
                     placeholder="10000"
                     className="h-12 text-base"
-                    required
                   />
                 </div>
               </div>
@@ -317,7 +312,7 @@ const ArtistApplicationForm = () => {
               </h3>
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label className="text-sm">Upload Song Sample (.WAV only) *</Label>
+                  <Label className="text-sm">Upload Song Sample (.WAV only)</Label>
                   <div className="mt-2">
                     <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
                       <div className="flex flex-col items-center justify-center py-4">
@@ -390,7 +385,7 @@ const ArtistApplicationForm = () => {
                     className="mt-0.5 h-5 w-5"
                   />
                   <Label htmlFor="ownsRights" className="text-base font-normal leading-relaxed cursor-pointer">
-                    I confirm I own or control all rights to the music I submit *
+                    I confirm I own or control all rights to the music I submit
                   </Label>
                 </div>
                 <div className="flex items-start gap-4">
@@ -401,7 +396,7 @@ const ArtistApplicationForm = () => {
                     className="mt-0.5 h-5 w-5"
                   />
                   <Label htmlFor="notReleasedPublicly" className="text-base font-normal leading-relaxed cursor-pointer">
-                    I confirm this music has not been released publicly yet OR I have the right to release it early *
+                    I confirm this music has not been released publicly yet OR I have the right to release it early
                   </Label>
                 </div>
                 <div className="flex items-start gap-4">
@@ -412,7 +407,7 @@ const ArtistApplicationForm = () => {
                     className="mt-0.5 h-5 w-5"
                   />
                   <Label htmlFor="agreesTerms" className="text-base font-normal leading-relaxed cursor-pointer">
-                    I agree to the Artist Terms of Service *
+                    I agree to the Artist Terms of Service
                   </Label>
                 </div>
               </div>
