@@ -47,6 +47,72 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_applications: {
+        Row: {
+          agrees_terms: boolean
+          apple_music_url: string | null
+          artist_name: string
+          contact_email: string
+          country_city: string | null
+          created_at: string
+          follower_count: number
+          genres: string
+          hook_preview_url: string | null
+          id: string
+          not_released_publicly: boolean
+          owns_rights: boolean
+          primary_social_platform: string
+          social_profile_url: string
+          song_sample_url: string
+          spotify_url: string | null
+          status: string
+          updated_at: string
+          years_releasing: string
+        }
+        Insert: {
+          agrees_terms?: boolean
+          apple_music_url?: string | null
+          artist_name: string
+          contact_email: string
+          country_city?: string | null
+          created_at?: string
+          follower_count: number
+          genres: string
+          hook_preview_url?: string | null
+          id?: string
+          not_released_publicly?: boolean
+          owns_rights?: boolean
+          primary_social_platform: string
+          social_profile_url: string
+          song_sample_url: string
+          spotify_url?: string | null
+          status?: string
+          updated_at?: string
+          years_releasing: string
+        }
+        Update: {
+          agrees_terms?: boolean
+          apple_music_url?: string | null
+          artist_name?: string
+          contact_email?: string
+          country_city?: string | null
+          created_at?: string
+          follower_count?: number
+          genres?: string
+          hook_preview_url?: string | null
+          id?: string
+          not_released_publicly?: boolean
+          owns_rights?: boolean
+          primary_social_platform?: string
+          social_profile_url?: string
+          song_sample_url?: string
+          spotify_url?: string | null
+          status?: string
+          updated_at?: string
+          years_releasing?: string
+        }
+        Relationships: []
+      }
       shared_tracks: {
         Row: {
           artist_id: string
