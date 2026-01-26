@@ -4,6 +4,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
+// TEMPORARY DEV BYPASS - Set to true to skip auth checks for testing
+const DEV_BYPASS = true;
+
 interface ArtistProtectedRouteProps {
   children: ReactNode;
 }
@@ -11,6 +14,11 @@ interface ArtistProtectedRouteProps {
 type ArtistStatus = "pending" | "approved_pending_setup" | "active" | "rejected" | null;
 
 export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) => {
+  // DEV BYPASS: Skip all auth checks for testing
+  if (DEV_BYPASS) {
+    return <>{children}</>;
+  }
+
   const { user, role, isLoading: authLoading } = useAuth();
   const location = useLocation();
   const [artistStatus, setArtistStatus] = useState<ArtistStatus>(null);
