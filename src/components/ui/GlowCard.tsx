@@ -29,20 +29,20 @@ const GlowCard = React.forwardRef<HTMLDivElement, GlowCardProps>(
         {/* Soft outer glow */}
         <div 
           className={cn(
-            "absolute -inset-[2px] rounded-xl bg-gradient-to-r blur-md transition-opacity duration-300",
+            "absolute -inset-[1px] rounded-xl bg-gradient-to-r blur-sm transition-opacity duration-300",
             glowStyles[glowColor],
             hover && "group-hover:opacity-60",
-            unlocking ? "animate-frame-glow-pulse" : "opacity-40"
+            unlocking ? "animate-frame-glow-pulse" : "opacity-30"
           )}
           aria-hidden="true"
         />
         {/* Crisp gradient border */}
         <div 
           className={cn(
-            "absolute -inset-[1px] rounded-xl bg-gradient-to-r transition-opacity duration-300",
+            "absolute inset-0 rounded-xl bg-gradient-to-r transition-opacity duration-300 p-[1.5px]",
             glowStyles[glowColor],
             hover && "group-hover:opacity-90",
-            unlocking ? "animate-frame-border-pulse" : "opacity-60"
+            unlocking ? "animate-frame-border-pulse" : "opacity-50"
           )}
           aria-hidden="true"
         />
