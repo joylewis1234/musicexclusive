@@ -23,7 +23,12 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
             key={`${artist.name}-${index}`}
             className="flex-shrink-0 px-2"
           >
-            <div className="group relative w-20 md:w-24 aspect-square rounded-xl overflow-hidden transition-all duration-300">
+            <div 
+              className="group relative w-20 md:w-24 aspect-square rounded-xl overflow-hidden transition-all duration-300"
+              style={{
+                boxShadow: "0 0 12px hsl(var(--primary) / 0.4), 0 0 24px hsl(var(--primary) / 0.2)",
+              }}
+            >
               {/* Artist Image */}
               <img
                 src={artist.imageUrl}
