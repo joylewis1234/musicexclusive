@@ -25,6 +25,7 @@ import MusicPlayer from "./pages/MusicPlayer";
 import ArtistApply from "./pages/ArtistApply";
 import ArtistApplicationForm from "./pages/ArtistApplicationForm";
 import ArtistApplicationStatus from "./pages/ArtistApplicationStatus";
+import ArtistProfilePage from "./pages/ArtistProfilePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/artist/apply" element={<ArtistApply />} />
             <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
             <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
+            <Route path="/artist/profile" element={<ArtistProfilePage />} />
             
             {/* Fan routes with persistent mini-player */}
             <Route element={<FanLayout />}>
