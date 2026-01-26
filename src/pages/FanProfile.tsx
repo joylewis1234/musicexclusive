@@ -76,7 +76,7 @@ const FanProfile = () => {
 
         {/* Wallet Balance Card */}
         <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
-          <WalletBalanceCard credits={125} />
+          <WalletBalanceCard />
         </section>
 
         {/* Top 5 Artists */}

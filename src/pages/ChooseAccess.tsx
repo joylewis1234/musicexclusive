@@ -16,11 +16,11 @@ const ChooseAccess = () => {
   const state = location.state as LocationState | null;
 
   const handleSuperfan = () => {
-    navigate("/subscribe", { state });
+    navigate("/subscribe", { state: { ...state, flow: "vault" } });
   };
 
   const handlePayAsYouGo = () => {
-    navigate("/load-credits", { state });
+    navigate("/load-credits", { state: { ...state, flow: "vault" } });
   };
 
   const superfanPerks = [

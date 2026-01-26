@@ -4,16 +4,20 @@ import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Home, Crown, Loader2, CheckCircle2, Zap, Star, Users, Gift, Sparkles } from "lucide-react";
+import { useCredits } from "@/hooks/useCredits";
 
 interface LocationState {
   email?: string;
   name?: string;
+  flow?: "superfan" | "vault";
 }
 
 const Subscribe = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
+  const flow = state?.flow || "superfan";
+  const { addCredits } = useCredits();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -30,6 +34,10 @@ const Subscribe = () => {
   const handleSubscribe = async () => {
     setIsProcessing(true);
     await new Promise((resolve) => setTimeout(resolve, 2000));
+    
+    // Add 25 credits for superfan subscription
+    await addCredits(25);
+    
     setIsProcessing(false);
     setIsComplete(true);
   };
@@ -86,7 +94,15 @@ const Subscribe = () => {
             </GlowCard>
 
             <Button
-              onClick={() => navigate("/agreements/fan", { state: { ...state, flow: "superfan" } })}
+              onClick={() => {
+                // Vault winners already signed agreements, go to dashboard
+                // Superfan direct signup goes to agreements first
+                if (flow === "vault") {
+                  navigate("/fan/dashboard", { replace: true });
+                } else {
+                  navigate("/agreements/fan", { state: { ...state, flow: "superfan" } });
+                }
+              }}
               className="w-full mt-8"
               variant="primary"
               size="lg"
