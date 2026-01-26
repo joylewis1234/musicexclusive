@@ -69,18 +69,18 @@ const ArtistApply = () => {
           </div>
 
           {/* Qualification Card */}
-          <GlowCard className="p-6 mb-6">
-            <h3 className="font-display text-sm uppercase tracking-widest text-foreground mb-6">
+          <GlowCard className="p-8 mb-8">
+            <h3 className="font-display text-base uppercase tracking-widest text-foreground mb-8">
               To Apply, Artists Must:
             </h3>
 
-            <ul className="space-y-4">
+            <ul className="space-y-6">
               {qualifications.map((qual, index) => (
-                <li key={index} className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <qual.icon className="w-5 h-5 text-primary" />
+                <li key={index} className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <qual.icon className="w-6 h-6 text-primary" />
                   </div>
-                  <p className="text-muted-foreground text-sm font-body leading-relaxed pt-2">
+                  <p className="text-muted-foreground text-base font-body leading-relaxed">
                     {qual.text}
                   </p>
                 </li>
@@ -89,8 +89,8 @@ const ArtistApply = () => {
           </GlowCard>
 
           {/* Disclaimer */}
-          <div className="bg-muted/20 border border-border/30 rounded-xl p-4 mb-8">
-            <p className="text-muted-foreground text-xs font-body text-center leading-relaxed">
+          <div className="bg-muted/20 border border-border/30 rounded-xl p-5 mb-8">
+            <p className="text-muted-foreground text-sm font-body text-center leading-relaxed">
               We review every application carefully to maintain quality and fairness for artists and fans.
             </p>
           </div>
