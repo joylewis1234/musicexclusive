@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { TrackManagementCard, Track } from "@/components/artist/TrackManagementCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { 
@@ -15,14 +15,6 @@ import {
   Music,
   Loader2
 } from "lucide-react";
-import { format } from "date-fns";
-
-interface Track {
-  id: string;
-  title: string;
-  created_at: string;
-  status?: "exclusive" | "scheduled" | "ended";
-}
 
 const ArtistDashboard = () => {
   const navigate = useNavigate();
@@ -31,75 +23,62 @@ const ArtistDashboard = () => {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchArtistData = async () => {
-      if (!user?.email) return;
+  const fetchArtistData = useCallback(async () => {
+    if (!user?.email) return;
 
-      try {
-        // Fetch artist application for name
-        const { data: application } = await supabase
-          .from("artist_applications")
-          .select("artist_name")
-          .eq("contact_email", user.email)
-          .maybeSingle();
+    try {
+      // Fetch artist application for name
+      const { data: application } = await supabase
+        .from("artist_applications")
+        .select("artist_name")
+        .eq("contact_email", user.email)
+        .maybeSingle();
 
-        if (application) {
-          setArtistName(application.artist_name);
-        }
-
-        // Fetch tracks - using email as artist_id for now
-        const { data: trackData } = await supabase
-          .from("tracks")
-          .select("id, title, created_at")
-          .eq("artist_id", user.email)
-          .order("created_at", { ascending: false });
-
-        if (trackData) {
-          // Add status based on upload date (mock logic for now)
-          const tracksWithStatus = trackData.map((track) => ({
-            ...track,
-            status: "exclusive" as const, // Default to exclusive
-          }));
-          setTracks(tracksWithStatus);
-        }
-      } catch (error) {
-        console.error("Error fetching artist data:", error);
-      } finally {
-        setIsLoading(false);
+      if (application) {
+        setArtistName(application.artist_name);
       }
-    };
 
-    fetchArtistData();
+      // Fetch tracks - using email as artist_id
+      const { data: trackData } = await supabase
+        .from("tracks")
+        .select("id, title, genre, created_at, preview_audio_url, full_audio_url")
+        .eq("artist_id", user.email)
+        .order("created_at", { ascending: false });
+
+      if (trackData) {
+        // Determine status based on dates and disabled flag
+        const tracksWithStatus: Track[] = trackData.map((track) => {
+          const isDisabled = track.genre?.startsWith("[DISABLED]");
+          const genre = isDisabled ? track.genre?.replace("[DISABLED] ", "") : track.genre;
+          
+          return {
+            ...track,
+            genre,
+            status: isDisabled ? "disabled" : "exclusive",
+            exclusive_weeks: 3, // Default 3 weeks
+          };
+        });
+        setTracks(tracksWithStatus);
+      }
+    } catch (error) {
+      console.error("Error fetching artist data:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }, [user]);
+
+  useEffect(() => {
+    fetchArtistData();
+  }, [fetchArtistData]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "exclusive":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30">
-            Exclusive
-          </span>
-        );
-      case "scheduled":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-500 border border-amber-500/30">
-            Scheduled
-          </span>
-        );
-      case "ended":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border/50">
-            Exclusive Period Ended
-          </span>
-        );
-      default:
-        return null;
-    }
+  const handleTrackUpdated = () => {
+    // Refresh tracks list
+    fetchArtistData();
   };
 
   return (
@@ -205,24 +184,11 @@ const ArtistDashboard = () => {
           ) : (
             <div className="space-y-3">
               {tracks.map((track) => (
-                <GlowCard key={track.id} className="p-4">
-                  <div className="flex items-center justify-between gap-4">
-                    {/* Track Info */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-display text-base font-semibold text-foreground truncate">
-                        {track.title}
-                      </h3>
-                      <p className="text-muted-foreground text-xs mt-1">
-                        Uploaded {format(new Date(track.created_at), "MMM d, yyyy")}
-                      </p>
-                    </div>
-                    
-                    {/* Status Badge */}
-                    <div className="flex-shrink-0">
-                      {getStatusBadge(track.status || "exclusive")}
-                    </div>
-                  </div>
-                </GlowCard>
+                <TrackManagementCard 
+                  key={track.id} 
+                  track={track} 
+                  onTrackUpdated={handleTrackUpdated}
+                />
               ))}
             </div>
           )}
