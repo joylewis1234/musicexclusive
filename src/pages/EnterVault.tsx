@@ -43,6 +43,8 @@ const generateVaultCode = (): string => {
 const EnterVault = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCheckingExisting, setIsCheckingExisting] = useState(false);
+  const [hasExistingCode, setHasExistingCode] = useState(false);
   const [submittedData, setSubmittedData] = useState<FormValues | null>(null);
   const [vaultCode, setVaultCode] = useState<string>("");
   const [isCopied, setIsCopied] = useState(false);
@@ -55,6 +57,38 @@ const EnterVault = () => {
       email: "",
     },
   });
+
+  // Check if email already has a valid code
+  const checkExistingCode = async (email: string) => {
+    if (!email || !z.string().email().safeParse(email).success) return;
+    
+    setIsCheckingExisting(true);
+    try {
+      const { data: existingCode } = await supabase
+        .from("vault_codes")
+        .select("code, name, expires_at, used_at")
+        .eq("email", email)
+        .is("used_at", null)
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+      
+      if (existingCode) {
+        setHasExistingCode(true);
+        setVaultCode(existingCode.code);
+        setSubmittedData({ name: existingCode.name, email });
+        setIsSubmitted(true);
+        sessionStorage.setItem("vaultCode", existingCode.code);
+        sessionStorage.setItem("vaultEmail", email);
+        sessionStorage.setItem("vaultName", existingCode.name);
+      } else {
+        setHasExistingCode(false);
+      }
+    } catch (err) {
+      console.error("Error checking existing code:", err);
+    } finally {
+      setIsCheckingExisting(false);
+    }
+  };
 
   const onSubmit = async (values: FormValues) => {
     setIsSubmitting(true);
@@ -262,9 +296,16 @@ const EnterVault = () => {
                   </Button>
 
                   {/* Helper text */}
-                  <p className="text-sm text-muted-foreground font-body">
-                    We also emailed your code (if enabled). Your code expires in 30 minutes.
-                  </p>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground font-body">
+                      Your code expires in 30 minutes.
+                    </p>
+                    {hasExistingCode && (
+                      <p className="text-sm text-primary font-body font-medium">
+                        You already have a code — use this one to maximize your chances!
+                      </p>
+                    )}
+                  </div>
                 </div>
               ) : (
                 /* Form State */
@@ -287,6 +328,9 @@ const EnterVault = () => {
                       <p>
                         If your code is selected, the Vault opens and you're in.
                         If not, no worries — your code stays active and you're automatically entered into the next draw.
+                      </p>
+                      <p className="text-primary/90 font-medium">
+                        ⚠️ You only need ONE code. Requesting multiple codes will NOT increase your chances — it may actually decrease them.
                       </p>
                     </div>
                   </div>
@@ -328,6 +372,10 @@ const EnterVault = () => {
                                 placeholder="Your email"
                                 className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base"
                                 {...field}
+                                onBlur={(e) => {
+                                  field.onBlur();
+                                  checkExistingCode(e.target.value);
+                                }}
                               />
                             </FormControl>
                             <FormMessage />
@@ -339,12 +387,17 @@ const EnterVault = () => {
                         type="submit"
                         size="lg"
                         className="w-full"
-                        disabled={isSubmitting}
+                        disabled={isSubmitting || isCheckingExisting}
                       >
                         {isSubmitting ? (
                           <>
                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                             CREATING...
+                          </>
+                        ) : isCheckingExisting ? (
+                          <>
+                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                            CHECKING...
                           </>
                         ) : (
                           "GET MY VAULT CODE"
