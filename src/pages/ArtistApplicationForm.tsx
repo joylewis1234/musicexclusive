@@ -174,7 +174,7 @@ const ArtistApplicationForm = () => {
 
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Section 1: Artist Info */}
-            <GlowCard className="p-6 md:p-8">
+            <GlowCard className="p-4 md:p-5">
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Artist Info
               </h3>
@@ -216,7 +216,7 @@ const ArtistApplicationForm = () => {
             </GlowCard>
 
             {/* Section 2: Music & Career */}
-            <GlowCard className="p-6 md:p-8">
+            <GlowCard className="p-4 md:p-5">
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Music & Career
               </h3>
@@ -271,7 +271,7 @@ const ArtistApplicationForm = () => {
             </GlowCard>
 
             {/* Section 3: Fanbase */}
-            <GlowCard className="p-6 md:p-8">
+            <GlowCard className="p-4 md:p-5">
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Fanbase
               </h3>
@@ -319,7 +319,7 @@ const ArtistApplicationForm = () => {
             </GlowCard>
 
             {/* Section 4: Music Quality */}
-            <GlowCard className="p-6 md:p-8">
+            <GlowCard className="p-4 md:p-5">
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Music Quality
               </h3>
@@ -385,7 +385,7 @@ const ArtistApplicationForm = () => {
             </GlowCard>
 
             {/* Section 5: Rights Confirmation */}
-            <GlowCard className="p-6 md:p-8">
+            <GlowCard className="p-4 md:p-5">
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Rights Confirmation
               </h3>
