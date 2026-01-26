@@ -185,12 +185,10 @@ const Index = () => {
           {/* No header needed - just the carousel */}
         </div>
         
-        {/* Horizontal Scroll */}
-        <div className="relative">
-          <div className="flex gap-4 px-4 overflow-x-auto scrollbar-hide pb-4">
-            {/* Add padding spacer for centering on mobile */}
-            <div className="flex-shrink-0 w-2 md:w-[calc((100vw-768px)/2)]" />
-            
+        {/* Continuous Scrolling Carousel */}
+        <div className="relative overflow-hidden">
+          <div className="flex gap-6 animate-scroll-slow">
+            {/* First set */}
             {artists.map((artist) => (
               <ArtistCard
                 key={artist.name}
@@ -199,8 +197,15 @@ const Index = () => {
                 imageUrl={artist.imageUrl}
               />
             ))}
-            
-            <div className="flex-shrink-0 w-4" />
+            {/* Duplicate set for seamless loop */}
+            {artists.map((artist) => (
+              <ArtistCard
+                key={`${artist.name}-dup`}
+                name={artist.name}
+                genre={artist.genre}
+                imageUrl={artist.imageUrl}
+              />
+            ))}
           </div>
         </div>
       </section>
