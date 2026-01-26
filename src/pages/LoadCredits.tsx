@@ -84,6 +84,16 @@ const LoadCredits = () => {
     }
   };
 
+  // After payment completes, auto-redirect to dashboard after a brief delay
+  useEffect(() => {
+    if (isComplete) {
+      const timer = setTimeout(() => {
+        navigate("/fan/dashboard", { replace: true });
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isComplete, navigate]);
+
   if (isComplete) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -131,14 +141,9 @@ const LoadCredits = () => {
               </div>
             </GlowCard>
 
-            <Button
-              onClick={() => navigate("/fan/dashboard", { replace: true })}
-              className="w-full mt-8"
-              variant="primary"
-              size="lg"
-            >
-              Enter Music Exclusive
-            </Button>
+            <p className="text-muted-foreground/60 text-sm mt-6">
+              Redirecting to your dashboard...
+            </p>
           </div>
         </main>
       </div>
