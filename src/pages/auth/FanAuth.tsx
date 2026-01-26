@@ -22,8 +22,10 @@ const FanAuth = () => {
   const state = location.state as LocationState | null;
   const flow = state?.flow || "default";
   const isSuperfanFlow = flow === "superfan";
+  const isVaultFlow = flow === "vault";
   
-  const [isSignUp, setIsSignUp] = useState(isSuperfanFlow); // Default to signup for superfan flow
+  // Default to signup for superfan and vault flows
+  const [isSignUp, setIsSignUp] = useState(isSuperfanFlow || isVaultFlow);
   const [email, setEmail] = useState(state?.email || "");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState(state?.name || "");
@@ -35,7 +37,11 @@ const FanAuth = () => {
       // Superfan flow: go to subscribe page
       return "/subscribe";
     }
-    // Default or vault flow: go to dashboard
+    if (isVaultFlow) {
+      // Vault flow: go to agreements first, then payment options
+      return "/agreements/fan";
+    }
+    // Default flow: go to dashboard
     return state?.from?.pathname || "/fan/dashboard";
   };
 
@@ -94,19 +100,25 @@ const FanAuth = () => {
           </div>
 
           <h1 className="font-display text-2xl font-bold text-foreground text-center mb-2">
-            {isSuperfanFlow 
-              ? (isSignUp ? "Become a Superfan" : "Welcome Back, Superfan")
-              : (isSignUp ? "Join the Vault" : "Welcome Back")}
+            {isVaultFlow
+              ? (isSignUp ? "Create Your Account" : "Welcome Back")
+              : isSuperfanFlow 
+                ? (isSignUp ? "Become a Superfan" : "Welcome Back, Superfan")
+                : (isSignUp ? "Join the Vault" : "Welcome Back")}
           </h1>
           
           <p className="text-muted-foreground text-center mb-6">
-            {isSuperfanFlow
+            {isVaultFlow
               ? (isSignUp 
-                  ? "Create your account to unlock guaranteed access"
-                  : "Sign in to continue to your Superfan subscription")
-              : (isSignUp 
-                  ? "Create your fan account to access exclusive music"
-                  : "Sign in to continue discovering exclusive tracks")}
+                  ? "You've won access! Create your account to continue"
+                  : "Sign in to access your Vault membership")
+              : isSuperfanFlow
+                ? (isSignUp 
+                    ? "Create your account to unlock guaranteed access"
+                    : "Sign in to continue to your Superfan subscription")
+                : (isSignUp 
+                    ? "Create your fan account to access exclusive music"
+                    : "Sign in to continue discovering exclusive tracks")}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
