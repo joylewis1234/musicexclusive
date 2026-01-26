@@ -187,7 +187,7 @@ const Index = () => {
         
         {/* Continuous Scrolling Carousel */}
         <div className="relative overflow-hidden">
-          <div className="flex gap-6 animate-scroll-slow">
+          <div className="flex gap-6 animate-scroll-cards hover:[animation-play-state:paused]">
             {/* First set */}
             {artists.map((artist) => (
               <ArtistCard
