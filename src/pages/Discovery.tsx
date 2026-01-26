@@ -2,34 +2,31 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { DiscoveryHeader } from "@/components/discovery/DiscoveryHeader";
 import { SearchFilterBar } from "@/components/discovery/SearchFilterBar";
-import { HotNewArtists } from "@/components/discovery/HotNewArtists";
-import { DiscoveryArtistCard } from "@/components/discovery/DiscoveryArtistCard";
+import { HotNewTracks } from "@/components/discovery/HotNewTracks";
+import { DiscoveryTrackCard } from "@/components/discovery/DiscoveryTrackCard";
 import { ShareTrackModal } from "@/components/ShareTrackModal";
 import { useAudioPreview } from "@/hooks/useAudioPreview";
-import { useTracks, getArtistPreviewTrack } from "@/hooks/useTracks";
-import { discoveryArtists, Genre } from "@/data/discoveryArtists";
+import { useTracks, DbTrack, getArtistName } from "@/hooks/useTracks";
+import { Genre } from "@/data/discoveryArtists";
 import { Track } from "@/contexts/PlayerContext";
 
-// Create a Track object for sharing
-const createMockTrackForArtist = (artistId: string, artistName: string): Track => ({
-  id: `${artistId}-featured`,
-  title: "Featured Track",
-  artist: artistName,
-  album: "Discovery",
-  artwork: "",
-  duration: 180,
+// Convert DbTrack to Track for sharing
+const dbTrackToTrack = (dbTrack: DbTrack): Track => ({
+  id: dbTrack.id,
+  title: dbTrack.title,
+  artist: getArtistName(dbTrack.artist_id),
+  album: dbTrack.album || "Single",
+  artwork: dbTrack.artwork_url || "",
+  duration: dbTrack.duration,
 });
 
 const Discovery = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<Genre>("All Genres");
-  const [featuredArtists, setFeaturedArtists] = useState(() => 
-    discoveryArtists.filter(a => a.isFeatured)
-  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [selectedArtistForShare, setSelectedArtistForShare] = useState<Track | null>(null);
+  const [selectedTrackForShare, setSelectedTrackForShare] = useState<Track | null>(null);
 
   const { 
     currentPreviewId, 
@@ -42,47 +39,67 @@ const Discovery = () => {
   } = useAudioPreview();
 
   // Fetch tracks from database
-  const { tracks } = useTracks();
+  const { tracks, isLoading: isLoadingTracks } = useTracks();
 
-  // Filter artists based on search and genre
-  const filteredArtists = useMemo(() => {
-    return discoveryArtists.filter((artist) => {
+  // Featured tracks (first 5 for hot section)
+  const [featuredTrackIds, setFeaturedTrackIds] = useState<string[]>([]);
+
+  // Initialize featured tracks when tracks load
+  useEffect(() => {
+    if (tracks.length > 0 && featuredTrackIds.length === 0) {
+      setFeaturedTrackIds(tracks.slice(0, 5).map(t => t.id));
+    }
+  }, [tracks, featuredTrackIds.length]);
+
+  const featuredTracks = useMemo(() => {
+    return featuredTrackIds
+      .map(id => tracks.find(t => t.id === id))
+      .filter((t): t is DbTrack => t !== undefined);
+  }, [tracks, featuredTrackIds]);
+
+  // Filter tracks based on search and genre
+  const filteredTracks = useMemo(() => {
+    return tracks.filter((track) => {
+      const artistName = getArtistName(track.artist_id);
       const matchesSearch = 
-        artist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        artist.genre.toLowerCase().includes(searchQuery.toLowerCase());
+        track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (track.genre?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
       
       const matchesGenre = 
         selectedGenre === "All Genres" || 
-        artist.genre.toLowerCase() === selectedGenre.toLowerCase();
+        track.genre?.toLowerCase() === selectedGenre.toLowerCase();
 
       return matchesSearch && matchesGenre;
     });
-  }, [searchQuery, selectedGenre]);
+  }, [tracks, searchQuery, selectedGenre]);
 
-  // Filtered featured artists
-  const displayedFeaturedArtists = useMemo(() => {
+  // Filtered featured tracks
+  const displayedFeaturedTracks = useMemo(() => {
     if (searchQuery || selectedGenre !== "All Genres") {
-      return featuredArtists.filter((artist) => {
+      return featuredTracks.filter((track) => {
+        const artistName = getArtistName(track.artist_id);
         const matchesSearch = 
-          artist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          artist.genre.toLowerCase().includes(searchQuery.toLowerCase());
+          track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (track.genre?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
         
         const matchesGenre = 
           selectedGenre === "All Genres" || 
-          artist.genre.toLowerCase() === selectedGenre.toLowerCase();
+          track.genre?.toLowerCase() === selectedGenre.toLowerCase();
 
         return matchesSearch && matchesGenre;
       });
     }
-    return featuredArtists;
-  }, [featuredArtists, searchQuery, selectedGenre]);
+    return featuredTracks;
+  }, [featuredTracks, searchQuery, selectedGenre]);
 
   const handleRefreshFeatured = useCallback(() => {
     setIsRefreshing(true);
     
-    // Simulate refresh with rotation
+    // Rotate featured tracks
     setTimeout(() => {
-      setFeaturedArtists((prev) => {
+      setFeaturedTrackIds((prev) => {
         const rotated = [...prev];
         const first = rotated.shift();
         if (first) rotated.push(first);
@@ -96,27 +113,21 @@ const Discovery = () => {
     navigate(`/artist/${artistId}`);
   };
 
-  const handlePreview = (artistId: string) => {
-    if (currentPreviewId === artistId && isPlaying) {
+  const handleTrackClick = (track: DbTrack) => {
+    navigate(`/artist/${track.artist_id}`);
+  };
+
+  const handlePreview = (track: DbTrack) => {
+    if (currentPreviewId === track.id && isPlaying) {
       stopPreview();
     } else {
-      // Find the preview track for this artist
-      const previewTrack = getArtistPreviewTrack(tracks, artistId);
-      const previewUrl = previewTrack?.preview_audio_url || null;
-      startPreview(artistId, previewUrl);
+      startPreview(track.id, track.preview_audio_url);
     }
   };
 
-  const handleShare = (artist: typeof discoveryArtists[0]) => {
-    const mockTrack = createMockTrackForArtist(artist.id, artist.name);
-    setSelectedArtistForShare(mockTrack);
+  const handleShare = (track: DbTrack) => {
+    setSelectedTrackForShare(dbTrackToTrack(track));
     setIsShareModalOpen(true);
-  };
-
-  // Check if an artist has a preview available
-  const hasPreviewAvailable = (artistId: string): boolean => {
-    const track = getArtistPreviewTrack(tracks, artistId);
-    return !!track?.preview_audio_url;
   };
 
   // Stop preview when navigating away
@@ -138,48 +149,54 @@ const Discovery = () => {
           onGenreChange={setSelectedGenre}
         />
 
-        {/* Hot New Artists */}
-        <HotNewArtists
-          artists={displayedFeaturedArtists}
+        {/* Hot New Drops */}
+        <HotNewTracks
+          tracks={displayedFeaturedTracks}
           onRefresh={handleRefreshFeatured}
-          onArtistClick={handleArtistClick}
+          onTrackClick={handleTrackClick}
           isRefreshing={isRefreshing}
         />
 
-        {/* All Artists Section Header */}
+        {/* All Tracks Section Header */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-display text-lg uppercase tracking-wider text-foreground font-semibold">
-            All Artists
+            All Tracks
           </h2>
           <span className="text-xs text-muted-foreground">
-            {filteredArtists.length} artists
+            {filteredTracks.length} tracks
           </span>
         </div>
 
-        {/* Artist Grid */}
-        {filteredArtists.length === 0 ? (
+        {/* Loading State */}
+        {isLoadingTracks ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground font-display animate-pulse">
+              Loading tracks...
+            </p>
+          </div>
+        ) : filteredTracks.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground font-display">
-              No artists found matching your search.
+              No tracks found matching your search.
             </p>
           </div>
         ) : (
           <div 
-            className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in"
+            className="grid grid-cols-2 gap-4 animate-fade-in"
             style={{ animationDelay: "100ms" }}
           >
-            {filteredArtists.map((artist) => (
-              <DiscoveryArtistCard
-                key={artist.id}
-                artist={artist}
-                isPreviewPlaying={currentPreviewId === artist.id && isPlaying}
-                isPreviewLoading={currentPreviewId === artist.id && isPreviewLoading}
-                previewProgress={currentPreviewId === artist.id ? previewProgress : 0}
-                previewError={currentPreviewId === artist.id ? previewError : null}
-                hasPreviewAvailable={hasPreviewAvailable(artist.id)}
-                onPreview={() => handlePreview(artist.id)}
-                onStream={() => handleArtistClick(artist.id)}
-                onShare={() => handleShare(artist)}
+            {filteredTracks.map((track) => (
+              <DiscoveryTrackCard
+                key={track.id}
+                track={track}
+                isPreviewPlaying={currentPreviewId === track.id && isPlaying}
+                isPreviewLoading={currentPreviewId === track.id && isPreviewLoading}
+                previewProgress={currentPreviewId === track.id ? previewProgress : 0}
+                previewError={currentPreviewId === track.id ? previewError : null}
+                onPreview={() => handlePreview(track)}
+                onStream={() => handleArtistClick(track.artist_id)}
+                onShare={() => handleShare(track)}
+                onArtistClick={() => handleArtistClick(track.artist_id)}
               />
             ))}
           </div>
@@ -193,7 +210,7 @@ const Discovery = () => {
       <ShareTrackModal
         open={isShareModalOpen}
         onOpenChange={setIsShareModalOpen}
-        track={selectedArtistForShare}
+        track={selectedTrackForShare}
       />
     </div>
   );

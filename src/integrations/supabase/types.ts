@@ -103,6 +103,7 @@ export type Database = {
           created_at: string
           duration: number
           full_audio_url: string | null
+          genre: string | null
           id: string
           preview_audio_url: string | null
           title: string
@@ -115,6 +116,7 @@ export type Database = {
           created_at?: string
           duration?: number
           full_audio_url?: string | null
+          genre?: string | null
           id?: string
           preview_audio_url?: string | null
           title: string
@@ -127,6 +129,7 @@ export type Database = {
           created_at?: string
           duration?: number
           full_audio_url?: string | null
+          genre?: string | null
           id?: string
           preview_audio_url?: string | null
           title?: string

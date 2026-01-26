@@ -1,0 +1,118 @@
+import { RefreshCw, Flame } from "lucide-react";
+import { DbTrack, getArtistName } from "@/hooks/useTracks";
+import { StatusBadge } from "@/components/ui/StatusBadge";
+
+import artist1 from "@/assets/artist-1.jpg";
+import artist2 from "@/assets/artist-2.jpg";
+import artist3 from "@/assets/artist-3.jpg";
+
+const artistImages: Record<string, string> = {
+  nova: artist1,
+  aura: artist2,
+  echo: artist3,
+  pulse: artist1,
+  drift: artist2,
+  vega: artist3,
+  zenith: artist1,
+  luna: artist2,
+};
+
+interface HotNewTracksProps {
+  tracks: DbTrack[];
+  onRefresh: () => void;
+  onTrackClick: (track: DbTrack) => void;
+  isRefreshing: boolean;
+}
+
+export const HotNewTracks = ({
+  tracks,
+  onRefresh,
+  onTrackClick,
+  isRefreshing,
+}: HotNewTracksProps) => {
+  if (tracks.length === 0) return null;
+
+  return (
+    <section className="mb-8 animate-fade-in">
+      {/* Section Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Flame className="w-5 h-5 text-accent" />
+          <h2 className="font-display text-lg uppercase tracking-wider text-foreground font-semibold">
+            Hot New Drops
+          </h2>
+        </div>
+        <button
+          onClick={onRefresh}
+          className="p-2 text-muted-foreground hover:text-primary transition-all duration-300 hover:rotate-180"
+          aria-label="Refresh featured tracks"
+        >
+          <RefreshCw 
+            className={`w-4 h-4 transition-transform duration-500 ${isRefreshing ? "animate-spin" : ""}`} 
+          />
+        </button>
+      </div>
+
+      {/* Horizontal Scroll */}
+      <div className="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+        <div 
+          className={`flex gap-4 transition-opacity duration-300 ${isRefreshing ? "opacity-50" : "opacity-100"}`}
+        >
+          {tracks.map((track) => {
+            const coverImage = track.artwork_url || artistImages[track.artist_id] || artist1;
+            const artistName = getArtistName(track.artist_id);
+
+            return (
+              <button
+                key={track.id}
+                onClick={() => onTrackClick(track)}
+                className="flex-shrink-0 w-[140px] group text-left"
+              >
+                <div className="relative aspect-square rounded-xl overflow-hidden mb-2 transition-transform duration-300 group-hover:scale-[1.02]">
+                  {/* Image */}
+                  <img
+                    src={coverImage}
+                    alt={track.title}
+                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  />
+                  
+                  {/* Gradient Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+                  
+                  {/* HOT Badge */}
+                  <div className="absolute top-2 left-2">
+                    <StatusBadge variant="superfan" size="sm">
+                      🔥 HOT
+                    </StatusBadge>
+                  </div>
+
+                  {/* Hook Preview indicator */}
+                  {track.preview_audio_url && (
+                    <div className="absolute bottom-2 left-2 right-2">
+                      <span 
+                        className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-display uppercase tracking-wider text-primary bg-background/80 backdrop-blur-sm"
+                      >
+                        Hook • 15s
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Hover glow */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none rounded-xl ring-1 ring-primary/40 shadow-[0_0_20px_hsl(var(--primary)/0.25)]" />
+                </div>
+
+                {/* Track Info */}
+                <h3 className="font-display text-sm font-bold text-foreground tracking-wide truncate">
+                  {track.title}
+                </h3>
+                <p className="text-primary text-[10px] font-display uppercase tracking-wider truncate">
+                  {artistName}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+};
