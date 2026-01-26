@@ -66,7 +66,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const emailResponse = await resend.emails.send({
-        from: "Music Exclusive <noreply@resend.dev>",
+        from: "Music Exclusive <support@musicexclusive.co>",
         to: [application.contact_email],
         subject: "🎉 You're Approved — Welcome to Music Exclusive",
         html: `
