@@ -1,122 +1,156 @@
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useRef } from "react";
-import { ChevronLeft, Home, Play } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { ChevronLeft, Home, Play, Share2, Mic2, Loader2, Music, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
+import { ShareTrackModal } from "@/components/ShareTrackModal";
+import { usePlayer, Track } from "@/contexts/PlayerContext";
+import { supabase } from "@/integrations/supabase/client";
 
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
 import artist3 from "@/assets/artist-3.jpg";
 
-// Mock artist data
-const artistsData: Record<string, {
+// Fallback images for artists
+const artistImages: Record<string, string> = {
+  default: artist1,
+  artist1,
+  artist2,
+  artist3,
+};
+
+interface DbTrack {
+  id: string;
+  title: string;
+  genre: string | null;
+  duration: number;
+  full_audio_url: string | null;
+  preview_audio_url: string | null;
+  artwork_url: string | null;
+  created_at: string;
+}
+
+interface ArtistData {
   id: string;
   name: string;
   genre: string;
   bio: string;
   imageUrl: string;
-  tracks: { id: string; title: string; duration: string }[];
-}> = {
-  nova: {
-    id: "nova",
-    name: "NOVA",
-    genre: "Electronic",
-    bio: "Pioneering the future of electronic music with immersive soundscapes and pulsing rhythms.",
-    imageUrl: artist1,
-    tracks: [
-      { id: "1", title: "Midnight Protocol", duration: "3:54" },
-      { id: "1", title: "Digital Dreams", duration: "4:12" },
-      { id: "1", title: "Neon Pulse", duration: "3:28" },
-    ],
-  },
-  aura: {
-    id: "aura",
-    name: "AURA",
-    genre: "R&B",
-    bio: "Smooth vocals and ethereal production create a signature sound that transcends genres.",
-    imageUrl: artist2,
-    tracks: [
-      { id: "2", title: "Velvet Skies", duration: "3:18" },
-      { id: "2", title: "Golden Hour", duration: "4:05" },
-    ],
-  },
-  echo: {
-    id: "echo",
-    name: "ECHO",
-    genre: "Indie",
-    bio: "Raw, authentic indie sound with introspective lyrics and atmospheric guitar work.",
-    imageUrl: artist3,
-    tracks: [
-      { id: "3", title: "Lost Frequency", duration: "4:27" },
-      { id: "3", title: "Signal Fade", duration: "3:45" },
-    ],
-  },
-  pulse: {
-    id: "pulse",
-    name: "PULSE",
-    genre: "Hip-Hop",
-    bio: "Hard-hitting beats and conscious lyrics define this rising hip-hop artist.",
-    imageUrl: artist1,
-    tracks: [
-      { id: "1", title: "City Lights", duration: "3:32" },
-    ],
-  },
-  drift: {
-    id: "drift",
-    name: "DRIFT",
-    genre: "Ambient",
-    bio: "Ambient textures and floating melodies designed for deep listening experiences.",
-    imageUrl: artist2,
-    tracks: [
-      { id: "2", title: "Horizon", duration: "5:15" },
-    ],
-  },
-  vega: {
-    id: "vega",
-    name: "VEGA",
-    genre: "Pop",
-    bio: "Fresh pop sensibility with an edge. Catchy hooks meet thoughtful production.",
-    imageUrl: artist3,
-    tracks: [
-      { id: "3", title: "Starlight", duration: "3:22" },
-    ],
-  },
-};
+}
 
 const ArtistProfile = () => {
   const navigate = useNavigate();
   const { artistId } = useParams<{ artistId: string }>();
-  const [searchParams] = useSearchParams();
-  const { playTrack } = usePlayer();
-  const selectedTrackRef = useRef<HTMLDivElement>(null);
+  const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
+  
+  const [artist, setArtist] = useState<ArtistData | null>(null);
+  const [tracks, setTracks] = useState<DbTrack[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [selectedTrackForShare, setSelectedTrackForShare] = useState<Track | null>(null);
 
-  const artist = artistId ? artistsData[artistId] : null;
-  const selectedTrackId = searchParams.get("track");
+  useEffect(() => {
+    const fetchArtistData = async () => {
+      if (!artistId) return;
 
-  // Get sorted tracks with selected track first
-  const sortedTracks = artist ? [...artist.tracks].sort((a, b) => {
-    if (selectedTrackId) {
-      if (a.id === selectedTrackId) return -1;
-      if (b.id === selectedTrackId) return 1;
-    }
-    return 0;
-  }) : [];
+      setIsLoading(true);
+      try {
+        // Fetch artist application data
+        const { data: application } = await supabase
+          .from("artist_applications")
+          .select("artist_name, genres, contact_email")
+          .eq("contact_email", artistId)
+          .maybeSingle();
 
-  const handlePlayTrack = (trackId: string) => {
-    const track = tracksLibrary[trackId];
-    if (track) {
-      playTrack(track);
-      navigate(`/player/${trackId}`);
+        if (application) {
+          setArtist({
+            id: artistId,
+            name: application.artist_name,
+            genre: application.genres,
+            bio: `Exclusive artist on Music Exclusive, bringing you premium ${application.genres} content before anyone else.`,
+            imageUrl: artistImages.default,
+          });
+
+          // Fetch tracks for this artist
+          const { data: trackData } = await supabase
+            .from("tracks")
+            .select("*")
+            .eq("artist_id", artistId)
+            .not("genre", "like", "[DISABLED]%")
+            .order("created_at", { ascending: false });
+
+          if (trackData) {
+            setTracks(trackData);
+          }
+        } else {
+          // Fallback for demo artists
+          const demoArtists: Record<string, ArtistData> = {
+            nova: { id: "nova", name: "NOVA", genre: "Electronic", bio: "Pioneering the future of electronic music.", imageUrl: artist1 },
+            aura: { id: "aura", name: "AURA", genre: "R&B", bio: "Smooth vocals and ethereal production.", imageUrl: artist2 },
+            echo: { id: "echo", name: "ECHO", genre: "Indie", bio: "Raw, authentic indie sound.", imageUrl: artist3 },
+          };
+          
+          if (demoArtists[artistId]) {
+            setArtist(demoArtists[artistId]);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching artist:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchArtistData();
+  }, [artistId]);
+
+  const convertToPlayerTrack = (track: DbTrack): Track => ({
+    id: track.id,
+    title: track.title,
+    artist: artist?.name || "Unknown Artist",
+    album: track.genre || "Exclusive Release",
+    artwork: track.artwork_url || artist?.imageUrl || artistImages.default,
+    duration: track.duration,
+  });
+
+  const handlePlayTrack = (track: DbTrack) => {
+    const playerTrack = convertToPlayerTrack(track);
+    
+    if (currentTrack?.id === track.id) {
+      togglePlayPause();
+    } else {
+      playTrack(playerTrack);
     }
   };
 
+  const handleShare = (track: DbTrack) => {
+    setSelectedTrackForShare(convertToPlayerTrack(track));
+    setShareModalOpen(true);
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (!artist) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Artist not found</p>
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+        <Music className="w-12 h-12 text-muted-foreground mb-4" />
+        <p className="text-muted-foreground text-center">Artist not found</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate("/discovery")}>
+          Back to Discovery
+        </Button>
       </div>
     );
   }
@@ -155,14 +189,17 @@ const ArtistProfile = () => {
         {/* Artist Info Overlay */}
         <div className="absolute bottom-0 left-0 right-0 px-4 pb-6">
           <div className="w-full max-w-md mx-auto">
-            <StatusBadge variant="exclusive" size="sm" className="mb-3">
-              Vault Exclusive
-            </StatusBadge>
+            {/* Exclusive Artist Badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/40 mb-3">
+              <Mic2 className="w-3.5 h-3.5 text-primary" />
+              <span className="text-primary text-xs font-display uppercase tracking-wider">
+                Exclusive Artist
+              </span>
+            </div>
+            
             <h1 
               className="font-display text-4xl md:text-5xl font-bold text-foreground tracking-wide mb-2"
-              style={{
-                textShadow: "0 2px 20px rgba(0, 0, 0, 0.5)"
-              }}
+              style={{ textShadow: "0 2px 20px rgba(0, 0, 0, 0.5)" }}
             >
               {artist.name}
             </h1>
@@ -187,67 +224,75 @@ const ArtistProfile = () => {
           <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
             <h2 
               className="font-display text-sm uppercase tracking-wider text-foreground mb-4"
-              style={{
-                textShadow: "0 0 15px rgba(255, 255, 255, 0.2)"
-              }}
+              style={{ textShadow: "0 0 15px rgba(255, 255, 255, 0.2)" }}
             >
               Exclusive Releases
             </h2>
             
-            <div className="space-y-3">
-              {sortedTracks.map((track, index) => {
-                const isSelected = selectedTrackId === track.id;
-                return (
-                  <div 
-                    key={`${track.title}-${index}`}
-                    ref={isSelected ? selectedTrackRef : undefined}
-                  >
-                    <GlowCard 
-                      glowColor={isSelected ? "accent" : "primary"} 
-                      hover
-                    >
-                      <button
-                        onClick={() => handlePlayTrack(track.id)}
-                        className={`w-full p-4 flex items-center justify-between text-left transition-all duration-300 ${
-                          isSelected ? "ring-2 ring-accent/60 rounded-xl" : ""
-                        }`}
-                        style={{
-                          boxShadow: isSelected ? "0 0 25px hsl(var(--accent) / 0.25), inset 0 0 15px hsl(var(--accent) / 0.05)" : undefined,
-                        }}
-                      >
+            {tracks.length === 0 ? (
+              <GlowCard className="p-6 text-center">
+                <Music className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-muted-foreground text-sm">
+                  No exclusive tracks available yet.
+                </p>
+              </GlowCard>
+            ) : (
+              <div className="space-y-3">
+                {tracks.map((track) => {
+                  const isCurrentTrack = currentTrack?.id === track.id;
+                  const isTrackPlaying = isCurrentTrack && isPlaying;
+                  
+                  return (
+                    <GlowCard key={track.id} glowColor="primary" hover>
+                      <div className="p-4 flex items-center gap-4">
+                        {/* Play Button */}
+                        <button
+                          onClick={() => handlePlayTrack(track)}
+                          className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
+                            isCurrentTrack 
+                              ? "bg-primary/30 border-2 border-primary" 
+                              : "bg-primary/20 border border-primary/30 hover:bg-primary/30"
+                          }`}
+                          style={{
+                            boxShadow: isCurrentTrack ? "0 0 20px hsl(var(--primary) / 0.5)" : undefined,
+                          }}
+                        >
+                          {isTrackPlaying ? (
+                            <Pause className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Play className="w-5 h-5 ml-0.5 text-primary" />
+                          )}
+                        </button>
+
+                        {/* Track Info */}
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mb-1">
                             <p className="font-display text-sm font-semibold text-foreground truncate">
                               {track.title}
                             </p>
-                            {isSelected && (
-                              <StatusBadge variant="exclusive" size="sm">
-                                Selected
-                              </StatusBadge>
-                            )}
+                            <StatusBadge variant="exclusive" size="sm">
+                              Exclusive
+                            </StatusBadge>
                           </div>
                           <p className="text-xs text-muted-foreground">
-                            {track.duration}
+                            {formatDuration(track.duration)}
                           </p>
                         </div>
-                        <div 
-                          className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
-                            isSelected 
-                              ? "bg-accent/30 border-2 border-accent/60" 
-                              : "bg-primary/20 border border-primary/30"
-                          }`}
-                          style={{
-                            boxShadow: isSelected ? "0 0 20px hsl(var(--accent) / 0.5)" : undefined,
-                          }}
+
+                        {/* Share Button */}
+                        <button
+                          onClick={() => handleShare(track)}
+                          className="flex-shrink-0 w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center hover:bg-muted/50 transition-colors"
+                          aria-label="Share track"
                         >
-                          <Play className={`w-4 h-4 ml-0.5 ${isSelected ? "text-accent" : "text-primary"}`} />
-                        </div>
-                      </button>
+                          <Share2 className="w-4 h-4 text-muted-foreground" />
+                        </button>
+                      </div>
                     </GlowCard>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </section>
 
           {/* Discover More CTA */}
@@ -265,6 +310,16 @@ const ArtistProfile = () => {
 
       {/* Bottom spacing for nav */}
       <div className="h-20" />
+
+      {/* Share Modal */}
+      <ShareTrackModal
+        open={shareModalOpen}
+        onOpenChange={(open) => {
+          setShareModalOpen(open);
+          if (!open) setSelectedTrackForShare(null);
+        }}
+        track={selectedTrackForShare}
+      />
     </div>
   );
 };
