@@ -22,6 +22,7 @@ import Discovery from "./pages/Discovery";
 import ArtistProfile from "./pages/ArtistProfile";
 import ArtistUpload from "./pages/ArtistUpload";
 import MusicPlayer from "./pages/MusicPlayer";
+import ArtistApply from "./pages/ArtistApply";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/subscribe" element={<Subscribe />} />
             <Route path="/load-credits" element={<LoadCredits />} />
             <Route path="/fan/payment" element={<Payment />} />
+            <Route path="/artist/apply" element={<ArtistApply />} />
             
             {/* Fan routes with persistent mini-player */}
             <Route element={<FanLayout />}>
