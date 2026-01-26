@@ -1,21 +1,51 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Upload, Music, Headphones, X, Check, Loader2, Info } from "lucide-react";
+import { ArrowLeft, Home, Upload, Music, Headphones, X, Check, Loader2, Info, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { GlowCard } from "@/components/ui/GlowCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { z } from "zod";
 
-const ACCEPTED_AUDIO_TYPES = ["audio/mpeg", "audio/mp4", "audio/aac", "audio/x-m4a"];
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const GENRES = [
+  "Hip-Hop",
+  "R&B",
+  "Pop",
+  "Rock",
+  "Electronic",
+  "Country",
+  "Latin",
+  "Jazz",
+  "Classical",
+  "Indie",
+  "Alternative",
+  "Soul",
+  "Funk",
+  "Reggae",
+  "Other",
+];
 
-const trackSchema = z.object({
-  title: z.string().trim().min(1, "Title is required").max(100, "Title must be less than 100 characters"),
-  album: z.string().trim().max(100, "Album must be less than 100 characters").optional(),
-  artistId: z.string().min(1, "Artist ID is required"),
-});
+const EXCLUSIVE_PERIODS = [
+  { value: "3", label: "3 Weeks (Minimum)" },
+  { value: "4", label: "4 Weeks" },
+  { value: "6", label: "6 Weeks" },
+  { value: "8", label: "8 Weeks" },
+  { value: "12", label: "12 Weeks" },
+];
+
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 
 interface UploadedFile {
   file: File;
@@ -25,26 +55,49 @@ interface UploadedFile {
 const ArtistUpload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
+  // Section 1: Track Details
   const [title, setTitle] = useState("");
-  const [album, setAlbum] = useState("");
-  const [artistId] = useState("nova"); // Mock artist ID - would come from auth
+  const [genre, setGenre] = useState("");
+  const [description, setDescription] = useState("");
   
+  // Section 2: Audio Files
   const [fullTrack, setFullTrack] = useState<UploadedFile | null>(null);
-  const [previewTrack, setPreviewTrack] = useState<UploadedFile | null>(null);
+  const [hookPreview, setHookPreview] = useState<UploadedFile | null>(null);
   
+  // Section 3: Release Settings
+  const [exclusivePeriod, setExclusivePeriod] = useState("3");
+  
+  // Section 4: Rights Confirmation
+  const [ownsRights, setOwnsRights] = useState(false);
+  const [hasExclusiveRights, setHasExclusiveRights] = useState(false);
+  const [agreesToTerms, setAgreesToTerms] = useState(false);
+  
+  // Upload state
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   
   const fullTrackInputRef = useRef<HTMLInputElement>(null);
-  const previewTrackInputRef = useRef<HTMLInputElement>(null);
+  const hookPreviewInputRef = useRef<HTMLInputElement>(null);
 
-  const validateFile = (file: File): string | null => {
-    if (!ACCEPTED_AUDIO_TYPES.includes(file.type)) {
-      return "Please upload an MP3 or AAC file";
+  const validateFullTrack = (file: File): string | null => {
+    if (!file.name.toLowerCase().endsWith('.wav')) {
+      return "Please upload a .WAV file for the full track";
     }
     if (file.size > MAX_FILE_SIZE) {
-      return "File size must be less than 50MB";
+      return "File size must be less than 100MB";
+    }
+    return null;
+  };
+
+  const validateHookPreview = (file: File): string | null => {
+    const ext = file.name.toLowerCase();
+    if (!ext.endsWith('.wav') && !ext.endsWith('.mp3')) {
+      return "Please upload a .WAV or .MP3 file for the hook preview";
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      return "File size must be less than 100MB";
     }
     return null;
   };
@@ -53,7 +106,7 @@ const ArtistUpload = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const error = validateFile(file);
+    const error = validateFullTrack(file);
     if (error) {
       toast({ title: "Invalid file", description: error, variant: "destructive" });
       return;
@@ -62,17 +115,17 @@ const ArtistUpload = () => {
     setFullTrack({ file, name: file.name });
   };
 
-  const handlePreviewTrackSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleHookPreviewSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const error = validateFile(file);
+    const error = validateHookPreview(file);
     if (error) {
       toast({ title: "Invalid file", description: error, variant: "destructive" });
       return;
     }
 
-    setPreviewTrack({ file, name: file.name });
+    setHookPreview({ file, name: file.name });
   };
 
   const uploadFile = async (file: File, path: string): Promise<string | null> => {
@@ -88,29 +141,26 @@ const ArtistUpload = () => {
       return null;
     }
 
-    // Get public URL
     const { data: urlData } = supabase.storage.from("audio").getPublicUrl(data.path);
     return urlData.publicUrl;
   };
 
+  const isFormValid = 
+    title.trim() && 
+    genre && 
+    fullTrack && 
+    hookPreview && 
+    ownsRights && 
+    hasExclusiveRights && 
+    agreesToTerms;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Validate form
-    const validation = trackSchema.safeParse({ title, album, artistId });
-    if (!validation.success) {
+    if (!isFormValid) {
       toast({
-        title: "Validation Error",
-        description: validation.error.errors[0]?.message || "Please check your inputs",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!fullTrack) {
-      toast({
-        title: "Full Track Required",
-        description: "Please upload your full track file",
+        title: "Missing Required Fields",
+        description: "Please complete all required fields and confirm the rights checkboxes.",
         variant: "destructive",
       });
       return;
@@ -121,12 +171,14 @@ const ArtistUpload = () => {
 
     try {
       const timestamp = Date.now();
+      const artistId = user?.email || "unknown";
       const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "-");
 
       // Upload full track
       setUploadProgress(20);
-      const fullTrackPath = `${artistId}/${sanitizedTitle}-full-${timestamp}.mp3`;
-      const fullAudioUrl = await uploadFile(fullTrack.file, fullTrackPath);
+      const fullTrackExt = fullTrack!.file.name.split('.').pop();
+      const fullTrackPath = `tracks/${artistId}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
+      const fullAudioUrl = await uploadFile(fullTrack!.file, fullTrackPath);
 
       if (!fullAudioUrl) {
         throw new Error("Failed to upload full track");
@@ -134,28 +186,25 @@ const ArtistUpload = () => {
 
       setUploadProgress(50);
 
-      // Upload preview if provided
-      let previewAudioUrl: string | null = null;
-      if (previewTrack) {
-        setUploadProgress(60);
-        const previewPath = `${artistId}/${sanitizedTitle}-preview-${timestamp}.mp3`;
-        previewAudioUrl = await uploadFile(previewTrack.file, previewPath);
-        
-        if (!previewAudioUrl) {
-          console.warn("Preview upload failed, continuing without preview");
-        }
+      // Upload hook preview
+      const previewExt = hookPreview!.file.name.split('.').pop();
+      const previewPath = `tracks/${artistId}/${sanitizedTitle}-preview-${timestamp}.${previewExt}`;
+      const previewAudioUrl = await uploadFile(hookPreview!.file, previewPath);
+
+      if (!previewAudioUrl) {
+        throw new Error("Failed to upload hook preview");
       }
 
       setUploadProgress(80);
 
-      // Get audio duration (approximate from file size for now)
-      const estimatedDuration = Math.floor(fullTrack.file.size / 16000); // Rough estimate
+      // Get audio duration estimate
+      const estimatedDuration = Math.floor(fullTrack!.file.size / 16000);
 
       // Save to database
       const { error: dbError } = await supabase.from("tracks").insert({
         artist_id: artistId,
         title: title.trim(),
-        album: album.trim() || null,
+        genre: genre,
         duration: estimatedDuration,
         full_audio_url: fullAudioUrl,
         preview_audio_url: previewAudioUrl,
@@ -168,20 +217,12 @@ const ArtistUpload = () => {
       setUploadProgress(100);
 
       toast({
-        title: "Track Uploaded!",
-        description: previewAudioUrl 
-          ? "Your track and preview are now live." 
-          : "Your track is now live. Consider adding a preview next time!",
+        title: "🎉 Track Published!",
+        description: "Your exclusive track is now live on Music Exclusive.",
       });
 
-      // Reset form
-      setTitle("");
-      setAlbum("");
-      setFullTrack(null);
-      setPreviewTrack(null);
-
-      // Navigate to discovery after short delay
-      setTimeout(() => navigate("/discovery"), 1500);
+      // Navigate to dashboard after short delay
+      setTimeout(() => navigate("/artist/dashboard"), 1500);
 
     } catch (error) {
       console.error("Upload error:", error);
@@ -197,219 +238,329 @@ const ArtistUpload = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col px-4 py-6">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="w-full max-w-lg mx-auto mb-8 flex items-center">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5" />
-          <span className="text-sm uppercase tracking-wider">Back</span>
-        </button>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+        <div className="container max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+          <button
+            onClick={() => navigate(-1)}
+            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+
+          <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
+            Upload Track
+          </span>
+
+          <button
+            onClick={() => navigate("/")}
+            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Go home"
+          >
+            <Home className="w-5 h-5" />
+          </button>
+        </div>
       </header>
 
-      <div className="flex-1 w-full max-w-lg mx-auto">
-        {/* Page Title */}
-        <section className="text-center mb-8 animate-fade-in">
-          <h1 
-            className="font-display text-2xl uppercase tracking-[0.1em] text-foreground font-bold mb-2"
-            style={{
-              textShadow: "0 0 30px hsl(var(--primary) / 0.4)"
-            }}
-          >
-            Upload New Track
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            Share your music with the Vault
-          </p>
-        </section>
-
-        {/* Upload Form */}
-        <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in" style={{ animationDelay: "100ms" }}>
-          {/* Track Details */}
-          <div className="space-y-4 p-4 rounded-xl bg-card/50 border border-border/50">
-            <div>
-              <Label htmlFor="title" className="text-sm font-display uppercase tracking-wider text-foreground">
-                Track Title *
-              </Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Enter track title"
-                className="mt-2 bg-background border-border/50 focus:border-primary/50"
-                maxLength={100}
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="album" className="text-sm font-display uppercase tracking-wider text-foreground">
-                Album (Optional)
-              </Label>
-              <Input
-                id="album"
-                value={album}
-                onChange={(e) => setAlbum(e.target.value)}
-                placeholder="Enter album name"
-                className="mt-2 bg-background border-border/50 focus:border-primary/50"
-                maxLength={100}
-              />
-            </div>
-          </div>
-
-          {/* Full Track Upload */}
-          <div className="p-4 rounded-xl bg-card/50 border border-border/50">
-            <div className="flex items-center gap-2 mb-3">
-              <Music className="w-5 h-5 text-primary" />
-              <Label className="text-sm font-display uppercase tracking-wider text-foreground">
-                Full Track *
-              </Label>
-            </div>
-
-            <input
-              ref={fullTrackInputRef}
-              type="file"
-              accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac"
-              onChange={handleFullTrackSelect}
-              className="hidden"
-            />
-
-            {fullTrack ? (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/30">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                  <span className="text-sm text-foreground truncate">{fullTrack.name}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setFullTrack(null)}
-                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => fullTrackInputRef.current?.click()}
-                className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-primary/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <Upload className="w-8 h-8" />
-                <span className="text-sm">Click to upload MP3 or AAC</span>
-                <span className="text-xs text-muted-foreground">Max 50MB</span>
-              </button>
-            )}
-          </div>
-
-          {/* Hook Preview Upload */}
-          <div className="p-4 rounded-xl bg-card/50 border border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <Headphones className="w-5 h-5 text-accent" />
-              <Label className="text-sm font-display uppercase tracking-wider text-foreground">
-                Upload 15s Hook Preview
-              </Label>
-              <span className="text-xs text-muted-foreground">(Recommended)</span>
-            </div>
-
-            {/* Helper text */}
-            <div className="flex items-start gap-2 mb-3 p-2 rounded-lg bg-accent/10 border border-accent/20">
-              <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p className="text-xs text-foreground font-medium">
-                  Choose your strongest 15 seconds — the hook fans will hear on Discovery.
-                </p>
-                <p className="text-[10px] text-muted-foreground">
-                  Preview should be ~15 seconds. MP3/AAC supported.
-                </p>
-              </div>
-            </div>
-
-            <input
-              ref={previewTrackInputRef}
-              type="file"
-              accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac"
-              onChange={handlePreviewTrackSelect}
-              className="hidden"
-            />
-
-            {previewTrack ? (
-              <div className="flex items-center justify-between p-3 rounded-lg bg-accent/10 border border-accent/30">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Check className="w-4 h-4 text-accent flex-shrink-0" />
-                  <span className="text-sm text-foreground truncate">{previewTrack.name}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPreviewTrack(null)}
-                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => previewTrackInputRef.current?.click()}
-                className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-accent/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
-              >
-                <Upload className="w-8 h-8" />
-                <span className="text-sm font-medium">Upload your hook preview</span>
-                <span className="text-xs text-muted-foreground">The 15 seconds fans hear first</span>
-              </button>
-            )}
-          </div>
-
-          {/* Upload Progress */}
-          {isUploading && (
-            <div className="p-4 rounded-xl bg-card/50 border border-primary/30">
-              <div className="flex items-center gap-3 mb-2">
-                <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                <span className="text-sm font-display uppercase tracking-wider text-foreground">
-                  Uploading...
-                </span>
-              </div>
-              <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <Button
-            type="submit"
-            variant="accent"
-            size="lg"
-            className="w-full gap-2 font-display uppercase tracking-wider"
-            disabled={isUploading || !fullTrack || !title.trim()}
-          >
-            {isUploading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5" />
-                Publish Track
-              </>
-            )}
-          </Button>
-
-          {!previewTrack && fullTrack && (
-            <p className="text-center text-xs text-muted-foreground">
-              💡 Tip: Adding a preview increases discovery by 40%
+      {/* Main Content */}
+      <main className="pt-20 pb-12 px-4">
+        <div className="container max-w-lg md:max-w-xl mx-auto">
+          
+          {/* Page Header */}
+          <div className="text-center mb-8">
+            <SectionHeader title="Upload New Track" align="center" framed />
+            <p className="text-muted-foreground text-sm font-body mt-4">
+              Share your exclusive music with fans inside the Vault.
             </p>
-          )}
-        </form>
-      </div>
+          </div>
 
-      {/* Bottom spacing */}
-      <div className="h-8" />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            
+            {/* SECTION 1: Track Details */}
+            <GlowCard className="p-4 md:p-5">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
+                Track Details
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title" className="text-sm">Track Title *</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter your track title"
+                    className="h-12 text-base"
+                    maxLength={100}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Genre *</Label>
+                  <Select value={genre} onValueChange={setGenre}>
+                    <SelectTrigger className="bg-card h-12 text-base">
+                      <SelectValue placeholder="Select genre" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border z-50">
+                      {GENRES.map((g) => (
+                        <SelectItem key={g} value={g} className="text-base py-3">
+                          {g}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-sm">Short Description (Optional)</Label>
+                  <Textarea
+                    id="description"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Tell fans about this track..."
+                    className="min-h-[80px] text-base resize-none"
+                    maxLength={280}
+                  />
+                  <p className="text-xs text-muted-foreground text-right">
+                    {description.length}/280
+                  </p>
+                </div>
+              </div>
+            </GlowCard>
+
+            {/* SECTION 2: Audio Files */}
+            <GlowCard className="p-4 md:p-5">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
+                Audio Files
+              </h3>
+              
+              <div className="space-y-5">
+                {/* Full Track Upload */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Music className="w-5 h-5 text-primary" />
+                    <Label className="text-sm">Upload Full Track (.WAV only) *</Label>
+                  </div>
+
+                  <input
+                    ref={fullTrackInputRef}
+                    type="file"
+                    accept=".wav"
+                    onChange={handleFullTrackSelect}
+                    className="hidden"
+                  />
+
+                  {fullTrack ? (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/30">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                        <span className="text-sm text-foreground truncate">{fullTrack.name}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFullTrack(null)}
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => fullTrackInputRef.current?.click()}
+                      className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-primary/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <Upload className="w-8 h-8" />
+                      <span className="text-sm">Click to upload .WAV file</span>
+                      <span className="text-xs text-muted-foreground">High-quality production required</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Hook Preview Upload */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Headphones className="w-5 h-5 text-accent" />
+                    <Label className="text-sm">Upload 15-Second Hook Preview *</Label>
+                  </div>
+
+                  {/* Helper text */}
+                  <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/20">
+                    <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-foreground">
+                      Your hook preview is the moment fans hear first on Discovery.
+                    </p>
+                  </div>
+
+                  <input
+                    ref={hookPreviewInputRef}
+                    type="file"
+                    accept=".wav,.mp3"
+                    onChange={handleHookPreviewSelect}
+                    className="hidden"
+                  />
+
+                  {hookPreview ? (
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-accent/10 border border-accent/30">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Check className="w-4 h-4 text-accent flex-shrink-0" />
+                        <span className="text-sm text-foreground truncate">{hookPreview.name}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setHookPreview(null)}
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => hookPreviewInputRef.current?.click()}
+                      className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-accent/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <Upload className="w-8 h-8" />
+                      <span className="text-sm">.WAV or .MP3 — ~15 seconds</span>
+                      <span className="text-xs text-muted-foreground">This preview plays on Discovery</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </GlowCard>
+
+            {/* SECTION 3: Exclusive Release Settings */}
+            <GlowCard className="p-4 md:p-5">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
+                Exclusive Release Settings
+              </h3>
+              
+              <div className="space-y-4">
+                {/* Release Type Badge */}
+                <div className="flex justify-center">
+                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
+                    <Lock className="w-4 h-4 text-primary" />
+                    <span className="text-primary text-sm font-display uppercase tracking-wider">
+                      Exclusive Release
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm">Exclusive Period</Label>
+                  <Select value={exclusivePeriod} onValueChange={setExclusivePeriod}>
+                    <SelectTrigger className="bg-card h-12 text-base">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border z-50">
+                      {EXCLUSIVE_PERIODS.map((period) => (
+                        <SelectItem key={period.value} value={period.value} className="text-base py-3">
+                          {period.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Helper text */}
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 border border-border/30">
+                  <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-muted-foreground">
+                    During this period, your music is only available on Music Exclusive.
+                  </p>
+                </div>
+              </div>
+            </GlowCard>
+
+            {/* SECTION 4: Rights Confirmation */}
+            <GlowCard className="p-4 md:p-5">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
+                Rights Confirmation
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <Checkbox
+                    id="ownsRights"
+                    checked={ownsRights}
+                    onCheckedChange={(checked) => setOwnsRights(checked as boolean)}
+                    className="mt-0.5 h-5 w-5"
+                  />
+                  <Label htmlFor="ownsRights" className="text-sm font-normal leading-relaxed cursor-pointer">
+                    I own or control all rights to this music *
+                  </Label>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <Checkbox
+                    id="hasExclusiveRights"
+                    checked={hasExclusiveRights}
+                    onCheckedChange={(checked) => setHasExclusiveRights(checked as boolean)}
+                    className="mt-0.5 h-5 w-5"
+                  />
+                  <Label htmlFor="hasExclusiveRights" className="text-sm font-normal leading-relaxed cursor-pointer">
+                    I have the right to release this music exclusively *
+                  </Label>
+                </div>
+
+                <div className="flex items-start gap-4">
+                  <Checkbox
+                    id="agreesToTerms"
+                    checked={agreesToTerms}
+                    onCheckedChange={(checked) => setAgreesToTerms(checked as boolean)}
+                    className="mt-0.5 h-5 w-5"
+                  />
+                  <Label htmlFor="agreesToTerms" className="text-sm font-normal leading-relaxed cursor-pointer">
+                    I agree to the Artist Terms of Service *
+                  </Label>
+                </div>
+              </div>
+            </GlowCard>
+
+            {/* Upload Progress */}
+            {isUploading && (
+              <GlowCard className="p-4" unlocking>
+                <div className="flex items-center gap-3 mb-3">
+                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                  <span className="text-sm font-display uppercase tracking-wider text-foreground">
+                    Publishing your track...
+                  </span>
+                </div>
+                <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              </GlowCard>
+            )}
+
+            {/* Primary CTA */}
+            <Button
+              type="submit"
+              size="lg"
+              className="w-full h-14 font-display uppercase tracking-wider"
+              disabled={isUploading || !isFormValid}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-5 h-5 mr-2" />
+                  Publish Exclusive Track
+                </>
+              )}
+            </Button>
+
+          </form>
+        </div>
+      </main>
     </div>
   );
 };
