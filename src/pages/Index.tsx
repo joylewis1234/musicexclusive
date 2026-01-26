@@ -11,11 +11,21 @@ import vaultPortal from "@/assets/vault-portal.png"
 import artist1 from "@/assets/artist-1.jpg"
 import artist2 from "@/assets/artist-2.jpg"
 import artist3 from "@/assets/artist-3.jpg"
+import artistHiphop from "@/assets/artist-hiphop.jpg"
+import artistChristian from "@/assets/artist-christian.jpg"
+import artistRock from "@/assets/artist-rock.jpg"
+import artistCountry from "@/assets/artist-country.jpg"
+import artistLatin from "@/assets/artist-latin.jpg"
+import artistPop from "@/assets/artist-pop.jpg"
 
 const artists = [
-  { name: "Maranda B.", genre: "Hip Hop", imageUrl: artist1 },
-  { name: "Rico Flames", genre: "Trap", imageUrl: artist2 },
-  { name: "DJ Kyra", genre: "Electronic", imageUrl: artist3 },
+  { name: "Maranda B.", genre: "R&B", imageUrl: artist1 },
+  { name: "King Trey", genre: "Hip Hop/Rap", imageUrl: artistHiphop },
+  { name: "Grace Divine", genre: "Christian", imageUrl: artistChristian },
+  { name: "Jake Stone", genre: "Rock", imageUrl: artistRock },
+  { name: "Dusty Roads", genre: "Country", imageUrl: artistCountry },
+  { name: "Carlos Vega", genre: "Latin", imageUrl: artistLatin },
+  { name: "Zara Nova", genre: "Pop", imageUrl: artistPop },
 ]
 
 const steps = [
@@ -184,16 +194,6 @@ const Index = () => {
             {artists.map((artist) => (
               <ArtistCard
                 key={artist.name}
-                name={artist.name}
-                genre={artist.genre}
-                imageUrl={artist.imageUrl}
-              />
-            ))}
-            
-            {/* Duplicate for more cards */}
-            {artists.map((artist) => (
-              <ArtistCard
-                key={`${artist.name}-2`}
                 name={artist.name}
                 genre={artist.genre}
                 imageUrl={artist.imageUrl}
