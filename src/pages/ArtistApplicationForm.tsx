@@ -175,7 +175,7 @@ const ArtistApplicationForm = () => {
           <form onSubmit={handleSubmit} className="space-y-8">
             {/* Section 1: Artist Info */}
             <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6 text-center">
                 Artist Info
               </h3>
               <div className="space-y-5">
@@ -217,7 +217,7 @@ const ArtistApplicationForm = () => {
 
             {/* Section 2: Music & Career */}
             <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6 text-center">
                 Music & Career
               </h3>
               <div className="space-y-5">
@@ -272,7 +272,7 @@ const ArtistApplicationForm = () => {
 
             {/* Section 3: Fanbase */}
             <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6 text-center">
                 Fanbase
               </h3>
               <div className="space-y-5">
@@ -320,7 +320,7 @@ const ArtistApplicationForm = () => {
 
             {/* Section 4: Music Quality */}
             <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6 text-center">
                 Music Quality
               </h3>
               <div className="space-y-5">
@@ -386,7 +386,7 @@ const ArtistApplicationForm = () => {
 
             {/* Section 5: Rights Confirmation */}
             <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6 text-center">
                 Rights Confirmation
               </h3>
               <div className="space-y-5">
