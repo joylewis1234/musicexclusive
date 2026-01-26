@@ -10,6 +10,7 @@ export interface DbTrack {
   full_audio_url: string | null;
   preview_audio_url: string | null;
   artwork_url: string | null;
+  genre: string | null;
   created_at: string;
 }
 
@@ -47,10 +48,33 @@ export const useTracks = (artistId?: string) => {
   return { tracks, isLoading, error };
 };
 
-// Get first track for an artist (for preview on Discovery)
-export const getArtistPreviewTrack = (tracks: DbTrack[], artistId: string): DbTrack | null => {
-  const artistTracks = tracks.filter(t => t.artist_id === artistId);
-  // Prefer tracks with preview_audio_url, otherwise return first track
-  const withPreview = artistTracks.find(t => t.preview_audio_url);
-  return withPreview || artistTracks[0] || null;
+// Get artist name from artist_id (mock mapping for now)
+export const getArtistName = (artistId: string): string => {
+  const artistNames: Record<string, string> = {
+    nova: "NOVA",
+    aura: "AURA",
+    echo: "ECHO",
+    pulse: "PULSE",
+    drift: "DRIFT",
+    vega: "VEGA",
+    zenith: "ZENITH",
+    luna: "LUNA",
+  };
+  return artistNames[artistId] || artistId.toUpperCase();
+};
+
+// Get artist image fallback
+export const getArtistImage = (artistId: string): string => {
+  // Import paths - these will be resolved at build time
+  const images: Record<string, string> = {
+    nova: "/src/assets/artist-1.jpg",
+    aura: "/src/assets/artist-2.jpg",
+    echo: "/src/assets/artist-3.jpg",
+    pulse: "/src/assets/artist-1.jpg",
+    drift: "/src/assets/artist-2.jpg",
+    vega: "/src/assets/artist-3.jpg",
+    zenith: "/src/assets/artist-1.jpg",
+    luna: "/src/assets/artist-2.jpg",
+  };
+  return images[artistId] || "/src/assets/artist-1.jpg";
 };
