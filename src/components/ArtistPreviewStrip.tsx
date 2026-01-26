@@ -15,11 +15,11 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
   // Double the artists for seamless infinite scroll
   const duplicatedArtists = [...artists, ...artists]
   
-  // Different glow colors matching page palette
+  // Vibrant neon glow colors - pink/purple/cyan
   const glowColors = [
-    "hsl(var(--primary))",      // cyan
-    "hsl(var(--accent))",       // purple/magenta
-    "hsl(var(--secondary))",    // blue
+    { base: "180, 100%, 50%", name: "cyan" },      // cyan
+    { base: "300, 100%, 60%", name: "magenta" },   // hot pink/magenta
+    { base: "270, 100%, 60%", name: "purple" },    // purple
   ]
 
   return (
@@ -37,7 +37,7 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
               <div 
                 className="group relative w-20 md:w-24 aspect-square rounded-xl overflow-hidden transition-all duration-300"
                 style={{
-                  boxShadow: `0 0 8px ${glowColor.replace(')', ' / 0.25)')}, 0 0 16px ${glowColor.replace(')', ' / 0.1)')}`,
+                  boxShadow: `0 0 12px hsla(${glowColor.base}, 0.5), 0 0 24px hsla(${glowColor.base}, 0.3), 0 0 40px hsla(${glowColor.base}, 0.15)`,
                 }}
               >
                 {/* Artist Image */}
