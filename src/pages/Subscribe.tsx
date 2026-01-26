@@ -86,7 +86,7 @@ const Subscribe = () => {
             </GlowCard>
 
             <Button
-              onClick={() => navigate("/fan/dashboard")}
+              onClick={() => navigate("/agreements/fan", { state: { ...state, flow: "superfan" } })}
               className="w-full mt-8"
               variant="primary"
               size="lg"

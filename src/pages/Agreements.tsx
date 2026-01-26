@@ -142,6 +142,7 @@ For privacy-related inquiries, please contact us through the Platform.
 interface LocationState {
   email?: string;
   name?: string;
+  flow?: "superfan" | "vault";
 }
 
 const Agreements = () => {
@@ -178,8 +179,14 @@ const Agreements = () => {
         if (error) throw error;
       }
 
-      // Navigate to access choice after accepting agreements
-      navigate("/fan/access-choice");
+      // Navigate based on flow type
+      if (state?.flow === "superfan") {
+        // Superfan flow: already paid, go directly to dashboard
+        navigate("/fan/dashboard");
+      } else {
+        // Vault winner flow: show both payment options
+        navigate("/onboarding/listen", { state });
+      }
     } catch (error) {
       console.error("Error saving agreement:", error);
       toast({

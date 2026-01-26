@@ -111,18 +111,20 @@ const Index = () => {
               Try Your Luck – Enter the Vault
             </Button>
             
-            <Button 
-              variant="secondary" 
-              size="lg" 
-              className="w-full max-w-xs"
-              onClick={() => navigate("/onboarding/listen")}
-            >
-              Unlock Superfan Access
-            </Button>
-            
-            <p className="text-muted-foreground text-sm font-body mt-4 max-w-xs">
-              Want guaranteed access? Skip the line and become a Superfan today.
-            </p>
+            {/* Superfan CTA with skip-lottery highlight */}
+            <div className="relative w-full max-w-xs">
+              <Button 
+                variant="secondary" 
+                size="lg" 
+                className="w-full"
+                onClick={() => navigate("/auth/fan", { state: { flow: "superfan" } })}
+              >
+                Unlock Superfan Access
+              </Button>
+              <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
+                ✨ Skip the lottery — guaranteed access
+              </p>
+            </div>
             
             {/* Artist CTA */}
             <Button 

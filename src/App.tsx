@@ -16,7 +16,6 @@ import SubmitVaultCode from "./pages/SubmitVaultCode";
 import VaultStatus from "./pages/VaultStatus";
 import Agreements from "./pages/Agreements";
 import ChooseAccess from "./pages/ChooseAccess";
-import AccessChoice from "./pages/AccessChoice";
 import Subscribe from "./pages/Subscribe";
 import LoadCredits from "./pages/LoadCredits";
 import Payment from "./pages/Payment";
@@ -84,7 +83,6 @@ const App = () => (
                 <Route path="/fan/dashboard" element={<FanDashboard />} />
                 <Route path="/fan/profile" element={<FanProfile />} />
                 <Route path="/fan/inbox" element={<FanInbox />} />
-                <Route path="/fan/access-choice" element={<AccessChoice />} />
                 <Route path="/fan/payment" element={<Payment />} />
                 <Route path="/discovery" element={<Discovery />} />
                 <Route path="/artist/:artistId" element={<ArtistProfile />} />
