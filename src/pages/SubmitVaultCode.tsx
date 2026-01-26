@@ -169,11 +169,12 @@ const SubmitVaultCode = () => {
       toast.success("Code verified! Welcome to the vault.");
       
       // Navigate to vault status
+      // TESTING: Always grant access (change to "in_draw" for real draw logic)
       navigate("/vault/status", { 
         state: { 
           email: values.email, 
           name: vaultRecord.name,
-          vaultState: "in_draw"
+          vaultState: "winner"
         } 
       });
     } catch (err) {
