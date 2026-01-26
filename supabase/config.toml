@@ -1,1 +1,4 @@
 project_id = "yjytuglxpvdkyvjsdyfk"
+
+[functions.approve-artist]
+verify_jwt = false
