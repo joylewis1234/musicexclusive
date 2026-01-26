@@ -63,9 +63,9 @@ const Header = () => {
           >
             {/* Menu Header */}
             <div className="flex items-center justify-between p-4 border-b border-border/30">
-              <span className="font-display text-lg font-bold tracking-wider">
-                <span className="text-foreground">Music </span>
-                <span className="text-primary">Exclusive</span>
+              <span className="font-display text-xl font-bold tracking-widest uppercase">
+                <span className="text-foreground">MUSIC </span>
+                <span className="text-primary">EXCLUSIVE</span>
                 <span className="text-muted-foreground text-[8px] align-super ml-0.5">™</span>
               </span>
               <button 
@@ -130,9 +130,9 @@ const Header = () => {
           onClick={() => navigate("/")}
           className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1"
         >
-          <span className="font-display text-lg font-bold tracking-wider">
-            <span className="text-foreground">Music </span>
-            <span className="text-primary">Exclusive</span>
+          <span className="font-display text-xl font-bold tracking-widest uppercase">
+            <span className="text-foreground">MUSIC </span>
+            <span className="text-primary">EXCLUSIVE</span>
             <span className="text-muted-foreground text-[8px] align-super ml-0.5">™</span>
           </span>
         </button>
