@@ -119,8 +119,8 @@ const VaultStatus = () => {
         </p>
       </div>
 
-      {/* CTA - Navigate to fan dashboard */}
-      <Button size="lg" onClick={() => navigate("/agreements/fan", { state })}>
+      {/* CTA - Navigate to auth with vault flow state */}
+      <Button size="lg" onClick={() => navigate("/auth/fan", { state: { ...state, flow: "vault" } })}>
         Enter The Vault
       </Button>
     </div>
