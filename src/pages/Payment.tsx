@@ -1,65 +1,68 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Home, Crown, Coins, Loader2, CheckCircle2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ChevronLeft, Home, Coins, Loader2, CheckCircle2, Plus, Minus } from "lucide-react";
 
 interface LocationState {
-  accessType?: "superfan" | "credits";
+  topUpCredits?: number;
 }
+
+const CREDIT_TO_DOLLAR = 0.20;
+const MIN_CREDITS = 25;
+const DEFAULT_CREDITS = 25;
+
+// Mock current balance - in production this would come from user data
+const CURRENT_BALANCE_CREDITS = 40;
 
 const Payment = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
-  
-  const accessType = state?.accessType || "credits";
+
+  const [credits, setCredits] = useState<number>(
+    state?.topUpCredits || DEFAULT_CREDITS
+  );
+  const [currentBalance] = useState(CURRENT_BALANCE_CREDITS);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [newBalance, setNewBalance] = useState(0);
 
-  const planDetails = {
-    superfan: {
-      title: "Superfan Membership",
-      description: "Monthly subscription with guaranteed access and perks",
-      price: "$5.00",
-      period: "/month",
-      icon: Crown,
-      iconColor: "text-primary",
-      iconBg: "bg-primary/20",
-    },
-    credits: {
-      title: "Credit Bundle",
-      description: "One-time purchase of listening credits",
-      price: "$5.00",
-      period: "one-time",
-      icon: Coins,
-      iconColor: "text-accent",
-      iconBg: "bg-accent/20",
-    },
+  const dollars = credits * CREDIT_TO_DOLLAR;
+  const afterTopUpCredits = currentBalance + credits;
+  const afterTopUpDollars = afterTopUpCredits * CREDIT_TO_DOLLAR;
+  const currentBalanceDollars = currentBalance * CREDIT_TO_DOLLAR;
+
+  const quickOptions = [
+    { credits: 25, dollars: 5 },
+    { credits: 50, dollars: 10 },
+    { credits: 100, dollars: 20 },
+  ];
+
+  const handleCreditsChange = (value: string) => {
+    const num = parseInt(value, 10);
+    if (!isNaN(num) && num >= 0) {
+      setCredits(num);
+    } else if (value === "") {
+      setCredits(0);
+    }
   };
 
-  const plan = planDetails[accessType];
-  const Icon = plan.icon;
+  const adjustCredits = (delta: number) => {
+    setCredits((prev) => Math.max(0, prev + delta));
+  };
 
   const handlePayment = async () => {
+    if (credits < MIN_CREDITS) return;
+
     setIsProcessing(true);
-    
-    // Simulate payment processing
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    
+    setNewBalance(currentBalance + credits);
     setIsProcessing(false);
     setIsComplete(true);
-  };
-
-  const handleGoToProfile = () => {
-    navigate("/fan/profile", { 
-      state: { 
-        accessType,
-        balance: accessType === "credits" ? 5.00 : null,
-        isSuperfan: accessType === "superfan",
-      } 
-    });
   };
 
   if (isComplete) {
@@ -85,34 +88,33 @@ const Payment = () => {
               </div>
             </div>
 
-            <SectionHeader 
-              title="Payment Complete" 
-              align="center" 
-              framed 
-            />
+            <SectionHeader title="Credits Added" align="center" framed />
 
             <p className="text-muted-foreground mt-6 mb-2">
-              {accessType === "superfan" 
-                ? "Welcome to the Superfan experience!"
-                : "Your credits have been loaded!"}
+              Your credits have been loaded!
             </p>
 
+            {/* Updated Balance Card */}
             <GlowCard glowColor="primary" hover={false} className="mt-8">
               <div className="p-6 text-center">
-                <div className={`inline-flex items-center justify-center p-3 rounded-full ${plan.iconBg} ${plan.iconColor} mb-4`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-lg font-display uppercase tracking-wider text-foreground mb-1">
-                  {accessType === "superfan" ? "Superfan Status" : "Credit Balance"}
-                </h3>
-                <p className="text-3xl font-bold text-primary">
-                  {accessType === "superfan" ? "Active" : "$5.00"}
+                <p className="text-muted-foreground/70 text-xs uppercase tracking-wider mb-2">
+                  New Balance
                 </p>
+                <p
+                  className="text-4xl font-bold font-display text-foreground mb-1"
+                  style={{ textShadow: "0 0 30px rgba(0, 255, 255, 0.3)" }}
+                >
+                  {newBalance} Credits
+                </p>
+                <p className="text-muted-foreground/70 text-sm">
+                  ≈ ${(newBalance * CREDIT_TO_DOLLAR).toFixed(2)}
+                </p>
+                <p className="text-primary text-xs mt-3">Balance updated.</p>
               </div>
             </GlowCard>
 
             <Button
-              onClick={handleGoToProfile}
+              onClick={() => navigate("/fan/profile")}
               className="w-full mt-8"
               variant="primary"
               size="lg"
@@ -146,88 +148,212 @@ const Payment = () => {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md">
-          {/* Framed Header */}
-          <div className="flex justify-center mb-8">
-            <SectionHeader 
-              title="Complete Payment" 
-              align="center" 
-              framed 
-            />
-          </div>
+      <main className="flex-1 px-4 py-6 max-w-md mx-auto w-full space-y-6">
+        {/* Page Title */}
+        <div className="flex justify-center">
+          <SectionHeader title="Add Credits" align="center" framed />
+        </div>
 
-          {/* Order Summary */}
-          <GlowCard glowColor="gradient" hover={false} className="mb-6">
-            <div className="p-6">
-              <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">
-                Order Summary
-              </h3>
-              
-              <div className="flex items-start gap-4">
-                <div className={`p-3 rounded-full ${plan.iconBg} ${plan.iconColor}`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-foreground font-display uppercase tracking-wider">
-                    {plan.title}
-                  </h4>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {plan.description}
-                  </p>
-                </div>
+        {/* Current Balance & After Top-Up Preview */}
+        <GlowCard glowColor="primary" hover={false}>
+          <div className="p-5">
+            <div className="grid grid-cols-2 gap-4">
+              {/* Current Balance */}
+              <div className="text-center">
+                <p className="text-muted-foreground/70 text-[10px] uppercase tracking-wider mb-1">
+                  Current Balance
+                </p>
+                <p
+                  className="text-2xl font-bold font-display text-foreground"
+                  style={{ textShadow: "0 0 20px rgba(0, 255, 255, 0.2)" }}
+                >
+                  {currentBalance}
+                </p>
+                <p className="text-muted-foreground/60 text-xs">
+                  ≈ ${currentBalanceDollars.toFixed(2)}
+                </p>
               </div>
 
-              <div className="border-t border-border/50 mt-6 pt-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Total</span>
-                  <div className="text-right">
-                    <span className="text-2xl font-bold text-foreground">{plan.price}</span>
-                    <span className="text-sm text-muted-foreground ml-1">{plan.period}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </GlowCard>
-
-          {/* Payment Form Placeholder */}
-          <GlowCard glowColor="gradient" hover={false} className="mb-8">
-            <div className="p-6">
-              <h3 className="text-sm uppercase tracking-wider text-muted-foreground mb-4">
-                Payment Method
-              </h3>
-              <div className="h-32 flex items-center justify-center border border-dashed border-border/50 rounded-lg">
-                <p className="text-muted-foreground text-sm text-center px-4">
-                  Payment integration placeholder
-                  <br />
-                  <span className="text-xs">(Stripe integration coming soon)</span>
+              {/* After Top-Up */}
+              <div className="text-center border-l border-border/30 pl-4">
+                <p className="text-muted-foreground/70 text-[10px] uppercase tracking-wider mb-1">
+                  After Top-Up
+                </p>
+                <p
+                  className="text-2xl font-bold font-display text-primary"
+                  style={{ textShadow: "0 0 20px rgba(0, 255, 255, 0.3)" }}
+                >
+                  {afterTopUpCredits}
+                </p>
+                <p className="text-muted-foreground/60 text-xs">
+                  ≈ ${afterTopUpDollars.toFixed(2)}
                 </p>
               </div>
             </div>
-          </GlowCard>
+          </div>
+        </GlowCard>
 
-          {/* CTA Button */}
-          <Button
-            onClick={handlePayment}
-            disabled={isProcessing}
-            className="w-full"
-            variant="primary"
-            size="lg"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              `Pay ${plan.price}`
+        {/* Credits Input */}
+        <GlowCard glowColor="gradient" hover={false}>
+          <div className="p-5 space-y-4">
+            <Label
+              htmlFor="credits"
+              className="text-xs uppercase tracking-wider text-muted-foreground"
+            >
+              Credits to Add
+            </Label>
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => adjustCredits(-5)}
+                disabled={credits <= 0}
+                className="shrink-0"
+              >
+                <Minus className="w-4 h-4" />
+              </Button>
+
+              <Input
+                id="credits"
+                type="number"
+                min={0}
+                step={1}
+                value={credits}
+                onChange={(e) => handleCreditsChange(e.target.value)}
+                className="text-center text-2xl font-display font-bold h-14 bg-background border-border"
+              />
+
+              <Button
+                variant="secondary"
+                size="icon"
+                onClick={() => adjustCredits(5)}
+                className="shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+
+            {/* Live Conversion */}
+            <p className="text-center text-muted-foreground text-sm">
+              <span className="text-foreground font-semibold">{credits} credits</span>
+              {" = "}
+              <span className="text-accent font-semibold">${dollars.toFixed(2)}</span>
+            </p>
+
+            {credits < MIN_CREDITS && credits > 0 && (
+              <p className="text-center text-destructive text-xs">
+                Minimum top-up: {MIN_CREDITS} credits (${(MIN_CREDITS * CREDIT_TO_DOLLAR).toFixed(2)})
+              </p>
             )}
-          </Button>
+          </div>
+        </GlowCard>
 
-          <p className="text-xs text-muted-foreground text-center mt-4">
-            Secure payment powered by Stripe
-          </p>
+        {/* Quick Select Chips */}
+        <div className="flex flex-wrap justify-center gap-2">
+          {quickOptions.map(({ credits: amt, dollars: dollarAmt }) => (
+            <button
+              key={amt}
+              onClick={() => setCredits(amt)}
+              className={`relative px-4 py-2 rounded-full text-xs font-display uppercase tracking-wider transition-all duration-200 active:scale-95 hover:-translate-y-0.5 group ${
+                credits === amt ? "ring-2 ring-accent" : ""
+              }`}
+            >
+              {/* Gradient border */}
+              <span
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 opacity-60 group-hover:opacity-90 transition-opacity"
+                aria-hidden="true"
+              />
+              {/* Soft glow */}
+              <span
+                className="absolute -inset-[1px] rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-sm opacity-0 group-hover:opacity-40 transition-opacity"
+                aria-hidden="true"
+              />
+              {/* Inner content */}
+              <span className="relative flex items-center gap-2 bg-card rounded-full px-4 py-2 -m-[1px]">
+                <span className="text-foreground font-semibold">+{amt}</span>
+                <span className="text-muted-foreground/70 text-[10px]">
+                  ≈ ${dollarAmt.toFixed(2)}
+                </span>
+              </span>
+            </button>
+          ))}
         </div>
+
+        {/* Payment Summary */}
+        <GlowCard glowColor="gradient" hover={false}>
+          <div className="p-5">
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-4">
+              Payment Summary
+            </h3>
+
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-sm">You're adding</span>
+                <span className="text-foreground font-display font-semibold">
+                  {credits} credits
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground text-sm">Equivalent</span>
+                <span className="text-foreground font-display font-semibold">
+                  ${dollars.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="border-t border-border/30 pt-3 flex justify-between items-center">
+                <span className="text-muted-foreground text-sm">Total</span>
+                <span className="text-2xl font-bold text-accent">
+                  ${dollars.toFixed(2)}
+                </span>
+              </div>
+            </div>
+
+            <p className="text-muted-foreground/50 text-[10px] text-center mt-4">
+              1 credit = $0.20
+            </p>
+          </div>
+        </GlowCard>
+
+        {/* Payment Placeholder */}
+        <GlowCard glowColor="gradient" hover={false}>
+          <div className="p-5">
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+              Payment Method
+            </h3>
+            <div className="h-20 flex items-center justify-center border border-dashed border-border/50 rounded-lg">
+              <p className="text-muted-foreground/60 text-xs text-center">
+                Stripe integration coming soon
+              </p>
+            </div>
+          </div>
+        </GlowCard>
+
+        {/* CTA Button */}
+        <Button
+          onClick={handlePayment}
+          disabled={isProcessing || credits < MIN_CREDITS}
+          className="w-full"
+          variant="accent"
+          size="lg"
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Coins className="w-4 h-4 mr-2" />
+              Pay & Add Credits
+            </>
+          )}
+        </Button>
+
+        <p className="text-xs text-muted-foreground/50 text-center">
+          Secure payment powered by Stripe
+        </p>
       </main>
     </div>
   );
