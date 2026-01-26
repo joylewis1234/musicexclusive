@@ -9,7 +9,7 @@ const mainNavItems = [
   { title: "Home", href: "/", icon: Home },
   { title: "How It Works", href: "/#how-it-works", icon: HelpCircle },
   { title: "Enter the Vault", href: "/vault/enter", icon: KeyRound },
-  { title: "Superfan", href: "/onboarding/listen", icon: Star },
+  { title: "Become a Superfan", href: "/auth/fan?flow=superfan", icon: Star },
   { title: "Artist Application", href: "/artist/apply", icon: Music },
 ]
 
