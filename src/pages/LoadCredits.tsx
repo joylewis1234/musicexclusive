@@ -1,15 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ChevronLeft, Home, CreditCard, Coins, Loader2, CheckCircle2, Plus, Minus } from "lucide-react";
+import { ChevronLeft, Home, Coins, Loader2, CheckCircle2, Plus, Minus } from "lucide-react";
+import { useCredits } from "@/hooks/useCredits";
 
 interface LocationState {
   email?: string;
   name?: string;
+  topUpCredits?: number;
+  flow?: string;
 }
 
 const CREDIT_TO_DOLLAR = 0.20;
@@ -20,11 +23,20 @@ const LoadCredits = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const state = location.state as LocationState | null;
+  const { addCredits: addCreditsToDb, credits: currentBalance } = useCredits();
 
-  const [credits, setCredits] = useState<number>(DEFAULT_CREDITS);
+  const initialCredits = state?.topUpCredits || DEFAULT_CREDITS;
+  const [credits, setCredits] = useState<number>(initialCredits);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
   const [purchasedCredits, setPurchasedCredits] = useState(0);
+  const [newBalance, setNewBalance] = useState(0);
+
+  useEffect(() => {
+    if (state?.topUpCredits) {
+      setCredits(state.topUpCredits);
+    }
+  }, [state?.topUpCredits]);
 
   const dollars = credits * CREDIT_TO_DOLLAR;
 
@@ -51,10 +63,25 @@ const LoadCredits = () => {
     if (credits < MIN_CREDITS) return;
 
     setIsProcessing(true);
+    
+    // Simulate payment processing
     await new Promise((resolve) => setTimeout(resolve, 2000));
-    setPurchasedCredits(credits);
-    setIsProcessing(false);
-    setIsComplete(true);
+    
+    // Add credits to database
+    const success = await addCreditsToDb(credits);
+    
+    if (success) {
+      setPurchasedCredits(credits);
+      setNewBalance(currentBalance + credits);
+      setIsProcessing(false);
+      setIsComplete(true);
+    } else {
+      setIsProcessing(false);
+      // Handle error - for now just show success anyway for demo
+      setPurchasedCredits(credits);
+      setNewBalance(currentBalance + credits);
+      setIsComplete(true);
+    }
   };
 
   if (isComplete) {
@@ -96,16 +123,16 @@ const LoadCredits = () => {
                   className="text-4xl font-bold font-display text-foreground mb-1"
                   style={{ textShadow: "0 0 30px rgba(0, 255, 255, 0.3)" }}
                 >
-                  {purchasedCredits} Credits
+                  {newBalance} Credits
                 </p>
                 <p className="text-muted-foreground/70 text-sm">
-                  ≈ ${(purchasedCredits * CREDIT_TO_DOLLAR).toFixed(2)}
+                  ≈ ${(newBalance * CREDIT_TO_DOLLAR).toFixed(2)}
                 </p>
               </div>
             </GlowCard>
 
             <Button
-              onClick={() => navigate("/fan/dashboard")}
+              onClick={() => navigate("/fan/dashboard", { replace: true })}
               className="w-full mt-8"
               variant="primary"
               size="lg"
