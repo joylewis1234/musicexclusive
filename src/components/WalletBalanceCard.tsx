@@ -76,6 +76,41 @@ const WalletBalanceCard = ({ credits }: WalletBalanceCardProps) => {
           Add Credits
         </Button>
 
+        {/* Quick Add Chips */}
+        <div className="flex flex-wrap justify-center gap-2 mb-4">
+          {[
+            { credits: 25, dollars: 5 },
+            { credits: 50, dollars: 10 },
+            { credits: 100, dollars: 20 },
+          ].map(({ credits: amt, dollars: dollarAmt }) => (
+            <button
+              key={amt}
+              onClick={() =>
+                navigate("/fan/payment", { state: { topUpCredits: amt } })
+              }
+              className="relative px-3 py-1.5 rounded-full text-xs font-display uppercase tracking-wider transition-all duration-200 active:scale-95 hover:-translate-y-0.5 group"
+            >
+              {/* Gradient border */}
+              <span
+                className="absolute inset-0 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 opacity-60 group-hover:opacity-90 transition-opacity"
+                aria-hidden="true"
+              />
+              {/* Soft glow */}
+              <span
+                className="absolute -inset-[1px] rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-sm opacity-0 group-hover:opacity-40 transition-opacity"
+                aria-hidden="true"
+              />
+              {/* Inner content */}
+              <span className="relative flex flex-col items-center bg-card rounded-full px-3 py-1.5 -m-[1px]">
+                <span className="text-foreground font-semibold">+{amt}</span>
+                <span className="text-muted-foreground/70 text-[10px]">
+                  ≈ ${dollarAmt.toFixed(2)}
+                </span>
+              </span>
+            </button>
+          ))}
+        </div>
+
         {/* Helper Text */}
         <p className="text-muted-foreground/60 text-[11px]">
           Credits are used for listening. 1 credit = $0.20.
