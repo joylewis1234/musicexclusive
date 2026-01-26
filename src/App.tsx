@@ -101,10 +101,10 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Artist public routes (no auth required) */}
               <Route path="/artist/apply" element={<ArtistApply />} />
               <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
               <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
+              <Route path="/artist/setup-account" element={<ArtistSetupAccount />} />
               
               {/* Artist protected routes */}
               <Route path="/artist/dashboard" element={
@@ -120,11 +120,6 @@ const App = () => (
               <Route path="/artist/upload" element={
                 <ProtectedRoute allowedRole="artist">
                   <ArtistUpload />
-                </ProtectedRoute>
-              } />
-              <Route path="/artist/setup-account" element={
-                <ProtectedRoute allowedRole="artist">
-                  <ArtistSetupAccount />
                 </ProtectedRoute>
               } />
               
