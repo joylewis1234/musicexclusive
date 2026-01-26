@@ -113,6 +113,16 @@ const Index = () => {
             <p className="text-muted-foreground text-sm font-body mt-4 max-w-xs">
               Want guaranteed access? Skip the line and become a Superfan today.
             </p>
+            
+            {/* Artist CTA */}
+            <Button 
+              variant="outline" 
+              size="default" 
+              className="mt-6 text-xs tracking-widest"
+              onClick={() => navigate("/artist/apply")}
+            >
+              Music Artists Apply Here
+            </Button>
           </div>
         </div>
       </section>
