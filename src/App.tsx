@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { ArtistProtectedRoute } from "@/components/auth/ArtistProtectedRoute";
 import { FanLayout } from "@/layouts/FanLayout";
 
 // Public pages
@@ -104,23 +105,27 @@ const App = () => (
               <Route path="/artist/apply" element={<ArtistApply />} />
               <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
               <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
-              <Route path="/artist/setup-account" element={<ArtistSetupAccount />} />
               
-              {/* Artist protected routes */}
+              {/* Artist protected routes - requires active status */}
               <Route path="/artist/dashboard" element={
-                <ProtectedRoute allowedRole="artist">
+                <ArtistProtectedRoute>
                   <ArtistDashboard />
-                </ProtectedRoute>
+                </ArtistProtectedRoute>
               } />
               <Route path="/artist/profile" element={
-                <ProtectedRoute allowedRole="artist">
+                <ArtistProtectedRoute>
                   <ArtistProfilePage />
-                </ProtectedRoute>
+                </ArtistProtectedRoute>
               } />
               <Route path="/artist/upload" element={
-                <ProtectedRoute allowedRole="artist">
+                <ArtistProtectedRoute>
                   <ArtistUpload />
-                </ProtectedRoute>
+                </ArtistProtectedRoute>
+              } />
+              <Route path="/artist/setup-account" element={
+                <ArtistProtectedRoute>
+                  <ArtistSetupAccount />
+                </ArtistProtectedRoute>
               } />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
