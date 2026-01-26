@@ -33,6 +33,7 @@ export const DiscoveryArtistCard = ({
     : "vault";
 
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
+  const isPreviewDisabled = !hasPreviewAvailable && !isPreviewPlaying;
 
   return (
     <div 
@@ -113,11 +114,36 @@ export const DiscoveryArtistCard = ({
           {artist.genre}
         </p>
 
-        {/* Error Message */}
-        {showError && (
+        {/* Error Message / No Preview Message */}
+        {(showError || isPreviewDisabled) && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 p-2 rounded-lg bg-muted/20 border border-border/50">
             <AlertCircle className="w-4 h-4 text-accent flex-shrink-0" />
-            <span>{previewError}</span>
+            <span>
+              {previewError || "Hook preview not available. Tap STREAM to listen inside."}
+            </span>
+          </div>
+        )}
+
+        {/* Hook Preview Badge */}
+        {hasPreviewAvailable && !showError && (
+          <div className="mb-3 flex items-center gap-2">
+            <span 
+              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-display uppercase tracking-wider text-primary border border-primary/40 bg-primary/10"
+              style={{
+                boxShadow: "0 0 8px hsl(var(--primary) / 0.2)",
+              }}
+            >
+              Hook Preview • 15s
+            </span>
+          </div>
+        )}
+
+        {/* Playing Label */}
+        {isPreviewPlaying && (
+          <div className="mb-3 flex items-center gap-2">
+            <span className="text-xs text-primary font-display uppercase tracking-wider animate-pulse">
+              ▶ Playing Hook Preview
+            </span>
           </div>
         )}
 
@@ -127,9 +153,9 @@ export const DiscoveryArtistCard = ({
             variant="outline"
             size="sm"
             onClick={onPreview}
-            disabled={isPreviewLoading}
+            disabled={isPreviewLoading || isPreviewDisabled}
             className={`flex-1 gap-1.5 text-xs uppercase tracking-wider border-border/50 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 ${
-              showError ? "opacity-50" : ""
+              isPreviewDisabled ? "opacity-50 cursor-not-allowed" : ""
             }`}
             style={{
               boxShadow: isPreviewPlaying ? "0 0 15px hsl(var(--primary) / 0.3)" : undefined,
@@ -157,7 +183,7 @@ export const DiscoveryArtistCard = ({
             size="sm"
             onClick={onStream}
             className={`flex-1 gap-1.5 text-xs uppercase tracking-wider ${
-              showError ? "ring-2 ring-accent/50 animate-pulse" : ""
+              isPreviewDisabled || showError ? "ring-2 ring-accent/50 animate-pulse" : ""
             }`}
           >
             <Headphones className="w-3.5 h-3.5" />
