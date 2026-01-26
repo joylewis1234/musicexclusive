@@ -70,7 +70,7 @@ const ArtistApply = () => {
 
           {/* Qualification Card */}
           <GlowCard className="p-5 mb-8">
-            <h3 className="font-display text-base uppercase tracking-widest text-foreground mb-8">
+            <h3 className="font-display text-base uppercase tracking-widest text-foreground mb-8 text-center">
               To Apply, Artists Must:
             </h3>
 
