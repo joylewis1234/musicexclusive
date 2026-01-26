@@ -60,70 +60,12 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate secure setup link
     const setupLink = `${baseUrl}/artist/setup-account?email=${encodeURIComponent(application.contact_email)}`;
 
-    // Try to send email
-    let emailSent = false;
-    let emailError = null;
-
-    try {
-      const emailResponse = await resend.emails.send({
-        from: "Music Exclusive <support@musicexclusive.co>",
-        to: [application.contact_email],
-        subject: "🎉 You're Approved — Welcome to Music Exclusive",
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          </head>
-          <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a; color: #ffffff;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-              <div style="text-align: center; margin-bottom: 40px;">
-                <h1 style="font-size: 28px; margin: 0; color: #ffffff;">Music Exclusive</h1>
-              </div>
-              
-              <div style="background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%); border: 1px solid rgba(168, 85, 247, 0.3); border-radius: 16px; padding: 40px; text-align: center;">
-                <div style="font-size: 48px; margin-bottom: 20px;">🎉</div>
-                
-                <h2 style="font-size: 24px; margin: 0 0 16px 0; color: #ffffff;">
-                  Congratulations, ${application.artist_name}!
-                </h2>
-                
-                <p style="font-size: 16px; line-height: 1.6; color: #a0a0a0; margin: 0 0 24px 0;">
-                  You've been approved as an Exclusive Artist on Music Exclusive.
-                </p>
-                
-                <p style="font-size: 16px; line-height: 1.6; color: #a0a0a0; margin: 0 0 32px 0;">
-                  Click below to set up your artist account and start uploading your exclusive releases.
-                </p>
-                
-                <a href="${setupLink}" style="display: inline-block; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-size: 14px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase;">
-                  SET UP MY ARTIST ACCOUNT
-                </a>
-                
-                <p style="font-size: 12px; color: #666666; margin-top: 32px;">
-                  If the button doesn't work, copy and paste this link into your browser:<br>
-                  <a href="${setupLink}" style="color: #a855f7; word-break: break-all;">${setupLink}</a>
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin-top: 40px;">
-                <p style="font-size: 12px; color: #666666;">
-                  © ${new Date().getFullYear()} Music Exclusive. All rights reserved.
-                </p>
-              </div>
-            </div>
-          </body>
-          </html>
-        `,
-      });
-
-      console.log("Approval email sent successfully:", emailResponse);
-      emailSent = true;
-    } catch (err) {
-      console.error("Failed to send email:", err);
-      emailError = err instanceof Error ? err.message : "Unknown email error";
-    }
+    // Email sending is paused - using on-screen approval confirmation instead
+    // TODO: Re-enable Resend email sending when domain verification is complete
+    const emailSent = false;
+    const emailError = "Email sending paused - using on-screen confirmation";
+    
+    console.log("Artist approved. Email sending paused. Setup link:", setupLink);
 
     return new Response(
       JSON.stringify({
