@@ -172,92 +172,98 @@ const ArtistApplicationForm = () => {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-8">
             {/* Section 1: Artist Info */}
-            <GlowCard className="p-5">
-              <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-4">
+            <GlowCard className="p-6 md:p-8">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Artist Info
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="artistName">Artist Name *</Label>
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="artistName" className="text-sm">Artist Name *</Label>
                   <Input
                     id="artistName"
                     value={artistName}
                     onChange={(e) => setArtistName(e.target.value)}
                     placeholder="Your artist/stage name"
+                    className="h-12 text-base"
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="contactEmail">Contact Email *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="contactEmail" className="text-sm">Contact Email *</Label>
                   <Input
                     id="contactEmail"
                     type="email"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
                     placeholder="artist@email.com"
+                    className="h-12 text-base"
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="countryCity">Country / City (Optional)</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="countryCity" className="text-sm">Country / City (Optional)</Label>
                   <Input
                     id="countryCity"
                     value={countryCity}
                     onChange={(e) => setCountryCity(e.target.value)}
                     placeholder="Los Angeles, CA"
+                    className="h-12 text-base"
                   />
                 </div>
               </div>
             </GlowCard>
 
             {/* Section 2: Music & Career */}
-            <GlowCard className="p-5">
-              <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-4">
+            <GlowCard className="p-6 md:p-8">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Music & Career
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="spotifyUrl">Spotify Artist Profile URL</Label>
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label htmlFor="spotifyUrl" className="text-sm">Spotify Artist Profile URL</Label>
                   <Input
                     id="spotifyUrl"
                     value={spotifyUrl}
                     onChange={(e) => setSpotifyUrl(e.target.value)}
                     placeholder="https://open.spotify.com/artist/..."
+                    className="h-12 text-base"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="appleMusicUrl">Apple Music Artist Profile URL</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="appleMusicUrl" className="text-sm">Apple Music Artist Profile URL</Label>
                   <Input
                     id="appleMusicUrl"
                     value={appleMusicUrl}
                     onChange={(e) => setAppleMusicUrl(e.target.value)}
                     placeholder="https://music.apple.com/artist/..."
+                    className="h-12 text-base"
                   />
                 </div>
-                <div>
-                  <Label>Years Releasing Music *</Label>
+                <div className="space-y-2">
+                  <Label className="text-sm">Years Releasing Music *</Label>
                   <Select value={yearsReleasing} onValueChange={setYearsReleasing}>
-                    <SelectTrigger className="bg-card">
+                    <SelectTrigger className="bg-card h-12 text-base">
                       <SelectValue placeholder="Select experience" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border z-50">
                       {yearsOptions.map((option) => (
-                        <SelectItem key={option} value={option}>
+                        <SelectItem key={option} value={option} className="text-base py-3">
                           {option}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="genres">Genre(s) *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="genres" className="text-sm">Genre(s) *</Label>
                   <Input
                     id="genres"
                     value={genres}
                     onChange={(e) => setGenres(e.target.value)}
                     placeholder="Hip-Hop, R&B, Pop..."
+                    className="h-12 text-base"
                     required
                   />
                 </div>
@@ -265,38 +271,39 @@ const ArtistApplicationForm = () => {
             </GlowCard>
 
             {/* Section 3: Fanbase */}
-            <GlowCard className="p-5">
-              <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-4">
+            <GlowCard className="p-6 md:p-8">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Fanbase
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <Label>Primary Social Platform *</Label>
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-sm">Primary Social Platform *</Label>
                   <Select value={primarySocialPlatform} onValueChange={setPrimarySocialPlatform}>
-                    <SelectTrigger className="bg-card">
+                    <SelectTrigger className="bg-card h-12 text-base">
                       <SelectValue placeholder="Select platform" />
                     </SelectTrigger>
                     <SelectContent className="bg-card border-border z-50">
                       {socialPlatforms.map((platform) => (
-                        <SelectItem key={platform.value} value={platform.value}>
+                        <SelectItem key={platform.value} value={platform.value} className="text-base py-3">
                           {platform.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="socialProfileUrl">Social Profile URL *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="socialProfileUrl" className="text-sm">Social Profile URL *</Label>
                   <Input
                     id="socialProfileUrl"
                     value={socialProfileUrl}
                     onChange={(e) => setSocialProfileUrl(e.target.value)}
                     placeholder="https://instagram.com/yourhandle"
+                    className="h-12 text-base"
                     required
                   />
                 </div>
-                <div>
-                  <Label htmlFor="followerCount">Approximate Follower Count *</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="followerCount" className="text-sm">Approximate Follower Count *</Label>
                   <Input
                     id="followerCount"
                     type="number"
@@ -304,6 +311,7 @@ const ArtistApplicationForm = () => {
                     value={followerCount}
                     onChange={(e) => setFollowerCount(e.target.value)}
                     placeholder="10000"
+                    className="h-12 text-base"
                     required
                   />
                 </div>
@@ -311,27 +319,27 @@ const ArtistApplicationForm = () => {
             </GlowCard>
 
             {/* Section 4: Music Quality */}
-            <GlowCard className="p-5">
-              <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-4">
+            <GlowCard className="p-6 md:p-8">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Music Quality
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <Label>Upload Song Sample (.WAV only) *</Label>
+              <div className="space-y-5">
+                <div className="space-y-2">
+                  <Label className="text-sm">Upload Song Sample (.WAV only) *</Label>
                   <div className="mt-2">
-                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
-                      <div className="flex flex-col items-center justify-center pt-2 pb-2">
+                    <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
+                      <div className="flex flex-col items-center justify-center py-4">
                         {songSampleFile ? (
                           <>
-                            <CheckCircle className="w-6 h-6 text-primary mb-1" />
-                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            <CheckCircle className="w-8 h-8 text-primary mb-2" />
+                            <p className="text-sm text-muted-foreground truncate max-w-[250px]">
                               {songSampleFile.name}
                             </p>
                           </>
                         ) : (
                           <>
-                            <Upload className="w-6 h-6 text-muted-foreground mb-1" />
-                            <p className="text-xs text-muted-foreground">Click to upload .WAV</p>
+                            <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">Click to upload .WAV</p>
                           </>
                         )}
                       </div>
@@ -344,23 +352,23 @@ const ArtistApplicationForm = () => {
                     </label>
                   </div>
                 </div>
-                <div>
-                  <Label>Upload 15s Hook Preview (Optional)</Label>
+                <div className="space-y-2">
+                  <Label className="text-sm">Upload 15s Hook Preview (Optional)</Label>
                   <p className="text-xs text-muted-foreground mb-2">.WAV or .MP3</p>
                   <div>
-                    <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
-                      <div className="flex flex-col items-center justify-center pt-2 pb-2">
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
+                      <div className="flex flex-col items-center justify-center py-3">
                         {hookPreviewFile ? (
                           <>
-                            <CheckCircle className="w-5 h-5 text-primary mb-1" />
-                            <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            <CheckCircle className="w-7 h-7 text-primary mb-2" />
+                            <p className="text-sm text-muted-foreground truncate max-w-[250px]">
                               {hookPreviewFile.name}
                             </p>
                           </>
                         ) : (
                           <>
-                            <Upload className="w-5 h-5 text-muted-foreground mb-1" />
-                            <p className="text-xs text-muted-foreground">Click to upload</p>
+                            <Upload className="w-7 h-7 text-muted-foreground mb-2" />
+                            <p className="text-sm text-muted-foreground">Click to upload</p>
                           </>
                         )}
                       </div>
@@ -377,38 +385,41 @@ const ArtistApplicationForm = () => {
             </GlowCard>
 
             {/* Section 5: Rights Confirmation */}
-            <GlowCard className="p-5">
-              <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-4">
+            <GlowCard className="p-6 md:p-8">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6">
                 Rights Confirmation
               </h3>
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
+              <div className="space-y-5">
+                <div className="flex items-start gap-4">
                   <Checkbox
                     id="ownsRights"
                     checked={ownsRights}
                     onCheckedChange={(checked) => setOwnsRights(checked as boolean)}
+                    className="mt-0.5 h-5 w-5"
                   />
-                  <Label htmlFor="ownsRights" className="text-sm font-normal leading-relaxed cursor-pointer">
+                  <Label htmlFor="ownsRights" className="text-base font-normal leading-relaxed cursor-pointer">
                     I confirm I own or control all rights to the music I submit *
                   </Label>
                 </div>
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-4">
                   <Checkbox
                     id="notReleasedPublicly"
                     checked={notReleasedPublicly}
                     onCheckedChange={(checked) => setNotReleasedPublicly(checked as boolean)}
+                    className="mt-0.5 h-5 w-5"
                   />
-                  <Label htmlFor="notReleasedPublicly" className="text-sm font-normal leading-relaxed cursor-pointer">
+                  <Label htmlFor="notReleasedPublicly" className="text-base font-normal leading-relaxed cursor-pointer">
                     I confirm this music has not been released publicly yet OR I have the right to release it early *
                   </Label>
                 </div>
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-4">
                   <Checkbox
                     id="agreesTerms"
                     checked={agreesTerms}
                     onCheckedChange={(checked) => setAgreesTerms(checked as boolean)}
+                    className="mt-0.5 h-5 w-5"
                   />
-                  <Label htmlFor="agreesTerms" className="text-sm font-normal leading-relaxed cursor-pointer">
+                  <Label htmlFor="agreesTerms" className="text-base font-normal leading-relaxed cursor-pointer">
                     I agree to the Artist Terms of Service *
                   </Label>
                 </div>
@@ -419,12 +430,12 @@ const ArtistApplicationForm = () => {
             <Button
               type="submit"
               size="lg"
-              className="w-full"
+              className="w-full h-14 text-base"
               disabled={!isFormValid || isSubmitting}
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                   Submitting...
                 </>
               ) : (
