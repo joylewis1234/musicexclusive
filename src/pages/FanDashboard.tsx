@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
-import { GlowCard } from "@/components/ui/GlowCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Home, Plus, Sparkles, Play } from "lucide-react";
+import { ChevronLeft, Home, Sparkles, Play } from "lucide-react";
 import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
+import WalletBalanceCard from "@/components/WalletBalanceCard";
 
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
@@ -68,34 +68,9 @@ const FanDashboard = () => {
           </StatusBadge>
         </section>
 
-        {/* Balance Card */}
+        {/* Wallet Balance Card */}
         <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
-          <GlowCard glowColor="primary" hover={false}>
-            <div className="p-6 text-center">
-              <p className="text-muted-foreground font-display text-xs uppercase tracking-wider mb-2">
-                Listening Balance
-              </p>
-              <p 
-                className="font-display text-4xl md:text-5xl font-bold text-foreground mb-1"
-                style={{
-                  textShadow: "0 0 30px rgba(0, 255, 255, 0.3)"
-                }}
-              >
-                $25.00
-              </p>
-              <p className="text-muted-foreground/70 text-xs mb-4">
-                Credits available
-              </p>
-              <Button 
-                variant="accent" 
-                size="sm"
-                className="gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                Add Credits
-              </Button>
-            </div>
-          </GlowCard>
+          <WalletBalanceCard credits={125} />
         </section>
 
         {/* Discovery Preview */}
