@@ -1,5 +1,6 @@
-import { useNavigate, useParams } from "react-router-dom";
-import { ChevronLeft, Home, Play } from "lucide-react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useEffect, useRef } from "react";
+import { ChevronLeft, Home, Play, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -87,9 +88,22 @@ const artistsData: Record<string, {
 const ArtistProfile = () => {
   const navigate = useNavigate();
   const { artistId } = useParams<{ artistId: string }>();
+  const [searchParams] = useSearchParams();
   const { playTrack } = usePlayer();
+  const selectedTrackRef = useRef<HTMLButtonElement>(null);
+  const hasAutoPlayed = useRef(false);
 
   const artist = artistId ? artistsData[artistId] : null;
+  const selectedTrackId = searchParams.get("track");
+
+  // Get sorted tracks with selected track first
+  const sortedTracks = artist ? [...artist.tracks].sort((a, b) => {
+    if (selectedTrackId) {
+      if (a.id === selectedTrackId) return -1;
+      if (b.id === selectedTrackId) return 1;
+    }
+    return 0;
+  }) : [];
 
   const handlePlayTrack = (trackId: string) => {
     const track = tracksLibrary[trackId];
@@ -98,6 +112,18 @@ const ArtistProfile = () => {
       navigate(`/player/${trackId}`);
     }
   };
+
+  // Auto-play selected track when coming from Discovery
+  useEffect(() => {
+    if (selectedTrackId && !hasAutoPlayed.current) {
+      hasAutoPlayed.current = true;
+      // Small delay for smooth page transition
+      const timer = setTimeout(() => {
+        handlePlayTrack(selectedTrackId);
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [selectedTrackId]);
 
   if (!artist) {
     return (
@@ -181,26 +207,53 @@ const ArtistProfile = () => {
             </h2>
             
             <div className="space-y-3">
-              {artist.tracks.map((track, index) => (
-                <GlowCard key={`${track.title}-${index}`} glowColor="primary" hover>
-                  <button
-                    onClick={() => handlePlayTrack(track.id)}
-                    className="w-full p-4 flex items-center justify-between text-left"
+              {sortedTracks.map((track, index) => {
+                const isSelected = selectedTrackId === track.id;
+                return (
+                  <GlowCard 
+                    key={`${track.title}-${index}`} 
+                    glowColor={isSelected ? "accent" : "primary"} 
+                    hover
                   >
-                    <div className="flex-1 min-w-0">
-                      <p className="font-display text-sm font-semibold text-foreground truncate">
-                        {track.title}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {track.duration}
-                      </p>
-                    </div>
-                    <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center">
-                      <Play className="w-4 h-4 text-primary ml-0.5" />
-                    </div>
-                  </button>
-                </GlowCard>
-              ))}
+                    <button
+                      ref={isSelected ? selectedTrackRef : undefined}
+                      onClick={() => handlePlayTrack(track.id)}
+                      className={`w-full p-4 flex items-center justify-between text-left transition-all duration-300 ${
+                        isSelected ? "ring-1 ring-accent/50" : ""
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-display text-sm font-semibold text-foreground truncate">
+                            {track.title}
+                          </p>
+                          {isSelected && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-display uppercase tracking-wider text-accent border border-accent/40 bg-accent/10 animate-pulse">
+                              <Check className="w-3 h-3" />
+                              Selected
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {track.duration}
+                        </p>
+                      </div>
+                      <div 
+                        className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+                          isSelected 
+                            ? "bg-accent/30 border border-accent/50" 
+                            : "bg-primary/20 border border-primary/30"
+                        }`}
+                        style={{
+                          boxShadow: isSelected ? "0 0 20px hsl(var(--accent) / 0.4)" : undefined,
+                        }}
+                      >
+                        <Play className={`w-4 h-4 ml-0.5 ${isSelected ? "text-accent" : "text-primary"}`} />
+                      </div>
+                    </button>
+                  </GlowCard>
+                );
+              })}
             </div>
           </section>
 
