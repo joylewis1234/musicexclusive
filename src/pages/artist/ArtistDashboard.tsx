@@ -1,34 +1,105 @@
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Home, 
   Upload, 
-  Music, 
-  Users, 
-  TrendingUp,
-  Settings,
+  Pencil,
   LogOut,
-  Mic2
+  Mic2,
+  Music,
+  Loader2
 } from "lucide-react";
+import { format } from "date-fns";
+
+interface Track {
+  id: string;
+  title: string;
+  created_at: string;
+  status?: "exclusive" | "scheduled" | "ended";
+}
 
 const ArtistDashboard = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const [artistName, setArtistName] = useState("Artist");
+  const [tracks, setTracks] = useState<Track[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchArtistData = async () => {
+      if (!user?.email) return;
+
+      try {
+        // Fetch artist application for name
+        const { data: application } = await supabase
+          .from("artist_applications")
+          .select("artist_name")
+          .eq("contact_email", user.email)
+          .maybeSingle();
+
+        if (application) {
+          setArtistName(application.artist_name);
+        }
+
+        // Fetch tracks - using email as artist_id for now
+        const { data: trackData } = await supabase
+          .from("tracks")
+          .select("id, title, created_at")
+          .eq("artist_id", user.email)
+          .order("created_at", { ascending: false });
+
+        if (trackData) {
+          // Add status based on upload date (mock logic for now)
+          const tracksWithStatus = trackData.map((track) => ({
+            ...track,
+            status: "exclusive" as const, // Default to exclusive
+          }));
+          setTracks(tracksWithStatus);
+        }
+      } catch (error) {
+        console.error("Error fetching artist data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchArtistData();
+  }, [user]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  // Mock stats - would come from database
-  const stats = {
-    totalTracks: 3,
-    totalStreams: 2879,
-    totalEarnings: 575.80,
-    followers: 142,
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "exclusive":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30">
+            Exclusive
+          </span>
+        );
+      case "scheduled":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-500 border border-amber-500/30">
+            Scheduled
+          </span>
+        );
+      case "ended":
+        return (
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted/50 text-muted-foreground border border-border/50">
+            Exclusive Period Ended
+          </span>
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -39,7 +110,7 @@ const ArtistDashboard = () => {
           <div className="flex items-center gap-2">
             <Mic2 className="w-5 h-5 text-accent" />
             <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
-              Artist Dashboard
+              Dashboard
             </span>
           </div>
 
@@ -66,100 +137,95 @@ const ArtistDashboard = () => {
       <main className="pt-20 pb-12 px-4">
         <div className="container max-w-lg md:max-w-xl mx-auto">
           
-          {/* Welcome Section */}
-          <div className="text-center mb-8">
-            <h1 className="font-display text-2xl font-bold text-foreground mb-2">
-              Welcome Back, Artist
+          {/* 1. Welcome Header */}
+          <GlowCard className="p-6 mb-6 text-center">
+            <h1 className="font-display text-xl md:text-2xl font-bold text-foreground mb-3">
+              Welcome to Music Exclusive
             </h1>
-            <p className="text-muted-foreground text-sm">
-              Manage your music and connect with fans
-            </p>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <GlowCard className="p-4 text-center">
-              <Music className="w-5 h-5 text-primary mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-foreground">
-                {stats.totalTracks}
-              </p>
-              <p className="text-muted-foreground text-xs">Tracks</p>
-            </GlowCard>
             
-            <GlowCard className="p-4 text-center">
-              <TrendingUp className="w-5 h-5 text-primary mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-foreground">
-                {stats.totalStreams.toLocaleString()}
-              </p>
-              <p className="text-muted-foreground text-xs">Streams</p>
-            </GlowCard>
+            {/* Exclusive Artist Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-4">
+              <Mic2 className="w-4 h-4 text-primary" />
+              <span className="text-primary text-sm font-display uppercase tracking-wider">
+                Exclusive Artist
+              </span>
+            </div>
             
-            <GlowCard className="p-4 text-center">
-              <Users className="w-5 h-5 text-accent mx-auto mb-2" />
-              <p className="font-display text-2xl font-bold text-foreground">
-                {stats.followers}
-              </p>
-              <p className="text-muted-foreground text-xs">Followers</p>
-            </GlowCard>
-            
-            <GlowCard className="p-4 text-center">
-              <div className="w-5 h-5 text-green-500 mx-auto mb-2 font-bold">$</div>
-              <p className="font-display text-2xl font-bold text-green-500">
-                ${stats.totalEarnings.toFixed(2)}
-              </p>
-              <p className="text-muted-foreground text-xs">Earnings</p>
-            </GlowCard>
-          </div>
-
-          {/* Quick Actions */}
-          <SectionHeader title="Quick Actions" align="left" className="mb-4" />
-          
-          <div className="space-y-3 mb-8">
-            <Button 
-              variant="outline" 
-              className="w-full justify-start h-14"
-              onClick={() => navigate("/artist/upload")}
-            >
-              <Upload className="w-5 h-5 mr-3 text-primary" />
-              <div className="text-left">
-                <p className="font-semibold">Upload New Track</p>
-                <p className="text-xs text-muted-foreground">Share exclusive music</p>
-              </div>
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="w-full justify-start h-14"
-              onClick={() => navigate("/artist/profile")}
-            >
-              <Mic2 className="w-5 h-5 mr-3 text-accent" />
-              <div className="text-left">
-                <p className="font-semibold">View Profile</p>
-                <p className="text-xs text-muted-foreground">See how fans see you</p>
-              </div>
-            </Button>
-
-            <Button 
-              variant="outline" 
-              className="w-full justify-start h-14"
-              onClick={() => navigate("/artist/settings")}
-            >
-              <Settings className="w-5 h-5 mr-3 text-muted-foreground" />
-              <div className="text-left">
-                <p className="font-semibold">Settings</p>
-                <p className="text-xs text-muted-foreground">Account preferences</p>
-              </div>
-            </Button>
-          </div>
-
-          {/* Recent Activity Placeholder */}
-          <SectionHeader title="Recent Activity" align="left" className="mb-4" />
-          
-          <GlowCard className="p-6 text-center">
-            <p className="text-muted-foreground text-sm">
-              Your recent streams and engagement will appear here.
+            <p className="text-muted-foreground text-sm font-body leading-relaxed max-w-xs mx-auto">
+              Release your music early to fans inside the Vault.
             </p>
           </GlowCard>
+
+          {/* 2. Primary Actions */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+            <Button 
+              size="lg"
+              className="w-full h-14"
+              onClick={() => navigate("/artist/upload")}
+            >
+              <Upload className="w-5 h-5 mr-2" />
+              Upload New Track
+            </Button>
+
+            <Button 
+              size="lg"
+              variant="secondary"
+              className="w-full h-14"
+              onClick={() => navigate("/artist/profile/edit")}
+            >
+              <Pencil className="w-5 h-5 mr-2" />
+              Edit Artist Profile
+            </Button>
+          </div>
+
+          {/* 3. Releases Overview */}
+          <div className="mb-4">
+            <SectionHeader title="Your Exclusive Releases" align="left" />
+          </div>
+
+          {isLoading ? (
+            <GlowCard className="p-8 text-center">
+              <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+            </GlowCard>
+          ) : tracks.length === 0 ? (
+            <GlowCard className="p-8 text-center">
+              <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm mb-4">
+                You haven't uploaded any tracks yet.
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate("/artist/upload")}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                Upload Your First Track
+              </Button>
+            </GlowCard>
+          ) : (
+            <div className="space-y-3">
+              {tracks.map((track) => (
+                <GlowCard key={track.id} className="p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    {/* Track Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-display text-base font-semibold text-foreground truncate">
+                        {track.title}
+                      </h3>
+                      <p className="text-muted-foreground text-xs mt-1">
+                        Uploaded {format(new Date(track.created_at), "MMM d, yyyy")}
+                      </p>
+                    </div>
+                    
+                    {/* Status Badge */}
+                    <div className="flex-shrink-0">
+                      {getStatusBadge(track.status || "exclusive")}
+                    </div>
+                  </div>
+                </GlowCard>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>
