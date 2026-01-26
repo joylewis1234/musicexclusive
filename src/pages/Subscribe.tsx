@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -41,6 +41,22 @@ const Subscribe = () => {
     setIsProcessing(false);
     setIsComplete(true);
   };
+
+  // After subscription completes, auto-redirect based on flow
+  useEffect(() => {
+    if (isComplete) {
+      const timer = setTimeout(() => {
+        if (flow === "vault") {
+          // Vault winners already signed agreements, go to dashboard
+          navigate("/fan/dashboard", { replace: true });
+        } else {
+          // Superfan direct signup goes to agreements first
+          navigate("/agreements/fan", { state: { ...state, flow: "superfan" }, replace: true });
+        }
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isComplete, flow, navigate, state]);
 
   if (isComplete) {
     return (
@@ -93,22 +109,9 @@ const Subscribe = () => {
               </div>
             </GlowCard>
 
-            <Button
-              onClick={() => {
-                // Vault winners already signed agreements, go to dashboard
-                // Superfan direct signup goes to agreements first
-                if (flow === "vault") {
-                  navigate("/fan/dashboard", { replace: true });
-                } else {
-                  navigate("/agreements/fan", { state: { ...state, flow: "superfan" } });
-                }
-              }}
-              className="w-full mt-8"
-              variant="primary"
-              size="lg"
-            >
-              Enter Music Exclusive
-            </Button>
+            <p className="text-muted-foreground/60 text-sm mt-6">
+              Redirecting...
+            </p>
           </div>
         </main>
       </div>
