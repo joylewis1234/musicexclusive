@@ -50,7 +50,7 @@ export const useAudioPreview = (): UseAudioPreviewReturn => {
 
     // If no audio URL, set error
     if (!audioUrl) {
-      setError("Preview not available. Tap STREAM to listen inside.");
+      setError("Hook preview not available. Tap STREAM to listen inside.");
       setCurrentPreviewId(artistId);
       return;
     }

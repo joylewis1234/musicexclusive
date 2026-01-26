@@ -303,12 +303,12 @@ const ArtistUpload = () => {
             )}
           </div>
 
-          {/* Preview Track Upload */}
+          {/* Hook Preview Upload */}
           <div className="p-4 rounded-xl bg-card/50 border border-border/50">
             <div className="flex items-center gap-2 mb-2">
               <Headphones className="w-5 h-5 text-accent" />
               <Label className="text-sm font-display uppercase tracking-wider text-foreground">
-                15-Second Preview
+                Upload 15s Hook Preview
               </Label>
               <span className="text-xs text-muted-foreground">(Recommended)</span>
             </div>
@@ -316,9 +316,14 @@ const ArtistUpload = () => {
             {/* Helper text */}
             <div className="flex items-start gap-2 mb-3 p-2 rounded-lg bg-accent/10 border border-accent/20">
               <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground">
-                Previews help fans discover your music faster.
-              </p>
+              <div className="space-y-1">
+                <p className="text-xs text-foreground font-medium">
+                  Choose your strongest 15 seconds — the hook fans will hear on Discovery.
+                </p>
+                <p className="text-[10px] text-muted-foreground">
+                  Preview should be ~15 seconds. MP3/AAC supported.
+                </p>
+              </div>
             </div>
 
             <input
@@ -350,8 +355,8 @@ const ArtistUpload = () => {
                 className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-accent/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
               >
                 <Upload className="w-8 h-8" />
-                <span className="text-sm">Click to upload 15s preview</span>
-                <span className="text-xs text-muted-foreground">MP3 or AAC, max 50MB</span>
+                <span className="text-sm font-medium">Upload your hook preview</span>
+                <span className="text-xs text-muted-foreground">The 15 seconds fans hear first</span>
               </button>
             )}
           </div>
