@@ -74,10 +74,10 @@ const Index = () => {
         <div className="container max-w-lg md:max-w-2xl mx-auto">
           {/* Micro-Explainer */}
           <p 
-            className="text-sm md:text-base font-display uppercase tracking-[0.2em] mb-6 animate-fade-up opacity-0 gradient-text"
-            style={{ textShadow: '0 0 30px hsl(var(--primary) / 0.4)' }}
+            className="text-base md:text-lg font-display uppercase tracking-[0.25em] mb-6 animate-fade-up opacity-0 gradient-text"
+            style={{ textShadow: '0 0 40px hsl(var(--primary) / 0.5)' }}
           >
-            Where artists release music before the world hears it.
+            Music. Released here first.
           </p>
           
           {/* Hero Text */}
