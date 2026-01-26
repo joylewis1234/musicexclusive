@@ -4,21 +4,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Loader2, Music, Sparkles } from "lucide-react";
+import { ArrowLeft, Loader2, Music, Sparkles, Crown } from "lucide-react";
 import { toast } from "sonner";
+
+interface LocationState {
+  from?: Location;
+  flow?: "superfan" | "vault";
+  email?: string;
+  name?: string;
+}
 
 const FanAuth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, signUp } = useAuth();
   
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState("");
+  const state = location.state as LocationState | null;
+  const flow = state?.flow || "default";
+  const isSuperfanFlow = flow === "superfan";
+  
+  const [isSignUp, setIsSignUp] = useState(isSuperfanFlow); // Default to signup for superfan flow
+  const [email, setEmail] = useState(state?.email || "");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [displayName, setDisplayName] = useState(state?.name || "");
   const [isLoading, setIsLoading] = useState(false);
 
-  const from = (location.state as { from?: Location })?.from?.pathname || "/fan/dashboard";
+  // Determine destination based on flow
+  const getDestination = () => {
+    if (isSuperfanFlow) {
+      // Superfan flow: go to subscribe page
+      return "/subscribe";
+    }
+    // Default or vault flow: go to dashboard
+    return state?.from?.pathname || "/fan/dashboard";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +51,7 @@ const FanAuth = () => {
           return;
         }
         toast.success("Account created! Welcome to the Vault.");
-        navigate(from, { replace: true });
+        navigate(getDestination(), { replace: true, state: { flow, email, name: displayName } });
       } else {
         const { error } = await signIn(email, password);
         if (error) {
@@ -40,7 +59,7 @@ const FanAuth = () => {
           return;
         }
         toast.success("Welcome back!");
-        navigate(from, { replace: true });
+        navigate(getDestination(), { replace: true, state: { flow, email } });
       }
     } finally {
       setIsLoading(false);
@@ -67,17 +86,27 @@ const FanAuth = () => {
         <GlowCard className="max-w-md w-full p-8">
           {/* Icon */}
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
-            <Music className="w-8 h-8 text-primary" />
+            {isSuperfanFlow ? (
+              <Crown className="w-8 h-8 text-primary" />
+            ) : (
+              <Music className="w-8 h-8 text-primary" />
+            )}
           </div>
 
           <h1 className="font-display text-2xl font-bold text-foreground text-center mb-2">
-            {isSignUp ? "Join the Vault" : "Welcome Back"}
+            {isSuperfanFlow 
+              ? (isSignUp ? "Become a Superfan" : "Welcome Back, Superfan")
+              : (isSignUp ? "Join the Vault" : "Welcome Back")}
           </h1>
           
           <p className="text-muted-foreground text-center mb-6">
-            {isSignUp 
-              ? "Create your fan account to access exclusive music"
-              : "Sign in to continue discovering exclusive tracks"}
+            {isSuperfanFlow
+              ? (isSignUp 
+                  ? "Create your account to unlock guaranteed access"
+                  : "Sign in to continue to your Superfan subscription")
+              : (isSignUp 
+                  ? "Create your fan account to access exclusive music"
+                  : "Sign in to continue discovering exclusive tracks")}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">

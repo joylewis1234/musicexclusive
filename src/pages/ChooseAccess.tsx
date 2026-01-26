@@ -2,11 +2,12 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Crown, Zap, Star, Users, Gift, Sparkles, CreditCard, Check, Home } from "lucide-react";
+import { ChevronLeft, Crown, Zap, Star, Users, Gift, Sparkles, CreditCard, Check, Home, Trophy } from "lucide-react";
 
 interface LocationState {
   email?: string;
   name?: string;
+  flow?: "vault";
 }
 
 const ChooseAccess = () => {
@@ -62,17 +63,27 @@ const ChooseAccess = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col items-center px-4 py-8">
         <div className="w-full max-w-4xl">
+          {/* Winner Banner */}
+          <div className="flex justify-center mb-4">
+            <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-full px-4 py-2">
+              <Trophy className="w-4 h-4 text-primary" />
+              <span className="text-sm text-primary font-display uppercase tracking-wider">
+                Vault Winner
+              </span>
+            </div>
+          </div>
+
           {/* Framed Header */}
           <div className="flex justify-center mb-4">
             <SectionHeader 
-              title="Choose Access to Exclusive Music" 
+              title="Choose Your Access" 
               align="center" 
               framed 
             />
           </div>
 
           <p className="text-muted-foreground text-center mb-10 text-sm md:text-base max-w-md mx-auto">
-            Select how you want to listen inside Music Exclusive.
+            Congratulations! As a vault winner, you can choose how you want to listen.
           </p>
 
           {/* Options Grid */}
