@@ -4,7 +4,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PlayerProvider } from "@/contexts/PlayerContext";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { FanLayout } from "@/layouts/FanLayout";
+
+// Public pages
 import Index from "./pages/Index";
 import EnterVault from "./pages/EnterVault";
 import SubmitVaultCode from "./pages/SubmitVaultCode";
@@ -15,65 +19,115 @@ import AccessChoice from "./pages/AccessChoice";
 import Subscribe from "./pages/Subscribe";
 import LoadCredits from "./pages/LoadCredits";
 import Payment from "./pages/Payment";
+import NotFound from "./pages/NotFound";
+
+// Auth pages
+import FanAuth from "./pages/auth/FanAuth";
+import ArtistAuth from "./pages/auth/ArtistAuth";
+import AccessRestricted from "./pages/AccessRestricted";
+
+// Fan pages (protected)
 import FanDashboard from "./pages/FanDashboard";
 import FanProfile from "./pages/FanProfile";
 import FanInbox from "./pages/FanInbox";
 import Discovery from "./pages/Discovery";
 import ArtistProfile from "./pages/ArtistProfile";
-import ArtistUpload from "./pages/ArtistUpload";
 import MusicPlayer from "./pages/MusicPlayer";
+
+// Artist pages (protected)
 import ArtistApply from "./pages/ArtistApply";
 import ArtistApplicationForm from "./pages/ArtistApplicationForm";
 import ArtistApplicationStatus from "./pages/ArtistApplicationStatus";
 import ArtistProfilePage from "./pages/ArtistProfilePage";
-import NotFound from "./pages/NotFound";
+import ArtistUpload from "./pages/ArtistUpload";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <PlayerProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/vault/enter" element={<EnterVault />} />
-            <Route path="/vault/submit" element={<SubmitVaultCode />} />
-            <Route path="/vault/status" element={<VaultStatus />} />
-            <Route path="/agreements/fan" element={<Agreements />} />
-            <Route path="/onboarding/listen" element={<ChooseAccess />} />
-            <Route path="/fan/access-choice" element={<AccessChoice />} />
-            <Route path="/subscribe" element={<Subscribe />} />
-            <Route path="/load-credits" element={<LoadCredits />} />
-            <Route path="/fan/payment" element={<Payment />} />
-            <Route path="/artist/apply" element={<ArtistApply />} />
-            <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
-            <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
-            <Route path="/artist/profile" element={<ArtistProfilePage />} />
-            
-            {/* Fan routes with persistent mini-player */}
-            <Route element={<FanLayout />}>
-              <Route path="/fan/dashboard" element={<FanDashboard />} />
-              <Route path="/fan/profile" element={<FanProfile />} />
-              <Route path="/fan/inbox" element={<FanInbox />} />
-              <Route path="/discovery" element={<Discovery />} />
-              <Route path="/artist/:artistId" element={<ArtistProfile />} />
-              <Route path="/artist/upload" element={<ArtistUpload />} />
-            </Route>
-            
-            {/* Full player (no mini-player) */}
-            <Route path="/player/:trackId" element={<MusicPlayer />} />
-            <Route path="/player" element={<MusicPlayer />} />
-            
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </PlayerProvider>
+    <AuthProvider>
+      <PlayerProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/vault/enter" element={<EnterVault />} />
+              <Route path="/vault/submit" element={<SubmitVaultCode />} />
+              <Route path="/vault/status" element={<VaultStatus />} />
+              <Route path="/agreements/fan" element={<Agreements />} />
+              <Route path="/onboarding/listen" element={<ChooseAccess />} />
+              <Route path="/subscribe" element={<Subscribe />} />
+              <Route path="/load-credits" element={<LoadCredits />} />
+              
+              {/* Auth routes */}
+              <Route path="/auth/fan" element={<FanAuth />} />
+              <Route path="/auth/artist" element={<ArtistAuth />} />
+              <Route path="/access-restricted" element={<AccessRestricted />} />
+              
+              {/* Fan routes with persistent mini-player (protected) */}
+              <Route element={
+                <ProtectedRoute allowedRole="fan">
+                  <FanLayout />
+                </ProtectedRoute>
+              }>
+                <Route path="/fan/dashboard" element={<FanDashboard />} />
+                <Route path="/fan/profile" element={<FanProfile />} />
+                <Route path="/fan/inbox" element={<FanInbox />} />
+                <Route path="/fan/access-choice" element={<AccessChoice />} />
+                <Route path="/fan/payment" element={<Payment />} />
+                <Route path="/discovery" element={<Discovery />} />
+                <Route path="/artist/:artistId" element={<ArtistProfile />} />
+              </Route>
+              
+              {/* Full player for fans (protected) */}
+              <Route path="/player/:trackId" element={
+                <ProtectedRoute allowedRole="fan">
+                  <MusicPlayer />
+                </ProtectedRoute>
+              } />
+              <Route path="/player" element={
+                <ProtectedRoute allowedRole="fan">
+                  <MusicPlayer />
+                </ProtectedRoute>
+              } />
+              
+              {/* Artist routes (protected) */}
+              <Route path="/artist/profile" element={
+                <ProtectedRoute allowedRole="artist">
+                  <ArtistProfilePage />
+                </ProtectedRoute>
+              } />
+              <Route path="/artist/upload" element={
+                <ProtectedRoute allowedRole="artist">
+                  <ArtistUpload />
+                </ProtectedRoute>
+              } />
+              <Route path="/artist/apply" element={
+                <ProtectedRoute allowedRole="artist">
+                  <ArtistApply />
+                </ProtectedRoute>
+              } />
+              <Route path="/artist/application-form" element={
+                <ProtectedRoute allowedRole="artist">
+                  <ArtistApplicationForm />
+                </ProtectedRoute>
+              } />
+              <Route path="/artist/application-status" element={
+                <ProtectedRoute allowedRole="artist">
+                  <ArtistApplicationStatus />
+                </ProtectedRoute>
+              } />
+              
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </PlayerProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 
