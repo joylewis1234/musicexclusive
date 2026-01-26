@@ -24,29 +24,28 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
             className="flex-shrink-0 px-2"
           >
             <div 
-              className="group relative w-20 md:w-24 rounded-xl overflow-hidden transition-all duration-300"
+              className="group relative w-20 md:w-24 aspect-square rounded-xl transition-all duration-300"
               style={{
                 boxShadow: "0 0 15px hsl(var(--primary) / 0.3), 0 0 30px hsl(var(--primary) / 0.15)",
               }}
             >
               {/* Glow border */}
               <div 
-                className="absolute inset-0 rounded-xl p-[1px] pointer-events-none z-10"
+                className="absolute inset-0 rounded-xl pointer-events-none z-10"
                 style={{
                   background: "linear-gradient(135deg, hsl(var(--primary) / 0.6), hsl(var(--accent) / 0.4), hsl(var(--primary) / 0.6))",
+                  padding: "1px",
                 }}
               />
               
               {/* Inner container */}
-              <div className="absolute inset-[1px] rounded-xl overflow-hidden bg-background z-0">
+              <div className="absolute inset-[1px] rounded-xl overflow-hidden bg-background">
                 {/* Artist Image */}
-                <div className="aspect-square overflow-hidden">
-                  <img
-                    src={artist.imageUrl}
-                    alt={artist.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                  />
-                </div>
+                <img
+                  src={artist.imageUrl}
+                  alt={artist.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
                 
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
