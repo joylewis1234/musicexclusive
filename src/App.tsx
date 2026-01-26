@@ -12,6 +12,8 @@ import VaultStatus from "./pages/VaultStatus";
 import Agreements from "./pages/Agreements";
 import ChooseAccess from "./pages/ChooseAccess";
 import AccessChoice from "./pages/AccessChoice";
+import Subscribe from "./pages/Subscribe";
+import LoadCredits from "./pages/LoadCredits";
 import Payment from "./pages/Payment";
 import FanDashboard from "./pages/FanDashboard";
 import FanProfile from "./pages/FanProfile";
@@ -40,6 +42,8 @@ const App = () => (
             <Route path="/agreements/fan" element={<Agreements />} />
             <Route path="/onboarding/listen" element={<ChooseAccess />} />
             <Route path="/fan/access-choice" element={<AccessChoice />} />
+            <Route path="/subscribe" element={<Subscribe />} />
+            <Route path="/load-credits" element={<LoadCredits />} />
             <Route path="/fan/payment" element={<Payment />} />
             
             {/* Fan routes with persistent mini-player */}
