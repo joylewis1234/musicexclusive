@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn } from "lucide-react"
+import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
@@ -9,7 +9,8 @@ const mainNavItems = [
   { title: "Home", href: "/", icon: Home },
   { title: "How It Works", href: "/#how-it-works", icon: HelpCircle },
   { title: "Enter the Vault", href: "/vault/enter", icon: KeyRound },
-  { title: "Superfan", href: "/choose-access", icon: Star },
+  { title: "Superfan", href: "/onboarding/listen", icon: Star },
+  { title: "Artist Application", href: "/artist/apply", icon: Music },
 ]
 
 const Header = () => {
