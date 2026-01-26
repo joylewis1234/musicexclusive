@@ -1,19 +1,76 @@
-import { useNavigate, useLocation } from "react-router-dom"
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { GlowCard } from "@/components/ui/GlowCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
-import { ArrowLeft, Home, Clock, CheckCircle, XCircle, Sparkles } from "lucide-react"
+import { ArrowLeft, Home, Clock, CheckCircle, XCircle, Sparkles, Copy, ExternalLink } from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
+import { toast } from "sonner"
 
-type ApplicationStatus = "pending" | "approved" | "rejected"
+type ApplicationStatus = "pending" | "approved" | "approved_pending_setup" | "rejected" | "active"
 
 const ArtistApplicationStatus = () => {
   const navigate = useNavigate()
   const { state } = useLocation()
-  const artistName = state?.artistName || "Artist"
+  const [searchParams] = useSearchParams()
   
-  // In production, this would come from the database
-  // For now, we use navigation state or default to pending
-  const status: ApplicationStatus = state?.status || "pending"
+  const [status, setStatus] = useState<ApplicationStatus>(state?.status || "pending")
+  const [artistName, setArtistName] = useState(state?.artistName || "Artist")
+  const [email, setEmail] = useState(state?.email || "")
+  const [isLoading, setIsLoading] = useState(!state?.status)
+  
+  // Check for email in URL params (for direct links)
+  const emailParam = searchParams.get("email")
+  
+  useEffect(() => {
+    const fetchApplicationStatus = async () => {
+      const checkEmail = emailParam || email
+      if (!checkEmail) {
+        setIsLoading(false)
+        return
+      }
+      
+      try {
+        const { data, error } = await supabase
+          .from("artist_applications")
+          .select("status, artist_name, contact_email")
+          .eq("contact_email", checkEmail)
+          .maybeSingle()
+        
+        if (error) {
+          console.error("Error fetching application:", error)
+        } else if (data) {
+          setStatus(data.status as ApplicationStatus)
+          setArtistName(data.artist_name)
+          setEmail(data.contact_email)
+        }
+      } catch (err) {
+        console.error("Error:", err)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+    
+    if (!state?.status) {
+      fetchApplicationStatus()
+    }
+  }, [emailParam, email, state?.status])
+  
+  const setupLink = email ? `${window.location.origin}/artist/setup-account?email=${encodeURIComponent(email)}` : ""
+  
+  const copySetupLink = () => {
+    navigator.clipboard.writeText(setupLink)
+    toast.success("Setup link copied to clipboard!")
+  }
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -125,11 +182,11 @@ const ArtistApplicationStatus = () => {
             </>
           )}
 
-          {/* Approved State */}
-          {status === "approved" && (
+          {/* Approved Pending Setup State */}
+          {(status === "approved" || status === "approved_pending_setup") && (
             <>
               <div className="text-center mb-8">
-                <SectionHeader title="You're Approved" align="center" framed />
+                <SectionHeader title="You're Approved!" align="center" framed />
               </div>
 
               <GlowCard className="p-6 text-center mb-6" unlocking>
@@ -138,13 +195,13 @@ const ArtistApplicationStatus = () => {
                 </div>
                 
                 <h2 className="font-display text-2xl font-bold text-foreground mb-2">
-                  🎉 Congratulations!
+                  🎉 Congratulations, {artistName}!
                 </h2>
                 
                 <p className="text-muted-foreground text-sm font-body mb-6 leading-relaxed max-w-xs mx-auto">
-                  Welcome to Music Exclusive.
+                  You've been approved as an Exclusive Artist on Music Exclusive.
                   <br />
-                  You've been selected to release music early to a dedicated fanbase.
+                  Click below to set up your artist account and start uploading your exclusive releases.
                 </p>
 
                 {/* Status Badge */}
@@ -189,12 +246,75 @@ const ArtistApplicationStatus = () => {
                 </ul>
               </GlowCard>
 
+              {/* Primary CTA */}
+              <Button
+                size="lg"
+                className="w-full mb-4"
+                onClick={() => navigate(`/artist/setup-account?email=${encodeURIComponent(email)}`)}
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                SET UP MY ARTIST ACCOUNT
+              </Button>
+
+              {/* Fallback: Copy Link */}
+              {setupLink && (
+                <div className="bg-muted/20 border border-border/30 rounded-xl p-4">
+                  <p className="text-muted-foreground text-xs font-body mb-3 text-center">
+                    Or copy your personal setup link:
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs bg-background/50 rounded px-3 py-2 truncate text-muted-foreground">
+                      {setupLink}
+                    </code>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={copySetupLink}
+                      className="flex-shrink-0"
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Active State - Already set up */}
+          {status === "active" && (
+            <>
+              <div className="text-center mb-8">
+                <SectionHeader title="Account Active" align="center" framed />
+              </div>
+
+              <GlowCard className="p-6 text-center mb-6">
+                <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+                  <CheckCircle className="w-8 h-8 text-primary" />
+                </div>
+                
+                <h2 className="font-display text-lg font-bold text-foreground mb-3">
+                  Welcome Back, {artistName}!
+                </h2>
+                
+                <p className="text-muted-foreground text-sm font-body mb-4 leading-relaxed">
+                  Your artist account is already set up and active.
+                </p>
+
+                {/* Status Badge */}
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
+                  <CheckCircle className="w-4 h-4 text-primary" />
+                  <span className="text-primary text-sm font-display uppercase tracking-wider">
+                    Active
+                  </span>
+                </div>
+              </GlowCard>
+
               <Button
                 size="lg"
                 className="w-full"
-                onClick={() => navigate("/artist/profile")}
+                onClick={() => navigate("/artist/login")}
               >
-                Set Up Artist Profile
+                Go to Artist Login
               </Button>
             </>
           )}
