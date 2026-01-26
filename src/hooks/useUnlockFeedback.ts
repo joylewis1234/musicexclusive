@@ -89,8 +89,8 @@ export const useUnlockFeedback = () => {
 
   const triggerUnlockFeedback = useCallback(() => {
     triggerHaptic();
-    triggerUnlockSound();
-  }, [triggerHaptic, triggerUnlockSound]);
+    // Sound disabled - only haptic feedback
+  }, [triggerHaptic]);
 
   return { triggerUnlockFeedback, triggerUnlockSound, triggerHaptic };
 };
