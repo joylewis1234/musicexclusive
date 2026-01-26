@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Crown, Zap, Star, Users, CreditCard, Home } from "lucide-react";
+import { ChevronLeft, Crown, Zap, Star, Users, Gift, Sparkles, CreditCard, Check, Home } from "lucide-react";
 
 interface LocationState {
   email?: string;
@@ -15,14 +15,29 @@ const ChooseAccess = () => {
   const state = location.state as LocationState | null;
 
   const handleSuperfan = () => {
-    // TODO: Route to Stripe subscription flow
     navigate("/subscribe", { state });
   };
 
   const handlePayAsYouGo = () => {
-    // TODO: Route to wallet top-up flow
     navigate("/load-credits", { state });
   };
+
+  const superfanPerks = [
+    { icon: Zap, text: "25 listening credits included each month" },
+    { icon: Crown, text: "Guaranteed access to Music Exclusive" },
+    { icon: Star, text: "Early access to exclusive music before public release" },
+    { icon: Sparkles, text: "Superfan status badge on your profile" },
+    { icon: Users, text: "Monthly friend bypass — invite a friend directly into the Vault" },
+    { icon: Gift, text: "Priority access to new drops and featured artists" },
+  ];
+
+  const payAsYouGoDetails = [
+    "$5 minimum load (25 credits)",
+    "Each stream uses 1 credit",
+    "Listen until credits run out",
+    "No subscription",
+    "No additional perks",
+  ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -50,25 +65,25 @@ const ChooseAccess = () => {
           {/* Framed Header */}
           <div className="flex justify-center mb-4">
             <SectionHeader 
-              title="Choose Your Access" 
+              title="Choose Access to Exclusive Music" 
               align="center" 
               framed 
             />
           </div>
 
           <p className="text-muted-foreground text-center mb-10 text-sm md:text-base max-w-md mx-auto">
-            Select how you want to experience Music Exclusive.
+            Select how you want to listen inside Music Exclusive.
           </p>
 
           {/* Options Grid */}
           <div className="grid md:grid-cols-2 gap-6 md:gap-8">
             
-            {/* SUPERFAN Card */}
-            <div className="relative group">
+            {/* SUPERFAN Card - Visually dominant */}
+            <div className="relative group md:scale-[1.02]">
               {/* Popular badge */}
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                 <span className="bg-gradient-to-r from-primary to-purple-500 text-primary-foreground text-xs uppercase tracking-wider px-4 py-1 rounded-full font-medium shadow-lg">
-                  Most Popular
+                  Best Value
                 </span>
               </div>
               
@@ -93,37 +108,26 @@ const ChooseAccess = () => {
                   </h3>
 
                   {/* Price */}
-                  <div className="text-center mb-6">
+                  <div className="text-center mb-2">
                     <span className="text-4xl font-display text-foreground">$5</span>
-                    <span className="text-muted-foreground text-sm">/month</span>
+                    <span className="text-muted-foreground text-sm"> / month</span>
                   </div>
 
+                  {/* Description */}
+                  <p className="text-muted-foreground text-center text-sm mb-6">
+                    Unlock guaranteed access and exclusive perks.
+                  </p>
+
                   {/* Benefits */}
-                  <ul className="space-y-4 mb-8 flex-1">
-                    <li className="flex items-start gap-3">
-                      <Zap className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground text-sm">
-                        <strong className="text-foreground">Included listening credits</strong> each month
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Star className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground text-sm">
-                        <strong className="text-foreground">Early access</strong> to new releases
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Crown className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground text-sm">
-                        <strong className="text-foreground">Exclusive status badge</strong> on your profile
-                      </span>
-                    </li>
-                    <li className="flex items-start gap-3">
-                      <Users className="w-5 h-5 text-primary shrink-0 mt-0.5" />
-                      <span className="text-muted-foreground text-sm">
-                        <strong className="text-foreground">Monthly friend bypass</strong> — invite someone directly
-                      </span>
-                    </li>
+                  <ul className="space-y-3 mb-6 flex-1">
+                    {superfanPerks.map(({ icon: Icon, text }, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <Icon className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                        <span className="text-muted-foreground text-sm leading-tight">
+                          {text}
+                        </span>
+                      </li>
+                    ))}
                   </ul>
 
                   {/* CTA */}
@@ -131,10 +135,15 @@ const ChooseAccess = () => {
                     onClick={handleSuperfan}
                     variant="primary"
                     size="lg"
-                    className="w-full"
+                    className="w-full mb-3"
                   >
                     Become a Superfan
                   </Button>
+
+                  {/* Helper text */}
+                  <p className="text-xs text-muted-foreground text-center">
+                    Best value. Cancel anytime.
+                  </p>
                 </div>
               </GlowCard>
             </div>
@@ -154,36 +163,43 @@ const ChooseAccess = () => {
                   Pay As You Go
                 </h3>
 
-                {/* Price indicator */}
-                <div className="text-center mb-6">
-                  <span className="text-4xl font-display text-foreground">$5</span>
-                  <span className="text-muted-foreground text-sm"> to start</span>
+                {/* Price */}
+                <div className="text-center mb-2">
+                  <span className="text-4xl font-display text-foreground">$0.20</span>
+                  <span className="text-muted-foreground text-sm"> per stream</span>
                 </div>
 
                 {/* Description */}
-                <div className="flex-1 flex flex-col justify-center mb-8">
-                  <p className="text-muted-foreground text-center text-sm md:text-base leading-relaxed">
-                    Load <strong className="text-foreground">$5 in credits</strong> and listen freely until you run out. 
-                    Top up whenever you need more.
-                  </p>
-                  
-                  <div className="mt-6 p-4 rounded-lg bg-muted/30 border border-border/50">
-                    <p className="text-xs text-muted-foreground text-center">
-                      No commitment. No subscription. <br />
-                      Just pay for what you play.
-                    </p>
-                  </div>
-                </div>
+                <p className="text-muted-foreground text-center text-sm mb-6">
+                  Listen on your own terms.
+                </p>
+
+                {/* Details */}
+                <ul className="space-y-3 mb-6 flex-1">
+                  {payAsYouGoDetails.map((text, index) => (
+                    <li key={index} className="flex items-start gap-3">
+                      <Check className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
+                      <span className="text-muted-foreground text-sm leading-tight">
+                        {text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
 
                 {/* CTA */}
                 <Button
                   onClick={handlePayAsYouGo}
                   variant="outline"
                   size="lg"
-                  className="w-full border-border/50 hover:border-primary/50 hover:bg-primary/5"
+                  className="w-full border-border/50 hover:border-primary/50 hover:bg-primary/5 mb-3"
                 >
-                  Load Credits
+                  Load $5 in Credits
                 </Button>
+
+                {/* Helper text */}
+                <p className="text-xs text-muted-foreground text-center">
+                  Simple, flexible listening.
+                </p>
               </div>
             </GlowCard>
           </div>
