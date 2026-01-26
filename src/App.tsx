@@ -24,6 +24,7 @@ import NotFound from "./pages/NotFound";
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
 import ArtistAuth from "./pages/auth/ArtistAuth";
+import ArtistLogin from "./pages/auth/ArtistLogin";
 import AccessRestricted from "./pages/AccessRestricted";
 
 // Fan pages (protected)
@@ -65,6 +66,7 @@ const App = () => (
               {/* Auth routes */}
               <Route path="/auth/fan" element={<FanAuth />} />
               <Route path="/auth/artist" element={<ArtistAuth />} />
+              <Route path="/artist/login" element={<ArtistLogin />} />
               <Route path="/access-restricted" element={<AccessRestricted />} />
               
               {/* Fan routes with persistent mini-player (protected) */}
