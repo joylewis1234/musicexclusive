@@ -113,6 +113,51 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_profiles: {
+        Row: {
+          artist_name: string
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          genre: string | null
+          id: string
+          instagram_url: string | null
+          tiktok_url: string | null
+          twitter_url: string | null
+          updated_at: string
+          user_id: string
+          youtube_url: string | null
+        }
+        Insert: {
+          artist_name: string
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          genre?: string | null
+          id?: string
+          instagram_url?: string | null
+          tiktok_url?: string | null
+          twitter_url?: string | null
+          updated_at?: string
+          user_id: string
+          youtube_url?: string | null
+        }
+        Update: {
+          artist_name?: string
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          genre?: string | null
+          id?: string
+          instagram_url?: string | null
+          tiktok_url?: string | null
+          twitter_url?: string | null
+          updated_at?: string
+          user_id?: string
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

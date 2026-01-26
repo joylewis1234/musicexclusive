@@ -44,6 +44,7 @@ import ArtistProfilePage from "./pages/ArtistProfilePage";
 import ArtistUpload from "./pages/ArtistUpload";
 import ArtistDashboard from "./pages/artist/ArtistDashboard";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
+import EditArtistProfile from "./pages/artist/EditArtistProfile";
 
 const queryClient = new QueryClient();
 
@@ -117,7 +118,7 @@ const App = () => (
               } />
               <Route path="/artist/profile/edit" element={
                 <ArtistProtectedRoute>
-                  <ArtistProfilePage />
+                  <EditArtistProfile />
                 </ArtistProtectedRoute>
               } />
               <Route path="/artist/upload" element={
