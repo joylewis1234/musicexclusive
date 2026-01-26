@@ -54,18 +54,8 @@ const ArtistApplicationForm = () => {
   const [notReleasedPublicly, setNotReleasedPublicly] = useState(false)
   const [agreesTerms, setAgreesTerms] = useState(false)
 
-  const isFormValid =
-    artistName &&
-    contactEmail &&
-    yearsReleasing &&
-    genres &&
-    primarySocialPlatform &&
-    socialProfileUrl &&
-    followerCount &&
-    songSampleFile &&
-    ownsRights &&
-    notReleasedPublicly &&
-    agreesTerms
+  // TESTING MODE: All validation disabled - allows submitting without any data
+  const isFormValid = true
 
   const uploadFile = async (file: File, folder: string): Promise<string> => {
     const fileExt = file.name.split(".").pop()
@@ -83,13 +73,15 @@ const ArtistApplicationForm = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!isFormValid) return
 
     setIsSubmitting(true)
 
     try {
-      // Upload song sample
-      const songSampleUrl = await uploadFile(songSampleFile!, "applications")
+      // Upload song sample if provided
+      let songSampleUrl = "https://placeholder-sample.wav"
+      if (songSampleFile) {
+        songSampleUrl = await uploadFile(songSampleFile, "applications")
+      }
 
       // Upload hook preview if provided
       let hookPreviewUrl = null
@@ -97,23 +89,23 @@ const ArtistApplicationForm = () => {
         hookPreviewUrl = await uploadFile(hookPreviewFile, "applications")
       }
 
-      // Insert application
+      // Insert application with defaults for missing fields (TESTING MODE)
       const { error } = await supabase.from("artist_applications").insert({
-        artist_name: artistName,
-        contact_email: contactEmail,
+        artist_name: artistName || "Test Artist",
+        contact_email: contactEmail || "test@example.com",
         country_city: countryCity || null,
         spotify_url: spotifyUrl || null,
         apple_music_url: appleMusicUrl || null,
-        years_releasing: yearsReleasing,
-        genres,
-        primary_social_platform: primarySocialPlatform,
-        social_profile_url: socialProfileUrl,
-        follower_count: parseInt(followerCount),
+        years_releasing: yearsReleasing || "1-2 years",
+        genres: genres || "Test Genre",
+        primary_social_platform: primarySocialPlatform || "instagram",
+        social_profile_url: socialProfileUrl || "https://instagram.com/test",
+        follower_count: parseInt(followerCount) || 1000,
         song_sample_url: songSampleUrl,
         hook_preview_url: hookPreviewUrl,
-        owns_rights: ownsRights,
-        not_released_publicly: notReleasedPublicly,
-        agrees_terms: agreesTerms,
+        owns_rights: true,
+        not_released_publicly: true,
+        agrees_terms: true,
         status: "pending",
       })
 
