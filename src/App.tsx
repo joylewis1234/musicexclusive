@@ -115,6 +115,11 @@ const App = () => (
                   <ArtistProfilePage />
                 </ArtistProtectedRoute>
               } />
+              <Route path="/artist/profile/edit" element={
+                <ArtistProtectedRoute>
+                  <ArtistProfilePage />
+                </ArtistProtectedRoute>
+              } />
               <Route path="/artist/upload" element={
                 <ArtistProtectedRoute>
                   <ArtistUpload />
