@@ -206,7 +206,7 @@ const Index = () => {
       </section>
 
       {/* How It Works Section */}
-      <section className="px-4 py-16 bg-background-elevated">
+      <section id="how-it-works" className="px-4 py-16 bg-background-elevated scroll-mt-20">
         <div className="container max-w-lg md:max-w-2xl mx-auto">
           <SectionHeader
             title="How It Works"
