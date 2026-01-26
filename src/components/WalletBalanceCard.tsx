@@ -3,19 +3,27 @@ import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Plus } from "lucide-react";
-
-interface WalletBalanceCardProps {
-  credits: number;
-}
+import { Plus, Loader2 } from "lucide-react";
+import { useCredits } from "@/hooks/useCredits";
 
 const CREDIT_TO_DOLLAR = 0.20;
 
-const WalletBalanceCard = ({ credits }: WalletBalanceCardProps) => {
+const WalletBalanceCard = () => {
   const navigate = useNavigate();
+  const { credits, loading } = useCredits();
   const [showDollars, setShowDollars] = useState(false);
 
   const dollars = credits * CREDIT_TO_DOLLAR;
+
+  if (loading) {
+    return (
+      <GlowCard glowColor="primary" hover={false}>
+        <div className="p-6 flex items-center justify-center min-h-[200px]">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      </GlowCard>
+    );
+  }
 
   return (
     <GlowCard glowColor="primary" hover={false}>

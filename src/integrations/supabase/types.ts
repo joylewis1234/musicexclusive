@@ -289,6 +289,7 @@ export type Database = {
       }
       vault_members: {
         Row: {
+          credits: number
           display_name: string
           email: string
           id: string
@@ -297,6 +298,7 @@ export type Database = {
           vault_access_active: boolean
         }
         Insert: {
+          credits?: number
           display_name: string
           email: string
           id?: string
@@ -305,6 +307,7 @@ export type Database = {
           vault_access_active?: boolean
         }
         Update: {
+          credits?: number
           display_name?: string
           email?: string
           id?: string
