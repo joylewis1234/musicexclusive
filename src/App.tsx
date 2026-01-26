@@ -35,12 +35,14 @@ import Discovery from "./pages/Discovery";
 import ArtistProfile from "./pages/ArtistProfile";
 import MusicPlayer from "./pages/MusicPlayer";
 
-// Artist pages (protected)
+// Artist pages
 import ArtistApply from "./pages/ArtistApply";
 import ArtistApplicationForm from "./pages/ArtistApplicationForm";
 import ArtistApplicationStatus from "./pages/ArtistApplicationStatus";
 import ArtistProfilePage from "./pages/ArtistProfilePage";
 import ArtistUpload from "./pages/ArtistUpload";
+import ArtistDashboard from "./pages/artist/ArtistDashboard";
+import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
 
 const queryClient = new QueryClient();
 
@@ -96,7 +98,17 @@ const App = () => (
                 </ProtectedRoute>
               } />
               
-              {/* Artist routes (protected) */}
+              {/* Artist public routes (no auth required) */}
+              <Route path="/artist/apply" element={<ArtistApply />} />
+              <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
+              <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
+              
+              {/* Artist protected routes */}
+              <Route path="/artist/dashboard" element={
+                <ProtectedRoute allowedRole="artist">
+                  <ArtistDashboard />
+                </ProtectedRoute>
+              } />
               <Route path="/artist/profile" element={
                 <ProtectedRoute allowedRole="artist">
                   <ArtistProfilePage />
@@ -107,19 +119,9 @@ const App = () => (
                   <ArtistUpload />
                 </ProtectedRoute>
               } />
-              <Route path="/artist/apply" element={
+              <Route path="/artist/setup-account" element={
                 <ProtectedRoute allowedRole="artist">
-                  <ArtistApply />
-                </ProtectedRoute>
-              } />
-              <Route path="/artist/application-form" element={
-                <ProtectedRoute allowedRole="artist">
-                  <ArtistApplicationForm />
-                </ProtectedRoute>
-              } />
-              <Route path="/artist/application-status" element={
-                <ProtectedRoute allowedRole="artist">
-                  <ArtistApplicationStatus />
+                  <ArtistSetupAccount />
                 </ProtectedRoute>
               } />
               
