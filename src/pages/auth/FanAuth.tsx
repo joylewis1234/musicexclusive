@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -17,10 +17,12 @@ interface LocationState {
 const FanAuth = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { signIn, signUp } = useAuth();
   
   const state = location.state as LocationState | null;
-  const flow = state?.flow || "default";
+  // Check both URL query param and location state for flow
+  const flow = searchParams.get("flow") as "superfan" | "vault" | null || state?.flow || "default";
   const isSuperfanFlow = flow === "superfan";
   const isVaultFlow = flow === "vault";
   
