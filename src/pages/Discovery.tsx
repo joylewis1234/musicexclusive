@@ -113,8 +113,13 @@ const Discovery = () => {
     navigate(`/artist/${artistId}`);
   };
 
+  const handleStreamTrack = (track: DbTrack) => {
+    // Navigate to artist profile with selected track
+    navigate(`/artist/${track.artist_id}?track=${track.id}`);
+  };
+
   const handleTrackClick = (track: DbTrack) => {
-    navigate(`/artist/${track.artist_id}`);
+    navigate(`/artist/${track.artist_id}?track=${track.id}`);
   };
 
   const handlePreview = (track: DbTrack) => {
@@ -194,7 +199,7 @@ const Discovery = () => {
                 previewProgress={currentPreviewId === track.id ? previewProgress : 0}
                 previewError={currentPreviewId === track.id ? previewError : null}
                 onPreview={() => handlePreview(track)}
-                onStream={() => handleArtistClick(track.artist_id)}
+                onStream={() => handleStreamTrack(track)}
                 onShare={() => handleShare(track)}
                 onArtistClick={() => handleArtistClick(track.artist_id)}
               />
