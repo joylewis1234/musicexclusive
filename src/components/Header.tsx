@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music, Mic2 } from "lucide-react"
+import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
@@ -138,26 +138,15 @@ const Header = () => {
           </span>
         </button>
 
-        {/* Right side buttons */}
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => navigate("/artist/login")}
-          >
-            <Mic2 className="w-4 h-4 mr-1.5" />
-            Artist Login
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-9 px-4 rounded-full text-xs"
-            onClick={() => navigate("/auth/fan")}
-          >
-            Log In
-          </Button>
-        </div>
+        {/* Login Button */}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-9 px-4 rounded-full text-xs"
+          onClick={() => navigate("/login")}
+        >
+          Log In
+        </Button>
       </div>
     </header>
   )

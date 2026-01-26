@@ -20,6 +20,7 @@ import Subscribe from "./pages/Subscribe";
 import LoadCredits from "./pages/LoadCredits";
 import Payment from "./pages/Payment";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -65,6 +66,8 @@ const App = () => (
               <Route path="/subscribe" element={<Subscribe />} />
               <Route path="/load-credits" element={<LoadCredits />} />
               
+              {/* Login selector page */}
+              <Route path="/login" element={<Login />} />
               {/* Auth routes */}
               <Route path="/auth/fan" element={<FanAuth />} />
               <Route path="/auth/artist" element={<ArtistAuth />} />
