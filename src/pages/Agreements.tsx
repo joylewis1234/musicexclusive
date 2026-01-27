@@ -181,11 +181,11 @@ const Agreements = () => {
 
       // Navigate based on flow type
       if (state?.flow === "superfan") {
-        // Superfan flow: already paid, go directly to dashboard
-        navigate("/fan/dashboard");
+        // Superfan flow: go directly to subscription payment (no choice)
+        navigate("/subscribe", { state: { ...state, flow: "superfan" } });
       } else {
         // Vault winner flow: show both payment options
-        navigate("/onboarding/listen", { state });
+        navigate("/onboarding/listen", { state: { ...state, flow: "vault" } });
       }
     } catch (error) {
       console.error("Error saving agreement:", error);
