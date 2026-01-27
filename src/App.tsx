@@ -51,6 +51,10 @@ import EditArtistProfile from "./pages/artist/EditArtistProfile";
 import AdminReports from "./pages/admin/AdminReports";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
+// Testing pages (temporary)
+import TestTools from "./pages/testing/TestTools";
+import TestPayouts from "./pages/testing/TestPayouts";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -148,6 +152,10 @@ const App = () => (
                   <AdminTestTools />
                 </AdminProtectedRoute>
               } />
+              
+              {/* Testing routes (temporary - no auth required) */}
+              <Route path="/testing/tools" element={<TestTools />} />
+              <Route path="/testing/payouts" element={<TestPayouts />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
