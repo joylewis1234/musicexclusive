@@ -1,5 +1,8 @@
 project_id = "yjytuglxpvdkyvjsdyfk"
 
+[functions.aggregate-weekly-earnings]
+verify_jwt = false
+
 [functions.approve-artist]
 verify_jwt = false
 
