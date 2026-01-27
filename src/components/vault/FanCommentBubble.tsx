@@ -26,15 +26,15 @@ const FanCommentBubble = ({
   className,
 }: FanCommentBubbleProps) => {
   // Position classes for absolute positioning around the vault
-  // Position classes - adjusted to keep bubbles within viewport
+  // Position classes - adjusted to keep bubbles fully within viewport
   const positionClasses: Record<string, string> = {
-    "top-left": "top-[5%] left-[5%]",
-    "top-right": "top-[5%] right-[5%]",
-    "top-center": "top-[2%] left-1/2 -translate-x-1/2",
-    "left": "top-1/2 left-[2%] -translate-y-1/2",
-    "right": "top-1/2 right-[2%] -translate-y-1/2",
-    "bottom-left": "bottom-[5%] left-[5%]",
-    "bottom-right": "bottom-[5%] right-[5%]",
+    "top-left": "top-[8%] left-[8%]",
+    "top-right": "top-[8%] right-[8%]",
+    "top-center": "top-[3%] left-1/2 -translate-x-1/2",
+    "left": "top-1/3 left-[3%]",
+    "right": "top-1/3 right-[3%]",
+    "bottom-left": "bottom-[8%] left-[8%]",
+    "bottom-right": "bottom-[8%] right-[8%]",
   };
 
   // Generate initials from name for fallback avatar
