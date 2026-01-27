@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music } from "lucide-react"
+import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music, FlaskConical, Wrench, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
@@ -11,6 +11,11 @@ const mainNavItems = [
   { title: "Enter the Vault", href: "/vault/enter", icon: KeyRound },
   { title: "Become a Superfan", href: "/auth/fan?flow=superfan", icon: Star },
   { title: "Artist Application", href: "/artist/apply", icon: Music },
+]
+
+const testingNavItems = [
+  { title: "Test Tools", href: "/testing/tools", icon: Wrench },
+  { title: "Test Payouts & Reports", href: "/testing/payouts", icon: Receipt },
 ]
 
 const Header = () => {
@@ -82,6 +87,28 @@ const Header = () => {
             <nav className="p-4">
               <ul className="space-y-1">
                 {mainNavItems.map((item) => (
+                  <li key={item.title}>
+                    <button
+                      onClick={() => handleNavigation(item.href)}
+                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 font-body text-sm text-left"
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.title}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              {/* Divider */}
+              <div className="my-4 border-t border-border/30" />
+
+              {/* Testing Section */}
+              <p className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-2">
+                <FlaskConical className="w-3 h-3" />
+                Testing
+              </p>
+              <ul className="space-y-1 mb-4">
+                {testingNavItems.map((item) => (
                   <li key={item.title}>
                     <button
                       onClick={() => handleNavigation(item.href)}
