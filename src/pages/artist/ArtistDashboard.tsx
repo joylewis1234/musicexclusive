@@ -144,7 +144,9 @@ const ArtistDashboard = () => {
   const handleConnectPayout = async () => {
     setIsConnecting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("create-connect-account");
+      const { data, error } = await supabase.functions.invoke("create-connect-account", {
+        body: { returnOrigin: window.location.origin }
+      });
       
       if (error) {
         toast.error("Failed to start payout setup. Please try again.");
@@ -155,6 +157,7 @@ const ArtistDashboard = () => {
       if (data?.url) {
         // Redirect to Stripe Connect onboarding in new tab (better mobile support)
         window.open(data.url, "_blank");
+        toast.info("Complete the setup in the new tab, then return here.");
       } else {
         toast.error("Failed to get onboarding link.");
       }

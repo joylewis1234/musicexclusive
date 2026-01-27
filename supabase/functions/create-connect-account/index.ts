@@ -57,7 +57,18 @@ serve(async (req) => {
     logStep("Artist profile found", { profileId: artistProfile.id });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const origin = req.headers.get("origin") || "http://localhost:3000";
+    
+    // Get origin from body (preferred) or fallback to header
+    let origin = "http://localhost:3000";
+    try {
+      const body = await req.json();
+      if (body?.returnOrigin) {
+        origin = body.returnOrigin;
+      }
+    } catch {
+      origin = req.headers.get("origin") || "http://localhost:3000";
+    }
+    logStep("Using origin for return URLs", { origin });
 
     let accountId = artistProfile.stripe_account_id;
 
