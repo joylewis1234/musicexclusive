@@ -39,7 +39,22 @@ serve(async (req) => {
       });
     }
 
-    logStep("Event parsed", { type: event.type });
+    logStep("Event parsed", { type: event.type, eventId: event.id });
+
+    // Idempotency check: verify event hasn't been processed already
+    const { data: existingEvent } = await supabaseAdmin
+      .from("stripe_events")
+      .select("id")
+      .eq("id", event.id)
+      .maybeSingle();
+
+    if (existingEvent) {
+      logStep("Event already processed, skipping", { eventId: event.id });
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     switch (event.type) {
       case "checkout.session.completed": {
@@ -142,6 +157,52 @@ serve(async (req) => {
         break;
       }
       
+      case "invoice.payment_succeeded": {
+        // Handle subscription renewals
+        const invoice = event.data.object as Stripe.Invoice;
+        logStep("Invoice payment succeeded", { invoiceId: invoice.id });
+        
+        // Check if this is a subscription invoice (not first payment)
+        if (invoice.billing_reason === "subscription_cycle") {
+          const customerEmail = invoice.customer_email;
+          if (customerEmail) {
+            // Grant monthly credits for Superfan subscription
+            const subscriptionCredits = 25;
+            
+            const { data: member } = await supabaseAdmin
+              .from("vault_members")
+              .select("credits")
+              .eq("email", customerEmail)
+              .maybeSingle();
+            
+            if (member) {
+              const newCredits = (member.credits || 0) + subscriptionCredits;
+              await supabaseAdmin
+                .from("vault_members")
+                .update({ credits: newCredits })
+                .eq("email", customerEmail);
+              
+              // Create ledger entry for subscription credits
+              await supabaseAdmin
+                .from("credit_ledger")
+                .insert({
+                  user_email: customerEmail,
+                  type: "SUBSCRIPTION_CREDITS",
+                  credits_delta: subscriptionCredits,
+                  usd_delta: 5.00,
+                  reference: invoice.id,
+                });
+              
+              logStep("Subscription credits granted", { 
+                email: customerEmail, 
+                credits: subscriptionCredits 
+              });
+            }
+          }
+        }
+        break;
+      }
+      
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
@@ -162,6 +223,21 @@ serve(async (req) => {
       
       default:
         logStep("Unhandled event type", { type: event.type });
+    }
+
+    // Store event ID to prevent duplicate processing
+    const { error: insertEventError } = await supabaseAdmin
+      .from("stripe_events")
+      .insert({
+        id: event.id,
+        event_type: event.type,
+        payload: event.data.object as unknown as Record<string, unknown>,
+      });
+
+    if (insertEventError) {
+      logStep("Error storing event ID", { error: insertEventError.message });
+    } else {
+      logStep("Event stored for idempotency", { eventId: event.id });
     }
 
     return new Response(JSON.stringify({ received: true }), {
