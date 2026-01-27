@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TrackManagementCard, Track } from "@/components/artist/TrackManagementCard";
+import EarningsDashboard from "@/components/artist/EarningsDashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -334,6 +335,11 @@ const ArtistDashboard = () => {
               ))}
             </div>
           )}
+
+          {/* Earnings Dashboard */}
+          <div className="mt-8">
+            <EarningsDashboard />
+          </div>
         </div>
       </main>
     </div>
