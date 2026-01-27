@@ -211,42 +211,32 @@ const TestTools = () => {
     setTestArtistResult(null);
 
     try {
-      // Generate a test user_id (UUID)
-      const testUserId = crypto.randomUUID();
+      // Call edge function to create test artist (bypasses RLS)
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-test-artist`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({
+            artist_name: testArtistName.trim(),
+            email: testArtistEmail.trim(),
+          }),
+        }
+      );
 
-      // Create artist_profiles record
-      const { error: profileError } = await supabase.from("artist_profiles").insert({
-        user_id: testUserId,
-        artist_name: testArtistName.trim(),
-        payout_status: "not_connected",
-        bio: "Test artist created for development purposes.",
-        genre: "Test",
-      });
+      const data = await response.json();
 
-      if (profileError) throw profileError;
-
-      // Create artist_applications record marked as active
-      const { error: appError } = await supabase.from("artist_applications").insert({
-        artist_name: testArtistName.trim(),
-        contact_email: testArtistEmail.trim(),
-        status: "active",
-        primary_social_platform: "instagram",
-        social_profile_url: "https://instagram.com/test",
-        song_sample_url: "https://example.com/test.mp3",
-        genres: "Test",
-        years_releasing: "1-3",
-        follower_count: 1000,
-        owns_rights: true,
-        not_released_publicly: true,
-        agrees_terms: true,
-      });
-
-      if (appError) throw appError;
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to create test artist");
+      }
 
       setTestArtistResult({
-        artist_name: testArtistName.trim(),
-        email: testArtistEmail.trim(),
-        user_id: testUserId,
+        artist_name: data.artist_name,
+        email: data.email,
+        user_id: data.user_id,
       });
 
       // Refresh artists list
