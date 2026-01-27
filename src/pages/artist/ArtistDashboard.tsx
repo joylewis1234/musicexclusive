@@ -227,7 +227,7 @@ const ArtistDashboard = () => {
                   payoutStatus === "connected" 
                     ? "bg-green-500/20 text-green-400" 
                     : payoutStatus === "pending"
-                    ? "bg-yellow-500/20 text-yellow-400"
+                    ? "bg-amber-500/20 text-amber-400"
                     : "bg-muted text-muted-foreground"
                 }`}>
                   {payoutStatus === "connected" ? (
@@ -243,15 +243,15 @@ const ArtistDashboard = () => {
                     {payoutStatus === "connected" 
                       ? "Payout account connected" 
                       : payoutStatus === "pending"
-                      ? "Payout setup incomplete"
-                      : "Payout account"
+                      ? "Action required"
+                      : "Payout account not connected"
                     }
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {payoutStatus === "connected" 
                       ? "Ready to receive earnings"
                       : payoutStatus === "pending"
-                      ? "Complete setup to receive payouts"
+                      ? "Stripe requires additional information"
                       : "Connect to receive your earnings"
                     }
                   </p>
@@ -261,14 +261,14 @@ const ArtistDashboard = () => {
               {payoutStatus !== "connected" && (
                 <Button
                   size="sm"
-                  variant={payoutStatus === "pending" ? "outline" : "default"}
+                  variant={payoutStatus === "pending" ? "destructive" : "default"}
                   onClick={handleConnectPayout}
                   disabled={isConnecting || isVerifying}
                 >
                   {isConnecting || isVerifying ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : payoutStatus === "pending" ? (
-                    "Complete Setup"
+                    "Fix Now"
                   ) : (
                     "Connect Payout Account"
                   )}
