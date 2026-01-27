@@ -42,6 +42,7 @@ interface TestArtistResult {
   artist_name: string;
   email: string;
   user_id: string;
+  temp_password: string;
 }
 
 const TestTools = () => {
@@ -237,6 +238,7 @@ const TestTools = () => {
         artist_name: data.artist_name,
         email: data.email,
         user_id: data.user_id,
+        temp_password: data.temp_password,
       });
 
       // Refresh artists list
@@ -508,10 +510,17 @@ const TestTools = () => {
                       <span className="text-muted-foreground">Email</span>
                       <span className="font-medium">{testArtistResult.email}</span>
                     </div>
-                    <div className="border-t border-border/30 pt-3">
-                      <Link to="/artist/dashboard">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Temp Password</span>
+                      <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{testArtistResult.temp_password}</span>
+                    </div>
+                    <div className="border-t border-border/30 pt-3 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Log in with the above credentials to access the artist dashboard and connect Stripe.
+                      </p>
+                      <Link to="/artist/login">
                         <Button variant="outline" className="w-full">
-                          Go connect Stripe
+                          Go to Artist Login
                           <ArrowRight className="w-4 h-4 ml-2" />
                         </Button>
                       </Link>
