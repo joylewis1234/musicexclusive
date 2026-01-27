@@ -108,7 +108,7 @@ const Index = () => {
               className="w-full max-w-xs"
               onClick={() => navigate("/vault/enter")}
             >
-              Try Your Luck – Enter the Vault
+              Try Your Luck, Enter the Lottery Vault
             </Button>
             
             {/* Superfan CTA with skip-lottery highlight */}
