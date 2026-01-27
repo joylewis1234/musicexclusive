@@ -105,7 +105,7 @@ const Index = () => {
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
             <Button 
               size="lg" 
-              className="w-full max-w-xs"
+              className="w-full max-w-xs text-sm md:text-base whitespace-normal h-auto py-3"
               onClick={() => navigate("/vault/enter")}
             >
               Try Your Luck, Enter the Lottery Vault
