@@ -1,58 +1,70 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import Stripe from "https://esm.sh/stripe@14.21.0?target=deno";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import Stripe from "https://esm.sh/stripe@18.5.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, stripe-signature",
 };
 
-const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-  apiVersion: "2023-10-16",
-  httpClient: Stripe.createFetchHttpClient(),
-});
+const logStep = (step: string, details?: Record<string, unknown>) => {
+  const detailsStr = details ? ` - ${JSON.stringify(details)}` : '';
+  console.log(`[STRIPE-WEBHOOK] ${step}${detailsStr}`);
+};
 
 const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const signature = req.headers.get("stripe-signature");
+    logStep("Webhook received");
+    
     const body = await req.text();
     
-    // For now, we'll process without signature verification for testing
-    // In production, you should verify the webhook signature
+    // Parse the event
     let event: Stripe.Event;
-    
     try {
       event = JSON.parse(body) as Stripe.Event;
     } catch (err) {
-      console.error("Failed to parse webhook body:", err);
+      logStep("Failed to parse webhook body", { error: String(err) });
       return new Response(JSON.stringify({ error: "Invalid payload" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("Received Stripe event:", event.type);
+    logStep("Event parsed", { type: event.type });
 
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log("Checkout session completed:", session.id, "mode:", session.mode);
+        logStep("Checkout session completed", { 
+          sessionId: session.id, 
+          mode: session.mode,
+          paymentIntent: session.payment_intent 
+        });
         
         // Get the customer email and credits from metadata
         const customerEmail = session.customer_email || session.metadata?.email;
         const credits = parseInt(session.metadata?.credits || "0", 10);
-        const subscriptionType = session.metadata?.subscription_type;
+        const transactionType = session.metadata?.type || "CREDITS_PURCHASE";
+        const paymentIntentId = typeof session.payment_intent === 'string' 
+          ? session.payment_intent 
+          : session.payment_intent?.id;
         
         if (customerEmail && credits > 0) {
-          console.log(`Adding ${credits} credits for ${customerEmail} (type: ${subscriptionType || "one-time"})`);
+          logStep("Processing credit purchase", { 
+            email: customerEmail, 
+            credits, 
+            type: transactionType,
+            paymentIntentId 
+          });
           
           // Get current credits
           const { data: member, error: fetchError } = await supabaseAdmin
@@ -62,7 +74,7 @@ Deno.serve(async (req) => {
             .maybeSingle();
           
           if (fetchError) {
-            console.error("Error fetching member:", fetchError);
+            logStep("Error fetching member", { error: fetchError.message });
           } else if (member) {
             // Update existing member
             const newCredits = (member.credits || 0) + credits;
@@ -75,9 +87,13 @@ Deno.serve(async (req) => {
               .eq("email", customerEmail);
             
             if (updateError) {
-              console.error("Error updating credits:", updateError);
+              logStep("Error updating credits", { error: updateError.message });
             } else {
-              console.log(`Updated credits to ${newCredits} for ${customerEmail}`);
+              logStep("Credits updated successfully", { 
+                email: customerEmail, 
+                previousCredits: member.credits,
+                newCredits 
+              });
             }
           } else {
             // Create new member
@@ -91,10 +107,36 @@ Deno.serve(async (req) => {
               });
             
             if (insertError) {
-              console.error("Error creating member:", insertError);
+              logStep("Error creating member", { error: insertError.message });
             } else {
-              console.log(`Created member with ${credits} credits for ${customerEmail}`);
+              logStep("New member created with credits", { 
+                email: customerEmail, 
+                credits 
+              });
             }
+          }
+
+          // Create ledger entry
+          const usdAmount = credits * 0.20;
+          const { error: ledgerError } = await supabaseAdmin
+            .from("credit_ledger")
+            .insert({
+              user_email: customerEmail,
+              type: transactionType,
+              credits_delta: credits,
+              usd_delta: usdAmount,
+              reference: paymentIntentId || session.id,
+            });
+
+          if (ledgerError) {
+            logStep("Error creating ledger entry", { error: ledgerError.message });
+          } else {
+            logStep("Ledger entry created", { 
+              email: customerEmail, 
+              credits_delta: credits,
+              usd_delta: usdAmount,
+              reference: paymentIntentId || session.id
+            });
           }
         }
         break;
@@ -103,19 +145,23 @@ Deno.serve(async (req) => {
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        console.log("Subscription event:", event.type, subscription.id, "status:", subscription.status);
+        logStep("Subscription event", { 
+          type: event.type, 
+          subscriptionId: subscription.id, 
+          status: subscription.status 
+        });
         // Handle subscription status changes if needed
         break;
       }
       
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
-        console.log("Payment intent succeeded:", paymentIntent.id);
+        logStep("Payment intent succeeded", { paymentIntentId: paymentIntent.id });
         break;
       }
       
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        logStep("Unhandled event type", { type: event.type });
     }
 
     return new Response(JSON.stringify({ received: true }), {
@@ -124,7 +170,7 @@ Deno.serve(async (req) => {
     });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Webhook error:", error);
+    logStep("ERROR", { message: errorMessage });
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
