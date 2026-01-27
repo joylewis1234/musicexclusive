@@ -12,6 +12,12 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[CREATE-CONNECT-ACCOUNT] ${step}${detailsStr}`);
 };
 
+const jsonResponse = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -34,22 +40,38 @@ serve(async (req) => {
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
     logStep("Stripe key verified");
 
-    // Authenticate user
+    // Authenticate user (must be a real user JWT with `sub`)
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("No authorization header provided");
+    if (!authHeader?.startsWith("Bearer ")) {
+      logStep("Unauthorized - missing/invalid Authorization header");
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
-    if (userError) throw new Error(`Authentication error: ${userError.message}`);
-    const user = userData.user;
-    if (!user?.email) throw new Error("User not authenticated or email not available");
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      logStep("Unauthorized - claims verification failed", { message: claimsError?.message });
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+
+    const userId = claimsData.claims.sub;
+    const email = (claimsData.claims as Record<string, unknown>).email;
+    if (!userId || typeof userId !== "string") {
+      // This is the common case when a client accidentally sends the anon key as Authorization
+      logStep("Unauthorized - missing sub claim");
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    if (!email || typeof email !== "string") {
+      logStep("Unauthorized - missing email claim");
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    logStep("User authenticated", { userId, email });
 
     // Check if artist already has a Stripe account
     const { data: artistProfile, error: profileError } = await supabaseAdmin
       .from("artist_profiles")
       .select("id, stripe_account_id, payout_status, artist_name")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .maybeSingle();
 
     if (profileError) throw new Error(`Profile error: ${profileError.message}`);
@@ -77,7 +99,7 @@ serve(async (req) => {
       logStep("Creating new Stripe Connect Express account");
       const account = await stripe.accounts.create({
         type: "express",
-        email: user.email,
+        email,
         capabilities: {
           transfers: { requested: true },
         },
@@ -85,7 +107,7 @@ serve(async (req) => {
           name: artistProfile.artist_name,
         },
         metadata: {
-          user_id: user.id,
+          user_id: userId,
           artist_profile_id: artistProfile.id,
         },
       });
@@ -115,16 +137,14 @@ serve(async (req) => {
     });
     logStep("Account link created", { url: accountLink.url });
 
-    return new Response(
-      JSON.stringify({ url: accountLink.url, accountId }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return jsonResponse({ url: accountLink.url, accountId }, 200);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logStep("ERROR", { message: errorMessage });
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Normalize auth-related errors into 401s to avoid noisy 500s
+    if (errorMessage.toLowerCase().includes("authentication") || errorMessage.toLowerCase().includes("unauthorized")) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    return jsonResponse({ error: errorMessage }, 500);
   }
 });

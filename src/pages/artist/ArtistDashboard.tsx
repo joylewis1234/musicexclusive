@@ -36,7 +36,11 @@ const ArtistDashboard = () => {
   const [isVerifying, setIsVerifying] = useState(false);
 
   const verifyConnectStatus = useCallback(async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("Please log in to check payout status.");
+      navigate("/artist/login");
+      return;
+    }
     
     setIsVerifying(true);
     try {
@@ -143,6 +147,12 @@ const ArtistDashboard = () => {
   };
 
   const handleConnectPayout = async () => {
+    if (!user) {
+      toast.error("Please log in to connect your payout account.");
+      navigate("/artist/login");
+      return;
+    }
+
     setIsConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-connect-account", {
@@ -150,6 +160,12 @@ const ArtistDashboard = () => {
       });
       
       if (error) {
+        const msg = (error as any)?.message || "";
+        if (msg.toLowerCase().includes("unauthorized") || msg.toLowerCase().includes("missing sub")) {
+          toast.error("Your session expired. Please log in again.");
+          navigate("/artist/login");
+          return;
+        }
         toast.error("Failed to start payout setup. Please try again.");
         console.error("Connect error:", error);
         return;
