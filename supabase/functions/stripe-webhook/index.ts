@@ -44,14 +44,15 @@ Deno.serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        console.log("Checkout session completed:", session.id);
+        console.log("Checkout session completed:", session.id, "mode:", session.mode);
         
         // Get the customer email and credits from metadata
         const customerEmail = session.customer_email || session.metadata?.email;
         const credits = parseInt(session.metadata?.credits || "0", 10);
+        const subscriptionType = session.metadata?.subscription_type;
         
         if (customerEmail && credits > 0) {
-          console.log(`Adding ${credits} credits for ${customerEmail}`);
+          console.log(`Adding ${credits} credits for ${customerEmail} (type: ${subscriptionType || "one-time"})`);
           
           // Get current credits
           const { data: member, error: fetchError } = await supabaseAdmin
@@ -67,7 +68,10 @@ Deno.serve(async (req) => {
             const newCredits = (member.credits || 0) + credits;
             const { error: updateError } = await supabaseAdmin
               .from("vault_members")
-              .update({ credits: newCredits })
+              .update({ 
+                credits: newCredits,
+                vault_access_active: true,
+              })
               .eq("email", customerEmail);
             
             if (updateError) {
@@ -93,6 +97,14 @@ Deno.serve(async (req) => {
             }
           }
         }
+        break;
+      }
+      
+      case "customer.subscription.created":
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription;
+        console.log("Subscription event:", event.type, subscription.id, "status:", subscription.status);
+        // Handle subscription status changes if needed
         break;
       }
       
