@@ -122,6 +122,8 @@ export type Database = {
           genre: string | null
           id: string
           instagram_url: string | null
+          payout_status: string | null
+          stripe_account_id: string | null
           tiktok_url: string | null
           twitter_url: string | null
           updated_at: string
@@ -136,6 +138,8 @@ export type Database = {
           genre?: string | null
           id?: string
           instagram_url?: string | null
+          payout_status?: string | null
+          stripe_account_id?: string | null
           tiktok_url?: string | null
           twitter_url?: string | null
           updated_at?: string
@@ -150,6 +154,8 @@ export type Database = {
           genre?: string | null
           id?: string
           instagram_url?: string | null
+          payout_status?: string | null
+          stripe_account_id?: string | null
           tiktok_url?: string | null
           twitter_url?: string | null
           updated_at?: string

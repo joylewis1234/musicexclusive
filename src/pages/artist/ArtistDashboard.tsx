@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -6,6 +6,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TrackManagementCard, Track } from "@/components/artist/TrackManagementCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { 
   Home, 
   Upload, 
@@ -13,15 +14,46 @@ import {
   LogOut,
   Mic2,
   Music,
-  Loader2
+  Loader2,
+  Wallet,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
+
+type PayoutStatus = "not_connected" | "pending" | "connected";
 
 const ArtistDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const [artistName, setArtistName] = useState("Artist");
   const [tracks, setTracks] = useState<Track[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [payoutStatus, setPayoutStatus] = useState<PayoutStatus>("not_connected");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  const verifyConnectStatus = useCallback(async () => {
+    if (!user) return;
+    
+    setIsVerifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-connect-status");
+      
+      if (error) {
+        console.error("Error verifying connect status:", error);
+        return;
+      }
+      
+      if (data?.status) {
+        setPayoutStatus(data.status as PayoutStatus);
+      }
+    } catch (error) {
+      console.error("Error verifying connect status:", error);
+    } finally {
+      setIsVerifying(false);
+    }
+  }, [user]);
 
   const fetchArtistData = useCallback(async () => {
     if (!user?.email) return;
@@ -36,6 +68,17 @@ const ArtistDashboard = () => {
 
       if (application) {
         setArtistName(application.artist_name);
+      }
+
+      // Fetch artist profile for payout status
+      const { data: profile } = await supabase
+        .from("artist_profiles")
+        .select("payout_status")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (profile?.payout_status) {
+        setPayoutStatus(profile.payout_status as PayoutStatus);
       }
 
       // Fetch tracks - using email as artist_id
@@ -67,6 +110,22 @@ const ArtistDashboard = () => {
     }
   }, [user]);
 
+  // Handle connect return from Stripe
+  useEffect(() => {
+    const connectParam = searchParams.get("connect");
+    if (connectParam === "success") {
+      toast.success("Verifying payout account...");
+      verifyConnectStatus().then(() => {
+        toast.success("Payout account connected!");
+      });
+      // Clear the URL parameter
+      setSearchParams({});
+    } else if (connectParam === "refresh") {
+      toast.info("Please complete the payout setup.");
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams, verifyConnectStatus]);
+
   useEffect(() => {
     fetchArtistData();
   }, [fetchArtistData]);
@@ -79,6 +138,31 @@ const ArtistDashboard = () => {
   const handleTrackUpdated = () => {
     // Refresh tracks list
     fetchArtistData();
+  };
+
+  const handleConnectPayout = async () => {
+    setIsConnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-connect-account");
+      
+      if (error) {
+        toast.error("Failed to start payout setup. Please try again.");
+        console.error("Connect error:", error);
+        return;
+      }
+      
+      if (data?.url) {
+        // Redirect to Stripe Connect onboarding
+        window.location.href = data.url;
+      } else {
+        toast.error("Failed to get onboarding link.");
+      }
+    } catch (error) {
+      console.error("Error connecting payout:", error);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
   return (
@@ -133,6 +217,64 @@ const ArtistDashboard = () => {
             <p className="text-muted-foreground text-sm font-body leading-relaxed max-w-xs mx-auto">
               Release your music early to fans inside the Vault.
             </p>
+          </GlowCard>
+
+          {/* Payout Account Status Card */}
+          <GlowCard className="p-5 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  payoutStatus === "connected" 
+                    ? "bg-green-500/20 text-green-400" 
+                    : payoutStatus === "pending"
+                    ? "bg-yellow-500/20 text-yellow-400"
+                    : "bg-muted text-muted-foreground"
+                }`}>
+                  {payoutStatus === "connected" ? (
+                    <CheckCircle2 className="w-5 h-5" />
+                  ) : payoutStatus === "pending" ? (
+                    <AlertCircle className="w-5 h-5" />
+                  ) : (
+                    <Wallet className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {payoutStatus === "connected" 
+                      ? "Payout account connected" 
+                      : payoutStatus === "pending"
+                      ? "Payout setup incomplete"
+                      : "Payout account"
+                    }
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {payoutStatus === "connected" 
+                      ? "Ready to receive earnings"
+                      : payoutStatus === "pending"
+                      ? "Complete setup to receive payouts"
+                      : "Connect to receive your earnings"
+                    }
+                  </p>
+                </div>
+              </div>
+              
+              {payoutStatus !== "connected" && (
+                <Button
+                  size="sm"
+                  variant={payoutStatus === "pending" ? "outline" : "default"}
+                  onClick={handleConnectPayout}
+                  disabled={isConnecting || isVerifying}
+                >
+                  {isConnecting || isVerifying ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : payoutStatus === "pending" ? (
+                    "Complete Setup"
+                  ) : (
+                    "Connect Payout Account"
+                  )}
+                </Button>
+              )}
+            </div>
           </GlowCard>
 
           {/* 2. Primary Actions */}
