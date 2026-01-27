@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import AdminTestTools from "./pages/admin/AdminTestTools";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -140,6 +141,11 @@ const App = () => (
               <Route path="/admin/reports" element={
                 <AdminProtectedRoute>
                   <AdminReports />
+                </AdminProtectedRoute>
+              } />
+              <Route path="/admin/test-tools" element={
+                <AdminProtectedRoute>
+                  <AdminTestTools />
                 </AdminProtectedRoute>
               } />
               
