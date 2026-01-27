@@ -73,6 +73,7 @@ const ArtistLogin = () => {
       }
 
       switch (application.status) {
+        case "active":
         case "approved":
           toast.success("Welcome back, artist!");
           navigate("/artist/dashboard", { replace: true });

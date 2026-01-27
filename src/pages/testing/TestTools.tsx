@@ -510,9 +510,18 @@ const TestTools = () => {
                       <span className="text-muted-foreground">Email</span>
                       <span className="font-medium">{testArtistResult.email}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Temp Password</span>
-                      <span className="font-mono text-xs bg-muted px-2 py-1 rounded">{testArtistResult.temp_password}</span>
+                    <div className="space-y-1">
+                      <span className="text-muted-foreground text-sm">Temp Password</span>
+                      <div 
+                        className="font-mono text-sm bg-muted px-3 py-2 rounded border border-border cursor-pointer hover:bg-muted/80 transition-colors select-all"
+                        onClick={() => {
+                          navigator.clipboard.writeText(testArtistResult.temp_password);
+                          toast({ title: "Password copied!" });
+                        }}
+                        title="Click to copy"
+                      >
+                        {testArtistResult.temp_password}
+                      </div>
                     </div>
                     <div className="border-t border-border/30 pt-3 space-y-2">
                       <p className="text-xs text-muted-foreground">
