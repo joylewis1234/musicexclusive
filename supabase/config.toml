@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.verify-connect-status]
 verify_jwt = false
+
+[functions.create-test-artist]
+verify_jwt = false
