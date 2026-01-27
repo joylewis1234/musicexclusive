@@ -26,8 +26,24 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Generate a test user_id (UUID)
-    const testUserId = crypto.randomUUID();
+    // Create an actual auth user first (required for foreign key)
+    const tempPassword = `TestPass${Date.now()}!`;
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: email.trim(),
+      password: tempPassword,
+      email_confirm: true,
+      user_metadata: { is_test_artist: true, artist_name: artist_name.trim() },
+    });
+
+    if (authError) {
+      console.error("Auth user creation error:", authError);
+      return new Response(
+        JSON.stringify({ error: authError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const testUserId = authData.user.id;
 
     // Create artist_profiles record
     const { error: profileError } = await supabaseAdmin
