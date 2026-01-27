@@ -1,10 +1,13 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Home, Crown, Loader2, CheckCircle2, Zap, Star, Users, Gift, Sparkles } from "lucide-react";
+import { ChevronLeft, Home, Crown, Loader2, Zap, Star, Users, Gift, Sparkles } from "lucide-react";
 import { useCredits } from "@/hooks/useCredits";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface LocationState {
   email?: string;
@@ -15,9 +18,10 @@ interface LocationState {
 const Subscribe = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = location.state as LocationState | null;
-  const flow = state?.flow || "superfan";
-  const { addCredits } = useCredits();
+  const { addCredits, refetch } = useCredits();
+  const { user } = useAuth();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -31,15 +35,58 @@ const Subscribe = () => {
     { icon: Gift, text: "Priority access to new drops" },
   ];
 
+  // Check for payment success from URL params
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    if (paymentStatus === "success") {
+      // Add 25 credits for superfan subscription
+      addCredits(25).then(() => {
+        refetch();
+        setIsComplete(true);
+        toast.success("Subscription activated! 25 credits added.");
+      });
+    } else if (paymentStatus === "cancelled") {
+      toast.info("Subscription cancelled.");
+    }
+  }, [searchParams, addCredits, refetch]);
+
   const handleSubscribe = async () => {
+    const email = user?.email || state?.email;
+    if (!email) {
+      toast.error("Please log in to subscribe");
+      return;
+    }
+
     setIsProcessing(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
     
-    // Add 25 credits for superfan subscription
-    await addCredits(25);
-    
-    setIsProcessing(false);
-    setIsComplete(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
+        body: {
+          email,
+          successUrl: `${window.location.origin}/subscribe?payment=success`,
+          cancelUrl: `${window.location.origin}/subscribe?payment=cancelled`,
+        },
+      });
+
+      if (error) {
+        console.error("Subscription checkout error:", error);
+        toast.error("Failed to start checkout. Please try again.");
+        setIsProcessing(false);
+        return;
+      }
+
+      if (data?.url) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.url;
+      } else {
+        toast.error("Failed to create checkout session");
+        setIsProcessing(false);
+      }
+    } catch (err) {
+      console.error("Subscription error:", err);
+      toast.error("Something went wrong. Please try again.");
+      setIsProcessing(false);
+    }
   };
 
   // After subscription completes, go to dashboard (agreements already signed)
@@ -176,16 +223,20 @@ const Subscribe = () => {
           </div>
         </GlowCard>
 
-        {/* Payment Method Placeholder */}
+        {/* Payment Method Info */}
         <GlowCard glowColor="gradient" hover={false}>
           <div className="p-5">
             <h3 className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
               Payment Method
             </h3>
-            <div className="h-20 flex items-center justify-center border border-dashed border-border/50 rounded-lg">
-              <p className="text-muted-foreground/60 text-xs text-center">
-                Stripe integration coming soon
-              </p>
+            <div className="h-16 flex items-center justify-center border border-border/50 rounded-lg bg-muted/20">
+              <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                <svg className="w-8 h-8" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="32" height="32" rx="6" fill="#635BFF"/>
+                  <path d="M15.024 13.356c0-.656.536-.908 1.424-.908.896 0 2.032.272 2.928.756v-2.772c-.98-.388-1.944-.544-2.928-.544-2.392 0-3.984 1.252-3.984 3.344 0 3.264 4.492 2.744 4.492 4.152 0 .776-.676 1.028-1.62 1.028-1.4 0-2.688-.576-3.584-1.356v2.804c1.22.524 2.456.748 3.584.748 2.452 0 4.136-1.212 4.136-3.34-.016-3.52-4.448-2.896-4.448-3.912z" fill="white"/>
+                </svg>
+                <span>Secure checkout via Stripe</span>
+              </div>
             </div>
           </div>
         </GlowCard>
@@ -233,12 +284,12 @@ const Subscribe = () => {
           {isProcessing ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Processing...
+              Redirecting to Checkout...
             </>
           ) : (
             <>
               <Crown className="w-4 h-4 mr-2" />
-              Subscribe & Become Superfan
+              Subscribe $5/month
             </>
           )}
         </Button>
