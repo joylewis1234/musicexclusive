@@ -18,7 +18,8 @@ import {
   Loader2,
   Wallet,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  RefreshCw
 } from "lucide-react";
 
 type PayoutStatus = "not_connected" | "pending" | "connected";
@@ -278,6 +279,21 @@ const ArtistDashboard = () => {
                   )}
                 </Button>
               )}
+              
+              {/* Refresh status button */}
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => {
+                  verifyConnectStatus();
+                  toast.info("Checking payout status...");
+                }}
+                disabled={isVerifying}
+                className="ml-2"
+                title="Refresh payout status"
+              >
+                <RefreshCw className={`w-4 h-4 ${isVerifying ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
           </GlowCard>
 
