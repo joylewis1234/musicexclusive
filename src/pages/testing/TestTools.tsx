@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon, CheckCircle2, Info } from "lucide-react";
+import { CalendarIcon, CheckCircle2, Info, UserPlus, ArrowRight } from "lucide-react";
 import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,6 +38,12 @@ interface GenerationResult {
   platformUsd: number;
 }
 
+interface TestArtistResult {
+  artist_name: string;
+  email: string;
+  user_id: string;
+}
+
 const TestTools = () => {
   const { toast } = useToast();
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -49,6 +56,12 @@ const TestTools = () => {
   }>({ from: undefined, to: undefined });
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
+
+  // Create Test Artist state
+  const [testArtistName, setTestArtistName] = useState("");
+  const [testArtistEmail, setTestArtistEmail] = useState("");
+  const [isCreatingArtist, setIsCreatingArtist] = useState(false);
+  const [testArtistResult, setTestArtistResult] = useState<TestArtistResult | null>(null);
 
   // Calculate this week's date range (Monday to Sunday)
   const today = new Date();
@@ -172,6 +185,89 @@ const TestTools = () => {
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleCreateTestArtist = async () => {
+    if (!testArtistName.trim()) {
+      toast({
+        title: "Enter artist name",
+        description: "Please enter a name for the test artist.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!testArtistEmail.trim()) {
+      toast({
+        title: "Enter email",
+        description: "Please enter an email for the test artist.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreatingArtist(true);
+    setTestArtistResult(null);
+
+    try {
+      // Generate a test user_id (UUID)
+      const testUserId = crypto.randomUUID();
+
+      // Create artist_profiles record
+      const { error: profileError } = await supabase.from("artist_profiles").insert({
+        user_id: testUserId,
+        artist_name: testArtistName.trim(),
+        payout_status: "not_connected",
+        bio: "Test artist created for development purposes.",
+        genre: "Test",
+      });
+
+      if (profileError) throw profileError;
+
+      // Create artist_applications record marked as active
+      const { error: appError } = await supabase.from("artist_applications").insert({
+        artist_name: testArtistName.trim(),
+        contact_email: testArtistEmail.trim(),
+        status: "active",
+        primary_social_platform: "instagram",
+        social_profile_url: "https://instagram.com/test",
+        song_sample_url: "https://example.com/test.mp3",
+        genres: "Test",
+        years_releasing: "1-3",
+        follower_count: 1000,
+        owns_rights: true,
+        not_released_publicly: true,
+        agrees_terms: true,
+      });
+
+      if (appError) throw appError;
+
+      setTestArtistResult({
+        artist_name: testArtistName.trim(),
+        email: testArtistEmail.trim(),
+        user_id: testUserId,
+      });
+
+      // Refresh artists list
+      await fetchArtists();
+
+      toast({
+        title: "Test artist created",
+        description: `${testArtistName} has been created and marked as active.`,
+      });
+
+      // Clear inputs
+      setTestArtistName("");
+      setTestArtistEmail("");
+    } catch (error: any) {
+      toast({
+        title: "Creation failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingArtist(false);
     }
   };
 
@@ -348,6 +444,87 @@ const TestTools = () => {
                       <span className="font-medium">
                         {result.platformCredits} credits (≈ ${result.platformUsd.toFixed(2)})
                       </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Create Test Artist Section */}
+        <Card className="border-border/40 bg-card/50 backdrop-blur-sm mt-8">
+          <CardHeader>
+            <CardTitle className="text-lg font-display flex items-center gap-2">
+              <UserPlus className="w-5 h-5" />
+              Create Test Artist (Temporary)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Create a test artist profile directly, bypassing the application approval flow.
+              The artist will be marked as active immediately.
+            </p>
+
+            {/* Artist Name */}
+            <div className="space-y-2">
+              <Label htmlFor="testArtistName">Artist Name</Label>
+              <Input
+                id="testArtistName"
+                placeholder="e.g. Test Artist One"
+                value={testArtistName}
+                onChange={(e) => setTestArtistName(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="testArtistEmail">Email</Label>
+              <Input
+                id="testArtistEmail"
+                type="email"
+                placeholder="e.g. testartist@example.com"
+                value={testArtistEmail}
+                onChange={(e) => setTestArtistEmail(e.target.value)}
+                className="bg-background"
+              />
+            </div>
+
+            {/* Create Button */}
+            <Button
+              onClick={handleCreateTestArtist}
+              disabled={isCreatingArtist || !testArtistName.trim() || !testArtistEmail.trim()}
+              className="w-full"
+              size="lg"
+            >
+              {isCreatingArtist ? "Creating..." : "CREATE TEST ARTIST"}
+            </Button>
+
+            {/* Result Card */}
+            {testArtistResult && (
+              <Card className="border-green-500/30 bg-green-500/10">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-green-500 font-medium mb-4">
+                    <CheckCircle2 className="w-5 h-5" />
+                    Test Artist Created
+                  </div>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Name</span>
+                      <span className="font-medium">{testArtistResult.artist_name}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Email</span>
+                      <span className="font-medium">{testArtistResult.email}</span>
+                    </div>
+                    <div className="border-t border-border/30 pt-3">
+                      <Link to="/artist/dashboard">
+                        <Button variant="outline" className="w-full">
+                          Go connect Stripe
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 </CardContent>
