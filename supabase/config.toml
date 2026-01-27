@@ -2,3 +2,9 @@ project_id = "yjytuglxpvdkyvjsdyfk"
 
 [functions.approve-artist]
 verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
