@@ -158,6 +158,36 @@ export type Database = {
         }
         Relationships: []
       }
+      credit_ledger: {
+        Row: {
+          created_at: string
+          credits_delta: number
+          id: string
+          reference: string | null
+          type: string
+          usd_delta: number
+          user_email: string
+        }
+        Insert: {
+          created_at?: string
+          credits_delta: number
+          id?: string
+          reference?: string | null
+          type: string
+          usd_delta: number
+          user_email: string
+        }
+        Update: {
+          created_at?: string
+          credits_delta?: number
+          id?: string
+          reference?: string | null
+          type?: string
+          usd_delta?: number
+          user_email?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
