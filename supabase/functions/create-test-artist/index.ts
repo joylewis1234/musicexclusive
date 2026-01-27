@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
         artist_name: artist_name.trim(),
         email: email.trim(),
         user_id: testUserId,
+        temp_password: tempPassword, // Return for testing login
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
