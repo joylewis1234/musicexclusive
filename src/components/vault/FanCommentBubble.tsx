@@ -26,14 +26,15 @@ const FanCommentBubble = ({
   className,
 }: FanCommentBubbleProps) => {
   // Position classes for absolute positioning around the vault
+  // Position classes - adjusted to keep bubbles within viewport
   const positionClasses: Record<string, string> = {
-    "top-left": "top-0 left-0 -translate-x-1/4 -translate-y-1/4",
-    "top-right": "top-0 right-0 translate-x-1/4 -translate-y-1/4",
-    "top-center": "top-0 left-1/2 -translate-x-1/2 -translate-y-3/4",
-    "left": "top-1/2 left-0 -translate-x-1/2 -translate-y-1/2",
-    "right": "top-1/2 right-0 translate-x-1/2 -translate-y-1/2",
-    "bottom-left": "bottom-0 left-0 -translate-x-1/4 translate-y-1/4",
-    "bottom-right": "bottom-0 right-0 translate-x-1/4 translate-y-1/4",
+    "top-left": "top-[5%] left-[5%]",
+    "top-right": "top-[5%] right-[5%]",
+    "top-center": "top-[2%] left-1/2 -translate-x-1/2",
+    "left": "top-1/2 left-[2%] -translate-y-1/2",
+    "right": "top-1/2 right-[2%] -translate-y-1/2",
+    "bottom-left": "bottom-[5%] left-[5%]",
+    "bottom-right": "bottom-[5%] right-[5%]",
   };
 
   // Generate initials from name for fallback avatar
@@ -58,10 +59,10 @@ const FanCommentBubble = ({
     >
       {/* Bubble container with glass effect */}
       <div
-        className="relative bg-card/90 backdrop-blur-md rounded-2xl p-3 md:p-4 shadow-lg border border-border/50 max-w-[160px] md:max-w-[200px] animate-float"
+        className="relative bg-card/90 backdrop-blur-md rounded-2xl p-2 md:p-3 shadow-lg border border-border/50 max-w-[130px] md:max-w-[160px] animate-float"
         style={{
           animationDelay: `${delay + 500}ms`,
-          boxShadow: "0 4px 20px rgba(0, 0, 0, 0.3), 0 0 40px rgba(139, 92, 246, 0.1)",
+          boxShadow: "0 4px 15px rgba(0, 0, 0, 0.3), 0 0 25px rgba(139, 92, 246, 0.15)",
         }}
       >
         {/* Header with avatar and name */}
