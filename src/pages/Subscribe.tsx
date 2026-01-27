@@ -42,21 +42,15 @@ const Subscribe = () => {
     setIsComplete(true);
   };
 
-  // After subscription completes, auto-redirect based on flow
+  // After subscription completes, go to dashboard (agreements already signed)
   useEffect(() => {
     if (isComplete) {
       const timer = setTimeout(() => {
-        if (flow === "vault") {
-          // Vault winners already signed agreements, go to dashboard
-          navigate("/fan/dashboard", { replace: true });
-        } else {
-          // Superfan direct signup goes to agreements first
-          navigate("/agreements/fan", { state: { ...state, flow: "superfan" }, replace: true });
-        }
+        navigate("/fan/dashboard", { replace: true });
       }, 2500);
       return () => clearTimeout(timer);
     }
-  }, [isComplete, flow, navigate, state]);
+  }, [isComplete, navigate]);
 
   if (isComplete) {
     return (

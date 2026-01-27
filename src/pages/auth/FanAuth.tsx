@@ -35,12 +35,8 @@ const FanAuth = () => {
 
   // Determine destination based on flow
   const getDestination = () => {
-    if (isSuperfanFlow) {
-      // Superfan flow: go to subscribe page
-      return "/subscribe";
-    }
-    if (isVaultFlow) {
-      // Vault flow: go to agreements first, then payment options
+    if (isSuperfanFlow || isVaultFlow) {
+      // Both flows: go to agreements first
       return "/agreements/fan";
     }
     // Default flow: go to dashboard
