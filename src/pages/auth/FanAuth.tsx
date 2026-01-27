@@ -22,7 +22,9 @@ const FanAuth = () => {
   
   const state = location.state as LocationState | null;
   // Check both URL query param and location state for flow
-  const flow = searchParams.get("flow") as "superfan" | "vault" | null || state?.flow || "default";
+  const flowFromParams = searchParams.get("flow") as "superfan" | "vault" | null;
+  const flowFromState = state?.flow;
+  const flow = flowFromParams || flowFromState; // Keep as undefined if neither exists
   const isSuperfanFlow = flow === "superfan";
   const isVaultFlow = flow === "vault";
   
