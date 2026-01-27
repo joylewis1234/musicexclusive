@@ -19,10 +19,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { CalendarIcon, CheckCircle2, Info, UserPlus, ArrowRight } from "lucide-react";
-import { format, startOfWeek, endOfWeek, addDays } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { LiveLedgerTable } from "@/components/testing/LiveLedgerTable";
 
 interface Artist {
   id: string;
@@ -57,7 +58,9 @@ const TestTools = () => {
   }>({ from: undefined, to: undefined });
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
-
+  
+  // Ledger refresh trigger
+  const [ledgerRefreshTrigger, setLedgerRefreshTrigger] = useState(0);
   // Create Test Artist state
   const [testArtistName, setTestArtistName] = useState("");
   const [testArtistEmail, setTestArtistEmail] = useState("");
@@ -173,6 +176,9 @@ const TestTools = () => {
         platformCredits,
         platformUsd,
       });
+
+      // Trigger ledger refresh
+      setLedgerRefreshTrigger((prev) => prev + 1);
 
       toast({
         title: "Test earnings generated",
@@ -540,6 +546,11 @@ const TestTools = () => {
             )}
           </CardContent>
         </Card>
+
+        {/* SECTION 3: Ledger Entries (Live) */}
+        <div className="mt-8">
+          <LiveLedgerTable refreshTrigger={ledgerRefreshTrigger} />
+        </div>
       </main>
     </div>
   );

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -31,7 +30,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  Download,
   RefreshCw,
   Loader2,
 } from "lucide-react";
@@ -39,6 +37,7 @@ import { format, startOfWeek, endOfWeek } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { LiveLedgerTable } from "@/components/testing/LiveLedgerTable";
 
 interface ArtistPayout {
   id: string;
@@ -49,17 +48,6 @@ interface ArtistPayout {
   unpaid_credits: number;
   unpaid_usd: number;
   last_payout_date: string | null;
-}
-
-interface LedgerEntry {
-  id: string;
-  created_at: string;
-  type: string;
-  user_email: string;
-  credits_delta: number;
-  usd_delta: number;
-  reference: string | null;
-  payout_batch_id: string | null;
 }
 
 interface PayoutResult {
@@ -87,13 +75,8 @@ const TestPayouts = () => {
   const [isRunningPayout, setIsRunningPayout] = useState(false);
   const [payoutResults, setPayoutResults] = useState<PayoutResult[]>([]);
   
-  // Section 3: Transaction Ledger
-  const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>([]);
-  const [loadingLedger, setLoadingLedger] = useState(true);
-  const [ledgerFilter, setLedgerFilter] = useState({
-    type: "all",
-    search: "",
-  });
+  // Ledger refresh trigger - increment to force refresh
+  const [ledgerRefreshTrigger, setLedgerRefreshTrigger] = useState(0);
 
   const today = new Date();
   const thisWeekStart = startOfWeek(today, { weekStartsOn: 1 });
@@ -101,7 +84,6 @@ const TestPayouts = () => {
 
   useEffect(() => {
     fetchArtistsWithEarnings();
-    fetchLedgerEntries();
   }, []);
 
   const fetchArtistsWithEarnings = async () => {
@@ -170,26 +152,9 @@ const TestPayouts = () => {
     }
   };
 
-  const fetchLedgerEntries = async () => {
-    setLoadingLedger(true);
-    try {
-      const { data, error } = await supabase
-        .from("credit_ledger")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(100);
-
-      if (error) throw error;
-      setLedgerEntries(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error fetching ledger",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoadingLedger(false);
-    }
+  // Trigger ledger refresh (called after payouts complete)
+  const triggerLedgerRefresh = () => {
+    setLedgerRefreshTrigger((prev) => prev + 1);
   };
 
   const getDateRange = () => {
@@ -313,7 +278,7 @@ const TestPayouts = () => {
       
       // Refresh data
       await fetchArtistsWithEarnings();
-      await fetchLedgerEntries();
+      triggerLedgerRefresh();
 
       const successCount = results.filter((r) => r.success).length;
       toast({
@@ -339,45 +304,6 @@ const TestPayouts = () => {
     await handleRunPayout();
   };
 
-  const filteredLedgerEntries = ledgerEntries.filter((entry) => {
-    if (ledgerFilter.type !== "all" && entry.type !== ledgerFilter.type) {
-      return false;
-    }
-    if (
-      ledgerFilter.search &&
-      !entry.user_email.toLowerCase().includes(ledgerFilter.search.toLowerCase()) &&
-      !entry.reference?.toLowerCase().includes(ledgerFilter.search.toLowerCase())
-    ) {
-      return false;
-    }
-    return true;
-  });
-
-  const exportToCSV = () => {
-    const headers = ["Date", "Type", "User/Artist", "Credits", "USD", "Status", "Reference"];
-    const rows = filteredLedgerEntries.map((entry) => [
-      format(new Date(entry.created_at), "yyyy-MM-dd HH:mm"),
-      entry.type,
-      entry.user_email,
-      entry.credits_delta,
-      entry.usd_delta,
-      entry.payout_batch_id ? "Paid" : "Unpaid",
-      entry.reference || "",
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) => row.map((cell) => `"${cell}"`).join(",")),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ledger-export-${format(new Date(), "yyyy-MM-dd")}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -633,129 +559,8 @@ const TestPayouts = () => {
           </CardContent>
         </Card>
 
-        {/* SECTION 3: Transaction Ledger */}
-        <Card className="border-border/40 bg-card/50 backdrop-blur-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg font-display">
-              Transaction Ledger (Preview)
-            </CardTitle>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchLedgerEntries}
-                disabled={loadingLedger}
-              >
-                <RefreshCw className={cn("w-4 h-4", loadingLedger && "animate-spin")} />
-              </Button>
-              <Button variant="outline" size="sm" onClick={exportToCSV}>
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Filters */}
-            <div className="flex gap-4 flex-wrap">
-              <div className="flex-1 min-w-[200px]">
-                <Input
-                  placeholder="Search by user or reference..."
-                  value={ledgerFilter.search}
-                  onChange={(e) =>
-                    setLedgerFilter((prev) => ({ ...prev, search: e.target.value }))
-                  }
-                  className="bg-background"
-                />
-              </div>
-              <Select
-                value={ledgerFilter.type}
-                onValueChange={(v) => setLedgerFilter((prev) => ({ ...prev, type: v }))}
-              >
-                <SelectTrigger className="w-[180px] bg-background">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent className="bg-background border-border z-50">
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="ARTIST_EARNING">Artist Earning</SelectItem>
-                  <SelectItem value="PLATFORM_EARNING">Platform Earning</SelectItem>
-                  <SelectItem value="CREDITS_PURCHASE">Credits Purchase</SelectItem>
-                  <SelectItem value="SUBSCRIPTION_CREDITS">Subscription Credits</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Ledger Table */}
-            {loadingLedger ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : filteredLedgerEntries.length === 0 ? (
-              <p className="text-muted-foreground text-center py-8">
-                No ledger entries found.
-              </p>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>User/Artist</TableHead>
-                      <TableHead className="text-right">Credits</TableHead>
-                      <TableHead className="text-right">USD</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Reference</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredLedgerEntries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {format(new Date(entry.created_at), "MMM d, HH:mm")}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {entry.type.replace(/_/g, " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="max-w-[150px] truncate">
-                          {entry.user_email}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {entry.credits_delta > 0 ? "+" : ""}
-                          {entry.credits_delta}
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          ${Number(entry.usd_delta).toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          {entry.payout_batch_id ? (
-                            <Badge
-                              variant="outline"
-                              className="border-green-500 text-green-500 text-xs"
-                            >
-                              Paid
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="border-yellow-500 text-yellow-500 text-xs"
-                            >
-                              Unpaid
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
-                          {entry.reference || "—"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        {/* SECTION 3: Ledger Entries (Live) */}
+        <LiveLedgerTable refreshTrigger={ledgerRefreshTrigger} />
       </main>
     </div>
   );
