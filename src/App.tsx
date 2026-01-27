@@ -46,6 +46,10 @@ import ArtistDashboard from "./pages/artist/ArtistDashboard";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
 import EditArtistProfile from "./pages/artist/EditArtistProfile";
 
+// Admin pages
+import AdminReports from "./pages/admin/AdminReports";
+import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -132,7 +136,15 @@ const App = () => (
                 </ArtistProtectedRoute>
               } />
               
+              {/* Admin routes */}
+              <Route path="/admin/reports" element={
+                <AdminProtectedRoute>
+                  <AdminReports />
+                </AdminProtectedRoute>
+              } />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
