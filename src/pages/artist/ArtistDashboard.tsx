@@ -153,8 +153,8 @@ const ArtistDashboard = () => {
       }
       
       if (data?.url) {
-        // Redirect to Stripe Connect onboarding
-        window.location.href = data.url;
+        // Redirect to Stripe Connect onboarding in new tab (better mobile support)
+        window.open(data.url, "_blank");
       } else {
         toast.error("Failed to get onboarding link.");
       }
