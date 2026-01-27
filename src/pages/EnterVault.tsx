@@ -18,7 +18,17 @@ import {
 import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { FanCommentBubble } from "@/components/vault/FanCommentBubble";
+import vaultPortal from "@/assets/vault-portal.png";
 
+// Fan testimonials for floating comments around the vault
+const fanComments = [
+  { name: "Elizabeth Grace", comment: "This is amazing!", position: "top-center" as const, delay: 0 },
+  { name: "Olivia Williams", comment: "Can't stop listening.", position: "left" as const, delay: 200 },
+  { name: "Emma Johnson", comment: "Total vibes.", position: "right" as const, delay: 400 },
+  { name: "Isabella Davis", comment: "Pure fire 🔥", position: "bottom-left" as const, delay: 600 },
+  { name: "Sophia Brown", comment: "Love every second.", position: "bottom-right" as const, delay: 800 },
+];
 const formSchema = z.object({
   name: z
     .string()
@@ -208,15 +218,48 @@ const EnterVault = () => {
         </button>
       </header>
 
-      {/* Background glow effect */}
-      <div
-        className="fixed inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(ellipse 50% 50% at 50% 50%, rgba(0, 212, 255, 0.08) 0%, transparent 70%)",
-        }}
-        aria-hidden="true"
-      />
+      {/* ========================================
+          VAULT PORTAL SECTION WITH FAN COMMENTS
+          Large portal with floating testimonials
+          ======================================== */}
+      <section className="relative w-full max-w-lg md:max-w-2xl mx-auto mb-8">
+        {/* Animated glow orbs behind the vault */}
+        <div className="absolute inset-0 bg-secondary/30 blur-[100px] rounded-full scale-90 animate-pulse" />
+        <div className="absolute inset-0 bg-accent/25 blur-[80px] rounded-full scale-100 animate-pulse [animation-delay:1s]" />
+        <div className="absolute inset-0 bg-primary/25 blur-[90px] rounded-full scale-95 animate-pulse [animation-delay:0.5s]" />
+        
+        {/* Vault Portal Container */}
+        <div className="relative mx-auto w-full max-w-sm md:max-w-md aspect-square">
+          {/* Static vault portal image with breathing glow */}
+          <img
+            src={vaultPortal}
+            alt="Vault Portal"
+            className="relative w-full h-full object-contain vault-glow z-10"
+          />
+          
+          {/* Inner energy lightning effect - overlaid on top with blend mode */}
+          <div className="absolute inset-[20%] rounded-full overflow-hidden pointer-events-none mix-blend-screen z-20">
+            <div className="absolute inset-0 animate-vault-lightning-1 opacity-70" />
+            <div className="absolute inset-0 animate-vault-lightning-2 opacity-60" />
+            <div className="absolute inset-0 animate-vault-lightning-3 opacity-50" />
+          </div>
+          
+          {/* ========================================
+              FLOATING FAN COMMENTS
+              Positioned around the vault portal
+              ======================================== */}
+          {fanComments.map((fan) => (
+            <FanCommentBubble
+              key={fan.name}
+              name={fan.name}
+              comment={fan.comment}
+              position={fan.position}
+              delay={fan.delay}
+              rating={5}
+            />
+          ))}
+        </div>
+      </section>
 
       <div className="flex-1 flex items-center justify-center">
         <div className="relative w-full max-w-md">
