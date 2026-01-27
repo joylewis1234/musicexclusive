@@ -169,6 +169,7 @@ export type Database = {
           created_at: string
           credits_delta: number
           id: string
+          payout_batch_id: string | null
           reference: string | null
           type: string
           usd_delta: number
@@ -178,6 +179,7 @@ export type Database = {
           created_at?: string
           credits_delta: number
           id?: string
+          payout_batch_id?: string | null
           reference?: string | null
           type: string
           usd_delta: number
@@ -187,10 +189,58 @@ export type Database = {
           created_at?: string
           credits_delta?: number
           id?: string
+          payout_batch_id?: string | null
           reference?: string | null
           type?: string
           usd_delta?: number
           user_email?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "credit_ledger_payout_batch_id_fkey"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payout_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payout_batches: {
+        Row: {
+          artist_user_id: string
+          created_at: string
+          id: string
+          paid_at: string | null
+          status: string
+          stripe_transfer_id: string | null
+          total_credits: number
+          total_usd: number
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          artist_user_id: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_transfer_id?: string | null
+          total_credits?: number
+          total_usd?: number
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          artist_user_id?: string
+          created_at?: string
+          id?: string
+          paid_at?: string | null
+          status?: string
+          stripe_transfer_id?: string | null
+          total_credits?: number
+          total_usd?: number
+          week_end?: string
+          week_start?: string
         }
         Relationships: []
       }
