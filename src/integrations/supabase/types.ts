@@ -263,6 +263,27 @@ export type Database = {
           },
         ]
       }
+      stripe_events: {
+        Row: {
+          event_type: string
+          id: string
+          payload: Json | null
+          processed_at: string
+        }
+        Insert: {
+          event_type: string
+          id: string
+          payload?: Json | null
+          processed_at?: string
+        }
+        Update: {
+          event_type?: string
+          id?: string
+          payload?: Json | null
+          processed_at?: string
+        }
+        Relationships: []
+      }
       tracks: {
         Row: {
           album: string | null
