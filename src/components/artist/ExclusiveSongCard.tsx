@@ -26,13 +26,16 @@ export interface ExclusiveSong {
   created_at: string;
 }
 
-// Helper to extract storage path from Supabase URL
-const getStoragePathFromUrl = (url: string | null): string | null => {
+// Helper to extract storage path and bucket from Supabase URL
+const getStorageInfoFromUrl = (url: string | null): { bucket: string; path: string } | null => {
   if (!url) return null;
   try {
-    // URLs look like: https://xyz.supabase.co/storage/v1/object/public/audio/artwork/filename.jpg
-    const match = url.match(/\/storage\/v1\/object\/public\/audio\/(.+)$/);
-    return match ? match[1] : null;
+    // URLs look like: https://xyz.supabase.co/storage/v1/object/public/{bucket}/{path}
+    const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+    if (match) {
+      return { bucket: match[1], path: match[2] };
+    }
+    return null;
   } catch {
     return null;
   }
@@ -63,23 +66,27 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
         // Continue anyway - likes might not exist
       }
 
-      // 2. Delete storage files
-      const filesToDelete: string[] = [];
-      
-      const artworkPath = getStoragePathFromUrl(song.artwork_url);
-      if (artworkPath) filesToDelete.push(artworkPath);
-      
-      const audioPath = getStoragePathFromUrl(song.full_audio_url);
-      if (audioPath) filesToDelete.push(audioPath);
+      // 2. Delete storage files from respective buckets
+      const artworkInfo = getStorageInfoFromUrl(song.artwork_url);
+      const audioInfo = getStorageInfoFromUrl(song.full_audio_url);
 
-      if (filesToDelete.length > 0) {
-        const { error: storageError } = await supabase.storage
-          .from("audio")
-          .remove(filesToDelete);
+      if (artworkInfo) {
+        const { error: artworkError } = await supabase.storage
+          .from(artworkInfo.bucket)
+          .remove([artworkInfo.path]);
 
-        if (storageError) {
-          console.warn("Error deleting storage files:", storageError);
-          // Continue anyway - files might not exist or already deleted
+        if (artworkError) {
+          console.warn("Error deleting artwork:", artworkError);
+        }
+      }
+
+      if (audioInfo) {
+        const { error: audioError } = await supabase.storage
+          .from(audioInfo.bucket)
+          .remove([audioInfo.path]);
+
+        if (audioError) {
+          console.warn("Error deleting audio:", audioError);
         }
       }
 
@@ -103,8 +110,8 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
   };
 
   const handleView = () => {
-    // Navigate to the public artist profile with this track highlighted
-    navigate(`/artist/${encodeURIComponent(artistId)}?track=${song.id}`);
+    // Navigate to artist's public profile in fan view mode with this track highlighted
+    navigate(`/artist/view/${encodeURIComponent(artistId)}?view=fan&track=${song.id}`);
   };
 
   return (

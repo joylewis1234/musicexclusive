@@ -82,6 +82,7 @@ const ArtistDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const [artistName, setArtistName] = useState("Artist");
+  const [artistProfileId, setArtistProfileId] = useState<string | null>(null);
   const [songs, setSongs] = useState<ExclusiveSong[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [payoutStatus, setPayoutStatus] = useState<PayoutStatus>("not_connected");
@@ -115,40 +116,35 @@ const ArtistDashboard = () => {
   }, [user]);
 
   const fetchArtistData = useCallback(async () => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     try {
-      // Fetch artist application for name
-      const { data: application } = await supabase
-        .from("artist_applications")
-        .select("artist_name")
-        .eq("contact_email", user.email)
-        .maybeSingle();
-
-      if (application) {
-        setArtistName(application.artist_name);
-      }
-
-      // Fetch artist profile for payout status
+      // Fetch artist profile for name and payout status
       const { data: profile } = await supabase
         .from("artist_profiles")
-        .select("payout_status")
+        .select("id, artist_name, payout_status")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (profile?.payout_status) {
-        setPayoutStatus(profile.payout_status as PayoutStatus);
-      }
+      if (profile) {
+        setArtistName(profile.artist_name);
+        setArtistProfileId(profile.id);
+        if (profile.payout_status) {
+          setPayoutStatus(profile.payout_status as PayoutStatus);
+        }
 
-      // Fetch songs - using email as artist_id
-      const { data: songData } = await supabase
-        .from("tracks")
-        .select("id, title, artwork_url, full_audio_url, genre, created_at")
-        .eq("artist_id", user.email)
-        .order("created_at", { ascending: false });
+        // Fetch songs using artist_profiles.id (UUID)
+        const { data: songData, error: songsError } = await supabase
+          .from("tracks")
+          .select("id, title, artwork_url, full_audio_url, genre, created_at")
+          .eq("artist_id", profile.id)
+          .order("created_at", { ascending: false });
 
-      if (songData) {
-        setSongs(songData);
+        if (songsError) {
+          console.error("Error fetching songs:", songsError);
+        } else if (songData) {
+          setSongs(songData);
+        }
       }
     } catch (error) {
       console.error("Error fetching artist data:", error);
@@ -443,7 +439,7 @@ const ArtistDashboard = () => {
                   >
                     <ExclusiveSongCard 
                       song={song}
-                      artistId={user?.email || ""}
+                      artistId={artistProfileId || ""}
                       onDeleted={handleSongDeleted}
                     />
                   </div>
