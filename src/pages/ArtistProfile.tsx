@@ -1,11 +1,12 @@
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, Home, Loader2, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtistHeader } from "@/components/profile/ArtistHeader";
 import { TrackListItem } from "@/components/profile/TrackListItem";
 import { VaultMusicPlayer } from "@/components/player/VaultMusicPlayer";
 import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
 
 import artist1 from "@/assets/artist-1.jpg";
@@ -58,6 +59,10 @@ const ArtistProfile = () => {
   const [fanId, setFanId] = useState<string | null>(null);
   const [hasVaultAccess, setHasVaultAccess] = useState(false);
   const [showAccessGate, setShowAccessGate] = useState(false);
+  
+  // Refs for scroll-to-track behavior
+  const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const hasScrolledToTrack = useRef(false);
 
   // Fetch fan's vault membership
   useEffect(() => {
@@ -141,14 +146,6 @@ const ArtistProfile = () => {
 
         if (trackData) {
           setTracks(trackData);
-
-          // Auto-select track from URL param
-          if (selectedTrackId) {
-            const trackToSelect = trackData.find((t) => t.id === selectedTrackId);
-            if (trackToSelect) {
-              handleSelectTrack(trackToSelect);
-            }
-          }
         }
       } catch (error) {
         console.error("Error fetching artist:", error);
@@ -158,7 +155,21 @@ const ArtistProfile = () => {
     };
 
     fetchArtistData();
-  }, [artistId, selectedTrackId]);
+  }, [artistId]);
+
+  // Scroll to and highlight selected track from URL param
+  useEffect(() => {
+    if (selectedTrackId && tracks.length > 0 && !hasScrolledToTrack.current) {
+      const trackElement = trackRefs.current[selectedTrackId];
+      if (trackElement) {
+        // Scroll with offset for header
+        setTimeout(() => {
+          trackElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+        hasScrolledToTrack.current = true;
+      }
+    }
+  }, [selectedTrackId, tracks]);
 
   const handleSelectTrack = (track: DbTrack) => {
     setSelectedTrack({
@@ -253,6 +264,7 @@ const ArtistProfile = () => {
                 {tracks.map((track) => (
                   <TrackListItem
                     key={track.id}
+                    ref={(el) => { trackRefs.current[track.id] = el; }}
                     track={{
                       id: track.id,
                       title: track.title,
@@ -260,6 +272,7 @@ const ArtistProfile = () => {
                     }}
                     fanId={fanId}
                     isSelected={selectedTrack?.id === track.id}
+                    isHighlighted={selectedTrackId === track.id}
                     onSelect={() => handleSelectTrack(track)}
                   />
                 ))}

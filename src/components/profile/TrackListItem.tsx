@@ -1,5 +1,7 @@
+import { forwardRef } from "react";
 import { Heart } from "lucide-react";
 import { useTrackLikes } from "@/hooks/useTrackLikes";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/utils";
 
 import artist1 from "@/assets/artist-1.jpg";
@@ -12,15 +14,17 @@ interface TrackListItemProps {
   };
   fanId: string | null;
   isSelected: boolean;
+  isHighlighted?: boolean;
   onSelect: () => void;
 }
 
-export const TrackListItem = ({
+export const TrackListItem = forwardRef<HTMLDivElement, TrackListItemProps>(({
   track,
   fanId,
   isSelected,
+  isHighlighted = false,
   onSelect,
-}: TrackListItemProps) => {
+}, ref) => {
   const { likeCount, isLiked, toggleLike, isLoading } = useTrackLikes(track.id, fanId);
 
   const handleLikeClick = (e: React.MouseEvent) => {
@@ -30,23 +34,26 @@ export const TrackListItem = ({
     }
   };
 
+  const showHighlight = isHighlighted || isSelected;
+
   return (
     <div
+      ref={ref}
       onClick={onSelect}
       className={cn(
         "group relative rounded-xl p-3 cursor-pointer transition-all duration-300",
-        isSelected
-          ? "bg-primary/10 border border-primary/40"
+        showHighlight
+          ? "bg-primary/10 border-2 border-primary/60 ring-2 ring-primary/30"
           : "bg-card/50 border border-transparent hover:bg-card/80 hover:border-primary/20"
       )}
       style={{
-        boxShadow: isSelected ? "0 0 20px hsl(var(--primary) / 0.2)" : undefined,
+        boxShadow: showHighlight ? "0 0 25px hsl(var(--primary) / 0.3)" : undefined,
       }}
     >
       <div className="flex items-center gap-3">
         {/* Cover art */}
         <div className="relative flex-shrink-0">
-          {isSelected && (
+          {showHighlight && (
             <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-primary to-purple-500 blur-sm opacity-60" />
           )}
           <img
@@ -58,15 +65,22 @@ export const TrackListItem = ({
 
         {/* Track info */}
         <div className="flex-1 min-w-0">
-          <p className={cn(
-            "font-display text-sm font-medium truncate transition-colors",
-            isSelected ? "text-primary" : "text-foreground"
-          )}>
-            {track.title}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className={cn(
+              "font-display text-sm font-medium truncate transition-colors",
+              showHighlight ? "text-primary" : "text-foreground"
+            )}>
+              {track.title}
+            </p>
+            {isHighlighted && !isSelected && (
+              <StatusBadge variant="exclusive" size="sm">
+                Selected
+              </StatusBadge>
+            )}
+          </div>
           {isSelected && (
             <p className="text-xs text-primary/70 font-display uppercase tracking-wider mt-0.5">
-              Now Selected
+              Now Playing
             </p>
           )}
         </div>
@@ -95,4 +109,6 @@ export const TrackListItem = ({
       </div>
     </div>
   );
-};
+});
+
+TrackListItem.displayName = "TrackListItem";
