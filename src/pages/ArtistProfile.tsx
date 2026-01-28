@@ -1,18 +1,17 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { ChevronLeft, Home, Play, Share2, Mic2, Loader2, Music, Pause } from "lucide-react";
+import { ChevronLeft, Home, Loader2, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GlowCard } from "@/components/ui/GlowCard";
-import { StatusBadge } from "@/components/ui/StatusBadge";
-import { ShareTrackModal } from "@/components/ShareTrackModal";
-import { usePlayer, Track } from "@/contexts/PlayerContext";
+import { ArtistHeader } from "@/components/profile/ArtistHeader";
+import { TrackListItem } from "@/components/profile/TrackListItem";
+import { VaultMusicPlayer } from "@/components/player/VaultMusicPlayer";
+import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { supabase } from "@/integrations/supabase/client";
 
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
 import artist3 from "@/assets/artist-3.jpg";
 
-// Fallback images for artists
 const artistImages: Record<string, string> = {
   default: artist1,
   artist1,
@@ -26,7 +25,6 @@ interface DbTrack {
   genre: string | null;
   duration: number;
   full_audio_url: string | null;
-  preview_audio_url: string | null;
   artwork_url: string | null;
   created_at: string;
 }
@@ -39,60 +37,117 @@ interface ArtistData {
   imageUrl: string;
 }
 
+interface PlayerTrack {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string;
+  audioUrl: string;
+}
+
 const ArtistProfile = () => {
   const navigate = useNavigate();
   const { artistId } = useParams<{ artistId: string }>();
-  const { playTrack, currentTrack, isPlaying, togglePlayPause } = usePlayer();
-  
+  const [searchParams] = useSearchParams();
+  const selectedTrackId = searchParams.get("track");
+
   const [artist, setArtist] = useState<ArtistData | null>(null);
   const [tracks, setTracks] = useState<DbTrack[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [shareModalOpen, setShareModalOpen] = useState(false);
-  const [selectedTrackForShare, setSelectedTrackForShare] = useState<Track | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<PlayerTrack | null>(null);
+  const [fanId, setFanId] = useState<string | null>(null);
+  const [hasVaultAccess, setHasVaultAccess] = useState(false);
+  const [showAccessGate, setShowAccessGate] = useState(false);
 
+  // Fetch fan's vault membership
+  useEffect(() => {
+    const fetchFanData = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { data: member } = await supabase
+          .from("vault_members")
+          .select("id, vault_access_active")
+          .eq("email", user.email)
+          .maybeSingle();
+
+        if (member) {
+          setFanId(member.id);
+          setHasVaultAccess(member.vault_access_active);
+        }
+      }
+    };
+    fetchFanData();
+  }, []);
+
+  // Fetch artist and tracks
   useEffect(() => {
     const fetchArtistData = async () => {
       if (!artistId) return;
 
       setIsLoading(true);
       try {
-        // Fetch artist application data
-        const { data: application } = await supabase
-          .from("artist_applications")
-          .select("artist_name, genres, contact_email")
-          .eq("contact_email", artistId)
+        // Fetch artist profile first
+        const { data: profile } = await supabase
+          .from("artist_profiles")
+          .select("artist_name, genre, bio, avatar_url")
+          .eq("user_id", artistId)
           .maybeSingle();
 
-        if (application) {
+        if (profile) {
           setArtist({
             id: artistId,
-            name: application.artist_name,
-            genre: application.genres,
-            bio: `Exclusive artist on Music Exclusive, bringing you premium ${application.genres} content before anyone else.`,
-            imageUrl: artistImages.default,
+            name: profile.artist_name,
+            genre: profile.genre || "Music",
+            bio: profile.bio || `Exclusive artist on Music Exclusive.`,
+            imageUrl: profile.avatar_url || artistImages.default,
           });
-
-          // Fetch tracks for this artist
-          const { data: trackData } = await supabase
-            .from("tracks")
-            .select("*")
-            .eq("artist_id", artistId)
-            .not("genre", "like", "[DISABLED]%")
-            .order("created_at", { ascending: false });
-
-          if (trackData) {
-            setTracks(trackData);
-          }
         } else {
-          // Fallback for demo artists
-          const demoArtists: Record<string, ArtistData> = {
-            nova: { id: "nova", name: "NOVA", genre: "Electronic", bio: "Pioneering the future of electronic music.", imageUrl: artist1 },
-            aura: { id: "aura", name: "AURA", genre: "R&B", bio: "Smooth vocals and ethereal production.", imageUrl: artist2 },
-            echo: { id: "echo", name: "ECHO", genre: "Indie", bio: "Raw, authentic indie sound.", imageUrl: artist3 },
-          };
-          
-          if (demoArtists[artistId]) {
-            setArtist(demoArtists[artistId]);
+          // Fallback to artist_applications
+          const { data: application } = await supabase
+            .from("artist_applications")
+            .select("artist_name, genres, contact_email")
+            .eq("contact_email", artistId)
+            .maybeSingle();
+
+          if (application) {
+            setArtist({
+              id: artistId,
+              name: application.artist_name,
+              genre: application.genres,
+              bio: `Exclusive artist on Music Exclusive, bringing you premium ${application.genres} content.`,
+              imageUrl: artistImages.default,
+            });
+          } else {
+            // Demo artists fallback
+            const demoArtists: Record<string, ArtistData> = {
+              nova: { id: "nova", name: "NOVA", genre: "Electronic", bio: "Pioneering the future of electronic music.", imageUrl: artist1 },
+              aura: { id: "aura", name: "AURA", genre: "R&B", bio: "Smooth vocals and ethereal production.", imageUrl: artist2 },
+              echo: { id: "echo", name: "ECHO", genre: "Indie", bio: "Raw, authentic indie sound.", imageUrl: artist3 },
+            };
+            if (demoArtists[artistId]) {
+              setArtist(demoArtists[artistId]);
+            }
+          }
+        }
+
+        // Fetch tracks
+        const { data: trackData } = await supabase
+          .from("tracks")
+          .select("id, title, genre, duration, full_audio_url, artwork_url, created_at")
+          .eq("artist_id", artistId)
+          .not("genre", "like", "[DELETED]%")
+          .not("genre", "like", "[DISABLED]%")
+          .order("created_at", { ascending: false });
+
+        if (trackData) {
+          setTracks(trackData);
+
+          // Auto-select track from URL param
+          if (selectedTrackId) {
+            const trackToSelect = trackData.find((t) => t.id === selectedTrackId);
+            if (trackToSelect) {
+              handleSelectTrack(trackToSelect);
+            }
           }
         }
       } catch (error) {
@@ -103,36 +158,16 @@ const ArtistProfile = () => {
     };
 
     fetchArtistData();
-  }, [artistId]);
+  }, [artistId, selectedTrackId]);
 
-  const convertToPlayerTrack = (track: DbTrack): Track => ({
-    id: track.id,
-    title: track.title,
-    artist: artist?.name || "Unknown Artist",
-    album: track.genre || "Exclusive Release",
-    artwork: track.artwork_url || artist?.imageUrl || artistImages.default,
-    duration: track.duration,
-  });
-
-  const handlePlayTrack = (track: DbTrack) => {
-    const playerTrack = convertToPlayerTrack(track);
-    
-    if (currentTrack?.id === track.id) {
-      togglePlayPause();
-    } else {
-      playTrack(playerTrack);
-    }
-  };
-
-  const handleShare = (track: DbTrack) => {
-    setSelectedTrackForShare(convertToPlayerTrack(track));
-    setShareModalOpen(true);
-  };
-
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  const handleSelectTrack = (track: DbTrack) => {
+    setSelectedTrack({
+      id: track.id,
+      title: track.title,
+      artist: artist?.name || "Unknown Artist",
+      artworkUrl: track.artwork_url || artist?.imageUrl || artistImages.default,
+      audioUrl: track.full_audio_url || "",
+    });
   };
 
   if (isLoading) {
@@ -157,140 +192,77 @@ const ArtistProfile = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Hero Section */}
-      <div className="relative h-[45vh] min-h-[320px]">
-        <img
-          src={artist.imageUrl}
-          alt={artist.name}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-        
-        {/* Navigation Header */}
-        <header className="absolute top-0 left-0 right-0 z-10 px-4 py-6">
-          <div className="w-full max-w-md mx-auto flex items-center justify-between">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              <span className="text-sm uppercase tracking-wider">Back</span>
-            </button>
-            <button
-              onClick={() => navigate("/")}
-              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
-            >
-              <Home className="w-5 h-5" />
-              <span className="text-sm uppercase tracking-wider">Home</span>
-            </button>
-          </div>
-        </header>
-
-        {/* Artist Info Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-6">
-          <div className="w-full max-w-md mx-auto">
-            {/* Exclusive Artist Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/40 mb-3">
-              <Mic2 className="w-3.5 h-3.5 text-primary" />
-              <span className="text-primary text-xs font-display uppercase tracking-wider">
-                Exclusive Artist
-              </span>
-            </div>
-            
-            <h1 
-              className="font-display text-4xl md:text-5xl font-bold text-foreground tracking-wide mb-2"
-              style={{ textShadow: "0 2px 20px rgba(0, 0, 0, 0.5)" }}
-            >
-              {artist.name}
-            </h1>
-            <p className="text-primary text-sm font-display uppercase tracking-wider">
-              {artist.genre}
-            </p>
-          </div>
+      {/* Navigation Header */}
+      <header className="fixed top-0 left-0 right-0 z-20 px-4 py-4 bg-gradient-to-b from-background/90 to-transparent">
+        <div className="w-full max-w-md mx-auto flex items-center justify-between">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="text-sm uppercase tracking-wider">Back</span>
+          </button>
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
+          >
+            <Home className="w-5 h-5" />
+            <span className="text-sm uppercase tracking-wider">Home</span>
+          </button>
         </div>
-      </div>
+      </header>
 
-      {/* Content Section */}
+      {/* Artist Header */}
+      <ArtistHeader
+        name={artist.name}
+        genre={artist.genre}
+        bio={artist.bio}
+        imageUrl={artist.imageUrl}
+      />
+
+      {/* Content */}
       <div className="flex-1 px-4 py-6">
         <div className="w-full max-w-md mx-auto space-y-6">
-          {/* Bio */}
+          {/* Music Player */}
           <section className="animate-fade-in">
-            <p className="text-muted-foreground text-sm leading-relaxed">
-              {artist.bio}
-            </p>
+            <VaultMusicPlayer
+              track={selectedTrack}
+              hasVaultAccess={hasVaultAccess}
+              onAccessDenied={() => setShowAccessGate(true)}
+            />
           </section>
 
-          {/* Tracks */}
+          {/* Exclusive Music Section */}
           <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
-            <h2 
+            <h2
               className="font-display text-sm uppercase tracking-wider text-foreground mb-4"
               style={{ textShadow: "0 0 15px rgba(255, 255, 255, 0.2)" }}
             >
-              Exclusive Releases
+              Exclusive Music
             </h2>
-            
+
             {tracks.length === 0 ? (
-              <GlowCard className="p-6 text-center">
+              <div className="rounded-xl bg-card/50 p-6 text-center border border-primary/10">
                 <Music className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                 <p className="text-muted-foreground text-sm">
                   No exclusive tracks available yet.
                 </p>
-              </GlowCard>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {tracks.map((track) => {
-                  const isCurrentTrack = currentTrack?.id === track.id;
-                  const isTrackPlaying = isCurrentTrack && isPlaying;
-                  
-                  return (
-                    <GlowCard key={track.id} glowColor="primary" hover>
-                      <div className="p-4 flex items-center gap-4">
-                        {/* Play Button */}
-                        <button
-                          onClick={() => handlePlayTrack(track)}
-                          className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300 ${
-                            isCurrentTrack 
-                              ? "bg-primary/30 border-2 border-primary" 
-                              : "bg-primary/20 border border-primary/30 hover:bg-primary/30"
-                          }`}
-                          style={{
-                            boxShadow: isCurrentTrack ? "0 0 20px hsl(var(--primary) / 0.5)" : undefined,
-                          }}
-                        >
-                          {isTrackPlaying ? (
-                            <Pause className="w-5 h-5 text-primary" />
-                          ) : (
-                            <Play className="w-5 h-5 ml-0.5 text-primary" />
-                          )}
-                        </button>
-
-                        {/* Track Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <p className="font-display text-sm font-semibold text-foreground truncate">
-                              {track.title}
-                            </p>
-                            <StatusBadge variant="exclusive" size="sm">
-                              Exclusive
-                            </StatusBadge>
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDuration(track.duration)}
-                          </p>
-                        </div>
-
-                        {/* Share Button */}
-                        <button
-                          onClick={() => handleShare(track)}
-                          className="flex-shrink-0 w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center hover:bg-muted/50 transition-colors"
-                          aria-label="Share track"
-                        >
-                          <Share2 className="w-4 h-4 text-muted-foreground" />
-                        </button>
-                      </div>
-                    </GlowCard>
-                  );
-                })}
+              <div className="space-y-2">
+                {tracks.map((track) => (
+                  <TrackListItem
+                    key={track.id}
+                    track={{
+                      id: track.id,
+                      title: track.title,
+                      artworkUrl: track.artwork_url,
+                    }}
+                    fanId={fanId}
+                    isSelected={selectedTrack?.id === track.id}
+                    onSelect={() => handleSelectTrack(track)}
+                  />
+                ))}
               </div>
             )}
           </section>
@@ -308,18 +280,13 @@ const ArtistProfile = () => {
         </div>
       </div>
 
-      {/* Bottom spacing for nav */}
+      {/* Bottom spacing */}
       <div className="h-20" />
 
-      {/* Share Modal */}
-      <ShareTrackModal
-        open={shareModalOpen}
-        onOpenChange={(open) => {
-          setShareModalOpen(open);
-          if (!open) setSelectedTrackForShare(null);
-        }}
-        track={selectedTrackForShare}
-      />
+      {/* Vault Access Gate Modal */}
+      {showAccessGate && (
+        <VaultAccessGate onClose={() => setShowAccessGate(false)} />
+      )}
     </div>
   );
 };
