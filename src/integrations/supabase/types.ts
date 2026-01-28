@@ -351,6 +351,7 @@ export type Database = {
           genre: string | null
           id: string
           preview_audio_url: string | null
+          preview_start_seconds: number
           title: string
           updated_at: string
         }
@@ -364,6 +365,7 @@ export type Database = {
           genre?: string | null
           id?: string
           preview_audio_url?: string | null
+          preview_start_seconds?: number
           title: string
           updated_at?: string
         }
@@ -377,6 +379,7 @@ export type Database = {
           genre?: string | null
           id?: string
           preview_audio_url?: string | null
+          preview_start_seconds?: number
           title?: string
           updated_at?: string
         }
