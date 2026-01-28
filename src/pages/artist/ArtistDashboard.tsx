@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-import { TrackManagementCard, Track } from "@/components/artist/TrackManagementCard";
+import { ExclusiveSongCard, ExclusiveSong } from "@/components/artist/ExclusiveSongCard";
 import EarningsDashboard from "@/components/artist/EarningsDashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,7 +29,7 @@ const ArtistDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, signOut } = useAuth();
   const [artistName, setArtistName] = useState("Artist");
-  const [tracks, setTracks] = useState<Track[]>([]);
+  const [songs, setSongs] = useState<ExclusiveSong[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [payoutStatus, setPayoutStatus] = useState<PayoutStatus>("not_connected");
   const [isConnecting, setIsConnecting] = useState(false);
@@ -87,27 +87,17 @@ const ArtistDashboard = () => {
         setPayoutStatus(profile.payout_status as PayoutStatus);
       }
 
-      // Fetch tracks - using email as artist_id
-      const { data: trackData } = await supabase
+      // Fetch songs - using email as artist_id, exclude deleted/disabled tracks
+      const { data: songData } = await supabase
         .from("tracks")
-        .select("id, title, genre, created_at, preview_audio_url, full_audio_url")
+        .select("id, title, artwork_url, genre, created_at")
         .eq("artist_id", user.email)
+        .not("genre", "like", "[DELETED]%")
+        .not("genre", "like", "[DISABLED]%")
         .order("created_at", { ascending: false });
 
-      if (trackData) {
-        // Determine status based on dates and disabled flag
-        const tracksWithStatus: Track[] = trackData.map((track) => {
-          const isDisabled = track.genre?.startsWith("[DISABLED]");
-          const genre = isDisabled ? track.genre?.replace("[DISABLED] ", "") : track.genre;
-          
-          return {
-            ...track,
-            genre,
-            status: isDisabled ? "disabled" : "exclusive",
-            exclusive_weeks: 3, // Default 3 weeks
-          };
-        });
-        setTracks(tracksWithStatus);
+      if (songData) {
+        setSongs(songData);
       }
     } catch (error) {
       console.error("Error fetching artist data:", error);
@@ -141,8 +131,8 @@ const ArtistDashboard = () => {
     navigate("/");
   };
 
-  const handleTrackUpdated = () => {
-    // Refresh tracks list
+  const handleSongDeleted = () => {
+    // Refresh songs list
     fetchArtistData();
   };
 
@@ -347,22 +337,22 @@ const ArtistDashboard = () => {
             </Button>
           </div>
 
-          {/* Releases Section */}
+          {/* Your Exclusive Songs Section */}
           <section 
             className="space-y-4 animate-fade-in"
             style={{ animationDelay: '150ms' }}
           >
-            <SectionHeader title="Your Exclusive Releases" align="left" />
+            <SectionHeader title="Your Exclusive Songs" align="left" />
 
             {isLoading ? (
               <GlowCard variant="flat" className="p-8 text-center">
                 <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
               </GlowCard>
-            ) : tracks.length === 0 ? (
+            ) : songs.length === 0 ? (
               <GlowCard variant="flat" className="p-8 text-center">
                 <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground text-sm mb-4">
-                  You haven't uploaded any tracks yet.
+                  You haven't uploaded any songs yet.
                 </p>
                 <Button 
                   variant="outline" 
@@ -371,20 +361,21 @@ const ArtistDashboard = () => {
                   onClick={() => navigate("/artist/upload")}
                 >
                   <Upload className="w-4 h-4 mr-2" />
-                  Upload Your First Track
+                  Upload Your First Song
                 </Button>
               </GlowCard>
             ) : (
               <div className="space-y-3">
-                {tracks.map((track, index) => (
+                {songs.map((song, index) => (
                   <div 
-                    key={track.id}
+                    key={song.id}
                     className="animate-fade-in"
                     style={{ animationDelay: `${200 + index * 50}ms` }}
                   >
-                    <TrackManagementCard 
-                      track={track} 
-                      onTrackUpdated={handleTrackUpdated}
+                    <ExclusiveSongCard 
+                      song={song}
+                      artistId={user?.email || ""}
+                      onDeleted={handleSongDeleted}
                     />
                   </div>
                 ))}
