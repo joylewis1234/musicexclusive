@@ -21,9 +21,22 @@ export interface ExclusiveSong {
   id: string;
   title: string;
   artwork_url: string | null;
+  full_audio_url: string | null;
   genre: string | null;
   created_at: string;
 }
+
+// Helper to extract storage path from Supabase URL
+const getStoragePathFromUrl = (url: string | null): string | null => {
+  if (!url) return null;
+  try {
+    // URLs look like: https://xyz.supabase.co/storage/v1/object/public/audio/artwork/filename.jpg
+    const match = url.match(/\/storage\/v1\/object\/public\/audio\/(.+)$/);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+};
 
 interface ExclusiveSongCardProps {
   song: ExclusiveSong;
@@ -39,22 +52,51 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // Soft delete by marking genre with [DELETED] prefix
-      const { error } = await supabase
+      // 1. Delete associated likes first (foreign key constraint)
+      const { error: likesError } = await supabase
+        .from("track_likes")
+        .delete()
+        .eq("track_id", song.id);
+
+      if (likesError) {
+        console.warn("Error deleting likes (may not exist):", likesError);
+        // Continue anyway - likes might not exist
+      }
+
+      // 2. Delete storage files
+      const filesToDelete: string[] = [];
+      
+      const artworkPath = getStoragePathFromUrl(song.artwork_url);
+      if (artworkPath) filesToDelete.push(artworkPath);
+      
+      const audioPath = getStoragePathFromUrl(song.full_audio_url);
+      if (audioPath) filesToDelete.push(audioPath);
+
+      if (filesToDelete.length > 0) {
+        const { error: storageError } = await supabase.storage
+          .from("audio")
+          .remove(filesToDelete);
+
+        if (storageError) {
+          console.warn("Error deleting storage files:", storageError);
+          // Continue anyway - files might not exist or already deleted
+        }
+      }
+
+      // 3. Hard delete the track record
+      const { error: deleteError } = await supabase
         .from("tracks")
-        .update({
-          genre: `[DELETED] ${song.genre || ""}`,
-        })
+        .delete()
         .eq("id", song.id);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
-      toast.success("Song removed from Discovery");
+      toast.success("Song permanently deleted");
       setIsDeleteOpen(false);
       onDeleted();
     } catch (error) {
       console.error("Error deleting song:", error);
-      toast.error("Failed to delete song");
+      toast.error(`Failed to delete song: ${(error as Error).message || "Unknown error"}`);
     } finally {
       setIsDeleting(false);
     }
@@ -135,24 +177,34 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
         <AlertDialogContent className="bg-card border-border max-w-sm">
           <AlertDialogHeader>
-            <AlertDialogTitle className="font-display">Delete this song?</AlertDialogTitle>
+            <AlertDialogTitle className="font-display text-destructive">
+              Delete this song permanently?
+            </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              This removes it from Discovery and the artist profile. Fans will no longer be able to find or play this track.
+              This will remove it from Discovery and your Artist Profile.{" "}
+              <span className="text-foreground font-medium">This cannot be undone.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl" disabled={isDeleting}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               disabled={isDeleting}
-              className="bg-destructive hover:bg-destructive/90 rounded-xl"
+              className="bg-destructive hover:bg-destructive/90 rounded-xl uppercase tracking-wider font-semibold"
             >
               {isDeleting ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Deleting...
+                </>
               ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Permanently
+                </>
               )}
-              Delete Song
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
