@@ -145,13 +145,28 @@ const ArtistUpload = () => {
       return;
     }
 
-    // Revoke old preview URL if exists
-    if (coverArt?.previewUrl) {
-      URL.revokeObjectURL(coverArt.previewUrl);
-    }
+    try {
+      // Revoke old preview URL if exists
+      if (coverArt?.previewUrl) {
+        URL.revokeObjectURL(coverArt.previewUrl);
+      }
 
-    const previewUrl = URL.createObjectURL(file);
-    setCoverArt({ file, name: file.name, previewUrl });
+      const previewUrl = URL.createObjectURL(file);
+      
+      // Verify the image can be loaded before setting state
+      const img = new Image();
+      img.onload = () => {
+        setCoverArt({ file, name: file.name, previewUrl });
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(previewUrl);
+        toast({ title: "Invalid image", description: "Could not load the selected image", variant: "destructive" });
+      };
+      img.src = previewUrl;
+    } catch (err) {
+      console.error("Error handling cover art:", err);
+      toast({ title: "Error", description: "Failed to process image", variant: "destructive" });
+    }
   };
 
   const handleRemoveCoverArt = () => {
@@ -462,6 +477,10 @@ const ArtistUpload = () => {
                           src={coverArt.previewUrl}
                           alt="Cover art preview"
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            console.error("Image failed to load");
+                            e.currentTarget.src = "/placeholder.svg";
+                          }}
                         />
                         <button
                           type="button"
