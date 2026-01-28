@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, Upload, Music, X, Check, Loader2, Info, Lock, Play, Pause } from "lucide-react";
+import { ArrowLeft, Home, Upload, Music, X, Check, Loader2, Info, Lock, Play, Pause, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,11 +47,18 @@ const EXCLUSIVE_PERIODS = [
 ];
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface UploadedFile {
   file: File;
   name: string;
   objectUrl?: string;
+}
+
+interface UploadedImage {
+  file: File;
+  name: string;
+  previewUrl: string;
 }
 
 const ArtistUpload = () => {
@@ -64,7 +71,11 @@ const ArtistUpload = () => {
   const [genre, setGenre] = useState("");
   const [description, setDescription] = useState("");
   
-  // Section 2: Audio File
+  // Section 2: Cover Art
+  const [coverArt, setCoverArt] = useState<UploadedImage | null>(null);
+  const coverArtInputRef = useRef<HTMLInputElement>(null);
+  
+  // Section 3: Audio File
   const [fullTrack, setFullTrack] = useState<UploadedFile | null>(null);
   const [audioDuration, setAudioDuration] = useState(0);
   const [previewStartSeconds, setPreviewStartSeconds] = useState(0);
@@ -87,11 +98,14 @@ const ArtistUpload = () => {
   
   const fullTrackInputRef = useRef<HTMLInputElement>(null);
 
-  // Cleanup object URL on unmount or when file changes
+  // Cleanup object URLs on unmount
   useEffect(() => {
     return () => {
       if (fullTrack?.objectUrl) {
         URL.revokeObjectURL(fullTrack.objectUrl);
+      }
+      if (coverArt?.previewUrl) {
+        URL.revokeObjectURL(coverArt.previewUrl);
       }
       if (fullTrackAudioRef.current) {
         fullTrackAudioRef.current.pause();
@@ -108,6 +122,46 @@ const ArtistUpload = () => {
       return "File size must be less than 100MB";
     }
     return null;
+  };
+
+  const validateCoverArt = (file: File): string | null => {
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      return "Please upload a JPG, PNG, or WEBP image";
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      return "Image size must be less than 10MB";
+    }
+    return null;
+  };
+
+  const handleCoverArtSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const error = validateCoverArt(file);
+    if (error) {
+      toast({ title: "Invalid file", description: error, variant: "destructive" });
+      return;
+    }
+
+    // Revoke old preview URL if exists
+    if (coverArt?.previewUrl) {
+      URL.revokeObjectURL(coverArt.previewUrl);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setCoverArt({ file, name: file.name, previewUrl });
+  };
+
+  const handleRemoveCoverArt = () => {
+    if (coverArt?.previewUrl) {
+      URL.revokeObjectURL(coverArt.previewUrl);
+    }
+    setCoverArt(null);
+    if (coverArtInputRef.current) {
+      coverArtInputRef.current.value = "";
+    }
   };
 
   const handleFullTrackSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,6 +243,7 @@ const ArtistUpload = () => {
   const isFormValid = 
     title.trim() && 
     genre && 
+    coverArt &&
     fullTrack && 
     ownsRights && 
     hasExclusiveRights && 
@@ -214,8 +269,18 @@ const ArtistUpload = () => {
       const artistId = user?.email || "unknown";
       const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "-");
 
-      // Upload full track
+      // Upload cover art
       setUploadProgress(20);
+      const coverArtExt = coverArt!.file.name.split('.').pop();
+      const coverArtPath = `artwork/${artistId}/${sanitizedTitle}-cover-${timestamp}.${coverArtExt}`;
+      const artworkUrl = await uploadFile(coverArt!.file, coverArtPath);
+
+      if (!artworkUrl) {
+        throw new Error("Failed to upload cover art");
+      }
+
+      // Upload full track
+      setUploadProgress(45);
       const fullTrackExt = fullTrack!.file.name.split('.').pop();
       const fullTrackPath = `tracks/${artistId}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
       const fullAudioUrl = await uploadFile(fullTrack!.file, fullTrackPath);
@@ -226,12 +291,13 @@ const ArtistUpload = () => {
 
       setUploadProgress(70);
 
-      // Save to database with preview_start_seconds
+      // Save to database with all fields
       const { error: dbError } = await supabase.from("tracks").insert({
         artist_id: artistId,
         title: title.trim(),
         genre: genre,
         duration: audioDuration,
+        artwork_url: artworkUrl,
         full_audio_url: fullAudioUrl,
         preview_audio_url: fullAudioUrl, // Use same URL, fans will seek to preview_start_seconds
         preview_start_seconds: previewStartSeconds,
@@ -364,7 +430,69 @@ const ArtistUpload = () => {
               </div>
             </GlowCard>
 
-            {/* SECTION 2: Audio Upload & Preview Selection */}
+            {/* SECTION 2: Cover Art */}
+            <GlowCard className="p-4 md:p-5">
+              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
+                Cover Art
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-primary" />
+                    <Label className="text-sm">Upload Cover Art *</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Square image, 1500×1500 or higher recommended. JPG, PNG, or WEBP.
+                  </p>
+
+                  <input
+                    ref={coverArtInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleCoverArtSelect}
+                    className="hidden"
+                  />
+
+                  {coverArt ? (
+                    <div className="space-y-3">
+                      {/* Image preview */}
+                      <div className="relative aspect-square w-full max-w-[200px] mx-auto rounded-xl overflow-hidden border border-primary/30">
+                        <img
+                          src={coverArt.previewUrl}
+                          alt="Cover art preview"
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleRemoveCoverArt}
+                          className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 text-foreground hover:bg-background transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      
+                      {/* File info */}
+                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                        <Check className="w-4 h-4 text-primary" />
+                        <span className="truncate max-w-[200px]">{coverArt.name}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => coverArtInputRef.current?.click()}
+                      className="w-full aspect-square max-w-[200px] mx-auto rounded-xl border-2 border-dashed border-border/50 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+                    >
+                      <ImageIcon className="w-10 h-10" />
+                      <span className="text-sm">Click to upload</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </GlowCard>
+
+            {/* SECTION 3: Audio Upload & Preview Selection */}
             <GlowCard className="p-4 md:p-5">
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
                 Audio File
