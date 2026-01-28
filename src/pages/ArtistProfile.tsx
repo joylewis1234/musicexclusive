@@ -1,6 +1,6 @@
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, Home, Loader2, Music } from "lucide-react";
+import { ChevronLeft, Home, Loader2, Music, LayoutDashboard, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtistHeader } from "@/components/profile/ArtistHeader";
 import { TrackListItem } from "@/components/profile/TrackListItem";
@@ -8,6 +8,7 @@ import { VaultMusicPlayer } from "@/components/player/VaultMusicPlayer";
 import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
@@ -32,6 +33,7 @@ interface DbTrack {
 
 interface ArtistData {
   id: string;
+  userId: string;
   name: string;
   genre: string;
   bio: string;
@@ -46,11 +48,18 @@ interface PlayerTrack {
   audioUrl: string;
 }
 
+type ViewContext = "fan" | "artist-own" | "artist-other";
+
 const ArtistProfile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { artistId } = useParams<{ artistId: string }>();
   const [searchParams] = useSearchParams();
   const selectedTrackId = searchParams.get("track");
+  const { user, role } = useAuth();
+
+  // Get the origin route from navigation state
+  const fromRoute = (location.state as { fromRoute?: string } | null)?.fromRoute;
 
   const [artist, setArtist] = useState<ArtistData | null>(null);
   const [tracks, setTracks] = useState<DbTrack[]>([]);
@@ -59,6 +68,7 @@ const ArtistProfile = () => {
   const [fanId, setFanId] = useState<string | null>(null);
   const [hasVaultAccess, setHasVaultAccess] = useState(false);
   const [showAccessGate, setShowAccessGate] = useState(false);
+  const [viewContext, setViewContext] = useState<ViewContext>("fan");
   
   // Refs for scroll-to-track behavior
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -91,16 +101,38 @@ const ArtistProfile = () => {
 
       setIsLoading(true);
       try {
-        // Fetch artist profile first
-        const { data: profile } = await supabase
+        // Fetch artist profile first - try by user_id first, then by profile id
+        let profile = null;
+        let artistUserId = artistId;
+        
+        // Try fetching by user_id
+        const { data: profileByUserId } = await supabase
           .from("artist_profiles")
-          .select("artist_name, genre, bio, avatar_url")
+          .select("id, user_id, artist_name, genre, bio, avatar_url")
           .eq("user_id", artistId)
           .maybeSingle();
+        
+        if (profileByUserId) {
+          profile = profileByUserId;
+          artistUserId = profileByUserId.user_id;
+        } else {
+          // Try fetching by profile id
+          const { data: profileById } = await supabase
+            .from("artist_profiles")
+            .select("id, user_id, artist_name, genre, bio, avatar_url")
+            .eq("id", artistId)
+            .maybeSingle();
+          
+          if (profileById) {
+            profile = profileById;
+            artistUserId = profileById.user_id;
+          }
+        }
 
         if (profile) {
           setArtist({
-            id: artistId,
+            id: profile.id,
+            userId: profile.user_id,
             name: profile.artist_name,
             genre: profile.genre || "Music",
             bio: profile.bio || `Exclusive artist on Music Exclusive.`,
@@ -117,6 +149,7 @@ const ArtistProfile = () => {
           if (application) {
             setArtist({
               id: artistId,
+              userId: "",
               name: application.artist_name,
               genre: application.genres,
               bio: `Exclusive artist on Music Exclusive, bringing you premium ${application.genres} content.`,
@@ -125,9 +158,9 @@ const ArtistProfile = () => {
           } else {
             // Demo artists fallback
             const demoArtists: Record<string, ArtistData> = {
-              nova: { id: "nova", name: "NOVA", genre: "Electronic", bio: "Pioneering the future of electronic music.", imageUrl: artist1 },
-              aura: { id: "aura", name: "AURA", genre: "R&B", bio: "Smooth vocals and ethereal production.", imageUrl: artist2 },
-              echo: { id: "echo", name: "ECHO", genre: "Indie", bio: "Raw, authentic indie sound.", imageUrl: artist3 },
+              nova: { id: "nova", userId: "", name: "NOVA", genre: "Electronic", bio: "Pioneering the future of electronic music.", imageUrl: artist1 },
+              aura: { id: "aura", userId: "", name: "AURA", genre: "R&B", bio: "Smooth vocals and ethereal production.", imageUrl: artist2 },
+              echo: { id: "echo", userId: "", name: "ECHO", genre: "Indie", bio: "Raw, authentic indie sound.", imageUrl: artist3 },
             };
             if (demoArtists[artistId]) {
               setArtist(demoArtists[artistId]);
@@ -157,6 +190,23 @@ const ArtistProfile = () => {
     fetchArtistData();
   }, [artistId]);
 
+  // Determine view context based on role and ownership
+  useEffect(() => {
+    if (!artist) return;
+    
+    if (role === "fan") {
+      setViewContext("fan");
+    } else if (role === "artist") {
+      if (user?.id === artist.userId) {
+        setViewContext("artist-own");
+      } else {
+        setViewContext("artist-other");
+      }
+    } else {
+      setViewContext("fan"); // Default for unauthenticated
+    }
+  }, [role, user?.id, artist]);
+
   // Scroll to and highlight selected track from URL param
   useEffect(() => {
     if (selectedTrackId && tracks.length > 0 && !hasScrolledToTrack.current) {
@@ -181,6 +231,33 @@ const ArtistProfile = () => {
     });
   };
 
+  // Navigation handlers based on context
+  const handleBack = () => {
+    if (fromRoute) {
+      navigate(fromRoute);
+    } else if (viewContext === "fan" || viewContext === "artist-other") {
+      navigate("/discovery");
+    } else {
+      navigate("/artist/dashboard");
+    }
+  };
+
+  const handleSecondaryNav = () => {
+    if (viewContext === "fan") {
+      navigate("/fan/dashboard");
+    }
+  };
+
+  const getBackLabel = () => {
+    if (viewContext === "artist-own") {
+      return "Dashboard";
+    }
+    if (fromRoute === "/discovery" || !fromRoute) {
+      return "Discovery";
+    }
+    return "Back";
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -203,23 +280,47 @@ const ArtistProfile = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Navigation Header */}
+      {/* Navigation Header - Context Aware */}
       <header className="fixed top-0 left-0 right-0 z-20 px-4 py-4 bg-gradient-to-b from-background/90 to-transparent">
         <div className="w-full max-w-md mx-auto flex items-center justify-between">
+          {/* Back Button */}
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
           >
             <ChevronLeft className="w-5 h-5" />
-            <span className="text-sm uppercase tracking-wider">Back</span>
+            <span className="text-sm uppercase tracking-wider">{getBackLabel()}</span>
           </button>
-          <button
-            onClick={() => navigate("/")}
-            className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
-          >
-            <Home className="w-5 h-5" />
-            <span className="text-sm uppercase tracking-wider">Home</span>
-          </button>
+          
+          {/* Right side navigation - context dependent */}
+          {viewContext === "fan" ? (
+            <button
+              onClick={handleSecondaryNav}
+              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
+              aria-label="Go to Dashboard"
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Dashboard</span>
+            </button>
+          ) : viewContext === "artist-own" ? (
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
+              aria-label="Go home"
+            >
+              <Home className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Home</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate("/discovery")}
+              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
+              aria-label="Discovery"
+            >
+              <Compass className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Discover</span>
+            </button>
+          )}
         </div>
       </header>
 

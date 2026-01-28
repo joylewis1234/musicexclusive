@@ -46,6 +46,7 @@ import ArtistUpload from "./pages/ArtistUpload";
 import ArtistDashboard from "./pages/artist/ArtistDashboard";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
 import EditArtistProfile from "./pages/artist/EditArtistProfile";
+import { ArtistProfilePreviewWrapper } from "./components/artist/ArtistProfilePreviewWrapper";
 
 // Admin pages
 import AdminReports from "./pages/admin/AdminReports";
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="/fan/inbox" element={<FanInbox />} />
                 <Route path="/fan/payment" element={<Payment />} />
                 <Route path="/discovery" element={<Discovery />} />
+                {/* Fan access to artist profiles */}
                 <Route path="/artist/:artistId" element={<ArtistProfile />} />
               </Route>
               
@@ -120,9 +122,16 @@ const App = () => (
                   <ArtistDashboard />
                 </ArtistProtectedRoute>
               } />
+              {/* Artist preview of their own profile - redirects to unified route */}
               <Route path="/artist/profile" element={
                 <ArtistProtectedRoute>
-                  <ArtistProfilePage />
+                  <ArtistProfilePreviewWrapper />
+                </ArtistProtectedRoute>
+              } />
+              {/* Artist viewing any artist profile (including their own via direct URL) */}
+              <Route path="/artist/view/:artistId" element={
+                <ArtistProtectedRoute>
+                  <ArtistProfile />
                 </ArtistProtectedRoute>
               } />
               <Route path="/artist/profile/edit" element={
