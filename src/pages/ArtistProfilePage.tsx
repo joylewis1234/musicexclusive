@@ -102,7 +102,14 @@ const ArtistProfilePage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        // No user logged in - show demo data
+        setArtistProfile(demoProfile);
+        setTracks(demoTracks);
+        setTotalLikes(287);
+        setIsLoading(false);
+        return;
+      }
 
       try {
         // Fetch artist profile
