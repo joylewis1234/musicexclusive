@@ -1,72 +1,172 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { GlowCard } from "@/components/ui/GlowCard"
-import { SectionHeader } from "@/components/ui/SectionHeader"
-import { StatusBadge } from "@/components/ui/StatusBadge"
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { GlowCard } from "@/components/ui/GlowCard";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 import { 
   ArrowLeft, 
   Home, 
   Play, 
   Pause, 
   Music, 
-  Upload,
   Edit2,
   Share2,
+  Heart,
+  Crown,
   Headphones
-} from "lucide-react"
-import artist1 from "@/assets/artist-1.jpg"
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLikeCount } from "@/hooks/useLikeCount";
+import artist1 from "@/assets/artist-1.jpg";
 
-// Mock artist data - in production this would come from the database
-const mockArtist = {
-  id: "artist-1",
-  name: "Maranda B.",
-  genre: "Hip Hop / R&B",
-  bio: "Atlanta-based artist blending soulful R&B with modern hip-hop production. Known for emotionally charged lyrics and innovative sound design. Featured on major playlists and collaborating with top producers.",
-  imageUrl: artist1,
-  status: "approved" as const,
+interface TrackData {
+  id: string;
+  title: string;
+  genre: string | null;
+  artwork_url: string | null;
+  full_audio_url: string | null;
+  duration: number;
+  created_at: string;
 }
 
-// Mock tracks data
-const mockTracks = [
-  {
-    id: "track-1",
-    title: "Midnight Memories",
-    releaseStatus: "exclusive",
-    duration: "3:24",
-    streams: 1420,
-    hasHookPreview: true,
-  },
-  {
-    id: "track-2",
-    title: "Golden Hour",
-    releaseStatus: "exclusive",
-    duration: "4:02",
-    streams: 892,
-    hasHookPreview: true,
-  },
-  {
-    id: "track-3",
-    title: "Echoes",
-    releaseStatus: "exclusive",
-    duration: "3:45",
-    streams: 567,
-    hasHookPreview: false,
-  },
-]
+interface ArtistProfile {
+  artist_name: string;
+  genre: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+}
+
+// Component to show like count for each track
+const TrackLikeCount = ({ trackId }: { trackId: string }) => {
+  const likeCount = useLikeCount(trackId);
+  return (
+    <span className="flex items-center gap-1 text-purple-400">
+      <Heart className="w-3.5 h-3.5 fill-purple-400" />
+      <span className="text-xs font-medium">{likeCount}</span>
+    </span>
+  );
+};
 
 const ArtistProfilePage = () => {
-  const navigate = useNavigate()
-  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null)
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
+  const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
+  const [tracks, setTracks] = useState<TrackData[]>([]);
+  const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [totalLikes, setTotalLikes] = useState(0);
 
-  // Check if artist is approved - redirect if not
-  if (mockArtist.status !== "approved") {
-    navigate("/artist/application-status")
-    return null
-  }
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user?.id) return;
 
-  const handlePlayPause = (trackId: string) => {
-    setPlayingTrackId(playingTrackId === trackId ? null : trackId)
+      try {
+        // Fetch artist profile
+        const { data: profile } = await supabase
+          .from("artist_profiles")
+          .select("artist_name, genre, bio, avatar_url")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (profile) {
+          setArtistProfile(profile);
+        } else {
+          // Fallback to application
+          const { data: application } = await supabase
+            .from("artist_applications")
+            .select("artist_name, genres")
+            .eq("contact_email", user.email)
+            .maybeSingle();
+
+          if (application) {
+            setArtistProfile({
+              artist_name: application.artist_name,
+              genre: application.genres,
+              bio: null,
+              avatar_url: null,
+            });
+          }
+        }
+
+        // Fetch tracks
+        const { data: trackData } = await supabase
+          .from("tracks")
+          .select("id, title, genre, artwork_url, full_audio_url, duration, created_at")
+          .eq("artist_id", user.email)
+          .not("genre", "like", "[DELETED]%")
+          .not("genre", "like", "[DISABLED]%")
+          .order("created_at", { ascending: false });
+
+        if (trackData) {
+          setTracks(trackData);
+
+          // Fetch total likes for all tracks
+          const trackIds = trackData.map(t => t.id);
+          if (trackIds.length > 0) {
+            const { count } = await supabase
+              .from("track_likes")
+              .select("*", { count: "exact", head: true })
+              .in("track_id", trackIds);
+            
+            setTotalLikes(count || 0);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioElement) {
+        audioElement.pause();
+        audioElement.src = "";
+      }
+    };
+  }, [audioElement]);
+
+  const handlePlayPause = (track: TrackData) => {
+    if (!track.full_audio_url) return;
+
+    if (playingTrackId === track.id) {
+      // Pause current track
+      audioElement?.pause();
+      setPlayingTrackId(null);
+    } else {
+      // Stop previous track
+      if (audioElement) {
+        audioElement.pause();
+      }
+      
+      // Play new track
+      const audio = new Audio(track.full_audio_url);
+      audio.play();
+      audio.onended = () => setPlayingTrackId(null);
+      setAudioElement(audio);
+      setPlayingTrackId(track.id);
+    }
+  };
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
   }
 
   return (
@@ -75,9 +175,9 @@ const ArtistProfilePage = () => {
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="container max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/artist/dashboard")}
             className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Go back"
+            aria-label="Back to Dashboard"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>
@@ -100,34 +200,56 @@ const ArtistProfilePage = () => {
       <main className="pt-20 pb-12 px-4">
         <div className="container max-w-lg md:max-w-xl mx-auto">
           
-          {/* Artist Header Card */}
+          {/* Artist Header Card - More Prominent Image */}
           <GlowCard className="p-0 overflow-hidden mb-6">
-            {/* Cover Image Area */}
-            <div className="relative h-32 bg-gradient-to-br from-primary/30 via-purple-500/20 to-pink-500/20">
-              <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+            {/* Large Cover Image Area */}
+            <div className="relative h-48 bg-gradient-to-br from-primary/30 via-purple-500/20 to-pink-500/20">
+              {artistProfile?.avatar_url ? (
+                <img
+                  src={artistProfile.avatar_url}
+                  alt={artistProfile.artist_name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/40 via-purple-600/30 to-pink-500/20" />
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
             </div>
             
             {/* Profile Content */}
-            <div className="px-5 pb-5 -mt-12 relative">
-              {/* Artist Image */}
-              <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-card shadow-lg mb-4">
-                <img
-                  src={mockArtist.imageUrl}
-                  alt={mockArtist.name}
-                  className="w-full h-full object-cover"
-                />
+            <div className="px-5 pb-5 -mt-16 relative">
+              {/* Artist Image - Larger and More Prominent */}
+              <div className="relative w-28 h-28 mb-4">
+                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-md opacity-60" />
+                <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-card shadow-2xl">
+                  <img
+                    src={artistProfile?.avatar_url || artist1}
+                    alt={artistProfile?.artist_name || "Artist"}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                {/* Headphones Badge */}
+                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center shadow-lg">
+                  <Headphones className="w-4 h-4 text-white" />
+                </div>
               </div>
 
               {/* Artist Info */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="font-display text-xl font-bold text-foreground mb-1">
-                    {mockArtist.name}
+                  <h1 className="font-display text-2xl font-bold text-foreground mb-1">
+                    {artistProfile?.artist_name || "Artist"}
                   </h1>
                   <p className="text-muted-foreground text-sm font-body mb-3">
-                    {mockArtist.genre}
+                    {artistProfile?.genre || "Music"}
                   </p>
-                  <StatusBadge variant="exclusive" />
+                  {/* Exclusive Badge with Crown */}
+                  <div className="relative inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/40">
+                    <Crown className="absolute -top-2 -right-2 w-4 h-4 text-amber-400 drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6))' }} />
+                    <span className="text-primary text-xs font-display uppercase tracking-wider">
+                      Exclusive Artist
+                    </span>
+                  </div>
                 </div>
 
                 <Button
@@ -144,59 +266,68 @@ const ArtistProfilePage = () => {
           </GlowCard>
 
           {/* Bio Section */}
-          <GlowCard className="p-5 mb-6">
-            <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-3">
-              About
-            </h3>
-            <p className="text-muted-foreground text-sm font-body leading-relaxed">
-              {mockArtist.bio}
-            </p>
-          </GlowCard>
+          {artistProfile?.bio && (
+            <GlowCard className="p-5 mb-6">
+              <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-3">
+                About
+              </h3>
+              <p className="text-muted-foreground text-sm font-body leading-relaxed">
+                {artistProfile.bio}
+              </p>
+            </GlowCard>
+          )}
 
-          {/* Stats Overview */}
+          {/* Stats Overview - Replaced Earned with Total Likes */}
           <div className="grid grid-cols-3 gap-3 mb-6">
             <GlowCard className="p-4 text-center">
               <p className="font-display text-2xl font-bold text-foreground">
-                {mockTracks.length}
+                {tracks.length}
               </p>
               <p className="text-muted-foreground text-xs font-body">Tracks</p>
             </GlowCard>
             <GlowCard className="p-4 text-center">
               <p className="font-display text-2xl font-bold text-foreground">
-                {mockTracks.reduce((acc, t) => acc + t.streams, 0).toLocaleString()}
+                {tracks.reduce((acc, t) => acc + t.duration, 0) > 0 
+                  ? Math.floor(tracks.reduce((acc, t) => acc + t.duration, 0) / 60)
+                  : 0}
               </p>
-              <p className="text-muted-foreground text-xs font-body">Streams</p>
+              <p className="text-muted-foreground text-xs font-body">Minutes</p>
             </GlowCard>
             <GlowCard className="p-4 text-center">
-              <p className="font-display text-2xl font-bold text-primary">
-                ${(mockTracks.reduce((acc, t) => acc + t.streams, 0) * 0.20).toFixed(2)}
-              </p>
-              <p className="text-muted-foreground text-xs font-body">Earned</p>
+              <div className="flex items-center justify-center gap-1">
+                <Heart className="w-5 h-5 text-purple-400 fill-purple-400" style={{ filter: 'drop-shadow(0 0 6px rgba(168, 85, 247, 0.6))' }} />
+                <p className="font-display text-2xl font-bold text-purple-400" style={{ textShadow: '0 0 10px rgba(168, 85, 247, 0.5)' }}>
+                  {totalLikes}
+                </p>
+              </div>
+              <p className="text-muted-foreground text-xs font-body">Likes</p>
             </GlowCard>
           </div>
 
-          {/* Music Section */}
+          {/* Music Section - Full Tracks Only, No Upload Button */}
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <SectionHeader title="Your Music" align="left" />
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate("/artist/upload")}
-              >
-                <Upload className="w-4 h-4 mr-1" />
-                Upload
-              </Button>
+              <SectionHeader title="Exclusive Music" align="left" />
             </div>
 
             <div className="space-y-3">
-              {mockTracks.map((track) => (
+              {tracks.map((track) => (
                 <GlowCard key={track.id} className="p-4">
                   <div className="flex items-center gap-4">
+                    {/* Cover Art */}
+                    <div className="relative flex-shrink-0">
+                      <img
+                        src={track.artwork_url || artist1}
+                        alt={track.title}
+                        className="w-14 h-14 rounded-lg object-cover"
+                      />
+                    </div>
+
                     {/* Play Button */}
                     <button
-                      onClick={() => handlePlayPause(track.id)}
-                      className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0"
+                      onClick={() => handlePlayPause(track)}
+                      disabled={!track.full_audio_url}
+                      className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors flex-shrink-0 disabled:opacity-50"
                     >
                       {playingTrackId === track.id ? (
                         <Pause className="w-5 h-5 text-primary" />
@@ -211,23 +342,18 @@ const ArtistProfilePage = () => {
                         <h4 className="font-display text-sm font-semibold text-foreground truncate">
                           {track.title}
                         </h4>
-                        <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-display uppercase tracking-wider flex-shrink-0">
-                          Exclusive
-                        </span>
+                        {/* Exclusive Badge with Crown */}
+                        <div className="relative px-2 py-0.5 rounded-full bg-primary/10 flex-shrink-0">
+                          <Crown className="absolute -top-1.5 -right-1.5 w-3 h-3 text-amber-400" style={{ filter: 'drop-shadow(0 0 3px rgba(251, 191, 36, 0.6))' }} />
+                          <span className="text-primary text-[10px] font-display uppercase tracking-wider">
+                            Exclusive
+                          </span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>{track.duration}</span>
+                        <span>{formatDuration(track.duration)}</span>
                         <span>•</span>
-                        <span>{track.streams.toLocaleString()} streams</span>
-                        {track.hasHookPreview && (
-                          <>
-                            <span>•</span>
-                            <span className="flex items-center gap-1 text-primary">
-                              <Headphones className="w-3 h-3" />
-                              Hook Preview
-                            </span>
-                          </>
-                        )}
+                        <TrackLikeCount trackId={track.id} />
                       </div>
                     </div>
 
@@ -241,7 +367,7 @@ const ArtistProfilePage = () => {
                 </GlowCard>
               ))}
 
-              {mockTracks.length === 0 && (
+              {tracks.length === 0 && (
                 <GlowCard className="p-8 text-center">
                   <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                   <p className="text-muted-foreground text-sm font-body mb-4">
@@ -249,10 +375,9 @@ const ArtistProfilePage = () => {
                   </p>
                   <Button
                     size="sm"
-                    onClick={() => navigate("/artist/upload")}
+                    onClick={() => navigate("/artist/dashboard")}
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Your First Track
+                    Go to Dashboard to Upload
                   </Button>
                 </GlowCard>
               )}
@@ -269,7 +394,7 @@ const ArtistProfilePage = () => {
         </div>
       </main>
     </div>
-  )
-}
+  );
+};
 
-export default ArtistProfilePage
+export default ArtistProfilePage;
