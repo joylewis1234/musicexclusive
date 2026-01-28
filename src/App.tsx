@@ -34,7 +34,6 @@ import FanDashboard from "./pages/FanDashboard";
 import FanProfile from "./pages/FanProfile";
 import FanInbox from "./pages/FanInbox";
 import Discovery from "./pages/Discovery";
-import ArtistProfile from "./pages/ArtistProfile";
 import MusicPlayer from "./pages/MusicPlayer";
 
 // Artist pages
@@ -97,7 +96,7 @@ const App = () => (
                 <Route path="/fan/payment" element={<Payment />} />
                 <Route path="/discovery" element={<Discovery />} />
                 {/* Fan access to artist profiles */}
-                <Route path="/artist/:artistId" element={<ArtistProfile />} />
+                <Route path="/artist/:artistId" element={<ArtistProfilePage />} />
               </Route>
               
               {/* Full player for fans (protected) */}
@@ -131,7 +130,7 @@ const App = () => (
               {/* Artist viewing any artist profile (including their own via direct URL) */}
               <Route path="/artist/view/:artistId" element={
                 <ArtistProtectedRoute>
-                  <ArtistProfile />
+                  <ArtistProfilePage />
                 </ArtistProtectedRoute>
               } />
               <Route path="/artist/profile/edit" element={
