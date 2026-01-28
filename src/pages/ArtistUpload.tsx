@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
+import { StorageHealthCheckPanel } from "@/components/artist/StorageHealthCheckPanel";
 
 const GENRES = [
   "Hip-Hop",
@@ -98,6 +99,25 @@ type UploadErrorReport = {
     responseText?: string;
   };
   hint?: string;
+};
+
+const extractHttpDetails = async (err: unknown): Promise<UploadErrorReport["http"] | undefined> => {
+  try {
+    const anyErr = err as any;
+    const ctx = anyErr?.context;
+    if (ctx && typeof ctx === "object" && typeof ctx.clone === "function" && typeof ctx.text === "function") {
+      const responseText = await ctx.clone().text().catch(() => undefined);
+      return { status: ctx.status, statusText: ctx.statusText, responseText };
+    }
+  } catch {
+    // ignore
+  }
+  return undefined;
+};
+
+const isFetchLikeFailure = (message?: string) => {
+  if (!message) return false;
+  return /failed to fetch|networkerror|load failed|fetch/i.test(message);
 };
 
 const safeStringify = (value: unknown) => {
@@ -386,14 +406,13 @@ const ArtistUpload = () => {
             });
 
           if (error) {
+            const http = await extractHttpDetails(error);
             const report: UploadErrorReport = {
               step: bucket === "track_covers" ? "cover_upload" : "audio_upload",
               userMessage: error.message,
               rawError: error,
               stringifiedError: safeStringify(error),
-              http: {
-                status: (error as any)?.statusCode ?? (error as any)?.status,
-              },
+              http: http ?? { status: (error as any)?.statusCode ?? (error as any)?.status },
             };
 
             console.error(`Upload error to ${bucket}:`, {
@@ -439,12 +458,55 @@ const ArtistUpload = () => {
         userMessage: lastErr instanceof Error ? lastErr.message : "Failed to fetch",
         rawError: lastErr,
         stringifiedError: safeStringify(lastErr),
+        hint: lastErr ? undefined : "No error details were provided by the browser. This is usually a network/CORS interruption.",
       };
       return { url: null, error: report };
     } catch (err) {
       console.error("Unexpected upload exception:", err);
+      const http = await extractHttpDetails(err);
       const report: UploadErrorReport = {
         step: bucket === "track_covers" ? "cover_upload" : "audio_upload",
+        userMessage: err instanceof Error ? err.message : "Unknown error",
+        rawError: err,
+        stringifiedError: safeStringify(err),
+        http,
+      };
+      return { url: null, error: report };
+    }
+  };
+
+  const uploadViaFallback = async (params: {
+    kind: "cover" | "audio";
+    artistProfileId: string;
+    file: File;
+    base: string;
+  }): Promise<{ url: string | null; path?: string; error: UploadErrorReport | null }> => {
+    try {
+      const fd = new FormData();
+      fd.append("file", params.file);
+      fd.append("kind", params.kind);
+      fd.append("artistProfileId", params.artistProfileId);
+      fd.append("base", params.base);
+
+      const { data, error } = await supabase.functions.invoke("upload-track-media", { body: fd });
+      if (error) {
+        const http = await extractHttpDetails(error);
+        const report: UploadErrorReport = {
+          step: params.kind === "cover" ? "cover_upload" : "audio_upload",
+          userMessage: error.message,
+          rawError: error,
+          stringifiedError: safeStringify(error),
+          http,
+        };
+        return { url: null, error: report };
+      }
+
+      const url = typeof (data as any)?.url === "string" ? (data as any).url : null;
+      const path = typeof (data as any)?.path === "string" ? (data as any).path : undefined;
+      return { url, path, error: null };
+    } catch (err) {
+      const report: UploadErrorReport = {
+        step: params.kind === "cover" ? "cover_upload" : "audio_upload",
         userMessage: err instanceof Error ? err.message : "Unknown error",
         rawError: err,
         stringifiedError: safeStringify(err),
@@ -539,7 +601,7 @@ const ArtistUpload = () => {
       setUploadStep("cover_upload");
       setUploadProgress(20);
       const coverExt = getFileExt(coverArt!.file.name) || ".jpg";
-      const coverPath = `${currentUser.id}/${sanitizedTitle}-cover-${timestamp}${coverExt}`;
+      const coverPath = `artists/${artistProfileId}/covers/${sanitizedTitle}-cover-${timestamp}${coverExt}`;
       lastSuccessfulRef.current.coverPath = coverPath;
 
       const coverResult = await withTimeout(
@@ -549,12 +611,129 @@ const ArtistUpload = () => {
       );
 
       if (!coverResult.url) {
-        const report: UploadErrorReport = coverResult.error ?? {
+        let report: UploadErrorReport = coverResult.error ?? {
           step: "cover_upload",
           userMessage: "Cover art upload failed",
           rawError: "Unknown error",
           stringifiedError: safeStringify("Unknown error"),
         };
+
+        // Automatic server-side fallback when the browser reports a fetch/network failure
+        if (isFetchLikeFailure(report.userMessage)) {
+          setUploadProgress(25);
+          const fallback = await withTimeout(
+            uploadViaFallback({
+              kind: "cover",
+              artistProfileId,
+              file: coverArt!.file,
+              base: sanitizedTitle,
+            }),
+            60_000,
+            "Cover fallback upload",
+          );
+
+          if (fallback.url) {
+            lastSuccessfulRef.current.coverPath = fallback.path;
+            lastSuccessfulRef.current.artworkUrl = fallback.url;
+            report = null as any;
+            // continue
+            const artworkUrl = fallback.url;
+            // Upload full track
+            setUploadStep("audio_upload");
+            setUploadProgress(45);
+
+            const fullTrackExt = fullTrack!.file.name.split('.').pop();
+            const fullTrackPath = `artists/${artistProfileId}/audio/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
+            lastSuccessfulRef.current.audioPath = fullTrackPath;
+
+            const audioResult = await withTimeout(
+              uploadFileToBucket("track_audio", fullTrack!.file, fullTrackPath),
+              120_000,
+              "Audio upload",
+            );
+
+            let fullAudioUrl: string | null = audioResult.url;
+            if (!fullAudioUrl) {
+              const audioReport = audioResult.error ?? {
+                step: "audio_upload",
+                userMessage: "Audio upload failed",
+                rawError: "Unknown error",
+                stringifiedError: safeStringify("Unknown error"),
+              };
+
+              if (isFetchLikeFailure(audioReport.userMessage)) {
+                setUploadProgress(55);
+                const audioFallback = await withTimeout(
+                  uploadViaFallback({
+                    kind: "audio",
+                    artistProfileId,
+                    file: fullTrack!.file,
+                    base: sanitizedTitle,
+                  }),
+                  120_000,
+                  "Audio fallback upload",
+                );
+                if (audioFallback.url) {
+                  fullAudioUrl = audioFallback.url;
+                  lastSuccessfulRef.current.audioPath = audioFallback.path;
+                } else {
+                  const finalReport = audioFallback.error ?? audioReport;
+                  finalReport.userMessage = `Audio upload failed: ${finalReport.userMessage}`;
+                  console.log("[ArtistUpload] Upload failed:", finalReport);
+                  setUploadError(finalReport);
+                  toast({ title: "Upload Failed", description: finalReport.userMessage, variant: "destructive" });
+                  return;
+                }
+              } else {
+                audioReport.userMessage = `Audio upload failed: ${audioReport.userMessage}`;
+                console.log("[ArtistUpload] Upload failed:", audioReport);
+                setUploadError(audioReport);
+                toast({ title: "Upload Failed", description: audioReport.userMessage, variant: "destructive" });
+                return;
+              }
+            }
+
+            lastSuccessfulRef.current.fullAudioUrl = fullAudioUrl;
+            setUploadProgress(70);
+
+            // Save DB
+            setUploadStep("db_insert");
+            const { error: dbError } = await withTimeout(
+              supabase.from("tracks").insert({
+                artist_id: artistProfileId,
+                title: title.trim(),
+                genre: genre,
+                duration: audioDuration,
+                artwork_url: artworkUrl,
+                full_audio_url: fullAudioUrl,
+                preview_audio_url: fullAudioUrl,
+                preview_start_seconds: previewStartSeconds,
+              }),
+              30_000,
+              "Saving track",
+            );
+
+            if (dbError) {
+              const dbReport: UploadErrorReport = {
+                step: "db_insert",
+                userMessage: "DB insert failed",
+                rawError: dbError,
+                stringifiedError: safeStringify(dbError),
+                http: { status: (dbError as any)?.status },
+              };
+              console.log("[ArtistUpload] Upload failed:", dbReport);
+              setUploadError(dbReport);
+              toast({ title: "Upload Failed", description: "DB insert failed — see details below", variant: "destructive" });
+              return;
+            }
+
+            setUploadProgress(100);
+            toast({ title: "🎉 Track Published!", description: "Your exclusive track is now live on Music Exclusive." });
+            setTimeout(() => navigate("/artist/dashboard"), 1500);
+            return;
+          }
+        }
+
         report.userMessage = `Cover upload failed: ${report.userMessage}`;
         console.log("[ArtistUpload] Upload failed:", report);
         setUploadError(report);
@@ -568,7 +747,7 @@ const ArtistUpload = () => {
       setUploadStep("audio_upload");
       setUploadProgress(45);
       const fullTrackExt = fullTrack!.file.name.split('.').pop();
-      const fullTrackPath = `${currentUser.id}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
+      const fullTrackPath = `artists/${artistProfileId}/audio/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
       lastSuccessfulRef.current.audioPath = fullTrackPath;
 
       const audioResult = await withTimeout(
@@ -578,12 +757,69 @@ const ArtistUpload = () => {
       );
 
       if (!audioResult.url) {
-        const report: UploadErrorReport = audioResult.error ?? {
+        let report: UploadErrorReport = audioResult.error ?? {
           step: "audio_upload",
           userMessage: "Audio upload failed",
           rawError: "Unknown error",
           stringifiedError: safeStringify("Unknown error"),
         };
+
+        if (isFetchLikeFailure(report.userMessage)) {
+          setUploadProgress(55);
+          const fallback = await withTimeout(
+            uploadViaFallback({
+              kind: "audio",
+              artistProfileId,
+              file: fullTrack!.file,
+              base: sanitizedTitle,
+            }),
+            120_000,
+            "Audio fallback upload",
+          );
+          if (fallback.url) {
+            lastSuccessfulRef.current.audioPath = fallback.path;
+            const fullAudioUrl = fallback.url;
+            lastSuccessfulRef.current.fullAudioUrl = fullAudioUrl;
+            setUploadProgress(70);
+
+            // Save to database
+            setUploadStep("db_insert");
+            const { error: dbError } = await withTimeout(
+              supabase.from("tracks").insert({
+                artist_id: artistProfileId,
+                title: title.trim(),
+                genre: genre,
+                duration: audioDuration,
+                artwork_url: artworkUrl,
+                full_audio_url: fullAudioUrl,
+                preview_audio_url: fullAudioUrl,
+                preview_start_seconds: previewStartSeconds,
+              }),
+              30_000,
+              "Saving track",
+            );
+
+            if (dbError) {
+              const dbReport: UploadErrorReport = {
+                step: "db_insert",
+                userMessage: "DB insert failed",
+                rawError: dbError,
+                stringifiedError: safeStringify(dbError),
+                http: { status: (dbError as any)?.status },
+              };
+              console.log("[ArtistUpload] Upload failed:", dbReport);
+              setUploadError(dbReport);
+              toast({ title: "Upload Failed", description: "DB insert failed — see details below", variant: "destructive" });
+              return;
+            }
+
+            setUploadProgress(100);
+            toast({ title: "🎉 Track Published!", description: "Your exclusive track is now live on Music Exclusive." });
+            setTimeout(() => navigate("/artist/dashboard"), 1500);
+            return;
+          }
+        }
+
         report.userMessage = `Audio upload failed: ${report.userMessage}`;
         console.log("[ArtistUpload] Upload failed:", report);
         setUploadError(report);
@@ -717,6 +953,9 @@ const ArtistUpload = () => {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
+
+            {/* Storage Health Check (runs before upload) */}
+            <StorageHealthCheckPanel />
             
             {/* SECTION 1: Track Details */}
             <GlowCard className="p-4 md:p-5">
