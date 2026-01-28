@@ -9,7 +9,6 @@ import {
   Play, 
   Pause, 
   Music, 
-  Edit2,
   Share2,
   Heart,
   Crown,
@@ -292,25 +291,8 @@ const ArtistProfilePage = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-card/20 pointer-events-none" />
             
             {/* Profile Content - positioned above vault */}
-            <div className="relative z-10 px-5 pt-8 pb-5 flex flex-col items-center">
-            
-              {/* Artist Image - Centered above Exclusive Artist */}
-              <div className="relative w-28 h-28 mb-3">
-                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-md opacity-60" />
-                <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-card shadow-2xl">
-                  <img
-                    src={artistProfile?.avatar_url || artist1}
-                    alt={artistProfile?.artist_name || "Artist"}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                {/* Headphones Badge */}
-                <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center shadow-lg">
-                  <Headphones className="w-4 h-4 text-white" />
-                </div>
-              </div>
-
-              {/* Exclusive Badge with Crown - Centered below image */}
+            <div className="relative z-10 px-5 pt-8 pb-5">
+              {/* Exclusive Badge with Crown - Top left */}
               <div className="relative inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/40 mb-4">
                 <div className="absolute -top-2.5 -left-1">
                   <div className="absolute inset-0 w-5 h-5 bg-amber-400/40 rounded-full blur-md -translate-x-0.5 translate-y-0.5" />
@@ -321,8 +303,8 @@ const ArtistProfilePage = () => {
                 </span>
               </div>
 
-              {/* Artist Info */}
-              <div className="w-full flex items-start justify-between">
+              {/* Artist Info and Image Row */}
+              <div className="flex items-end justify-between">
                 <div>
                   <h1 className="font-display text-2xl font-bold text-foreground mb-1">
                     {artistProfile?.artist_name || "Artist"}
@@ -332,14 +314,21 @@ const ArtistProfilePage = () => {
                   </p>
                 </div>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => navigate("/artist/profile/edit")}
-                >
-                  <Edit2 className="w-4 h-4 mr-1" />
-                  Edit
-                </Button>
+                {/* Artist Image - Bottom right */}
+                <div className="relative w-24 h-24">
+                  <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-md opacity-60" />
+                  <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-card shadow-2xl">
+                    <img
+                      src={artistProfile?.avatar_url || artist1}
+                      alt={artistProfile?.artist_name || "Artist"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  {/* Headphones Badge */}
+                  <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-purple-500 flex items-center justify-center shadow-lg">
+                    <Headphones className="w-3.5 h-3.5 text-white" />
+                  </div>
+                </div>
               </div>
             </div>
           </GlowCard>
