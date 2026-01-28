@@ -2,52 +2,60 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 interface GlowCardProps extends React.HTMLAttributes<HTMLDivElement> {
-  glowColor?: "primary" | "secondary" | "accent" | "gradient"
+  glowColor?: "primary" | "secondary" | "accent" | "gradient" | "subtle"
   hover?: boolean
   unlocking?: boolean
+  variant?: "default" | "elevated" | "flat"
 }
 
 const GlowCard = React.forwardRef<HTMLDivElement, GlowCardProps>(
-  ({ className, glowColor = "gradient", hover = true, unlocking = false, children, ...props }, ref) => {
+  ({ className, glowColor = "subtle", hover = true, unlocking = false, variant = "default", children, ...props }, ref) => {
     const glowStyles = {
       primary: "from-primary via-purple-500 to-pink-500",
       secondary: "from-secondary via-primary to-accent",
       accent: "from-accent via-primary to-purple-500",
       gradient: "from-primary via-purple-500 to-pink-500",
+      subtle: "from-primary/40 via-purple-500/30 to-pink-500/40",
+    }
+
+    const variantStyles = {
+      default: "bg-card",
+      elevated: "bg-card shadow-lg shadow-primary/5",
+      flat: "bg-card/80 backdrop-blur-sm",
     }
 
     return (
       <div
         ref={ref}
         className={cn(
-          "relative rounded-xl transition-all duration-300",
-          hover && "hover:-translate-y-1",
+          "relative rounded-2xl transition-all duration-300 group",
+          hover && "hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/10",
           className
         )}
         {...props}
       >
-        {/* Soft outer glow */}
+        {/* Soft outer glow - more subtle */}
         <div 
           className={cn(
-            "absolute -inset-[1px] rounded-xl bg-gradient-to-r blur-sm transition-opacity duration-300",
+            "absolute -inset-[0.5px] rounded-2xl bg-gradient-to-r blur-[2px] transition-opacity duration-300",
             glowStyles[glowColor],
-            hover && "group-hover:opacity-60",
-            unlocking ? "animate-frame-glow-pulse" : "opacity-30"
+            hover && "group-hover:opacity-50",
+            unlocking ? "animate-frame-glow-pulse opacity-40" : "opacity-20"
           )}
           aria-hidden="true"
         />
-        {/* Crisp gradient border */}
+        {/* Thin gradient border */}
         <div 
           className={cn(
-            "absolute inset-0 rounded-xl bg-gradient-to-r transition-opacity duration-300 p-[1.5px]",
+            "absolute inset-0 rounded-2xl bg-gradient-to-r transition-opacity duration-300 p-[1px]",
             glowStyles[glowColor],
-            hover && "group-hover:opacity-90",
-            unlocking ? "animate-frame-border-pulse" : "opacity-50"
+            hover && "group-hover:opacity-70",
+            unlocking ? "animate-frame-border-pulse opacity-50" : "opacity-30"
           )}
           aria-hidden="true"
         />
         {/* Inner content */}
-        <div className="relative rounded-xl bg-card h-full">
+        <div className={cn("relative rounded-2xl h-full", variantStyles[variant])}>
           {children}
         </div>
       </div>
