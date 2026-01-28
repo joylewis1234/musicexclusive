@@ -292,10 +292,10 @@ const ArtistProfilePage = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-card/20 pointer-events-none" />
             
             {/* Profile Content - positioned above vault */}
-            <div className="relative z-10 px-5 pt-24 pb-5">
+            <div className="relative z-10 px-5 pt-8 pb-5">
             
               {/* Artist Image - Larger and More Prominent */}
-              <div className="relative w-28 h-28 mb-4">
+              <div className="relative w-28 h-28 mb-4 mx-auto">
                 <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-md opacity-60" />
                 <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-card shadow-2xl">
                   <img
