@@ -308,12 +308,17 @@ const ArtistUpload = () => {
       return;
     }
 
-    if (!user?.id) {
+    // Get fresh session to ensure we have the latest auth state
+    const { data: sessionData } = await supabase.auth.getSession();
+    const currentUser = sessionData?.session?.user;
+
+    if (!currentUser?.id) {
       toast({
         title: "Not Authenticated",
         description: "Please log in to upload tracks.",
         variant: "destructive",
       });
+      navigate("/artist/login");
       return;
     }
 
@@ -325,7 +330,7 @@ const ArtistUpload = () => {
       const { data: artistProfile, error: profileError } = await supabase
         .from("artist_profiles")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", currentUser.id)
         .maybeSingle();
 
       if (profileError || !artistProfile) {
@@ -339,7 +344,7 @@ const ArtistUpload = () => {
       // Upload cover art
       setUploadProgress(20);
       const coverArtExt = coverArt!.file.name.split('.').pop();
-      const coverArtPath = `artwork/${user.id}/${sanitizedTitle}-cover-${timestamp}.${coverArtExt}`;
+      const coverArtPath = `artwork/${currentUser.id}/${sanitizedTitle}-cover-${timestamp}.${coverArtExt}`;
       const artworkUrl = await uploadFile(coverArt!.file, coverArtPath);
 
       if (!artworkUrl) {
@@ -349,7 +354,7 @@ const ArtistUpload = () => {
       // Upload full track
       setUploadProgress(45);
       const fullTrackExt = fullTrack!.file.name.split('.').pop();
-      const fullTrackPath = `tracks/${user.id}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
+      const fullTrackPath = `tracks/${currentUser.id}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
       const fullAudioUrl = await uploadFile(fullTrack!.file, fullTrackPath);
 
       if (!fullAudioUrl) {
