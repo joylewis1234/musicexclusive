@@ -61,9 +61,13 @@ const getFileExt = (name: string) => {
 const normalizeMimeType = (file: File): string | undefined => {
   const ext = getFileExt(file.name);
   const t = (file.type || "").toLowerCase();
+  const isOctetStream = t === "application/octet-stream";
 
   // Images
   if (t === "image/jpg") return "image/jpeg";
+  if (isOctetStream && (ext === ".jpg" || ext === ".jpeg")) return "image/jpeg";
+  if (isOctetStream && ext === ".png") return "image/png";
+  if (isOctetStream && ext === ".webp") return "image/webp";
   if (!t && ext === ".jpg") return "image/jpeg";
   if (!t && ext === ".jpeg") return "image/jpeg";
   if (!t && ext === ".png") return "image/png";
@@ -71,11 +75,15 @@ const normalizeMimeType = (file: File): string | undefined => {
 
   // Audio
   if (t === "audio/mp3") return "audio/mpeg";
+  if (isOctetStream && ext === ".mp3") return "audio/mpeg";
+  if (isOctetStream && ext === ".wav") return "audio/wav";
   if (!t && ext === ".mp3") return "audio/mpeg";
   if (!t && ext === ".wav") return "audio/wav";
 
   return t || undefined;
 };
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface UploadedFile {
   file: File;
@@ -297,27 +305,59 @@ const ArtistUpload = () => {
   ): Promise<{ url: string | null; error: string | null }> => {
     try {
       const contentType = normalizeMimeType(file);
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(path, file, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType,
-        });
+      const MAX_RETRIES = 3;
+      let lastErr: unknown;
 
-      if (error) {
-        console.error(`Upload error to ${bucket}:`, {
-          message: error.message,
-          name: (error as any)?.name,
-          status: (error as any)?.status,
-          statusCode: (error as any)?.statusCode,
-          error: (error as any)?.error,
-        });
-        return { url: null, error: error.message };
+      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const { data, error } = await supabase.storage
+            .from(bucket)
+            .upload(path, file, {
+              cacheControl: "3600",
+              upsert: false,
+              contentType,
+            });
+
+          if (error) {
+            console.error(`Upload error to ${bucket}:`, {
+              attempt,
+              path,
+              file: { name: file.name, size: file.size, type: file.type, normalizedType: contentType },
+              message: error.message,
+              name: (error as any)?.name,
+              status: (error as any)?.status,
+              statusCode: (error as any)?.statusCode,
+              error: (error as any)?.error,
+            });
+            return { url: null, error: error.message };
+          }
+
+          const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+          return { url: urlData.publicUrl, error: null };
+        } catch (err) {
+          lastErr = err;
+          const msg = err instanceof Error ? err.message : String(err);
+          const isTransientFetch = /failed to fetch|networkerror|load failed|fetch/i.test(msg);
+
+          console.error("Upload exception:", {
+            bucket,
+            attempt,
+            path,
+            isTransientFetch,
+            file: { name: file.name, size: file.size, type: file.type, normalizedType: contentType },
+            error: err,
+          });
+
+          if (!isTransientFetch || attempt === MAX_RETRIES) {
+            break;
+          }
+          // Backoff: 400ms, 800ms, 1600ms
+          await sleep(400 * Math.pow(2, attempt - 1));
+        }
       }
 
-      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-      return { url: urlData.publicUrl, error: null };
+      const msg = lastErr instanceof Error ? lastErr.message : "Failed to fetch";
+      return { url: null, error: msg };
     } catch (err) {
       console.error("Unexpected upload exception:", err);
       return { url: null, error: err instanceof Error ? err.message : "Unknown error" };
