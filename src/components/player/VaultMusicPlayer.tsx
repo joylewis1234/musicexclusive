@@ -112,13 +112,39 @@ export const VaultMusicPlayer = ({
   if (!track) {
     return (
       <div className="relative rounded-2xl overflow-hidden">
-        {/* Glow effect */}
-        <div className="absolute -inset-[1px] rounded-2xl bg-gradient-to-r from-primary/30 via-purple-500/20 to-pink-500/30 blur-sm" />
+        {/* Outer glow ring */}
+        <div 
+          className="absolute -inset-[2px] rounded-2xl blur-md opacity-40"
+          style={{ 
+            background: 'linear-gradient(135deg, hsl(280, 80%, 50%), hsl(300, 80%, 50%), hsl(280, 80%, 50%))' 
+          }}
+        />
         
-        <div className="relative bg-card/90 backdrop-blur-sm rounded-2xl p-6 border border-primary/20">
-          <div className="text-center text-muted-foreground py-8">
-            <p className="font-display text-sm uppercase tracking-wider">
-              Select a track to play
+        {/* Inner border */}
+        <div 
+          className="absolute inset-0 rounded-2xl p-[1px]"
+          style={{ 
+            background: 'linear-gradient(135deg, hsla(280, 80%, 60%, 0.5), hsla(300, 80%, 60%, 0.4), hsla(280, 80%, 60%, 0.5))' 
+          }}
+        />
+        
+        <div className="relative bg-card/95 backdrop-blur-sm rounded-2xl p-6 border border-transparent">
+          <div className="text-center py-8">
+            {/* Vault icon placeholder */}
+            <div 
+              className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
+              style={{
+                background: 'hsla(280, 80%, 50%, 0.15)',
+                boxShadow: '0 0 20px hsla(280, 80%, 50%, 0.2), inset 0 0 15px hsla(280, 80%, 50%, 0.1)'
+              }}
+            >
+              <Play className="w-7 h-7 text-purple-400/60 ml-0.5" />
+            </div>
+            <p 
+              className="font-display text-sm uppercase tracking-wider"
+              style={{ color: 'hsl(280, 70%, 60%)' }}
+            >
+              Select a track to load the Vault Player
             </p>
           </div>
         </div>
