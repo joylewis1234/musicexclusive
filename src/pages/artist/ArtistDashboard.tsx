@@ -8,6 +8,7 @@ import EarningsDashboard from "@/components/artist/EarningsDashboard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Home, 
   Upload, 
@@ -19,7 +20,8 @@ import {
   Wallet,
   CheckCircle2,
   AlertCircle,
-  RefreshCw
+  RefreshCw,
+  User
 } from "lucide-react";
 
 type PayoutStatus = "not_connected" | "pending" | "connected";
@@ -209,6 +211,21 @@ const ArtistDashboard = () => {
       <main className="pt-20 pb-12 px-4">
         <div className="container max-w-lg md:max-w-3xl mx-auto space-y-6">
           
+          {/* Tab Navigation */}
+          <Tabs defaultValue="dashboard" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-6">
+              <TabsTrigger value="dashboard" className="gap-2">
+                <Mic2 className="w-4 h-4" />
+                Dashboard
+              </TabsTrigger>
+              <TabsTrigger value="profile" className="gap-2" onClick={() => navigate("/artist/profile")}>
+                <User className="w-4 h-4" />
+                My Profile
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="dashboard" className="space-y-6">
+          
           {/* Welcome Header - fade in */}
           <GlowCard variant="elevated" glowColor="gradient" className="p-6 text-center animate-fade-in">
             <h1 className="font-display text-xl md:text-2xl font-bold text-foreground mb-3">
@@ -388,6 +405,9 @@ const ArtistDashboard = () => {
           >
             <EarningsDashboard />
           </section>
+          
+            </TabsContent>
+          </Tabs>
         </div>
       </main>
     </div>
