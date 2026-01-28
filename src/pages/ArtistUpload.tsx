@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, Upload, Music, Headphones, X, Check, Loader2, Info, Lock } from "lucide-react";
+import { ArrowLeft, Home, Upload, Music, X, Check, Loader2, Info, Lock, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 
 const GENRES = [
   "Hip-Hop",
@@ -50,6 +51,7 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
 interface UploadedFile {
   file: File;
   name: string;
+  objectUrl?: string;
 }
 
 const ArtistUpload = () => {
@@ -62,9 +64,14 @@ const ArtistUpload = () => {
   const [genre, setGenre] = useState("");
   const [description, setDescription] = useState("");
   
-  // Section 2: Audio Files
+  // Section 2: Audio File
   const [fullTrack, setFullTrack] = useState<UploadedFile | null>(null);
-  const [hookPreview, setHookPreview] = useState<UploadedFile | null>(null);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [previewStartSeconds, setPreviewStartSeconds] = useState(0);
+  
+  // Full track player state
+  const [isFullTrackPlaying, setIsFullTrackPlaying] = useState(false);
+  const fullTrackAudioRef = useRef<HTMLAudioElement | null>(null);
   
   // Section 3: Release Settings
   const [exclusivePeriod, setExclusivePeriod] = useState("3");
@@ -79,22 +86,23 @@ const ArtistUpload = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
   
   const fullTrackInputRef = useRef<HTMLInputElement>(null);
-  const hookPreviewInputRef = useRef<HTMLInputElement>(null);
+
+  // Cleanup object URL on unmount or when file changes
+  useEffect(() => {
+    return () => {
+      if (fullTrack?.objectUrl) {
+        URL.revokeObjectURL(fullTrack.objectUrl);
+      }
+      if (fullTrackAudioRef.current) {
+        fullTrackAudioRef.current.pause();
+        fullTrackAudioRef.current = null;
+      }
+    };
+  }, []);
 
   const validateFullTrack = (file: File): string | null => {
     if (!file.name.toLowerCase().endsWith('.wav')) {
       return "Please upload a .WAV file for the full track";
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return "File size must be less than 100MB";
-    }
-    return null;
-  };
-
-  const validateHookPreview = (file: File): string | null => {
-    const ext = file.name.toLowerCase();
-    if (!ext.endsWith('.wav') && !ext.endsWith('.mp3')) {
-      return "Please upload a .WAV or .MP3 file for the hook preview";
     }
     if (file.size > MAX_FILE_SIZE) {
       return "File size must be less than 100MB";
@@ -112,20 +120,53 @@ const ArtistUpload = () => {
       return;
     }
 
-    setFullTrack({ file, name: file.name });
-  };
-
-  const handleHookPreviewSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const error = validateHookPreview(file);
-    if (error) {
-      toast({ title: "Invalid file", description: error, variant: "destructive" });
-      return;
+    // Revoke old object URL if exists
+    if (fullTrack?.objectUrl) {
+      URL.revokeObjectURL(fullTrack.objectUrl);
     }
 
-    setHookPreview({ file, name: file.name });
+    // Create object URL for playback
+    const objectUrl = URL.createObjectURL(file);
+    setFullTrack({ file, name: file.name, objectUrl });
+    setPreviewStartSeconds(0);
+
+    // Get audio duration
+    const audio = new Audio(objectUrl);
+    audio.addEventListener("loadedmetadata", () => {
+      setAudioDuration(Math.floor(audio.duration));
+    });
+  };
+
+  const handleRemoveFullTrack = () => {
+    if (fullTrack?.objectUrl) {
+      URL.revokeObjectURL(fullTrack.objectUrl);
+    }
+    if (fullTrackAudioRef.current) {
+      fullTrackAudioRef.current.pause();
+      fullTrackAudioRef.current = null;
+    }
+    setFullTrack(null);
+    setAudioDuration(0);
+    setPreviewStartSeconds(0);
+    setIsFullTrackPlaying(false);
+  };
+
+  const toggleFullTrackPlay = () => {
+    if (!fullTrack?.objectUrl) return;
+
+    if (isFullTrackPlaying) {
+      fullTrackAudioRef.current?.pause();
+      setIsFullTrackPlaying(false);
+    } else {
+      if (!fullTrackAudioRef.current) {
+        fullTrackAudioRef.current = new Audio(fullTrack.objectUrl);
+        fullTrackAudioRef.current.addEventListener("ended", () => {
+          setIsFullTrackPlaying(false);
+        });
+      }
+      fullTrackAudioRef.current.play();
+      setIsFullTrackPlaying(true);
+    }
   };
 
   const uploadFile = async (file: File, path: string): Promise<string | null> => {
@@ -149,7 +190,6 @@ const ArtistUpload = () => {
     title.trim() && 
     genre && 
     fullTrack && 
-    hookPreview && 
     ownsRights && 
     hasExclusiveRights && 
     agreesToTerms;
@@ -184,30 +224,17 @@ const ArtistUpload = () => {
         throw new Error("Failed to upload full track");
       }
 
-      setUploadProgress(50);
+      setUploadProgress(70);
 
-      // Upload hook preview
-      const previewExt = hookPreview!.file.name.split('.').pop();
-      const previewPath = `tracks/${artistId}/${sanitizedTitle}-preview-${timestamp}.${previewExt}`;
-      const previewAudioUrl = await uploadFile(hookPreview!.file, previewPath);
-
-      if (!previewAudioUrl) {
-        throw new Error("Failed to upload hook preview");
-      }
-
-      setUploadProgress(80);
-
-      // Get audio duration estimate
-      const estimatedDuration = Math.floor(fullTrack!.file.size / 16000);
-
-      // Save to database
+      // Save to database with preview_start_seconds
       const { error: dbError } = await supabase.from("tracks").insert({
         artist_id: artistId,
         title: title.trim(),
         genre: genre,
-        duration: estimatedDuration,
+        duration: audioDuration,
         full_audio_url: fullAudioUrl,
-        preview_audio_url: previewAudioUrl,
+        preview_audio_url: fullAudioUrl, // Use same URL, fans will seek to preview_start_seconds
+        preview_start_seconds: previewStartSeconds,
       });
 
       if (dbError) {
@@ -235,6 +262,12 @@ const ArtistUpload = () => {
       setIsUploading(false);
       setUploadProgress(0);
     }
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
@@ -331,10 +364,10 @@ const ArtistUpload = () => {
               </div>
             </GlowCard>
 
-            {/* SECTION 2: Audio Files */}
+            {/* SECTION 2: Audio Upload & Preview Selection */}
             <GlowCard className="p-4 md:p-5">
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
-                Audio Files
+                Audio File
               </h3>
               
               <div className="space-y-5">
@@ -354,18 +387,44 @@ const ArtistUpload = () => {
                   />
 
                   {fullTrack ? (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/30">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span className="text-sm text-foreground truncate">{fullTrack.name}</span>
+                    <div className="space-y-3">
+                      {/* File info + remove */}
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/30">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Check className="w-4 h-4 text-primary flex-shrink-0" />
+                          <span className="text-sm text-foreground truncate">{fullTrack.name}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleRemoveFullTrack}
+                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setFullTrack(null)}
-                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+
+                      {/* Full track player */}
+                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={toggleFullTrackPlay}
+                          className="h-10 w-10 flex-shrink-0"
+                        >
+                          {isFullTrackPlaying ? (
+                            <Pause className="w-4 h-4" />
+                          ) : (
+                            <Play className="w-4 h-4" />
+                          )}
+                        </Button>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">Full Track Preview</p>
+                          <p className="text-xs text-muted-foreground">
+                            Duration: {formatDuration(audioDuration)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <button
@@ -380,55 +439,24 @@ const ArtistUpload = () => {
                   )}
                 </div>
 
-                {/* Hook Preview Upload */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Headphones className="w-5 h-5 text-accent" />
-                    <Label className="text-sm">Upload 15-Second Hook Preview *</Label>
-                  </div>
-
-                  {/* Helper text */}
-                  <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/20">
-                    <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                    <p className="text-xs text-foreground">
-                      Your hook preview is the moment fans hear first on Discovery.
-                    </p>
-                  </div>
-
-                  <input
-                    ref={hookPreviewInputRef}
-                    type="file"
-                    accept=".wav,.mp3"
-                    onChange={handleHookPreviewSelect}
-                    className="hidden"
-                  />
-
-                  {hookPreview ? (
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-accent/10 border border-accent/30">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <Check className="w-4 h-4 text-accent flex-shrink-0" />
-                        <span className="text-sm text-foreground truncate">{hookPreview.name}</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setHookPreview(null)}
-                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                {/* Preview Selection (only show after track upload) */}
+                {fullTrack && audioDuration > 0 && (
+                  <div className="pt-4 border-t border-border/30">
+                    <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/20 mb-4">
+                      <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-foreground">
+                        Select the best 15-second hook for Discovery. Fans will hear this preview before unlocking the full track.
+                      </p>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => hookPreviewInputRef.current?.click()}
-                      className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-accent/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
-                    >
-                      <Upload className="w-8 h-8" />
-                      <span className="text-sm">.WAV or .MP3 — ~15 seconds</span>
-                      <span className="text-xs text-muted-foreground">This preview plays on Discovery</span>
-                    </button>
-                  )}
-                </div>
+
+                    <PreviewTimeSelector
+                      audioUrl={fullTrack.objectUrl || null}
+                      audioDuration={audioDuration}
+                      previewStartSeconds={previewStartSeconds}
+                      onPreviewStartChange={setPreviewStartSeconds}
+                    />
+                  </div>
+                )}
               </div>
             </GlowCard>
 
