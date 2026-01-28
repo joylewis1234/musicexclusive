@@ -108,11 +108,11 @@ const EarningsDashboard = () => {
     <div className="space-y-4">
       <SectionHeader title="Your Earnings" align="left" />
 
-      {/* Summary Cards */}
+      {/* Summary Cards - 2 column grid */}
       <div className="grid grid-cols-2 gap-3">
-        <GlowCard className="p-4">
+        <GlowCard variant="flat" glowColor="subtle" className="p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
               <Clock className="w-4 h-4 text-amber-400" />
             </div>
             <span className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -124,9 +124,9 @@ const EarningsDashboard = () => {
           </p>
         </GlowCard>
 
-        <GlowCard className="p-4">
+        <GlowCard variant="flat" glowColor="subtle" className="p-4">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-green-500/10 flex items-center justify-center">
               <DollarSign className="w-4 h-4 text-green-400" />
             </div>
             <span className="text-xs text-muted-foreground uppercase tracking-wider">
@@ -140,7 +140,7 @@ const EarningsDashboard = () => {
       </div>
 
       {/* Payout History */}
-      <GlowCard className="p-4">
+      <GlowCard variant="flat" glowColor="subtle" className="p-5">
         <h3 className="text-sm font-display font-semibold text-foreground mb-4 uppercase tracking-wider">
           Payout History
         </h3>
@@ -150,14 +150,14 @@ const EarningsDashboard = () => {
             No earnings yet. Upload tracks and start earning!
           </p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {batches.map((batch) => (
               <div
                 key={batch.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border/30"
+                className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors duration-200"
               >
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {format(new Date(batch.week_start), "MMM d")} -{" "}
                     {format(new Date(batch.week_end), "MMM d, yyyy")}
                   </p>
@@ -165,7 +165,7 @@ const EarningsDashboard = () => {
                     {batch.total_credits} credits
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-shrink-0">
                   <p className="text-sm font-semibold text-foreground">
                     ${Number(batch.total_usd).toFixed(2)}
                   </p>
