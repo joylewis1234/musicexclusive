@@ -271,6 +271,7 @@ const ArtistProfile = () => {
                       artworkUrl: track.artwork_url,
                     }}
                     fanId={fanId}
+                    hasVaultAccess={hasVaultAccess}
                     isSelected={selectedTrack?.id === track.id}
                     isHighlighted={selectedTrackId === track.id}
                     onSelect={() => handleSelectTrack(track)}
