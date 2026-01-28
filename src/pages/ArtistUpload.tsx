@@ -590,13 +590,13 @@ const ArtistUpload = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Music className="w-5 h-5 text-primary" />
-                    <Label className="text-sm">Upload Full Track (.WAV only) *</Label>
+                    <Label className="text-sm">Upload Full Track (MP3 or WAV) *</Label>
                   </div>
 
                   <input
                     ref={fullTrackInputRef}
                     type="file"
-                    accept=".wav"
+                    accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav"
                     onChange={handleFullTrackSelect}
                     className="hidden"
                   />
@@ -648,8 +648,8 @@ const ArtistUpload = () => {
                       className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-primary/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
                     >
                       <Upload className="w-8 h-8" />
-                      <span className="text-sm">Click to upload .WAV file</span>
-                      <span className="text-xs text-muted-foreground">High-quality production required</span>
+                      <span className="text-sm">Click to upload MP3 or WAV file</span>
+                      <span className="text-xs text-muted-foreground">Max 50MB</span>
                     </button>
                   )}
                 </div>
