@@ -292,10 +292,10 @@ const ArtistProfilePage = () => {
             <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-card/20 pointer-events-none" />
             
             {/* Profile Content - positioned above vault */}
-            <div className="relative z-10 px-5 pt-8 pb-5">
+            <div className="relative z-10 px-5 pt-8 pb-5 flex flex-col items-center">
             
-              {/* Artist Image - Larger and More Prominent */}
-              <div className="relative w-28 h-28 mb-4 mx-auto">
+              {/* Artist Image - Centered above Exclusive Artist */}
+              <div className="relative w-28 h-28 mb-3">
                 <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-md opacity-60" />
                 <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-card shadow-2xl">
                   <img
@@ -309,31 +309,32 @@ const ArtistProfilePage = () => {
                   <Headphones className="w-4 h-4 text-white" />
                 </div>
               </div>
+
+              {/* Exclusive Badge with Crown - Centered below image */}
+              <div className="relative inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/40 mb-4">
+                <div className="absolute -top-2.5 -left-1">
+                  <div className="absolute inset-0 w-5 h-5 bg-amber-400/40 rounded-full blur-md -translate-x-0.5 translate-y-0.5" />
+                  <Crown className="relative w-4 h-4 text-amber-400 rotate-[-20deg]" style={{ filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 12px rgba(251, 191, 36, 0.5))' }} />
+                </div>
+                <span className="text-primary text-xs font-display uppercase tracking-wider">
+                  Exclusive Artist
+                </span>
+              </div>
+
               {/* Artist Info */}
-              <div className="flex items-start justify-between mt-4">
+              <div className="w-full flex items-start justify-between">
                 <div>
                   <h1 className="font-display text-2xl font-bold text-foreground mb-1">
                     {artistProfile?.artist_name || "Artist"}
                   </h1>
-                  <p className="text-muted-foreground text-sm font-body mb-3">
+                  <p className="text-muted-foreground text-sm font-body">
                     {artistProfile?.genre || "Music"}
                   </p>
-                  {/* Exclusive Badge with Crown */}
-                  <div className="relative inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/40">
-                    <div className="absolute -top-2.5 -left-1">
-                      <div className="absolute inset-0 w-5 h-5 bg-amber-400/40 rounded-full blur-md -translate-x-0.5 translate-y-0.5" />
-                      <Crown className="relative w-4 h-4 text-amber-400 rotate-[-20deg]" style={{ filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 12px rgba(251, 191, 36, 0.5))' }} />
-                    </div>
-                    <span className="text-primary text-xs font-display uppercase tracking-wider">
-                      Exclusive Artist
-                    </span>
-                  </div>
                 </div>
 
                 <Button
                   variant="outline"
                   size="sm"
-                  className="mt-1"
                   onClick={() => navigate("/artist/profile/edit")}
                 >
                   <Edit2 className="w-4 h-4 mr-1" />
