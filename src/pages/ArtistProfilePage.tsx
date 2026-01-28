@@ -13,7 +13,8 @@ import {
   Share2,
   Heart,
   Crown,
-  Headphones
+  Headphones,
+  Compass
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -342,21 +343,13 @@ const ArtistProfilePage = () => {
             </GlowCard>
           )}
 
-          {/* Stats Overview - Replaced Earned with Total Likes */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          {/* Stats Overview */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
             <GlowCard className="p-4 text-center">
               <p className="font-display text-2xl font-bold text-foreground">
                 {tracks.length}
               </p>
               <p className="text-muted-foreground text-xs font-body">Tracks</p>
-            </GlowCard>
-            <GlowCard className="p-4 text-center">
-              <p className="font-display text-2xl font-bold text-foreground">
-                {tracks.reduce((acc, t) => acc + t.duration, 0) > 0 
-                  ? Math.floor(tracks.reduce((acc, t) => acc + t.duration, 0) / 60)
-                  : 0}
-              </p>
-              <p className="text-muted-foreground text-xs font-body">Minutes</p>
             </GlowCard>
             <GlowCard className="p-4 text-center">
               <div className="flex items-center justify-center gap-1">
@@ -368,6 +361,16 @@ const ArtistProfilePage = () => {
               <p className="text-muted-foreground text-xs font-body">Likes</p>
             </GlowCard>
           </div>
+
+          {/* Back to Discovery Button */}
+          <Button
+            variant="outline"
+            className="w-full mb-6"
+            onClick={() => navigate("/discovery")}
+          >
+            <Compass className="w-4 h-4 mr-2" />
+            Back to Discovery
+          </Button>
 
           {/* Music Section - Full Tracks Only, No Upload Button */}
           <div className="mb-6">
