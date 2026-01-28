@@ -294,18 +294,38 @@ const ArtistUpload = () => {
       return;
     }
 
+    if (!user?.id) {
+      toast({
+        title: "Not Authenticated",
+        description: "Please log in to upload tracks.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsUploading(true);
     setUploadProgress(10);
 
     try {
+      // First, get the artist profile ID for the current user
+      const { data: artistProfile, error: profileError } = await supabase
+        .from("artist_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (profileError || !artistProfile) {
+        throw new Error("Artist profile not found. Please complete your profile setup first.");
+      }
+
+      const artistProfileId = artistProfile.id;
       const timestamp = Date.now();
-      const artistId = user?.email || "unknown";
       const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "-");
 
       // Upload cover art
       setUploadProgress(20);
       const coverArtExt = coverArt!.file.name.split('.').pop();
-      const coverArtPath = `artwork/${artistId}/${sanitizedTitle}-cover-${timestamp}.${coverArtExt}`;
+      const coverArtPath = `artwork/${user.id}/${sanitizedTitle}-cover-${timestamp}.${coverArtExt}`;
       const artworkUrl = await uploadFile(coverArt!.file, coverArtPath);
 
       if (!artworkUrl) {
@@ -315,7 +335,7 @@ const ArtistUpload = () => {
       // Upload full track
       setUploadProgress(45);
       const fullTrackExt = fullTrack!.file.name.split('.').pop();
-      const fullTrackPath = `tracks/${artistId}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
+      const fullTrackPath = `tracks/${user.id}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
       const fullAudioUrl = await uploadFile(fullTrack!.file, fullTrackPath);
 
       if (!fullAudioUrl) {
@@ -324,9 +344,9 @@ const ArtistUpload = () => {
 
       setUploadProgress(70);
 
-      // Save to database with all fields
+      // Save to database with artist profile ID (UUID)
       const { error: dbError } = await supabase.from("tracks").insert({
-        artist_id: artistId,
+        artist_id: artistProfileId,
         title: title.trim(),
         genre: genre,
         duration: audioDuration,
@@ -337,6 +357,7 @@ const ArtistUpload = () => {
       });
 
       if (dbError) {
+        console.error("Database error:", dbError);
         throw new Error("Failed to save track record");
       }
 
