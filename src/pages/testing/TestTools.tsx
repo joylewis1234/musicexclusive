@@ -219,32 +219,26 @@ const TestTools = () => {
 
     try {
       // Call edge function to create test artist (bypasses RLS)
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-test-artist`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          },
-          body: JSON.stringify({
-            artist_name: testArtistName.trim(),
-            email: testArtistEmail.trim(),
-          }),
-        }
-      );
+      const { data, error } = await supabase.functions.invoke("create-test-artist", {
+        body: {
+          artist_name: testArtistName.trim(),
+          email: testArtistEmail.trim(),
+        },
+      });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to create test artist");
+      if (error) {
+        // surface response text if available
+        const ctx = (error as any)?.context;
+        const responseText =
+          ctx && typeof ctx.clone === "function" ? await ctx.clone().text().catch(() => "") : "";
+        throw new Error(`${error.message}${responseText ? ` — ${responseText}` : ""}`);
       }
 
       setTestArtistResult({
-        artist_name: data.artist_name,
-        email: data.email,
-        user_id: data.user_id,
-        temp_password: data.temp_password,
+        artist_name: (data as any).artist_name,
+        email: (data as any).email,
+        user_id: (data as any).user_id,
+        temp_password: (data as any).temp_password,
       });
 
       // Refresh artists list
