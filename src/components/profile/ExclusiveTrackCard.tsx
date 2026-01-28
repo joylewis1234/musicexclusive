@@ -70,19 +70,13 @@ export const ExclusiveTrackCard = ({
               }}
             >
               {/* Gold Crown on top-left corner edge */}
-              <div className="absolute -top-1.5 -left-0.5">
-                <div 
-                  className="absolute inset-0 w-4 h-4 rounded-full blur-sm"
-                  style={{ background: 'rgba(251, 191, 36, 0.4)', transform: 'translate(-1px, 1px)' }}
-                />
-                <Crown 
-                  className="relative w-3 h-3 rotate-[-20deg]" 
-                  style={{ 
-                    color: '#fbbf24',
-                    filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.5))' 
-                  }} 
-                />
-              </div>
+              <Crown 
+                className="absolute -top-[6px] -left-[6px] w-3 h-3 rotate-[-10deg]" 
+                style={{ 
+                  color: '#fbbf24',
+                  filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.5))' 
+                }} 
+              />
               <span 
                 className="text-[10px] font-display uppercase tracking-wider pl-1"
                 style={{ color: 'hsl(280, 80%, 70%)' }}

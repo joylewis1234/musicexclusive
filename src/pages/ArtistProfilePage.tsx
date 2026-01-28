@@ -447,19 +447,13 @@ const ArtistProfilePage = () => {
                   }}
                 >
                   {/* Gold Crown on top-left corner edge */}
-                  <div className="absolute -top-2.5 -left-1">
-                    <div 
-                      className="absolute inset-0 w-6 h-6 rounded-full blur-md"
-                      style={{ background: 'rgba(251, 191, 36, 0.4)', transform: 'translate(-2px, 2px)' }}
-                    />
-                    <Crown 
-                      className="relative w-5 h-5 rotate-[-20deg]" 
-                      style={{ 
-                        color: '#fbbf24',
-                        filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 15px rgba(251, 191, 36, 0.6))' 
-                      }} 
-                    />
-                  </div>
+                  <Crown 
+                    className="absolute -top-[6px] -left-[6px] w-5 h-5 rotate-[-10deg]" 
+                    style={{ 
+                      color: '#fbbf24',
+                      filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 15px rgba(251, 191, 36, 0.6))' 
+                    }} 
+                  />
                   <span 
                     className="text-xs font-display uppercase tracking-wider pl-2"
                     style={{ 
@@ -490,21 +484,15 @@ const ArtistProfilePage = () => {
           <section className="mb-6">
             {/* Section Header with Crown - Neon Purple */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="relative">
+              <div className="relative inline-block">
                 {/* Gold Crown on top-left corner edge */}
-                <div className="absolute -top-2.5 -left-2">
-                  <div 
-                    className="absolute inset-0 w-5 h-5 rounded-full blur-sm"
-                    style={{ background: 'rgba(251, 191, 36, 0.4)', transform: 'translate(-1px, 1px)' }}
-                  />
-                  <Crown 
-                    className="relative w-4 h-4 rotate-[-20deg]" 
-                    style={{ 
-                      color: '#fbbf24',
-                      filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 10px rgba(251, 191, 36, 0.5))' 
-                    }} 
-                  />
-                </div>
+                <Crown 
+                  className="absolute -top-[6px] -left-[6px] w-4 h-4 rotate-[-10deg]" 
+                  style={{ 
+                    color: '#fbbf24',
+                    filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 10px rgba(251, 191, 36, 0.5))' 
+                  }} 
+                />
                 <h2 
                   className="font-display text-lg uppercase tracking-wider font-semibold pl-1"
                   style={{ 
