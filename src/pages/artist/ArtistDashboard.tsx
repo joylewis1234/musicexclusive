@@ -352,6 +352,22 @@ const ArtistDashboard = () => {
             </Button>
           </div>
 
+          {/* View Profile as Fan */}
+          <div 
+            className="animate-fade-in"
+            style={{ animationDelay: '120ms' }}
+          >
+            <Button 
+              size="lg"
+              variant="secondary"
+              className="w-full h-12 rounded-2xl"
+              onClick={() => navigate(`/artist/view/${user?.id}?view=fan`)}
+            >
+              <User className="w-5 h-5 mr-2" />
+              View My Profile (Fan View)
+            </Button>
+          </div>
+
           {/* Your Exclusive Songs Section */}
           <section 
             className="space-y-4 animate-fade-in"
