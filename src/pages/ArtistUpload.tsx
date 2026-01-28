@@ -51,6 +51,32 @@ const EXCLUSIVE_PERIODS = [
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
+const getFileExt = (name: string) => {
+  const i = name.lastIndexOf(".");
+  return i >= 0 ? name.slice(i).toLowerCase() : "";
+};
+
+// Some mobile browsers provide non-standard/empty MIME types.
+// Normalize them so uploads pass bucket MIME allow-lists.
+const normalizeMimeType = (file: File): string | undefined => {
+  const ext = getFileExt(file.name);
+  const t = (file.type || "").toLowerCase();
+
+  // Images
+  if (t === "image/jpg") return "image/jpeg";
+  if (!t && ext === ".jpg") return "image/jpeg";
+  if (!t && ext === ".jpeg") return "image/jpeg";
+  if (!t && ext === ".png") return "image/png";
+  if (!t && ext === ".webp") return "image/webp";
+
+  // Audio
+  if (t === "audio/mp3") return "audio/mpeg";
+  if (!t && ext === ".mp3") return "audio/mpeg";
+  if (!t && ext === ".wav") return "audio/wav";
+
+  return t || undefined;
+};
+
 interface UploadedFile {
   file: File;
   name: string;
@@ -117,11 +143,12 @@ const ArtistUpload = () => {
   }, []);
 
   const validateFullTrack = (file: File): string | null => {
-    const validAudioTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav'];
+    const type = normalizeMimeType(file);
+    const validAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'];
     const validExtensions = ['.mp3', '.wav'];
-    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    const ext = getFileExt(file.name);
     
-    if (!validExtensions.includes(ext) && !validAudioTypes.includes(file.type)) {
+    if (!validExtensions.includes(ext) && !(type && validAudioTypes.includes(type))) {
       return "Please upload an MP3 or WAV file for the full track";
     }
     if (file.size > MAX_FILE_SIZE) {
@@ -131,8 +158,9 @@ const ArtistUpload = () => {
   };
 
   const validateCoverArt = (file: File): string | null => {
-    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
+    const type = normalizeMimeType(file);
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!type || !validTypes.includes(type)) {
       return "Please upload a JPG, PNG, or WEBP image";
     }
     if (file.size > MAX_IMAGE_SIZE) {
@@ -268,12 +296,13 @@ const ArtistUpload = () => {
     path: string
   ): Promise<{ url: string | null; error: string | null }> => {
     try {
+      const contentType = normalizeMimeType(file);
       const { data, error } = await supabase.storage
         .from(bucket)
         .upload(path, file, {
           cacheControl: "3600",
           upsert: false,
-          contentType: file.type || undefined,
+          contentType,
         });
 
       if (error) {
@@ -532,7 +561,7 @@ const ArtistUpload = () => {
                   <input
                     ref={coverArtInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                     onChange={handleCoverArtSelect}
                     className="hidden"
                   />
@@ -596,7 +625,7 @@ const ArtistUpload = () => {
                   <input
                     ref={fullTrackInputRef}
                     type="file"
-                    accept=".mp3,.wav,audio/mpeg,audio/wav,audio/x-wav"
+                    accept=".mp3,.wav,audio/mpeg,audio/mp3,audio/wav,audio/x-wav"
                     onChange={handleFullTrackSelect}
                     className="hidden"
                   />
