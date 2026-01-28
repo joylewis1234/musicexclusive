@@ -189,21 +189,39 @@ const ArtistUpload = () => {
       return;
     }
 
-    // Revoke old object URL if exists
-    if (fullTrack?.objectUrl) {
-      URL.revokeObjectURL(fullTrack.objectUrl);
+    try {
+      // Revoke old object URL if exists
+      if (fullTrack?.objectUrl) {
+        URL.revokeObjectURL(fullTrack.objectUrl);
+      }
+
+      // Create object URL for playback
+      const objectUrl = URL.createObjectURL(file);
+
+      // Get audio duration with proper error handling
+      const audio = new Audio();
+      
+      audio.addEventListener("loadedmetadata", () => {
+        setAudioDuration(Math.floor(audio.duration));
+        setFullTrack({ file, name: file.name, objectUrl });
+        setPreviewStartSeconds(0);
+      });
+      
+      audio.addEventListener("error", () => {
+        URL.revokeObjectURL(objectUrl);
+        toast({ 
+          title: "Invalid audio file", 
+          description: "Could not load the selected audio file. Please try a different file.", 
+          variant: "destructive" 
+        });
+      });
+      
+      audio.src = objectUrl;
+      audio.load();
+    } catch (err) {
+      console.error("Error handling audio file:", err);
+      toast({ title: "Error", description: "Failed to process audio file", variant: "destructive" });
     }
-
-    // Create object URL for playback
-    const objectUrl = URL.createObjectURL(file);
-    setFullTrack({ file, name: file.name, objectUrl });
-    setPreviewStartSeconds(0);
-
-    // Get audio duration
-    const audio = new Audio(objectUrl);
-    audio.addEventListener("loadedmetadata", () => {
-      setAudioDuration(Math.floor(audio.duration));
-    });
   };
 
   const handleRemoveFullTrack = () => {
