@@ -9,6 +9,7 @@ export interface DbTrack {
   duration: number;
   full_audio_url: string | null;
   preview_audio_url: string | null;
+  preview_start_seconds: number;
   artwork_url: string | null;
   genre: string | null;
   created_at: string;
@@ -36,7 +37,12 @@ export const useTracks = (artistId?: string) => {
         console.error("Error fetching tracks:", fetchError);
         setError("Could not load tracks");
       } else {
-        setTracks(data || []);
+        // Ensure preview_start_seconds has a default value
+        const tracksWithDefaults = (data || []).map(track => ({
+          ...track,
+          preview_start_seconds: track.preview_start_seconds ?? 0,
+        }));
+        setTracks(tracksWithDefaults);
       }
 
       setIsLoading(false);

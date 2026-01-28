@@ -126,7 +126,10 @@ const Discovery = () => {
     if (currentPreviewId === track.id && isPlaying) {
       stopPreview();
     } else {
-      startPreview(track.id, track.preview_audio_url);
+      // Use preview_audio_url if available, otherwise use full_audio_url with start offset
+      const audioUrl = track.preview_audio_url || track.full_audio_url;
+      const startSeconds = track.preview_start_seconds || 0;
+      startPreview(track.id, audioUrl, startSeconds);
     }
   };
 
