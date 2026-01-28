@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLikeCount } from "@/hooks/useLikeCount";
 import artist1 from "@/assets/artist-1.jpg";
+import vaultPortal from "@/assets/vault-portal.png";
 
 interface TrackData {
   id: string;
@@ -263,26 +264,38 @@ const ArtistProfilePage = () => {
       <main className="pt-20 pb-12 px-4">
         <div className="container max-w-lg md:max-w-xl mx-auto">
           
-          {/* Artist Header Card - More Prominent Image */}
-          <GlowCard className="p-0 overflow-hidden mb-6">
-            {/* Large Cover Image Area */}
-            <div className="relative h-48 bg-gradient-to-br from-primary/30 via-purple-500/20 to-pink-500/20">
-              {artistProfile?.avatar_url ? (
-                <img
-                  src={artistProfile.avatar_url}
-                  alt={artistProfile.artist_name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/40 via-purple-600/30 to-pink-500/20" />
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-card via-card/50 to-transparent" />
+          {/* Artist Header Card - With Vault Portal Background */}
+          <GlowCard className="p-0 overflow-hidden mb-6 relative">
+            {/* Vault Portal Background */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              {/* Animated glow orbs behind */}
+              <div className="absolute inset-0 bg-secondary/20 blur-[60px] rounded-full scale-75 animate-pulse" />
+              <div className="absolute inset-0 bg-accent/15 blur-[50px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
+              <div className="absolute inset-0 bg-primary/15 blur-[55px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
+              
+              {/* Vault portal image with breathing glow */}
+              <img
+                src={vaultPortal}
+                alt=""
+                className="w-[120%] h-[120%] object-contain vault-glow opacity-40"
+              />
+              
+              {/* Inner energy lightning effect */}
+              <div className="absolute inset-[15%] rounded-full overflow-hidden mix-blend-screen">
+                <div className="absolute inset-0 animate-vault-lightning-1 opacity-50" />
+                <div className="absolute inset-0 animate-vault-lightning-2 opacity-40" />
+                <div className="absolute inset-0 animate-vault-lightning-3 opacity-30" />
+              </div>
             </div>
             
-            {/* Profile Content */}
-            <div className="px-5 pb-5 -mt-16 relative">
+            {/* Dark overlay for text readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-card/40 pointer-events-none" />
+            
+            {/* Profile Content - positioned above vault */}
+            <div className="relative z-10 px-5 pt-8 pb-5">
+            
               {/* Artist Image - Larger and More Prominent */}
-              <div className="relative w-28 h-28 mb-4">
+              <div className="relative w-28 h-28 mb-4 mx-auto">
                 <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-md opacity-60" />
                 <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-card shadow-2xl">
                   <img
@@ -296,9 +309,8 @@ const ArtistProfilePage = () => {
                   <Headphones className="w-4 h-4 text-white" />
                 </div>
               </div>
-
               {/* Artist Info */}
-              <div className="flex items-start justify-between">
+              <div className="flex items-start justify-between mt-4">
                 <div>
                   <h1 className="font-display text-2xl font-bold text-foreground mb-1">
                     {artistProfile?.artist_name || "Artist"}
