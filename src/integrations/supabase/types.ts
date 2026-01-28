@@ -340,6 +340,42 @@ export type Database = {
         }
         Relationships: []
       }
+      track_likes: {
+        Row: {
+          created_at: string
+          fan_id: string
+          id: string
+          track_id: string
+        }
+        Insert: {
+          created_at?: string
+          fan_id: string
+          id?: string
+          track_id: string
+        }
+        Update: {
+          created_at?: string
+          fan_id?: string
+          id?: string
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "track_likes_fan_id_fkey"
+            columns: ["fan_id"]
+            isOneToOne: false
+            referencedRelation: "vault_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "track_likes_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tracks: {
         Row: {
           album: string | null
