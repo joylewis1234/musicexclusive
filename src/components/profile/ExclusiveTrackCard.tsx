@@ -1,4 +1,4 @@
-import { Crown, Heart, Share2 } from "lucide-react";
+import { Headphones, Heart, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { cn } from "@/lib/utils";
@@ -69,12 +69,12 @@ export const ExclusiveTrackCard = ({
                 boxShadow: '0 0 8px hsla(280, 80%, 50%, 0.25)'
               }}
             >
-              {/* Gold Crown on top-left corner edge */}
-              <Crown 
+              {/* Headphones icon on top-left corner edge */}
+              <Headphones 
                 className="absolute -top-[6px] -left-[6px] w-3 h-3 rotate-[-10deg]" 
                 style={{ 
-                  color: '#fbbf24',
-                  filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.5))' 
+                  color: 'hsl(280, 80%, 70%)',
+                  filter: 'drop-shadow(0 0 4px hsla(280, 80%, 60%, 0.9)) drop-shadow(0 0 8px hsla(280, 80%, 50%, 0.5))' 
                 }} 
               />
               <span 
