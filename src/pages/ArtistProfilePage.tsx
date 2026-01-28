@@ -37,13 +37,55 @@ interface ArtistProfile {
   avatar_url: string | null;
 }
 
+// Demo/fallback data
+const demoProfile: ArtistProfile = {
+  artist_name: "Maranda B.",
+  genre: "Hip Hop / R&B",
+  bio: "Atlanta-based artist blending soulful R&B with modern hip-hop production. Known for emotionally charged lyrics and innovative sound design. Featured on major playlists and collaborating with top producers.",
+  avatar_url: null,
+};
+
+const demoTracks: TrackData[] = [
+  {
+    id: "demo-1",
+    title: "Midnight Memories",
+    genre: "R&B",
+    artwork_url: null,
+    full_audio_url: null,
+    duration: 204,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-2",
+    title: "Golden Hour",
+    genre: "Hip Hop",
+    artwork_url: null,
+    full_audio_url: null,
+    duration: 242,
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "demo-3",
+    title: "Echoes",
+    genre: "R&B",
+    artwork_url: null,
+    full_audio_url: null,
+    duration: 225,
+    created_at: new Date().toISOString(),
+  },
+];
+
 // Component to show like count for each track
 const TrackLikeCount = ({ trackId }: { trackId: string }) => {
   const likeCount = useLikeCount(trackId);
+  // Show demo likes for demo tracks
+  const displayCount = trackId.startsWith("demo-") 
+    ? (trackId === "demo-1" ? 142 : trackId === "demo-2" ? 89 : 56)
+    : likeCount;
   return (
     <span className="flex items-center gap-1 text-purple-400">
       <Heart className="w-3.5 h-3.5 fill-purple-400" />
-      <span className="text-xs font-medium">{likeCount}</span>
+      <span className="text-xs font-medium">{displayCount}</span>
     </span>
   );
 };
@@ -99,7 +141,7 @@ const ArtistProfilePage = () => {
           .not("genre", "like", "[DISABLED]%")
           .order("created_at", { ascending: false });
 
-        if (trackData) {
+        if (trackData && trackData.length > 0) {
           setTracks(trackData);
 
           // Fetch total likes for all tracks
@@ -112,9 +154,22 @@ const ArtistProfilePage = () => {
             
             setTotalLikes(count || 0);
           }
+        } else {
+          // Use demo data if no real tracks
+          setTracks(demoTracks);
+          setTotalLikes(287); // Demo total likes
+        }
+
+        // Use demo profile if no real profile
+        if (!profile && !artistProfile) {
+          setArtistProfile(demoProfile);
         }
       } catch (error) {
         console.error("Error fetching data:", error);
+        // Fallback to demo data on error
+        setArtistProfile(demoProfile);
+        setTracks(demoTracks);
+        setTotalLikes(287);
       } finally {
         setIsLoading(false);
       }
