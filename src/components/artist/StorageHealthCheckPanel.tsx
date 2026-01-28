@@ -51,9 +51,7 @@ export const StorageHealthCheckPanel = () => {
             result
               ? result.testUpload.ok
                 ? "ok"
-                : result.testUpload.skipped
-                  ? `skipped (${result.testUpload.reason ?? ""})`
-                  : "failed"
+                : "failed"
               : isRunning
                 ? "checking…"
                 : "—"
@@ -68,7 +66,6 @@ export const StorageHealthCheckPanel = () => {
                 ? error
                 : safeStringify({
                     session: result?.session,
-                    artistProfile: result?.artistProfile,
                     listBuckets: result?.listBuckets,
                     testUpload: result?.testUpload,
                   })}

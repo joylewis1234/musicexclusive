@@ -597,150 +597,79 @@ const ArtistUpload = () => {
       lastSuccessfulRef.current.timestamp = timestamp;
       lastSuccessfulRef.current.sanitizedTitle = sanitizedTitle;
 
-      // Upload cover art to track_covers bucket (Storage client, no raw fetch)
+      // Upload cover art to track_covers bucket
       setUploadStep("cover_upload");
       setUploadProgress(20);
       const coverExt = getFileExt(coverArt!.file.name) || ".jpg";
       const coverPath = `artists/${artistProfileId}/covers/${sanitizedTitle}-cover-${timestamp}${coverExt}`;
       lastSuccessfulRef.current.coverPath = coverPath;
 
-      const coverResult = await withTimeout(
-        uploadFileToBucket("track_covers", coverArt!.file, coverPath),
+      // Prefer server-side upload first to avoid browser/network fetch issues to the storage endpoint.
+      let artworkUrl: string | null = null;
+      const coverFallbackFirst = await withTimeout(
+        uploadViaFallback({
+          kind: "cover",
+          artistProfileId,
+          file: coverArt!.file,
+          base: sanitizedTitle,
+        }),
         60_000,
-        "Cover art upload",
+        "Cover upload (server)",
       );
 
-      if (!coverResult.url) {
-        let report: UploadErrorReport = coverResult.error ?? {
-          step: "cover_upload",
-          userMessage: "Cover art upload failed",
-          rawError: "Unknown error",
-          stringifiedError: safeStringify("Unknown error"),
-        };
+      if (coverFallbackFirst.url) {
+        artworkUrl = coverFallbackFirst.url;
+        lastSuccessfulRef.current.coverPath = coverFallbackFirst.path ?? coverPath;
+      } else {
+        const coverResult = await withTimeout(
+          uploadFileToBucket("track_covers", coverArt!.file, coverPath),
+          60_000,
+          "Cover upload (client)",
+        );
 
-        // Automatic server-side fallback when the browser reports a fetch/network failure
-        if (isFetchLikeFailure(report.userMessage)) {
-          setUploadProgress(25);
-          const fallback = await withTimeout(
-            uploadViaFallback({
-              kind: "cover",
-              artistProfileId,
-              file: coverArt!.file,
-              base: sanitizedTitle,
-            }),
-            60_000,
-            "Cover fallback upload",
-          );
+        if (!coverResult.url) {
+          let report: UploadErrorReport = coverResult.error ?? {
+            step: "cover_upload",
+            userMessage: "Cover art upload failed",
+            rawError: "Unknown error",
+            stringifiedError: safeStringify("Unknown error"),
+          };
 
-          if (fallback.url) {
-            lastSuccessfulRef.current.coverPath = fallback.path;
-            lastSuccessfulRef.current.artworkUrl = fallback.url;
-            report = null as any;
-            // continue
-            const artworkUrl = fallback.url;
-            // Upload full track
-            setUploadStep("audio_upload");
-            setUploadProgress(45);
-
-            const fullTrackExt = fullTrack!.file.name.split('.').pop();
-            const fullTrackPath = `artists/${artistProfileId}/audio/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
-            lastSuccessfulRef.current.audioPath = fullTrackPath;
-
-            const audioResult = await withTimeout(
-              uploadFileToBucket("track_audio", fullTrack!.file, fullTrackPath),
-              120_000,
-              "Audio upload",
-            );
-
-            let fullAudioUrl: string | null = audioResult.url;
-            if (!fullAudioUrl) {
-              const audioReport = audioResult.error ?? {
-                step: "audio_upload",
-                userMessage: "Audio upload failed",
-                rawError: "Unknown error",
-                stringifiedError: safeStringify("Unknown error"),
-              };
-
-              if (isFetchLikeFailure(audioReport.userMessage)) {
-                setUploadProgress(55);
-                const audioFallback = await withTimeout(
-                  uploadViaFallback({
-                    kind: "audio",
-                    artistProfileId,
-                    file: fullTrack!.file,
-                    base: sanitizedTitle,
-                  }),
-                  120_000,
-                  "Audio fallback upload",
-                );
-                if (audioFallback.url) {
-                  fullAudioUrl = audioFallback.url;
-                  lastSuccessfulRef.current.audioPath = audioFallback.path;
-                } else {
-                  const finalReport = audioFallback.error ?? audioReport;
-                  finalReport.userMessage = `Audio upload failed: ${finalReport.userMessage}`;
-                  console.log("[ArtistUpload] Upload failed:", finalReport);
-                  setUploadError(finalReport);
-                  toast({ title: "Upload Failed", description: finalReport.userMessage, variant: "destructive" });
-                  return;
-                }
-              } else {
-                audioReport.userMessage = `Audio upload failed: ${audioReport.userMessage}`;
-                console.log("[ArtistUpload] Upload failed:", audioReport);
-                setUploadError(audioReport);
-                toast({ title: "Upload Failed", description: audioReport.userMessage, variant: "destructive" });
-                return;
-              }
-            }
-
-            lastSuccessfulRef.current.fullAudioUrl = fullAudioUrl;
-            setUploadProgress(70);
-
-            // Save DB
-            setUploadStep("db_insert");
-            const { error: dbError } = await withTimeout(
-              supabase.from("tracks").insert({
-                artist_id: artistProfileId,
-                title: title.trim(),
-                genre: genre,
-                duration: audioDuration,
-                artwork_url: artworkUrl,
-                full_audio_url: fullAudioUrl,
-                preview_audio_url: fullAudioUrl,
-                preview_start_seconds: previewStartSeconds,
+          // One more attempt via server if the client failed with a fetch/network error.
+          if (isFetchLikeFailure(report.userMessage)) {
+            setUploadProgress(25);
+            const coverFallbackSecond = await withTimeout(
+              uploadViaFallback({
+                kind: "cover",
+                artistProfileId,
+                file: coverArt!.file,
+                base: sanitizedTitle,
               }),
-              30_000,
-              "Saving track",
+              60_000,
+              "Cover upload retry (server)",
             );
-
-            if (dbError) {
-              const dbReport: UploadErrorReport = {
-                step: "db_insert",
-                userMessage: "DB insert failed",
-                rawError: dbError,
-                stringifiedError: safeStringify(dbError),
-                http: { status: (dbError as any)?.status },
-              };
-              console.log("[ArtistUpload] Upload failed:", dbReport);
-              setUploadError(dbReport);
-              toast({ title: "Upload Failed", description: "DB insert failed — see details below", variant: "destructive" });
+            if (coverFallbackSecond.url) {
+              artworkUrl = coverFallbackSecond.url;
+              lastSuccessfulRef.current.coverPath = coverFallbackSecond.path ?? coverPath;
+            } else {
+              report.userMessage = `Cover upload failed: ${report.userMessage}`;
+              console.log("[ArtistUpload] Upload failed:", report);
+              setUploadError(report);
+              toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
               return;
             }
-
-            setUploadProgress(100);
-            toast({ title: "🎉 Track Published!", description: "Your exclusive track is now live on Music Exclusive." });
-            setTimeout(() => navigate("/artist/dashboard"), 1500);
+          } else {
+            report.userMessage = `Cover upload failed: ${report.userMessage}`;
+            console.log("[ArtistUpload] Upload failed:", report);
+            setUploadError(report);
+            toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
             return;
           }
+        } else {
+          artworkUrl = coverResult.url;
         }
-
-        report.userMessage = `Cover upload failed: ${report.userMessage}`;
-        console.log("[ArtistUpload] Upload failed:", report);
-        setUploadError(report);
-        toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
-        return;
       }
-      const artworkUrl = coverResult.url;
+
       lastSuccessfulRef.current.artworkUrl = artworkUrl;
 
       // Upload full track to track_audio bucket
@@ -790,7 +719,7 @@ const ArtistUpload = () => {
                 title: title.trim(),
                 genre: genre,
                 duration: audioDuration,
-                artwork_url: artworkUrl,
+                 artwork_url: artworkUrl,
                 full_audio_url: fullAudioUrl,
                 preview_audio_url: fullAudioUrl,
                 preview_start_seconds: previewStartSeconds,
