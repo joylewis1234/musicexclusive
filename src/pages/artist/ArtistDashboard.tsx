@@ -26,6 +26,57 @@ import {
 
 type PayoutStatus = "not_connected" | "pending" | "connected";
 
+// Component to fetch artist profile ID and navigate to fan view
+const ViewProfileButton = ({ userId }: { userId?: string }) => {
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [profileId, setProfileId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProfileId = async () => {
+      if (!userId) return;
+      
+      const { data } = await supabase
+        .from("artist_profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (data) {
+        setProfileId(data.id);
+      }
+    };
+
+    fetchProfileId();
+  }, [userId]);
+
+  const handleClick = () => {
+    if (profileId) {
+      navigate(`/artist/${profileId}?view=fan`);
+    } else {
+      toast.info("Profile not found. Please set up your profile first.");
+    }
+  };
+
+  return (
+    <div 
+      className="animate-fade-in"
+      style={{ animationDelay: '120ms' }}
+    >
+      <Button 
+        size="lg"
+        variant="secondary"
+        className="w-full h-12 rounded-2xl"
+        onClick={handleClick}
+        disabled={!profileId}
+      >
+        <User className="w-5 h-5 mr-2" />
+        View My Profile (Fan View)
+      </Button>
+    </div>
+  );
+};
+
 const ArtistDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -353,20 +404,7 @@ const ArtistDashboard = () => {
           </div>
 
           {/* View Profile as Fan */}
-          <div 
-            className="animate-fade-in"
-            style={{ animationDelay: '120ms' }}
-          >
-            <Button 
-              size="lg"
-              variant="secondary"
-              className="w-full h-12 rounded-2xl"
-              onClick={() => navigate(`/artist/view/${user?.id}?view=fan`)}
-            >
-              <User className="w-5 h-5 mr-2" />
-              View My Profile (Fan View)
-            </Button>
-          </div>
+          <ViewProfileButton userId={user?.id} />
 
           {/* Your Exclusive Songs Section */}
           <section 
