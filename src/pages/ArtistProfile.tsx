@@ -56,6 +56,7 @@ const ArtistProfile = () => {
   const { artistId } = useParams<{ artistId: string }>();
   const [searchParams] = useSearchParams();
   const selectedTrackId = searchParams.get("track");
+  const forceFanView = searchParams.get("view") === "fan";
   const { user, role } = useAuth();
 
   // Get the origin route from navigation state
@@ -190,9 +191,15 @@ const ArtistProfile = () => {
     fetchArtistData();
   }, [artistId]);
 
-  // Determine view context based on role and ownership
+  // Determine view context based on role, ownership, and query param
   useEffect(() => {
     if (!artist) return;
+    
+    // Force fan view if query param is present
+    if (forceFanView) {
+      setViewContext("fan");
+      return;
+    }
     
     if (role === "fan") {
       setViewContext("fan");
@@ -205,7 +212,7 @@ const ArtistProfile = () => {
     } else {
       setViewContext("fan"); // Default for unauthenticated
     }
-  }, [role, user?.id, artist]);
+  }, [role, user?.id, artist, forceFanView]);
 
   // Scroll to and highlight selected track from URL param
   useEffect(() => {
@@ -293,11 +300,20 @@ const ArtistProfile = () => {
           </button>
           
           {/* Right side navigation - context dependent */}
-          {viewContext === "fan" ? (
+          {viewContext === "fan" && !forceFanView ? (
             <button
               onClick={handleSecondaryNav}
               className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
               aria-label="Go to Dashboard"
+            >
+              <LayoutDashboard className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Dashboard</span>
+            </button>
+          ) : viewContext === "fan" && forceFanView ? (
+            <button
+              onClick={() => navigate("/artist/dashboard")}
+              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
+              aria-label="Back to Artist Dashboard"
             >
               <LayoutDashboard className="w-5 h-5" />
               <span className="text-sm uppercase tracking-wider">Dashboard</span>
