@@ -117,8 +117,12 @@ const ArtistUpload = () => {
   }, []);
 
   const validateFullTrack = (file: File): string | null => {
-    if (!file.name.toLowerCase().endsWith('.wav')) {
-      return "Please upload a .WAV file for the full track";
+    const validAudioTypes = ['audio/mpeg', 'audio/wav', 'audio/x-wav'];
+    const validExtensions = ['.mp3', '.wav'];
+    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    
+    if (!validExtensions.includes(ext) && !validAudioTypes.includes(file.type)) {
+      return "Please upload an MP3 or WAV file for the full track";
     }
     if (file.size > MAX_FILE_SIZE) {
       return "File size must be less than 50MB";
@@ -258,10 +262,14 @@ const ArtistUpload = () => {
     }
   };
 
-  const uploadFile = async (file: File, path: string): Promise<string | null> => {
+  const uploadFileToBucket = async (
+    bucket: string, 
+    file: File, 
+    path: string
+  ): Promise<{ url: string | null; error: string | null }> => {
     try {
       const { data, error } = await supabase.storage
-        .from("audio")
+        .from(bucket)
         .upload(path, file, {
           cacheControl: "3600",
           upsert: false,
@@ -269,21 +277,21 @@ const ArtistUpload = () => {
         });
 
       if (error) {
-        console.error("Upload error:", {
+        console.error(`Upload error to ${bucket}:`, {
           message: error.message,
           name: (error as any)?.name,
           status: (error as any)?.status,
           statusCode: (error as any)?.statusCode,
           error: (error as any)?.error,
         });
-        return null;
+        return { url: null, error: error.message };
       }
 
-      const { data: urlData } = supabase.storage.from("audio").getPublicUrl(data.path);
-      return urlData.publicUrl;
+      const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
+      return { url: urlData.publicUrl, error: null };
     } catch (err) {
       console.error("Unexpected upload exception:", err);
-      return null;
+      return { url: null, error: err instanceof Error ? err.message : "Unknown error" };
     }
   };
 
@@ -341,25 +349,27 @@ const ArtistUpload = () => {
       const timestamp = Date.now();
       const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "-");
 
-      // Upload cover art
+      // Upload cover art to track_covers bucket
       setUploadProgress(20);
       const coverArtExt = coverArt!.file.name.split('.').pop();
-      const coverArtPath = `artwork/${currentUser.id}/${sanitizedTitle}-cover-${timestamp}.${coverArtExt}`;
-      const artworkUrl = await uploadFile(coverArt!.file, coverArtPath);
+      const coverArtPath = `${currentUser.id}/${sanitizedTitle}-cover-${timestamp}.${coverArtExt}`;
+      const coverResult = await uploadFileToBucket("track_covers", coverArt!.file, coverArtPath);
 
-      if (!artworkUrl) {
-        throw new Error("Failed to upload cover art");
+      if (!coverResult.url) {
+        throw new Error(`Cover art upload failed: ${coverResult.error || "Unknown error"}`);
       }
+      const artworkUrl = coverResult.url;
 
-      // Upload full track
+      // Upload full track to track_audio bucket
       setUploadProgress(45);
       const fullTrackExt = fullTrack!.file.name.split('.').pop();
-      const fullTrackPath = `tracks/${currentUser.id}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
-      const fullAudioUrl = await uploadFile(fullTrack!.file, fullTrackPath);
+      const fullTrackPath = `${currentUser.id}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
+      const audioResult = await uploadFileToBucket("track_audio", fullTrack!.file, fullTrackPath);
 
-      if (!fullAudioUrl) {
-        throw new Error("Failed to upload full track");
+      if (!audioResult.url) {
+        throw new Error(`Audio upload failed: ${audioResult.error || "Unknown error"}`);
       }
+      const fullAudioUrl = audioResult.url;
 
       setUploadProgress(70);
 
