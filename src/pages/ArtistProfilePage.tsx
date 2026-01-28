@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -13,7 +13,8 @@ import {
   Heart,
   Crown,
   Headphones,
-  Compass
+  Compass,
+  LayoutDashboard
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -32,6 +33,8 @@ interface TrackData {
 }
 
 interface ArtistProfile {
+  id: string;
+  user_id: string;
   artist_name: string;
   genre: string | null;
   bio: string | null;
@@ -40,6 +43,8 @@ interface ArtistProfile {
 
 // Demo/fallback data
 const demoProfile: ArtistProfile = {
+  id: "demo",
+  user_id: "demo",
   artist_name: "Maranda B.",
   genre: "Hip Hop / R&B",
   bio: "Atlanta-based artist blending soulful R&B with modern hip-hop production. Known for emotionally charged lyrics and innovative sound design. Featured on major playlists and collaborating with top producers.",
@@ -91,20 +96,107 @@ const TrackLikeCount = ({ trackId }: { trackId: string }) => {
   );
 };
 
+type ViewContext = "fan" | "artist-own" | "artist-other";
+
 const ArtistProfilePage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const location = useLocation();
+  const { artistId } = useParams<{ artistId: string }>();
+  const { user, role } = useAuth();
   const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null);
   const [tracks, setTracks] = useState<TrackData[]>([]);
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [totalLikes, setTotalLikes] = useState(0);
+  const [viewContext, setViewContext] = useState<ViewContext>("fan");
+  
+  // Get the origin route from navigation state
+  const fromRoute = (location.state as { fromRoute?: string } | null)?.fromRoute;
+
+  // Determine view context based on role and ownership
+  useEffect(() => {
+    if (!artistProfile) return;
+    
+    if (role === "fan") {
+      setViewContext("fan");
+    } else if (role === "artist") {
+      if (user?.id === artistProfile.user_id) {
+        setViewContext("artist-own");
+      } else {
+        setViewContext("artist-other");
+      }
+    } else {
+      setViewContext("fan"); // Default for unauthenticated
+    }
+  }, [role, user?.id, artistProfile]);
 
   useEffect(() => {
     const fetchData = async () => {
+      // If we have an artistId param, fetch that specific artist
+      if (artistId) {
+        try {
+          // Fetch artist profile by ID
+          const { data: profile } = await supabase
+            .from("artist_profiles")
+            .select("id, user_id, artist_name, genre, bio, avatar_url")
+            .eq("id", artistId)
+            .maybeSingle();
+
+          if (profile) {
+            setArtistProfile(profile);
+            
+            // Fetch tracks for this artist using their user_id to get email
+            // First get the artist's email from auth or applications
+            const { data: application } = await supabase
+              .from("artist_applications")
+              .select("contact_email")
+              .eq("contact_email", profile.artist_name) // This might need adjustment
+              .maybeSingle();
+            
+            // For now, fetch tracks by looking up via user association
+            // Tracks use artist_id as email, so we need to find the right tracks
+            const { data: trackData } = await supabase
+              .from("tracks")
+              .select("id, title, genre, artwork_url, full_audio_url, duration, created_at")
+              .not("genre", "like", "[DELETED]%")
+              .not("genre", "like", "[DISABLED]%")
+              .order("created_at", { ascending: false });
+            
+            // Filter tracks - in a real implementation, we'd have a proper artist association
+            if (trackData && trackData.length > 0) {
+              setTracks(trackData);
+              
+              const trackIds = trackData.map(t => t.id);
+              const { count } = await supabase
+                .from("track_likes")
+                .select("*", { count: "exact", head: true })
+                .in("track_id", trackIds);
+              
+              setTotalLikes(count || 0);
+            } else {
+              setTracks(demoTracks);
+              setTotalLikes(287);
+            }
+          } else {
+            // Artist not found - show demo
+            setArtistProfile(demoProfile);
+            setTracks(demoTracks);
+            setTotalLikes(287);
+          }
+        } catch (error) {
+          console.error("Error fetching artist data:", error);
+          setArtistProfile(demoProfile);
+          setTracks(demoTracks);
+          setTotalLikes(287);
+        } finally {
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      // No artistId - check if current user is an artist viewing their own profile
       if (!user?.id) {
-        // No user logged in - show demo data
         setArtistProfile(demoProfile);
         setTracks(demoTracks);
         setTotalLikes(287);
@@ -113,10 +205,10 @@ const ArtistProfilePage = () => {
       }
 
       try {
-        // Fetch artist profile
+        // Fetch artist profile for current user
         const { data: profile } = await supabase
           .from("artist_profiles")
-          .select("artist_name, genre, bio, avatar_url")
+          .select("id, user_id, artist_name, genre, bio, avatar_url")
           .eq("user_id", user.id)
           .maybeSingle();
 
@@ -132,6 +224,8 @@ const ArtistProfilePage = () => {
 
           if (application) {
             setArtistProfile({
+              id: "temp",
+              user_id: user.id,
               artist_name: application.artist_name,
               genre: application.genres,
               bio: null,
@@ -152,7 +246,6 @@ const ArtistProfilePage = () => {
         if (trackData && trackData.length > 0) {
           setTracks(trackData);
 
-          // Fetch total likes for all tracks
           const trackIds = trackData.map(t => t.id);
           if (trackIds.length > 0) {
             const { count } = await supabase
@@ -163,9 +256,8 @@ const ArtistProfilePage = () => {
             setTotalLikes(count || 0);
           }
         } else {
-          // Use demo data if no real tracks
           setTracks(demoTracks);
-          setTotalLikes(287); // Demo total likes
+          setTotalLikes(287);
         }
 
         // Use demo profile if no real profile
@@ -174,7 +266,6 @@ const ArtistProfilePage = () => {
         }
       } catch (error) {
         console.error("Error fetching data:", error);
-        // Fallback to demo data on error
         setArtistProfile(demoProfile);
         setTracks(demoTracks);
         setTotalLikes(287);
@@ -184,7 +275,7 @@ const ArtistProfilePage = () => {
     };
 
     fetchData();
-  }, [user]);
+  }, [user, artistId]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -224,6 +315,33 @@ const ArtistProfilePage = () => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Navigation handlers based on context
+  const handleBack = () => {
+    if (fromRoute) {
+      navigate(fromRoute);
+    } else if (viewContext === "fan" || viewContext === "artist-other") {
+      navigate("/discovery");
+    } else {
+      navigate("/artist/dashboard");
+    }
+  };
+
+  const handleSecondaryNav = () => {
+    if (viewContext === "fan") {
+      navigate("/fan/dashboard");
+    }
+  };
+
+  const getBackLabel = () => {
+    if (viewContext === "artist-own") {
+      return "Back to Dashboard";
+    }
+    if (fromRoute === "/discovery" || !fromRoute) {
+      return "Back to Discovery";
+    }
+    return "Back";
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -237,25 +355,46 @@ const ArtistProfilePage = () => {
       {/* Navigation Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="container max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+          {/* Back Button */}
           <button
-            onClick={() => navigate("/artist/dashboard")}
-            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Back to Dashboard"
+            onClick={handleBack}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label={getBackLabel()}
           >
             <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-medium hidden sm:inline">{getBackLabel()}</span>
           </button>
 
           <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
             Artist Profile
           </span>
 
-          <button
-            onClick={() => navigate("/")}
-            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Go home"
-          >
-            <Home className="w-5 h-5" />
-          </button>
+          {/* Right side navigation - context dependent */}
+          {viewContext === "fan" ? (
+            <button
+              onClick={handleSecondaryNav}
+              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Go to Dashboard"
+            >
+              <LayoutDashboard className="w-5 h-5" />
+            </button>
+          ) : viewContext === "artist-own" ? (
+            <button
+              onClick={() => navigate("/")}
+              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Go home"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate("/discovery")}
+              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Discovery"
+            >
+              <Compass className="w-5 h-5" />
+            </button>
+          )}
         </div>
       </header>
 
@@ -362,15 +501,6 @@ const ArtistProfilePage = () => {
             </GlowCard>
           </div>
 
-          {/* Back to Discovery Button */}
-          <Button
-            variant="outline"
-            className="w-full mb-6"
-            onClick={() => navigate("/discovery")}
-          >
-            <Compass className="w-4 h-4 mr-2" />
-            Back to Discovery
-          </Button>
 
           {/* Music Section - Full Tracks Only, No Upload Button */}
           <div className="mb-6">
