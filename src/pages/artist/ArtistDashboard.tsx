@@ -87,13 +87,11 @@ const ArtistDashboard = () => {
         setPayoutStatus(profile.payout_status as PayoutStatus);
       }
 
-      // Fetch songs - using email as artist_id, exclude deleted/disabled tracks
+      // Fetch songs - using email as artist_id
       const { data: songData } = await supabase
         .from("tracks")
-        .select("id, title, artwork_url, genre, created_at")
+        .select("id, title, artwork_url, full_audio_url, genre, created_at")
         .eq("artist_id", user.email)
-        .not("genre", "like", "[DELETED]%")
-        .not("genre", "like", "[DISABLED]%")
         .order("created_at", { ascending: false });
 
       if (songData) {
