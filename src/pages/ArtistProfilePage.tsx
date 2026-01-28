@@ -300,7 +300,10 @@ const ArtistProfilePage = () => {
                   </p>
                   {/* Exclusive Badge with Crown */}
                   <div className="relative inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/40">
-                    <Crown className="absolute -top-2.5 -left-1 w-4 h-4 text-amber-400 rotate-[-20deg]" style={{ filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6))' }} />
+                    <div className="absolute -top-2.5 -left-1">
+                      <div className="absolute inset-0 w-5 h-5 bg-amber-400/40 rounded-full blur-md -translate-x-0.5 translate-y-0.5" />
+                      <Crown className="relative w-4 h-4 text-amber-400 rotate-[-20deg]" style={{ filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 12px rgba(251, 191, 36, 0.5))' }} />
+                    </div>
                     <span className="text-primary text-xs font-display uppercase tracking-wider">
                       Exclusive Artist
                     </span>
@@ -399,7 +402,10 @@ const ArtistProfilePage = () => {
                         </h4>
                         {/* Exclusive Badge with Crown */}
                         <div className="relative px-2 py-0.5 rounded-full bg-primary/10 flex-shrink-0">
-                          <Crown className="absolute -top-2 -left-0.5 w-3 h-3 text-amber-400 rotate-[-20deg]" style={{ filter: 'drop-shadow(0 0 3px rgba(251, 191, 36, 0.6))' }} />
+                          <div className="absolute -top-2 -left-0.5">
+                            <div className="absolute inset-0 w-4 h-4 bg-amber-400/40 rounded-full blur-sm -translate-x-0.5 translate-y-0.5" />
+                            <Crown className="relative w-3 h-3 text-amber-400 rotate-[-20deg]" style={{ filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.5))' }} />
+                          </div>
                           <span className="text-primary text-[10px] font-display uppercase tracking-wider">
                             Exclusive
                           </span>
