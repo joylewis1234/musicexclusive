@@ -46,7 +46,9 @@ const EXCLUSIVE_PERIODS = [
   { value: "12", label: "12 Weeks" },
 ];
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
+// NOTE: Many hosted storage setups enforce a 50MB max object size by default.
+// Keeping this aligned prevents hard failures during upload.
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface UploadedFile {
@@ -119,7 +121,7 @@ const ArtistUpload = () => {
       return "Please upload a .WAV file for the full track";
     }
     if (file.size > MAX_FILE_SIZE) {
-      return "File size must be less than 100MB";
+      return "File size must be less than 50MB";
     }
     return null;
   };
@@ -257,20 +259,32 @@ const ArtistUpload = () => {
   };
 
   const uploadFile = async (file: File, path: string): Promise<string | null> => {
-    const { data, error } = await supabase.storage
-      .from("audio")
-      .upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-      });
+    try {
+      const { data, error } = await supabase.storage
+        .from("audio")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: file.type || undefined,
+        });
 
-    if (error) {
-      console.error("Upload error:", error);
+      if (error) {
+        console.error("Upload error:", {
+          message: error.message,
+          name: (error as any)?.name,
+          status: (error as any)?.status,
+          statusCode: (error as any)?.statusCode,
+          error: (error as any)?.error,
+        });
+        return null;
+      }
+
+      const { data: urlData } = supabase.storage.from("audio").getPublicUrl(data.path);
+      return urlData.publicUrl;
+    } catch (err) {
+      console.error("Unexpected upload exception:", err);
       return null;
     }
-
-    const { data: urlData } = supabase.storage.from("audio").getPublicUrl(data.path);
-    return urlData.publicUrl;
   };
 
   const isFormValid = 
