@@ -437,20 +437,35 @@ const ArtistProfilePage = () => {
                   </p>
                 )}
                 
-                {/* Exclusive Artist Badge with Crown */}
-                <div className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/20 border border-primary/40">
-                  <div className="absolute -top-3 -left-1.5">
-                    <div className="absolute inset-0 w-6 h-6 bg-amber-400/40 rounded-full blur-md -translate-x-0.5 translate-y-0.5" />
+                {/* Exclusive Artist Badge with Crown - Neon Purple */}
+                <div 
+                  className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-full border"
+                  style={{
+                    background: 'hsla(280, 80%, 50%, 0.15)',
+                    borderColor: 'hsla(280, 80%, 60%, 0.4)',
+                    boxShadow: '0 0 15px hsla(280, 80%, 50%, 0.3), inset 0 0 10px hsla(280, 80%, 50%, 0.1)'
+                  }}
+                >
+                  {/* Gold Crown on top-left corner edge */}
+                  <div className="absolute -top-2.5 -left-1">
+                    <div 
+                      className="absolute inset-0 w-6 h-6 rounded-full blur-md"
+                      style={{ background: 'rgba(251, 191, 36, 0.4)', transform: 'translate(-2px, 2px)' }}
+                    />
                     <Crown 
-                      className="relative w-5 h-5 text-amber-400 rotate-[-20deg]" 
+                      className="relative w-5 h-5 rotate-[-20deg]" 
                       style={{ 
-                        filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 15px rgba(251, 191, 36, 0.5))' 
+                        color: '#fbbf24',
+                        filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 15px rgba(251, 191, 36, 0.6))' 
                       }} 
                     />
                   </div>
                   <span 
-                    className="text-primary text-xs font-display uppercase tracking-wider"
-                    style={{ textShadow: '0 0 10px hsl(var(--primary) / 0.5)' }}
+                    className="text-xs font-display uppercase tracking-wider pl-2"
+                    style={{ 
+                      color: 'hsl(280, 80%, 70%)',
+                      textShadow: '0 0 12px hsla(280, 80%, 60%, 0.6)' 
+                    }}
                   >
                     Exclusive Artist
                   </span>
@@ -473,27 +488,32 @@ const ArtistProfilePage = () => {
 
           {/* Exclusive Music Section */}
           <section className="mb-6">
-            {/* Section Header with Crown */}
+            {/* Section Header with Crown - Neon Purple */}
             <div className="flex items-center gap-3 mb-4">
               <div className="relative">
+                {/* Gold Crown on top-left corner edge */}
+                <div className="absolute -top-2.5 -left-2">
+                  <div 
+                    className="absolute inset-0 w-5 h-5 rounded-full blur-sm"
+                    style={{ background: 'rgba(251, 191, 36, 0.4)', transform: 'translate(-1px, 1px)' }}
+                  />
+                  <Crown 
+                    className="relative w-4 h-4 rotate-[-20deg]" 
+                    style={{ 
+                      color: '#fbbf24',
+                      filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 10px rgba(251, 191, 36, 0.5))' 
+                    }} 
+                  />
+                </div>
                 <h2 
-                  className="font-display text-lg uppercase tracking-wider font-semibold"
+                  className="font-display text-lg uppercase tracking-wider font-semibold pl-1"
                   style={{ 
-                    color: 'hsl(var(--primary))',
-                    textShadow: '0 0 15px hsl(var(--primary) / 0.4)' 
+                    color: 'hsl(280, 80%, 70%)',
+                    textShadow: '0 0 15px hsla(280, 80%, 60%, 0.5)' 
                   }}
                 >
                   Exclusive Music
                 </h2>
-                <div className="absolute -top-3 -left-3">
-                  <div className="absolute inset-0 w-5 h-5 bg-amber-400/40 rounded-full blur-sm" />
-                  <Crown 
-                    className="relative w-4 h-4 text-amber-400 rotate-[-20deg]" 
-                    style={{ 
-                      filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.8))' 
-                    }} 
-                  />
-                </div>
               </div>
             </div>
 
@@ -502,7 +522,7 @@ const ArtistProfilePage = () => {
               <GlowCard className="p-8 text-center">
                 <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground text-sm font-body">
-                  No exclusive tracks yet.
+                  No exclusive tracks yet. New drops will appear here.
                 </p>
               </GlowCard>
             ) : (
