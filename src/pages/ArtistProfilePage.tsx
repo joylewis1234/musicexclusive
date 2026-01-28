@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   ArrowLeft,
-  Crown,
+  Headphones,
   LayoutDashboard,
   Compass,
   Music,
@@ -446,12 +446,12 @@ const ArtistProfilePage = () => {
                     boxShadow: '0 0 15px hsla(280, 80%, 50%, 0.3), inset 0 0 10px hsla(280, 80%, 50%, 0.1)'
                   }}
                 >
-                  {/* Gold Crown on top-left corner edge */}
-                  <Crown 
+                  {/* Headphones icon on top-left corner edge */}
+                  <Headphones 
                     className="absolute -top-[6px] -left-[6px] w-5 h-5 rotate-[-10deg]" 
                     style={{ 
-                      color: '#fbbf24',
-                      filter: 'drop-shadow(0 0 8px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 15px rgba(251, 191, 36, 0.6))' 
+                      color: 'hsl(280, 80%, 70%)',
+                      filter: 'drop-shadow(0 0 8px hsla(280, 80%, 60%, 0.9)) drop-shadow(0 0 15px hsla(280, 80%, 50%, 0.6))' 
                     }} 
                   />
                   <span 
@@ -482,15 +482,15 @@ const ArtistProfilePage = () => {
 
           {/* Exclusive Music Section */}
           <section className="mb-6">
-            {/* Section Header with Crown - Neon Purple */}
+            {/* Section Header with Headphones - Neon Purple */}
             <div className="flex items-center gap-3 mb-4">
               <div className="relative inline-block">
-                {/* Gold Crown on top-left corner edge */}
-                <Crown 
+                {/* Headphones icon on top-left corner edge */}
+                <Headphones 
                   className="absolute -top-[6px] -left-[6px] w-4 h-4 rotate-[-10deg]" 
                   style={{ 
-                    color: '#fbbf24',
-                    filter: 'drop-shadow(0 0 6px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 10px rgba(251, 191, 36, 0.5))' 
+                    color: 'hsl(280, 80%, 70%)',
+                    filter: 'drop-shadow(0 0 6px hsla(280, 80%, 60%, 0.9)) drop-shadow(0 0 10px hsla(280, 80%, 50%, 0.5))' 
                   }} 
                 />
                 <h2 
