@@ -45,6 +45,22 @@ Deno.serve(async (req) => {
 
     const testUserId = authData.user.id;
 
+    // Create user_roles record (REQUIRED for auth context)
+    const { error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .insert({
+        user_id: testUserId,
+        role: "artist",
+      });
+
+    if (roleError) {
+      console.error("Role insert error:", roleError);
+      return new Response(
+        JSON.stringify({ error: roleError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Create artist_profiles record
     const { error: profileError } = await supabaseAdmin
       .from("artist_profiles")
