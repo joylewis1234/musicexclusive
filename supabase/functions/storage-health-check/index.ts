@@ -91,16 +91,25 @@ serve(async (req) => {
       listBuckets = { ok: false, error: safeError(err) };
     }
 
-    // test upload 1KB
+    // test upload 1KB (use image/png to satisfy bucket MIME restrictions)
     let testUpload: any = { ok: false, skipped: true, reason: "missing/invalid artistProfileId" };
     if (artistProfileId && artistOk) {
-      const path = `artists/${artistProfileId}/_health/${Date.now()}.txt`;
+      const path = `artists/${artistProfileId}/_health/${Date.now()}.png`;
       try {
-        const content = new Blob([new Uint8Array(1024)], { type: "text/plain" });
+        // Minimal 1x1 transparent PNG (67 bytes)
+        const pngBytes = new Uint8Array([
+          0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+          0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+          0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00,
+          0x0a, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+          0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00, 0x00, 0x00, 0x00, 0x49,
+          0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82
+        ]);
+        const content = new Blob([pngBytes], { type: "image/png" });
         const { data, error } = await supabaseAdmin.storage.from("track_covers").upload(path, content, {
           cacheControl: "60",
           upsert: true,
-          contentType: "text/plain",
+          contentType: "image/png",
         });
         if (error || !data?.path) throw error ?? new Error("Upload returned no path");
         const { data: urlData } = supabaseAdmin.storage.from("track_covers").getPublicUrl(data.path);
