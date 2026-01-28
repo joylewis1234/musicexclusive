@@ -85,6 +85,52 @@ const normalizeMimeType = (file: File): string | undefined => {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+const uploadCoverArtViaBackend = async (
+  file: File,
+  base: string,
+  accessToken: string,
+): Promise<{ url: string | null; error: string | null }> => {
+  const MAX_RETRIES = 3;
+  let lastErr: unknown;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      form.append("base", base);
+
+      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-track-cover`;
+      const res = await fetch(fnUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: form,
+      });
+
+      const payload = await res.json().catch(() => null as any);
+      if (!res.ok) {
+        return {
+          url: null,
+          error: payload?.error || `Cover upload failed (${res.status})`,
+        };
+      }
+
+      return { url: payload?.url ?? null, error: null };
+    } catch (err) {
+      lastErr = err;
+      const msg = err instanceof Error ? err.message : String(err);
+      const isTransientFetch = /failed to fetch|networkerror|load failed|fetch/i.test(msg);
+      if (!isTransientFetch || attempt === MAX_RETRIES) break;
+      await sleep(400 * Math.pow(2, attempt - 1));
+    }
+  }
+
+  const msg = lastErr instanceof Error ? lastErr.message : "Failed to fetch";
+  return { url: null, error: msg };
+};
+
 interface UploadedFile {
   file: File;
   name: string;
@@ -420,9 +466,11 @@ const ArtistUpload = () => {
 
       // Upload cover art to track_covers bucket
       setUploadProgress(20);
-      const coverArtExt = coverArt!.file.name.split('.').pop();
-      const coverArtPath = `${currentUser.id}/${sanitizedTitle}-cover-${timestamp}.${coverArtExt}`;
-      const coverResult = await uploadFileToBucket("track_covers", coverArt!.file, coverArtPath);
+      const coverResult = await uploadCoverArtViaBackend(
+        coverArt!.file,
+        sanitizedTitle,
+        sessionData.session!.access_token,
+      );
 
       if (!coverResult.url) {
         throw new Error(`Cover art upload failed: ${coverResult.error || "Unknown error"}`);
