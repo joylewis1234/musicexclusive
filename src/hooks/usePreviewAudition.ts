@@ -1,30 +1,25 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
-interface UseAudioPreviewReturn {
-  currentPreviewId: string | null;
-  previewProgress: number;
+interface UsePreviewAuditionReturn {
   isPlaying: boolean;
   isLoading: boolean;
-  error: string | null;
-  startPreview: (artistId: string, audioUrl: string | null, startSeconds?: number) => void;
-  stopPreview: () => void;
+  timeRemaining: number;
+  startAudition: (audioUrl: string, startSeconds: number) => void;
+  stopAudition: () => void;
 }
 
-const PREVIEW_DURATION = 15; // 15 seconds max
+const PREVIEW_DURATION = 15; // 15 seconds
 
-export const useAudioPreview = (): UseAudioPreviewReturn => {
-  const [currentPreviewId, setCurrentPreviewId] = useState<string | null>(null);
-  const [previewProgress, setPreviewProgress] = useState(0);
+export const usePreviewAudition = (): UsePreviewAuditionReturn => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [timeRemaining, setTimeRemaining] = useState(0);
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const startTimeRef = useRef<number>(0);
   const stopTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const stopPreview = useCallback(() => {
+  const stopAudition = useCallback(() => {
     // Stop audio
     if (audioRef.current) {
       audioRef.current.pause();
@@ -44,83 +39,71 @@ export const useAudioPreview = (): UseAudioPreviewReturn => {
       stopTimeoutRef.current = null;
     }
     
-    setCurrentPreviewId(null);
-    setPreviewProgress(0);
     setIsPlaying(false);
     setIsLoading(false);
-    setError(null);
+    setTimeRemaining(0);
   }, []);
 
-  const startPreview = useCallback((artistId: string, audioUrl: string | null, startSeconds: number = 0) => {
-    // Stop any existing preview first
-    stopPreview();
+  const startAudition = useCallback((audioUrl: string, startSeconds: number) => {
+    // Stop any existing audition first
+    stopAudition();
 
-    // If no audio URL, set error
-    if (!audioUrl) {
-      setError("Hook preview not available. Tap STREAM to listen inside.");
-      setCurrentPreviewId(artistId);
-      return;
-    }
+    if (!audioUrl) return;
 
-    setCurrentPreviewId(artistId);
     setIsLoading(true);
-    setError(null);
 
     // Create audio element
     const audio = new Audio(audioUrl);
     audio.preload = "auto";
-    audio.volume = 0.8;
     audioRef.current = audio;
 
     // Handle successful load
-    audio.addEventListener("canplaythrough", () => {
+    const handleCanPlay = () => {
       setIsLoading(false);
       setIsPlaying(true);
-      startTimeRef.current = Date.now();
+      setTimeRemaining(PREVIEW_DURATION);
       
-      // Seek to start position
+      // Set start time
       audio.currentTime = startSeconds;
       
       audio.play().catch((e) => {
         console.error("Audio play failed:", e);
-        setError("Could not play preview");
         setIsPlaying(false);
       });
 
-      // Start progress tracking
+      // Update countdown every second
       intervalRef.current = setInterval(() => {
-        const elapsed = (Date.now() - startTimeRef.current) / 1000;
-        const progress = Math.min((elapsed / PREVIEW_DURATION) * 100, 100);
-        
-        setPreviewProgress(progress);
+        setTimeRemaining((prev) => {
+          if (prev <= 1) {
+            stopAudition();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
 
-        // Stop at 15 seconds
-        if (elapsed >= PREVIEW_DURATION) {
-          stopPreview();
-        }
-      }, 100);
-      
-      // Also set a timeout to ensure we stop after exactly 15 seconds
+      // Auto-stop after 15 seconds
       stopTimeoutRef.current = setTimeout(() => {
-        stopPreview();
+        stopAudition();
       }, PREVIEW_DURATION * 1000);
-    }, { once: true });
+    };
 
-    // Handle audio end (if file is shorter than 15s from start position)
+    audio.addEventListener("canplaythrough", handleCanPlay, { once: true });
+
+    // Handle audio end (if file is shorter than remaining duration)
     audio.addEventListener("ended", () => {
-      stopPreview();
+      stopAudition();
     }, { once: true });
 
     // Handle load error
     audio.addEventListener("error", () => {
-      setError("Could not load preview");
       setIsLoading(false);
       setIsPlaying(false);
     }, { once: true });
 
     // Start loading
     audio.load();
-  }, [stopPreview]);
+  }, [stopAudition]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -139,12 +122,10 @@ export const useAudioPreview = (): UseAudioPreviewReturn => {
   }, []);
 
   return {
-    currentPreviewId,
-    previewProgress,
     isPlaying,
     isLoading,
-    error,
-    startPreview,
-    stopPreview,
+    timeRemaining,
+    startAudition,
+    stopAudition,
   };
 };
