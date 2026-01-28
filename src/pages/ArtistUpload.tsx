@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useMemo, useRef, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Home, Upload, Music, X, Check, Loader2, Info, Lock, Play, Pause, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -85,50 +85,59 @@ const normalizeMimeType = (file: File): string | undefined => {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-const uploadCoverArtViaBackend = async (
-  file: File,
-  base: string,
-  accessToken: string,
-): Promise<{ url: string | null; error: string | null }> => {
-  const MAX_RETRIES = 3;
-  let lastErr: unknown;
+type UploadStep = "session" | "cover_upload" | "audio_upload" | "db_insert";
 
-  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-    try {
-      const form = new FormData();
-      form.append("file", file, file.name);
-      form.append("base", base);
+type UploadErrorReport = {
+  step: UploadStep;
+  userMessage: string;
+  rawError: unknown;
+  stringifiedError: string;
+  http?: {
+    status?: number;
+    statusText?: string;
+    responseText?: string;
+  };
+  hint?: string;
+};
 
-      const fnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-track-cover`;
-      const res = await fetch(fnUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+const safeStringify = (value: unknown) => {
+  try {
+    if (value instanceof Error) {
+      return JSON.stringify(
+        {
+          name: value.name,
+          message: value.message,
+          stack: value.stack,
+          ...(value as any),
         },
-        body: form,
-      });
-
-      const payload = await res.json().catch(() => null as any);
-      if (!res.ok) {
-        return {
-          url: null,
-          error: payload?.error || `Cover upload failed (${res.status})`,
-        };
-      }
-
-      return { url: payload?.url ?? null, error: null };
-    } catch (err) {
-      lastErr = err;
-      const msg = err instanceof Error ? err.message : String(err);
-      const isTransientFetch = /failed to fetch|networkerror|load failed|fetch/i.test(msg);
-      if (!isTransientFetch || attempt === MAX_RETRIES) break;
-      await sleep(400 * Math.pow(2, attempt - 1));
+        null,
+        2,
+      );
+    }
+    return JSON.stringify(value, null, 2);
+  } catch {
+    try {
+      return String(value);
+    } catch {
+      return "[unstringifiable error]";
     }
   }
+};
 
-  const msg = lastErr instanceof Error ? lastErr.message : "Failed to fetch";
-  return { url: null, error: msg };
+const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> => {
+  let timeoutId: number | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => {
+      reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s`));
+    }, ms);
+  });
+
+  try {
+    // Supabase query builders are PromiseLike (thenable) but not typed as Promise.
+    return await Promise.race([Promise.resolve(promise as any) as Promise<T>, timeoutPromise]);
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
+  }
 };
 
 interface UploadedFile {
@@ -147,6 +156,18 @@ const ArtistUpload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+
+  const [uploadStep, setUploadStep] = useState<UploadStep | null>(null);
+  const [uploadError, setUploadError] = useState<UploadErrorReport | null>(null);
+  const lastSuccessfulRef = useRef<{
+    artistProfileId?: string;
+    artworkUrl?: string;
+    fullAudioUrl?: string;
+    coverPath?: string;
+    audioPath?: string;
+    timestamp?: number;
+    sanitizedTitle?: string;
+  }>({});
   
   // Section 1: Track Details
   const [title, setTitle] = useState("");
@@ -198,12 +219,12 @@ const ArtistUpload = () => {
 
   const validateFullTrack = (file: File): string | null => {
     const type = normalizeMimeType(file);
-    const validAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav'];
-    const validExtensions = ['.mp3', '.wav'];
+    const validAudioTypes = ["audio/mpeg", "audio/mp3"]; // keep tolerant for weird browsers
+    const validExtensions = [".mp3"];
     const ext = getFileExt(file.name);
     
     if (!validExtensions.includes(ext) && !(type && validAudioTypes.includes(type))) {
-      return "Please upload an MP3 or WAV file for the full track";
+      return "Please upload an MP3 file";
     }
     if (file.size > MAX_FILE_SIZE) {
       return "File size must be less than 50MB";
@@ -348,7 +369,7 @@ const ArtistUpload = () => {
     bucket: string, 
     file: File, 
     path: string
-  ): Promise<{ url: string | null; error: string | null }> => {
+  ): Promise<{ url: string | null; error: UploadErrorReport | null }> => {
     try {
       const contentType = normalizeMimeType(file);
       const MAX_RETRIES = 3;
@@ -365,6 +386,16 @@ const ArtistUpload = () => {
             });
 
           if (error) {
+            const report: UploadErrorReport = {
+              step: bucket === "track_covers" ? "cover_upload" : "audio_upload",
+              userMessage: error.message,
+              rawError: error,
+              stringifiedError: safeStringify(error),
+              http: {
+                status: (error as any)?.statusCode ?? (error as any)?.status,
+              },
+            };
+
             console.error(`Upload error to ${bucket}:`, {
               attempt,
               path,
@@ -375,7 +406,8 @@ const ArtistUpload = () => {
               statusCode: (error as any)?.statusCode,
               error: (error as any)?.error,
             });
-            return { url: null, error: error.message };
+
+            return { url: null, error: report };
           }
 
           const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
@@ -402,11 +434,22 @@ const ArtistUpload = () => {
         }
       }
 
-      const msg = lastErr instanceof Error ? lastErr.message : "Failed to fetch";
-      return { url: null, error: msg };
+      const report: UploadErrorReport = {
+        step: bucket === "track_covers" ? "cover_upload" : "audio_upload",
+        userMessage: lastErr instanceof Error ? lastErr.message : "Failed to fetch",
+        rawError: lastErr,
+        stringifiedError: safeStringify(lastErr),
+      };
+      return { url: null, error: report };
     } catch (err) {
       console.error("Unexpected upload exception:", err);
-      return { url: null, error: err instanceof Error ? err.message : "Unknown error" };
+      const report: UploadErrorReport = {
+        step: bucket === "track_covers" ? "cover_upload" : "audio_upload",
+        userMessage: err instanceof Error ? err.message : "Unknown error",
+        rawError: err,
+        stringifiedError: safeStringify(err),
+      };
+      return { url: null, error: report };
     }
   };
 
@@ -422,6 +465,9 @@ const ArtistUpload = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    setUploadError(null);
+    lastSuccessfulRef.current = {};
+
     if (!isFormValid) {
       toast({
         title: "Missing Required Fields",
@@ -431,80 +477,155 @@ const ArtistUpload = () => {
       return;
     }
 
-    // Get fresh session to ensure we have the latest auth state
-    const { data: sessionData } = await supabase.auth.getSession();
-    const currentUser = sessionData?.session?.user;
-
-    if (!currentUser?.id) {
-      toast({
-        title: "Not Authenticated",
-        description: "Please log in to upload tracks.",
-        variant: "destructive",
-      });
-      navigate("/artist/login");
-      return;
-    }
-
     setIsUploading(true);
     setUploadProgress(10);
 
     try {
+      setUploadStep("session");
+      const { data: sessionData, error: sessionError } = await withTimeout(
+        supabase.auth.getSession(),
+        15_000,
+        "Session check",
+      );
+      const currentUser = sessionData?.session?.user;
+
+      if (sessionError || !currentUser?.id) {
+        const report: UploadErrorReport = {
+          step: "session",
+          userMessage: "Session expired — please log in again",
+          rawError: sessionError ?? null,
+          stringifiedError: safeStringify(sessionError ?? { reason: "missing session" }),
+          hint: "Tap Log In and try again.",
+        };
+        console.log("[ArtistUpload] Upload failed:", report);
+        setUploadError(report);
+        toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
+        return;
+      }
+
       // First, get the artist profile ID for the current user
-      const { data: artistProfile, error: profileError } = await supabase
-        .from("artist_profiles")
-        .select("id")
-        .eq("user_id", currentUser.id)
-        .maybeSingle();
+      const { data: artistProfile, error: profileError } = await withTimeout(
+        supabase
+          .from("artist_profiles")
+          .select("id")
+          .eq("user_id", currentUser.id)
+          .maybeSingle(),
+        20_000,
+        "Artist profile lookup",
+      );
 
       if (profileError || !artistProfile) {
-        throw new Error("Artist profile not found. Please complete your profile setup first.");
+        const report: UploadErrorReport = {
+          step: "session",
+          userMessage: "Artist profile not found — please finish setup and try again",
+          rawError: profileError ?? { reason: "no artist_profiles row" },
+          stringifiedError: safeStringify(profileError ?? { reason: "no artist_profiles row" }),
+        };
+        console.log("[ArtistUpload] Upload failed:", report);
+        setUploadError(report);
+        toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
+        return;
       }
 
       const artistProfileId = artistProfile.id;
       const timestamp = Date.now();
       const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "-");
 
-      // Upload cover art to track_covers bucket
+      lastSuccessfulRef.current.artistProfileId = artistProfileId;
+      lastSuccessfulRef.current.timestamp = timestamp;
+      lastSuccessfulRef.current.sanitizedTitle = sanitizedTitle;
+
+      // Upload cover art to track_covers bucket (Storage client, no raw fetch)
+      setUploadStep("cover_upload");
       setUploadProgress(20);
-      const coverResult = await uploadCoverArtViaBackend(
-        coverArt!.file,
-        sanitizedTitle,
-        sessionData.session!.access_token,
+      const coverExt = getFileExt(coverArt!.file.name) || ".jpg";
+      const coverPath = `${currentUser.id}/${sanitizedTitle}-cover-${timestamp}${coverExt}`;
+      lastSuccessfulRef.current.coverPath = coverPath;
+
+      const coverResult = await withTimeout(
+        uploadFileToBucket("track_covers", coverArt!.file, coverPath),
+        60_000,
+        "Cover art upload",
       );
 
       if (!coverResult.url) {
-        throw new Error(`Cover art upload failed: ${coverResult.error || "Unknown error"}`);
+        const report: UploadErrorReport = coverResult.error ?? {
+          step: "cover_upload",
+          userMessage: "Cover art upload failed",
+          rawError: "Unknown error",
+          stringifiedError: safeStringify("Unknown error"),
+        };
+        report.userMessage = `Cover upload failed: ${report.userMessage}`;
+        console.log("[ArtistUpload] Upload failed:", report);
+        setUploadError(report);
+        toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
+        return;
       }
       const artworkUrl = coverResult.url;
+      lastSuccessfulRef.current.artworkUrl = artworkUrl;
 
       // Upload full track to track_audio bucket
+      setUploadStep("audio_upload");
       setUploadProgress(45);
       const fullTrackExt = fullTrack!.file.name.split('.').pop();
       const fullTrackPath = `${currentUser.id}/${sanitizedTitle}-full-${timestamp}.${fullTrackExt}`;
-      const audioResult = await uploadFileToBucket("track_audio", fullTrack!.file, fullTrackPath);
+      lastSuccessfulRef.current.audioPath = fullTrackPath;
+
+      const audioResult = await withTimeout(
+        uploadFileToBucket("track_audio", fullTrack!.file, fullTrackPath),
+        120_000,
+        "Audio upload",
+      );
 
       if (!audioResult.url) {
-        throw new Error(`Audio upload failed: ${audioResult.error || "Unknown error"}`);
+        const report: UploadErrorReport = audioResult.error ?? {
+          step: "audio_upload",
+          userMessage: "Audio upload failed",
+          rawError: "Unknown error",
+          stringifiedError: safeStringify("Unknown error"),
+        };
+        report.userMessage = `Audio upload failed: ${report.userMessage}`;
+        console.log("[ArtistUpload] Upload failed:", report);
+        setUploadError(report);
+        toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
+        return;
       }
       const fullAudioUrl = audioResult.url;
+      lastSuccessfulRef.current.fullAudioUrl = fullAudioUrl;
 
       setUploadProgress(70);
 
       // Save to database with artist profile ID (UUID)
-      const { error: dbError } = await supabase.from("tracks").insert({
-        artist_id: artistProfileId,
-        title: title.trim(),
-        genre: genre,
-        duration: audioDuration,
-        artwork_url: artworkUrl,
-        full_audio_url: fullAudioUrl,
-        preview_audio_url: fullAudioUrl, // Use same URL, fans will seek to preview_start_seconds
-        preview_start_seconds: previewStartSeconds,
-      });
+      setUploadStep("db_insert");
+      const { error: dbError } = await withTimeout(
+        supabase.from("tracks").insert({
+          artist_id: artistProfileId,
+          title: title.trim(),
+          genre: genre,
+          duration: audioDuration,
+          artwork_url: artworkUrl,
+          full_audio_url: fullAudioUrl,
+          preview_audio_url: fullAudioUrl, // Use same URL, fans will seek to preview_start_seconds
+          preview_start_seconds: previewStartSeconds,
+        }),
+        30_000,
+        "Saving track",
+      );
 
       if (dbError) {
-        console.error("Database error:", dbError);
-        throw new Error("Failed to save track record");
+        const report: UploadErrorReport = {
+          step: "db_insert",
+          userMessage: "DB insert failed",
+          rawError: dbError,
+          stringifiedError: safeStringify(dbError),
+          http: {
+            status: (dbError as any)?.status,
+          },
+        };
+        console.log("[ArtistUpload] Upload failed:", report);
+        setUploadError(report);
+        toast({ title: "Upload Failed", description: "DB insert failed — see details below", variant: "destructive" });
+        return;
       }
 
       setUploadProgress(100);
@@ -518,17 +639,37 @@ const ArtistUpload = () => {
       setTimeout(() => navigate("/artist/dashboard"), 1500);
 
     } catch (error) {
+      const report: UploadErrorReport = {
+        step: uploadStep ?? "session",
+        userMessage: error instanceof Error ? error.message : "Unknown error",
+        rawError: error,
+        stringifiedError: safeStringify(error),
+      };
+      console.log("[ArtistUpload] Upload failed:", report);
       console.error("Upload error:", error);
-      toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Something went wrong",
-        variant: "destructive",
-      });
+      setUploadError(report);
+      toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
+      setUploadStep(null);
     }
   };
+
+  const stepLabel = useMemo(() => {
+    switch (uploadStep) {
+      case "session":
+        return "Checking session…";
+      case "cover_upload":
+        return "Uploading cover…";
+      case "audio_upload":
+        return "Uploading audio…";
+      case "db_insert":
+        return "Saving track…";
+      default:
+        return null;
+    }
+  }, [uploadStep]);
 
   const formatDuration = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -707,13 +848,13 @@ const ArtistUpload = () => {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Music className="w-5 h-5 text-primary" />
-                    <Label className="text-sm">Upload Full Track (MP3 or WAV) *</Label>
+                    <Label className="text-sm">Upload Full Track (MP3) *</Label>
                   </div>
 
                   <input
                     ref={fullTrackInputRef}
                     type="file"
-                    accept=".mp3,.wav,audio/mpeg,audio/mp3,audio/wav,audio/x-wav"
+                    accept=".mp3,audio/mpeg,audio/mp3"
                     onChange={handleFullTrackSelect}
                     className="hidden"
                   />
@@ -765,7 +906,7 @@ const ArtistUpload = () => {
                       className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-primary/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
                     >
                       <Upload className="w-8 h-8" />
-                      <span className="text-sm">Click to upload MP3 or WAV file</span>
+                      <span className="text-sm">Click to upload MP3 file</span>
                       <span className="text-xs text-muted-foreground">Max 50MB</span>
                     </button>
                   )}
@@ -886,7 +1027,7 @@ const ArtistUpload = () => {
                 <div className="flex items-center gap-3 mb-3">
                   <Loader2 className="w-5 h-5 text-primary animate-spin" />
                   <span className="text-sm font-display uppercase tracking-wider text-foreground">
-                    Publishing your track...
+                    {stepLabel ?? "Publishing your track..."}
                   </span>
                 </div>
                 <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
@@ -894,6 +1035,63 @@ const ArtistUpload = () => {
                     className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
                     style={{ width: `${uploadProgress}%` }}
                   />
+                </div>
+              </GlowCard>
+            )}
+
+            {/* Detailed error reporting + retry */}
+            {uploadError && !isUploading && (
+              <GlowCard className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h4 className="font-display text-sm uppercase tracking-widest text-foreground">
+                      Upload diagnostics
+                    </h4>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Step failed: <span className="text-foreground font-medium">{uploadError.step}</span>
+                    </p>
+                    <p className="text-sm text-foreground mt-2">{uploadError.userMessage}</p>
+                    {uploadError.hint && (
+                      <p className="text-xs text-muted-foreground mt-1">{uploadError.hint}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-lg border border-border/40 bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground mb-2">Error object (stringified)</p>
+                    <pre className="text-xs whitespace-pre-wrap break-words text-foreground/90">
+                      {uploadError.stringifiedError}
+                    </pre>
+                  </div>
+
+                  {uploadError.http && (uploadError.http.status || uploadError.http.responseText) && (
+                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3">
+                      <p className="text-xs text-muted-foreground mb-2">HTTP details</p>
+                      <pre className="text-xs whitespace-pre-wrap break-words text-foreground/90">
+                        {safeStringify(uploadError.http)}
+                      </pre>
+                    </div>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => {
+                        // Re-run full flow (sequential, no next-step on failure)
+                        const fakeEvent = { preventDefault: () => {} } as unknown as React.FormEvent;
+                        handleSubmit(fakeEvent);
+                      }}
+                    >
+                      Retry
+                    </Button>
+                    {uploadError.step === "session" && (
+                      <Button type="button" onClick={() => navigate("/artist/login")}>
+                        Log In
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </GlowCard>
             )}
