@@ -15,12 +15,14 @@ interface VaultMusicPlayerProps {
   track: Track | null;
   hasVaultAccess: boolean;
   onAccessDenied?: () => void;
+  onPlay?: () => void;
 }
 
 export const VaultMusicPlayer = ({
   track,
   hasVaultAccess,
   onAccessDenied,
+  onPlay,
 }: VaultMusicPlayerProps) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -58,6 +60,8 @@ export const VaultMusicPlayer = ({
         audioRef.current.pause();
       } else {
         audioRef.current.play();
+        // Trigger stream charge on play
+        onPlay?.();
       }
       setIsPlaying(!isPlaying);
     }
