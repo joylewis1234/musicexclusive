@@ -61,18 +61,32 @@ export const ExclusiveTrackCard = ({
             <h4 className="font-display text-sm font-semibold text-foreground truncate">
               {title}
             </h4>
-            {/* Exclusive Badge with Crown */}
-            <div className="relative px-2 py-0.5 rounded-full bg-primary/10 flex-shrink-0">
-              <div className="absolute -top-2 -left-0.5">
-                <div className="absolute inset-0 w-4 h-4 bg-amber-400/40 rounded-full blur-sm -translate-x-0.5 translate-y-0.5" />
+            {/* Exclusive Badge with Crown - Neon Purple */}
+            <div 
+              className="relative px-2.5 py-0.5 rounded-full flex-shrink-0"
+              style={{
+                background: 'hsla(280, 80%, 50%, 0.15)',
+                boxShadow: '0 0 8px hsla(280, 80%, 50%, 0.25)'
+              }}
+            >
+              {/* Gold Crown on top-left corner edge */}
+              <div className="absolute -top-1.5 -left-0.5">
+                <div 
+                  className="absolute inset-0 w-4 h-4 rounded-full blur-sm"
+                  style={{ background: 'rgba(251, 191, 36, 0.4)', transform: 'translate(-1px, 1px)' }}
+                />
                 <Crown 
-                  className="relative w-3 h-3 text-amber-400 rotate-[-20deg]" 
+                  className="relative w-3 h-3 rotate-[-20deg]" 
                   style={{ 
-                    filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.8)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.5))' 
+                    color: '#fbbf24',
+                    filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.9)) drop-shadow(0 0 8px rgba(251, 191, 36, 0.5))' 
                   }} 
                 />
               </div>
-              <span className="text-primary text-[10px] font-display uppercase tracking-wider">
+              <span 
+                className="text-[10px] font-display uppercase tracking-wider pl-1"
+                style={{ color: 'hsl(280, 80%, 70%)' }}
+              >
                 Exclusive
               </span>
             </div>
