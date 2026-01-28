@@ -189,26 +189,26 @@ const ArtistDashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
-        <div className="container max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/20">
+        <div className="container max-w-lg md:max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Mic2 className="w-5 h-5 text-accent" />
+            <Mic2 className="w-5 h-5 text-primary" />
             <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
               Dashboard
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => navigate("/")}
-              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200"
               aria-label="Go home"
             >
               <Home className="w-5 h-5" />
             </button>
             <button
               onClick={handleSignOut}
-              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200"
               aria-label="Sign out"
             >
               <LogOut className="w-5 h-5" />
@@ -219,36 +219,41 @@ const ArtistDashboard = () => {
 
       {/* Main Content */}
       <main className="pt-20 pb-12 px-4">
-        <div className="container max-w-lg md:max-w-xl mx-auto">
+        <div className="container max-w-lg md:max-w-3xl mx-auto space-y-6">
           
-          {/* 1. Welcome Header */}
-          <GlowCard className="p-6 mb-6 text-center">
+          {/* Welcome Header - fade in */}
+          <GlowCard variant="elevated" glowColor="gradient" className="p-6 text-center animate-fade-in">
             <h1 className="font-display text-xl md:text-2xl font-bold text-foreground mb-3">
               Welcome to Music Exclusive
             </h1>
             
             {/* Exclusive Artist Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-4">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
               <Mic2 className="w-4 h-4 text-primary" />
               <span className="text-primary text-sm font-display uppercase tracking-wider">
                 Exclusive Artist
               </span>
             </div>
             
-            <p className="text-muted-foreground text-sm font-body leading-relaxed max-w-xs mx-auto">
+            <p className="text-muted-foreground text-sm font-body leading-relaxed max-w-sm mx-auto">
               Release your music early to fans inside the Vault.
             </p>
           </GlowCard>
 
           {/* Payout Account Status Card */}
-          <GlowCard className="p-5 mb-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+          <GlowCard 
+            variant="flat" 
+            glowColor={payoutStatus === "connected" ? "primary" : "subtle"} 
+            className="p-5 animate-fade-in"
+            style={{ animationDelay: '50ms' }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
                   payoutStatus === "connected" 
-                    ? "bg-green-500/20 text-green-400" 
+                    ? "bg-green-500/10 text-green-400" 
                     : payoutStatus === "pending"
-                    ? "bg-amber-500/20 text-amber-400"
+                    ? "bg-amber-500/10 text-amber-400"
                     : "bg-muted text-muted-foreground"
                 }`}>
                   {payoutStatus === "connected" ? (
@@ -259,75 +264,82 @@ const ArtistDashboard = () => {
                     <Wallet className="w-5 h-5" />
                   )}
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {payoutStatus === "connected" 
-                      ? "Payout account connected" 
+                      ? "Payout connected" 
                       : payoutStatus === "pending"
                       ? "Action required"
-                      : "Payout account not connected"
+                      : "Connect payouts"
                     }
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {payoutStatus === "connected" 
                       ? "Ready to receive earnings"
                       : payoutStatus === "pending"
-                      ? "Stripe requires additional information"
-                      : "Connect to receive your earnings"
+                      ? "Complete Stripe setup"
+                      : "Receive your earnings"
                     }
                   </p>
                 </div>
               </div>
               
-              {payoutStatus !== "connected" && (
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {payoutStatus !== "connected" && (
+                  <Button
+                    size="sm"
+                    variant={payoutStatus === "pending" ? "destructive" : "secondary"}
+                    onClick={handleConnectPayout}
+                    disabled={isConnecting || isVerifying}
+                    className="rounded-xl"
+                  >
+                    {isConnecting || isVerifying ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : payoutStatus === "pending" ? (
+                      "Fix"
+                    ) : (
+                      "Connect"
+                    )}
+                  </Button>
+                )}
+                
                 <Button
                   size="sm"
-                  variant={payoutStatus === "pending" ? "destructive" : "default"}
-                  onClick={handleConnectPayout}
-                  disabled={isConnecting || isVerifying}
+                  variant="ghost"
+                  onClick={() => {
+                    verifyConnectStatus();
+                    toast.info("Checking payout status...");
+                  }}
+                  disabled={isVerifying}
+                  className="rounded-xl w-9 h-9 p-0"
+                  title="Refresh payout status"
                 >
-                  {isConnecting || isVerifying ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : payoutStatus === "pending" ? (
-                    "Fix Now"
-                  ) : (
-                    "Connect Payout Account"
-                  )}
+                  <RefreshCw className={`w-4 h-4 ${isVerifying ? 'animate-spin' : ''}`} />
                 </Button>
-              )}
-              
-              {/* Refresh status button */}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => {
-                  verifyConnectStatus();
-                  toast.info("Checking payout status...");
-                }}
-                disabled={isVerifying}
-                className="ml-2"
-                title="Refresh payout status"
-              >
-                <RefreshCw className={`w-4 h-4 ${isVerifying ? 'animate-spin' : ''}`} />
-              </Button>
+              </div>
             </div>
           </GlowCard>
 
-          {/* 2. Primary Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+          {/* Primary Actions - 2 column grid on desktop */}
+          <div 
+            className="grid grid-cols-1 md:grid-cols-2 gap-3 animate-fade-in"
+            style={{ animationDelay: '100ms' }}
+          >
+            {/* Primary CTA - Upload */}
             <Button 
               size="lg"
-              className="w-full h-14"
+              className="w-full h-14 rounded-2xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 group"
               onClick={() => navigate("/artist/upload")}
             >
-              <Upload className="w-5 h-5 mr-2" />
+              <Upload className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform duration-200" />
               Upload New Track
             </Button>
 
+            {/* Secondary CTA - Edit Profile */}
             <Button 
               size="lg"
-              variant="secondary"
-              className="w-full h-14"
+              variant="outline"
+              className="w-full h-14 rounded-2xl border-border/50 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300"
               onClick={() => navigate("/artist/profile/edit")}
             >
               <Pencil className="w-5 h-5 mr-2" />
@@ -335,46 +347,58 @@ const ArtistDashboard = () => {
             </Button>
           </div>
 
-          {/* 3. Releases Overview */}
-          <div className="mb-4">
+          {/* Releases Section */}
+          <section 
+            className="space-y-4 animate-fade-in"
+            style={{ animationDelay: '150ms' }}
+          >
             <SectionHeader title="Your Exclusive Releases" align="left" />
-          </div>
 
-          {isLoading ? (
-            <GlowCard className="p-8 text-center">
-              <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
-            </GlowCard>
-          ) : tracks.length === 0 ? (
-            <GlowCard className="p-8 text-center">
-              <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground text-sm mb-4">
-                You haven't uploaded any tracks yet.
-              </p>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => navigate("/artist/upload")}
-              >
-                <Upload className="w-4 h-4 mr-2" />
-                Upload Your First Track
-              </Button>
-            </GlowCard>
-          ) : (
-            <div className="space-y-3">
-              {tracks.map((track) => (
-                <TrackManagementCard 
-                  key={track.id} 
-                  track={track} 
-                  onTrackUpdated={handleTrackUpdated}
-                />
-              ))}
-            </div>
-          )}
+            {isLoading ? (
+              <GlowCard variant="flat" className="p-8 text-center">
+                <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+              </GlowCard>
+            ) : tracks.length === 0 ? (
+              <GlowCard variant="flat" className="p-8 text-center">
+                <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm mb-4">
+                  You haven't uploaded any tracks yet.
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-xl"
+                  onClick={() => navigate("/artist/upload")}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Your First Track
+                </Button>
+              </GlowCard>
+            ) : (
+              <div className="space-y-3">
+                {tracks.map((track, index) => (
+                  <div 
+                    key={track.id}
+                    className="animate-fade-in"
+                    style={{ animationDelay: `${200 + index * 50}ms` }}
+                  >
+                    <TrackManagementCard 
+                      track={track} 
+                      onTrackUpdated={handleTrackUpdated}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           {/* Earnings Dashboard */}
-          <div className="mt-8">
+          <section 
+            className="animate-fade-in"
+            style={{ animationDelay: '250ms' }}
+          >
             <EarningsDashboard />
-          </div>
+          </section>
         </div>
       </main>
     </div>
