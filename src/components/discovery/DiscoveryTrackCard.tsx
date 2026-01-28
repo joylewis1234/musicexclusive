@@ -1,7 +1,8 @@
-import { Play, Pause, Share2, Headphones, Loader2, AlertCircle, User } from "lucide-react";
+import { Play, Pause, Share2, Headphones, Loader2, AlertCircle, User, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
+import { useLikeCount } from "@/hooks/useLikeCount";
 
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
@@ -47,6 +48,7 @@ export const DiscoveryTrackCard = ({
   const hasPreview = !!track.preview_audio_url;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreview && !isPreviewPlaying;
+  const likeCount = useLikeCount(track.id);
 
   return (
     <div 
@@ -87,17 +89,26 @@ export const DiscoveryTrackCard = ({
           </div>
         )}
 
-        {/* Share Button */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onShare();
-          }}
-          className="absolute top-3 right-3 p-2 bg-background/60 backdrop-blur-sm rounded-full text-muted-foreground hover:text-primary hover:bg-background/80 transition-all duration-200"
-          aria-label="Share track"
-        >
-          <Share2 className="w-4 h-4" />
-        </button>
+        {/* Top Right Actions: Like Count + Share */}
+        <div className="absolute top-3 right-3 flex items-center gap-2">
+          {/* Like Count (Social Proof) */}
+          <div className="flex items-center gap-1 px-2 py-1 bg-background/60 backdrop-blur-sm rounded-full">
+            <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400/50" />
+            <span className="text-xs font-medium text-foreground/90">{likeCount}</span>
+          </div>
+          
+          {/* Share Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onShare();
+            }}
+            className="p-2 bg-background/60 backdrop-blur-sm rounded-full text-muted-foreground hover:text-primary hover:bg-background/80 transition-all duration-200"
+            aria-label="Share track"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+        </div>
 
         {/* Playing/Loading Indicator */}
         {(isPreviewPlaying || isPreviewLoading) && (
