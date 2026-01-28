@@ -300,7 +300,7 @@ const ArtistProfilePage = () => {
                   </p>
                   {/* Exclusive Badge with Crown */}
                   <div className="relative inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/20 border border-primary/40">
-                    <Crown className="absolute -top-2 -right-2 w-4 h-4 text-amber-400 drop-shadow-lg" style={{ filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6))' }} />
+                    <Crown className="absolute -top-2.5 -left-1 w-4 h-4 text-amber-400 rotate-[-20deg]" style={{ filter: 'drop-shadow(0 0 4px rgba(251, 191, 36, 0.6))' }} />
                     <span className="text-primary text-xs font-display uppercase tracking-wider">
                       Exclusive Artist
                     </span>
@@ -399,7 +399,7 @@ const ArtistProfilePage = () => {
                         </h4>
                         {/* Exclusive Badge with Crown */}
                         <div className="relative px-2 py-0.5 rounded-full bg-primary/10 flex-shrink-0">
-                          <Crown className="absolute -top-1.5 -right-1.5 w-3 h-3 text-amber-400" style={{ filter: 'drop-shadow(0 0 3px rgba(251, 191, 36, 0.6))' }} />
+                          <Crown className="absolute -top-2 -left-0.5 w-3 h-3 text-amber-400 rotate-[-20deg]" style={{ filter: 'drop-shadow(0 0 3px rgba(251, 191, 36, 0.6))' }} />
                           <span className="text-primary text-[10px] font-display uppercase tracking-wider">
                             Exclusive
                           </span>
