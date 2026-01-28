@@ -269,27 +269,27 @@ const ArtistProfilePage = () => {
             {/* Vault Portal Background */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               {/* Animated glow orbs behind */}
-              <div className="absolute inset-0 bg-secondary/20 blur-[60px] rounded-full scale-75 animate-pulse" />
-              <div className="absolute inset-0 bg-accent/15 blur-[50px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
-              <div className="absolute inset-0 bg-primary/15 blur-[55px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
+              <div className="absolute inset-0 bg-secondary/30 blur-[60px] rounded-full scale-75 animate-pulse" />
+              <div className="absolute inset-0 bg-accent/25 blur-[50px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
+              <div className="absolute inset-0 bg-primary/25 blur-[55px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
               
               {/* Vault portal image with breathing glow */}
               <img
                 src={vaultPortal}
                 alt=""
-                className="w-[120%] h-[120%] object-contain vault-glow opacity-40"
+                className="w-[120%] h-[120%] object-contain vault-glow opacity-60"
               />
               
               {/* Inner energy lightning effect */}
               <div className="absolute inset-[15%] rounded-full overflow-hidden mix-blend-screen">
-                <div className="absolute inset-0 animate-vault-lightning-1 opacity-50" />
-                <div className="absolute inset-0 animate-vault-lightning-2 opacity-40" />
-                <div className="absolute inset-0 animate-vault-lightning-3 opacity-30" />
+                <div className="absolute inset-0 animate-vault-lightning-1 opacity-70" />
+                <div className="absolute inset-0 animate-vault-lightning-2 opacity-60" />
+                <div className="absolute inset-0 animate-vault-lightning-3 opacity-50" />
               </div>
             </div>
             
             {/* Dark overlay for text readability */}
-            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/80 to-card/40 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-card/20 pointer-events-none" />
             
             {/* Profile Content - positioned above vault */}
             <div className="relative z-10 px-5 pt-8 pb-5">
