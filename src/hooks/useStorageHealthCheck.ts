@@ -4,10 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 export type StorageHealthCheckResult = {
   checkedAt: string;
   session: { ok: boolean; userId?: string; error?: unknown };
-  artistProfile: { ok: boolean; artistProfileId?: string | null };
   storageBaseUrl: string | null;
   listBuckets: { ok: boolean; buckets?: Array<{ id: string; name: string; public: boolean }>; error?: unknown };
-  testUpload: { ok: boolean; bucket?: string; path?: string; url?: string; error?: unknown; skipped?: boolean; reason?: string };
+  testUpload: { ok: boolean; bucket: string; path?: string; url?: string; error?: unknown };
 };
 
 const safeStringify = (value: unknown) => {
@@ -55,50 +54,53 @@ export const useStorageHealthCheck = () => {
         const r: StorageHealthCheckResult = {
           checkedAt: new Date().toISOString(),
           session: { ok: false, error: sessionError ?? { reason: "missing session" } },
-          artistProfile: { ok: false, artistProfileId: null },
           storageBaseUrl,
           listBuckets: { ok: false, error: "Unauthorized" },
-          testUpload: { ok: false, error: "Unauthorized" },
+          testUpload: { ok: false, bucket: "track_covers", error: "Unauthorized" },
         };
         setResult(r);
         return r;
       }
 
-      const { data: ap } = await supabase
-        .from("artist_profiles")
-        .select("id")
-        .eq("user_id", userId)
-        .maybeSingle();
-      const artistProfileId = ap?.id ?? null;
-
-      const { data, error: fnError } = await supabase.functions.invoke("storage-health-check", {
-        body: { artistProfileId },
-      });
-
-      if (fnError) {
-        const http = await extractHttp(fnError);
-        const r: StorageHealthCheckResult = {
-          checkedAt: new Date().toISOString(),
-          session: { ok: true, userId },
-          artistProfile: { ok: Boolean(artistProfileId), artistProfileId },
-          storageBaseUrl,
-          listBuckets: { ok: false, error: { fnError, http } },
-          testUpload: { ok: false, error: { fnError, http } },
+      // 1) list buckets (client-side) — may be blocked depending on backend permissions
+      let listBuckets: StorageHealthCheckResult["listBuckets"] = { ok: false, error: "not run" };
+      try {
+        const { data: buckets, error: bucketsError } = await supabase.storage.listBuckets();
+        if (bucketsError) throw bucketsError;
+        listBuckets = {
+          ok: true,
+          buckets: (buckets ?? []).map((b) => ({ id: b.id, name: b.name, public: b.public })),
         };
-        setResult(r);
-        return r;
+      } catch (e) {
+        listBuckets = { ok: false, error: e };
+      }
+
+      // 2) test upload (client-side) into track_covers/test.txt as requested
+      let testUpload: StorageHealthCheckResult["testUpload"] = { ok: false, bucket: "track_covers" };
+      try {
+        const path = "test.txt";
+        const content = new Blob([new Uint8Array(1024)], { type: "text/plain" });
+        const { data, error: uploadError } = await supabase.storage.from("track_covers").upload(path, content, {
+          cacheControl: "60",
+          upsert: true,
+          contentType: "text/plain",
+        });
+        if (uploadError || !data?.path) throw uploadError ?? new Error("Upload returned no path");
+
+        const { data: urlData } = supabase.storage.from("track_covers").getPublicUrl(data.path);
+        testUpload = { ok: true, bucket: "track_covers", path: data.path, url: urlData.publicUrl };
+      } catch (e) {
+        testUpload = { ok: false, bucket: "track_covers", error: e };
       }
 
       const r: StorageHealthCheckResult = {
-        checkedAt: data?.checkedAt ?? new Date().toISOString(),
-        session: data?.session?.ok ? { ok: true, userId: data?.session?.userId ?? userId } : { ok: false, error: data?.session?.error },
-        artistProfile: { ok: Boolean(data?.artistProfile?.ok), artistProfileId: data?.artistProfile?.artistProfileId ?? artistProfileId },
+        checkedAt: new Date().toISOString(),
+        session: { ok: true, userId },
         storageBaseUrl,
-        listBuckets: data?.listBuckets?.ok ? { ok: true, buckets: data?.listBuckets?.buckets ?? [] } : { ok: false, error: data?.listBuckets?.error },
-        testUpload: data?.testUpload?.ok
-          ? { ok: true, bucket: data?.testUpload?.bucket, path: data?.testUpload?.path, url: data?.testUpload?.url }
-          : { ok: false, ...(data?.testUpload ?? {}) },
+        listBuckets,
+        testUpload,
       };
+
       setResult(r);
       return r;
     } catch (e) {
@@ -116,18 +118,5 @@ export const useStorageHealthCheck = () => {
 
   return { isRunning, result, error, run, safeStringify };
 };
-
-async function extractHttp(fnError: any) {
-  try {
-    const ctx = fnError?.context;
-    if (ctx && typeof ctx === "object" && typeof ctx.clone === "function" && typeof ctx.text === "function") {
-      const text = await ctx.clone().text().catch(() => undefined);
-      return { status: ctx.status, statusText: ctx.statusText, responseText: text };
-    }
-  } catch {
-    // ignore
-  }
-  return undefined;
-}
 
 export { safeStringify };
