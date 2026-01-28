@@ -36,7 +36,12 @@ export const useStorageHealthCheck = () => {
 
   const storageBaseUrl = useMemo(() => {
     const anyClient = supabase as any;
-    return (anyClient?.storageUrl as string | undefined) ?? (anyClient?.supabaseUrl as string | undefined) ?? null;
+    const raw = anyClient?.storageUrl ?? anyClient?.supabaseUrl ?? null;
+    // Ensure we return a string, not a URL object
+    if (raw === null || raw === undefined) return null;
+    if (typeof raw === "string") return raw;
+    if (typeof raw === "object" && typeof raw.toString === "function") return String(raw);
+    return null;
   }, []);
 
   const run = useCallback(async () => {
