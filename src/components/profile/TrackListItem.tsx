@@ -3,6 +3,7 @@ import { Heart } from "lucide-react";
 import { useTrackLikes } from "@/hooks/useTrackLikes";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 import artist1 from "@/assets/artist-1.jpg";
 
@@ -13,6 +14,7 @@ interface TrackListItemProps {
     artworkUrl: string | null;
   };
   fanId: string | null;
+  hasVaultAccess: boolean;
   isSelected: boolean;
   isHighlighted?: boolean;
   onSelect: () => void;
@@ -21,6 +23,7 @@ interface TrackListItemProps {
 export const TrackListItem = forwardRef<HTMLDivElement, TrackListItemProps>(({
   track,
   fanId,
+  hasVaultAccess,
   isSelected,
   isHighlighted = false,
   onSelect,
@@ -29,10 +32,22 @@ export const TrackListItem = forwardRef<HTMLDivElement, TrackListItemProps>(({
 
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (!hasVaultAccess) {
+      toast({
+        title: "Vault Access Required",
+        description: "Enter the Vault to like and stream exclusive music.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     if (fanId) {
       toggleLike();
     }
   };
+
+  const canLike = fanId && hasVaultAccess;
 
   const showHighlight = isHighlighted || isSelected;
 
@@ -88,13 +103,14 @@ export const TrackListItem = forwardRef<HTMLDivElement, TrackListItemProps>(({
         {/* Like button */}
         <button
           onClick={handleLikeClick}
-          disabled={!fanId || isLoading}
+          disabled={isLoading}
           className={cn(
             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200",
             isLiked
               ? "bg-pink-500/20 text-pink-400"
               : "bg-muted/30 text-muted-foreground hover:bg-muted/50",
-            (!fanId || isLoading) && "opacity-50 cursor-not-allowed"
+            !canLike && "opacity-50",
+            isLoading && "cursor-not-allowed"
           )}
           aria-label={isLiked ? "Unlike" : "Like"}
         >
