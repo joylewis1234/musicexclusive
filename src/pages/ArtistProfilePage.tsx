@@ -107,7 +107,7 @@ const ArtistProfilePage = () => {
 
         setArtistProfile(profile);
 
-        // Get artist's email from their user_id for track fetching
+        // Get artist's email for stream charging (from applications or auth)
         const { data: userData } = await supabase
           .from("artist_applications")
           .select("contact_email")
@@ -117,11 +117,11 @@ const ArtistProfilePage = () => {
         const email = userData?.contact_email || "";
         setArtistEmail(email);
 
-        // Fetch tracks for this artist
+        // Fetch tracks for this artist using profile.id (UUID)
         const { data: trackData } = await supabase
           .from("tracks")
           .select("*")
-          .eq("artist_id", email)
+          .eq("artist_id", profile.id)
           .not("genre", "like", "[DELETED]%")
           .not("genre", "like", "[DISABLED]%")
           .order("created_at", { ascending: false });
