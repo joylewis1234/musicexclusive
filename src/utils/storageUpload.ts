@@ -27,9 +27,11 @@ type UploadWithXhrParams = {
   onProgress?: (pct: number) => void;
 };
 
+const RETRY_DELAYS_MS = [1500, 3000, 5000]; // 3 retries with exponential back-off
+
 /**
- * XHR-based upload to improve mobile reliability vs fetch.
- * Sends multipart/form-data to the Storage object endpoint.
+ * XHR-based upload with automatic retry on network errors.
+ * Improved mobile reliability vs fetch.
  */
 export async function uploadToStorageWithXhr(params: UploadWithXhrParams): Promise<StorageXhrUploadResult> {
   const {
@@ -48,52 +50,89 @@ export async function uploadToStorageWithXhr(params: UploadWithXhrParams): Promi
   const safeObjectPath = objectPath.replace(/^\/+/, "");
   const endpoint = `${url.replace(/\/+$/, "")}/storage/v1/object/${bucket}/${encodeStoragePath(safeObjectPath)}`;
 
-  // IMPORTANT: do not set Content-Type header (browser needs boundary)
-  const form = new FormData();
-  form.append("cacheControl", cacheControl);
-
-  // Force an explicit per-part content type
-  const blob = file.slice(0, file.size, contentType);
-  const typedFile = new File([blob], "file", { type: contentType });
-  form.append("", typedFile);
-
-  return await new Promise<StorageXhrUploadResult>((resolve) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open("POST", endpoint);
-    xhr.responseType = "text";
-
-    xhr.setRequestHeader("apikey", apikey);
-    xhr.setRequestHeader("authorization", `Bearer ${accessToken}`);
-    xhr.setRequestHeader("x-upsert", upsert ? "true" : "false");
-
-    xhr.upload.onprogress = (evt) => {
+  const attemptUpload = (): Promise<StorageXhrUploadResult> => {
+    return new Promise<StorageXhrUploadResult>((resolve) => {
       try {
-        if (!evt.lengthComputable) return;
-        const pct = Math.max(0, Math.min(100, (evt.loaded / evt.total) * 100));
-        onProgress?.(pct);
-      } catch {
-        // ignore
+        const form = new FormData();
+        form.append("cacheControl", cacheControl);
+
+        // Force explicit content type
+        const blob = file.slice(0, file.size, contentType);
+        const typedFile = new File([blob], "file", { type: contentType });
+        form.append("", typedFile);
+
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", endpoint);
+        xhr.responseType = "text";
+
+        xhr.setRequestHeader("apikey", apikey);
+        xhr.setRequestHeader("authorization", `Bearer ${accessToken}`);
+        xhr.setRequestHeader("x-upsert", upsert ? "true" : "false");
+
+        xhr.upload.onprogress = (evt) => {
+          try {
+            if (!evt.lengthComputable) return;
+            const pct = Math.max(0, Math.min(100, (evt.loaded / evt.total) * 100));
+            onProgress?.(pct);
+          } catch {
+            // ignore progress errors
+          }
+        };
+
+        xhr.onerror = () => {
+          resolve({ ok: false, status: xhr.status || 0, responseText: xhr.responseText || "XHR network error" });
+        };
+
+        xhr.onabort = () => {
+          resolve({ ok: false, status: xhr.status || 0, responseText: xhr.responseText || "XHR aborted" });
+        };
+
+        xhr.ontimeout = () => {
+          resolve({ ok: false, status: 0, responseText: "XHR timeout" });
+        };
+
+        xhr.onload = () => {
+          const status = xhr.status || 0;
+          const ok = status >= 200 && status < 300;
+          resolve({ ok, status, responseText: xhr.responseText || "" });
+        };
+
+        // Set a generous timeout for slow mobile connections (90s)
+        xhr.timeout = 90_000;
+
+        xhr.send(form);
+      } catch (err) {
+        resolve({ ok: false, status: 0, responseText: safeStringify(err) });
       }
-    };
+    });
+  };
 
-    xhr.onerror = () => {
-      resolve({ ok: false, status: xhr.status || 0, responseText: xhr.responseText || "XHR network error" });
-    };
+  // Retry logic with exponential back-off
+  let lastResult: StorageXhrUploadResult = { ok: false, status: 0, responseText: "No attempt made" };
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    lastResult = await attemptUpload();
 
-    xhr.onabort = () => {
-      resolve({ ok: false, status: xhr.status || 0, responseText: xhr.responseText || "XHR aborted" });
-    };
-
-    xhr.onload = () => {
-      const status = xhr.status || 0;
-      const ok = status >= 200 && status < 300;
-      resolve({ ok, status, responseText: xhr.responseText || "" });
-    };
-
-    try {
-      xhr.send(form);
-    } catch (err) {
-      resolve({ ok: false, status: 0, responseText: safeStringify(err) });
+    if (lastResult.ok) {
+      return lastResult;
     }
-  });
+
+    // Don't retry on 4xx client errors (e.g., 403 Forbidden, 400 Bad Request)
+    if (lastResult.status >= 400 && lastResult.status < 500) {
+      console.warn(`[Storage] Non-retryable error: ${lastResult.status} - ${lastResult.responseText}`);
+      return lastResult;
+    }
+
+    // Retry on network errors or 5xx server errors
+    const isLastAttempt = attempt >= RETRY_DELAYS_MS.length;
+    if (isLastAttempt) {
+      console.error(`[Storage] All ${RETRY_DELAYS_MS.length + 1} attempts failed`, lastResult);
+      return lastResult;
+    }
+
+    const delay = RETRY_DELAYS_MS[attempt];
+    console.warn(`[Storage] Attempt ${attempt + 1} failed. Retrying in ${delay}ms...`, lastResult);
+    await new Promise((r) => setTimeout(r, delay));
+  }
+
+  return lastResult;
 }
