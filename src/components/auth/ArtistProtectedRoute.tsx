@@ -14,17 +14,19 @@ interface ArtistProtectedRouteProps {
 type ArtistStatus = "pending" | "approved_pending_setup" | "active" | "rejected" | null;
 
 export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) => {
-  // DEV BYPASS: Skip all auth checks for testing
-  if (DEV_BYPASS) {
-    return <>{children}</>;
-  }
-
+  // All hooks MUST be called unconditionally before any early returns
   const { user, role, isLoading: authLoading } = useAuth();
   const location = useLocation();
   const [artistStatus, setArtistStatus] = useState<ArtistStatus>(null);
   const [statusLoading, setStatusLoading] = useState(true);
 
   useEffect(() => {
+    // Skip fetch if DEV_BYPASS is on
+    if (DEV_BYPASS) {
+      setStatusLoading(false);
+      return;
+    }
+
     const fetchArtistStatus = async () => {
       if (!user) {
         setStatusLoading(false);
@@ -59,6 +61,11 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
       setStatusLoading(false);
     }
   }, [user, role]);
+
+  // DEV BYPASS: Skip all auth checks for testing
+  if (DEV_BYPASS) {
+    return <>{children}</>;
+  }
 
   // Show loading while checking auth and status
   if (authLoading || statusLoading) {
