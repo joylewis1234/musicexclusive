@@ -16,7 +16,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { StorageHealthCheckPanel } from "@/components/artist/StorageHealthCheckPanel";
 
 const GENRES = [
   "Hip-Hop",
@@ -36,16 +35,12 @@ const GENRES = [
   "Other",
 ];
 
-type UploadStatus = "idle" | "uploading_cover" | "success" | "error";
+type UploadStatus = "idle" | "uploading_cover" | "uploading_audio" | "saving_track" | "success" | "error";
 
 interface UploadError {
   step: string;
   message: string;
   details?: string;
-}
-
-interface UploadResult {
-  coverUrl: string;
 }
 
 const ArtistUpload = () => {
@@ -66,7 +61,6 @@ const ArtistUpload = () => {
   // Upload state
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [error, setError] = useState<UploadError | null>(null);
-  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
   // Refs
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -79,7 +73,7 @@ const ArtistUpload = () => {
     };
   }, [coverPreview]);
 
-  const isFormValid = title.trim() && genre && coverFile && agreesToTerms;
+  const isFormValid = title.trim() && genre && coverFile && audioFile && agreesToTerms;
 
   const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,21 +113,31 @@ const ArtistUpload = () => {
     setAudioFile(file);
   };
 
+  const logUploadError = (bucket: string, file: File, error: unknown) => {
+    console.error(`[Upload Error] Bucket: ${bucket}`, {
+      fileName: file.name,
+      fileType: file.type,
+      fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      error: error,
+      errorString: String(error),
+      errorJSON: JSON.stringify(error, Object.getOwnPropertyNames(error as object), 2),
+    });
+  };
+
   const handlePublish = async () => {
     if (!isFormValid || !user) return;
 
     setError(null);
-    setUploadResult(null);
     setStatus("uploading_cover");
 
     try {
-      // Get fresh session
+      // Step 1: Get fresh session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !sessionData.session) {
         throw { step: "auth", message: "Session expired. Please log in again." };
       }
 
-      // Get artist profile
+      // Step 2: Get artist profile
       const { data: artistProfile, error: profileError } = await supabase
         .from("artist_profiles")
         .select("id")
@@ -141,50 +145,130 @@ const ArtistUpload = () => {
         .maybeSingle();
 
       if (profileError || !artistProfile) {
+        console.error("Artist profile error:", profileError);
         throw { step: "auth", message: "Artist profile not found." };
       }
 
-      // Build form data for server-side upload (COVER ONLY)
-      const formData = new FormData();
-      formData.append("coverFile", coverFile!);
-      formData.append("artistId", artistProfile.id);
-      formData.append("title", title.trim());
-      formData.append("genre", genre);
+      const artistId = artistProfile.id;
+      const timestamp = Date.now();
+      const sanitizedTitle = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
 
-      // Call edge function for COVER ONLY TEST
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/uploadTrackAssets`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${sessionData.session.access_token}`,
-          },
-          body: formData,
-        }
-      );
+      // Step 3: Upload cover to track_covers bucket
+      const coverExt = coverFile!.name.split(".").pop()?.toLowerCase() || "jpg";
+      const coverPath = `${artistId}/${sanitizedTitle}-${timestamp}.${coverExt}`;
+      
+      console.log(`[Upload] Starting cover upload to track_covers/${coverPath}`);
+      
+      const { data: coverData, error: coverError } = await supabase.storage
+        .from("track_covers")
+        .upload(coverPath, coverFile!, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: coverFile!.type || `image/${coverExt}`,
+        });
 
-      const result = await response.json();
-
-      if (!response.ok) {
+      if (coverError) {
+        logUploadError("track_covers", coverFile!, coverError);
         throw {
           step: "cover_upload",
-          message: result.error || "Cover upload failed",
-          details: JSON.stringify(result, null, 2),
+          message: coverError.message || "Cover upload failed",
+          details: JSON.stringify(coverError, null, 2),
         };
       }
 
-      // Success - show the URL
-      setUploadResult({ coverUrl: result.coverUrl });
-      setStatus("success");
-      toast({ title: "Cover uploaded!", description: "URL displayed below" });
+      console.log("[Upload] Cover uploaded successfully:", coverData);
 
-    } catch (err: any) {
+      // Get cover public URL
+      const { data: coverUrlData } = supabase.storage
+        .from("track_covers")
+        .getPublicUrl(coverData.path);
+      
+      const coverUrl = coverUrlData.publicUrl;
+      console.log("[Upload] Cover public URL:", coverUrl);
+
+      // Step 4: Upload audio to track_audio bucket
+      setStatus("uploading_audio");
+      const audioPath = `${artistId}/${sanitizedTitle}-${timestamp}.mp3`;
+      
+      console.log(`[Upload] Starting audio upload to track_audio/${audioPath}`);
+      
+      const { data: audioData, error: audioError } = await supabase.storage
+        .from("track_audio")
+        .upload(audioPath, audioFile!, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: "audio/mpeg",
+        });
+
+      if (audioError) {
+        logUploadError("track_audio", audioFile!, audioError);
+        throw {
+          step: "audio_upload",
+          message: audioError.message || "Audio upload failed",
+          details: JSON.stringify(audioError, null, 2),
+        };
+      }
+
+      console.log("[Upload] Audio uploaded successfully:", audioData);
+
+      // Get audio public URL
+      const { data: audioUrlData } = supabase.storage
+        .from("track_audio")
+        .getPublicUrl(audioData.path);
+      
+      const audioUrl = audioUrlData.publicUrl;
+      console.log("[Upload] Audio public URL:", audioUrl);
+
+      // Step 5: Insert track record
+      setStatus("saving_track");
+      
+      const { data: trackData, error: trackError } = await supabase
+        .from("tracks")
+        .insert({
+          artist_id: artistId,
+          title: title.trim(),
+          genre: genre,
+          artwork_url: coverUrl,
+          full_audio_url: audioUrl,
+        })
+        .select("id")
+        .single();
+
+      if (trackError) {
+        console.error("[Upload] Track insert error:", trackError);
+        throw {
+          step: "database",
+          message: trackError.message || "Failed to save track",
+          details: JSON.stringify(trackError, null, 2),
+        };
+      }
+
+      console.log("[Upload] Track saved successfully:", trackData);
+
+      // Success!
+      setStatus("success");
+      toast({ title: "Track uploaded!", description: "Your exclusive track is now live." });
+      
+      // Redirect to dashboard after short delay
+      setTimeout(() => {
+        navigate("/artist/dashboard");
+      }, 1500);
+
+    } catch (err: unknown) {
       console.error("Upload error:", err);
       setStatus("error");
+      
+      const uploadError = err as UploadError;
       setError({
-        step: err.step || "unknown",
-        message: err.message || "An unexpected error occurred",
-        details: err.details,
+        step: uploadError.step || "unknown",
+        message: uploadError.message || "An unexpected error occurred",
+        details: uploadError.details,
+      });
+      
+      toast({
+        title: "Upload failed",
+        description: uploadError.message || "Something went wrong. Please try again.",
+        variant: "destructive",
       });
     }
   };
@@ -198,8 +282,12 @@ const ArtistUpload = () => {
     switch (status) {
       case "uploading_cover":
         return "Uploading cover art...";
+      case "uploading_audio":
+        return "Uploading audio file...";
+      case "saving_track":
+        return "Saving track...";
       case "success":
-        return "Cover uploaded successfully!";
+        return "Track uploaded successfully!";
       default:
         return "";
     }
@@ -213,14 +301,11 @@ const ArtistUpload = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/artist/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-display text-lg font-semibold tracking-wide">Upload Track (Cover Test Only)</h1>
+          <h1 className="font-display text-lg font-semibold tracking-wide">Upload Exclusive Track</h1>
         </div>
       </div>
 
       <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
-        {/* Storage diagnostics */}
-        <StorageHealthCheckPanel />
-
         {/* Track Title */}
         <div className="space-y-2">
           <Label htmlFor="title">Track Title *</Label>
@@ -253,7 +338,7 @@ const ArtistUpload = () => {
 
         {/* Cover Art */}
         <div className="space-y-2">
-          <Label>Cover Art * (JPG, PNG, or WEBP)</Label>
+          <Label>Cover Art * (JPG, PNG, or WEBP, max 10MB)</Label>
           <input
             ref={coverInputRef}
             type="file"
@@ -285,14 +370,39 @@ const ArtistUpload = () => {
           </GlowCard>
         </div>
 
-        {/* Audio File - DISABLED FOR TESTING */}
-        <div className="space-y-2 opacity-50">
-          <Label>Audio File (DISABLED - Cover test only)</Label>
-          <GlowCard className="p-4">
-            <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground">
-              <Music className="h-8 w-8" />
-              <span className="text-sm">Audio upload disabled for this test</span>
-            </div>
+        {/* Audio File */}
+        <div className="space-y-2">
+          <Label>Audio File * (MP3 only, max 50MB)</Label>
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/mpeg,audio/mp3"
+            onChange={handleAudioSelect}
+            className="hidden"
+            disabled={status !== "idle"}
+          />
+          <GlowCard
+            className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => status === "idle" && audioInputRef.current?.click()}
+          >
+            {audioFile ? (
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Music className="h-8 w-8 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{audioFile.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground">
+                <Music className="h-8 w-8" />
+                <span className="text-sm">Tap to select audio file</span>
+              </div>
+            )}
           </GlowCard>
         </div>
 
@@ -310,7 +420,7 @@ const ArtistUpload = () => {
         </div>
 
         {/* Upload Progress/Status */}
-        {status !== "idle" && status !== "error" && !uploadResult && (
+        {status !== "idle" && status !== "error" && status !== "success" && (
           <GlowCard className="p-4">
             <div className="flex items-center gap-3">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -319,24 +429,14 @@ const ArtistUpload = () => {
           </GlowCard>
         )}
 
-        {/* Success - Show URL */}
-        {status === "success" && uploadResult && (
+        {/* Success */}
+        {status === "success" && (
           <GlowCard className="p-4 border-green-500/50">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <CheckCircle className="h-5 w-5 text-green-500" />
-                <span className="text-sm font-medium text-green-500">Cover uploaded successfully!</span>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Cover URL:</Label>
-                <pre className="text-xs bg-muted/50 p-3 rounded-lg overflow-x-auto break-all">
-                  {uploadResult.coverUrl}
-                </pre>
-              </div>
-              <Button variant="secondary" size="sm" onClick={handleRetry}>
-                Upload Another
-              </Button>
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-green-500" />
+              <span className="text-sm font-medium text-green-500">{getStatusMessage()}</span>
             </div>
+            <p className="text-xs text-muted-foreground mt-2">Redirecting to dashboard...</p>
           </GlowCard>
         )}
 
@@ -365,22 +465,22 @@ const ArtistUpload = () => {
           </GlowCard>
         )}
 
-        {/* Test Button */}
+        {/* Publish Button */}
         <Button
           className="w-full"
           size="lg"
           disabled={!isFormValid || status !== "idle"}
           onClick={handlePublish}
         >
-          {status === "uploading_cover" ? (
+          {status === "idle" ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Uploading Cover...
+              <Upload className="h-4 w-4 mr-2" />
+              Publish Exclusive Track
             </>
           ) : (
             <>
-              <Upload className="h-4 w-4 mr-2" />
-              Test Cover Upload
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              {getStatusMessage()}
             </>
           )}
         </Button>
