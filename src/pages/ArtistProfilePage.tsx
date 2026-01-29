@@ -1,27 +1,22 @@
-import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { ChevronLeft, Loader2, Music, Crown, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GlowCard } from "@/components/ui/GlowCard";
-import { VaultMusicPlayer } from "@/components/player/VaultMusicPlayer";
-import { ExclusiveTrackCard } from "@/components/profile/ExclusiveTrackCard";
+import { ArtistProfileHero } from "@/components/profile/ArtistProfileHero";
+import { ArtistAboutSection } from "@/components/profile/ArtistAboutSection";
+import { AppleMusicTrackRow } from "@/components/profile/AppleMusicTrackRow";
+import { CompactVaultPlayer } from "@/components/profile/CompactVaultPlayer";
+import { ShareArtistSection } from "@/components/profile/ShareArtistSection";
+import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { ShareExclusiveTrackModal } from "@/components/profile/ShareExclusiveTrackModal";
-import { useAuth } from "@/contexts/AuthContext";
+import { useTrackLikes } from "@/hooks/useTrackLikes";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import {
-  ArrowLeft,
-  Headphones,
-  LayoutDashboard,
-  Compass,
-  Music,
-  AlertTriangle,
-  Eye,
-} from "lucide-react";
-import artist1 from "@/assets/artist-1.jpg";
-import vaultPortal from "@/assets/vault-portal.png";
 
-// Types
+import artist1 from "@/assets/artist-1.jpg";
+
 interface ArtistProfile {
   id: string;
   user_id: string;
@@ -42,9 +37,12 @@ interface TrackData {
   artist_id: string;
 }
 
-interface TrackLikeState {
-  count: number;
-  isLiked: boolean;
+interface PlayerTrack {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string;
+  audioUrl: string;
 }
 
 type ViewerContext = "fan" | "artist-own" | "artist-preview";
@@ -55,11 +53,9 @@ const ArtistProfilePage = () => {
   const [searchParams] = useSearchParams();
   const { user, role } = useAuth();
   
-  // View mode from query param
   const isPreviewMode = searchParams.get("view") === "fan";
   const highlightTrackId = searchParams.get("track");
 
-  // State
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [tracks, setTracks] = useState<TrackData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -67,34 +63,24 @@ const ArtistProfilePage = () => {
   const [viewerContext, setViewerContext] = useState<ViewerContext>("fan");
   const [hasVaultAccess, setHasVaultAccess] = useState(false);
   const [fanId, setFanId] = useState<string | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<PlayerTrack | null>(null);
+  const [showAccessGate, setShowAccessGate] = useState(false);
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [trackToShare, setTrackToShare] = useState<TrackData | null>(null);
+  const [artistEmail, setArtistEmail] = useState<string>("");
+  
+  const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const hasScrolledToTrack = useRef(false);
 
-  // Track selection and player
-  const [selectedTrack, setSelectedTrack] = useState<TrackData | null>(null);
-  const [trackLikes, setTrackLikes] = useState<Record<string, TrackLikeState>>({});
-
-  // Share modal
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  const [shareTrack, setShareTrack] = useState<TrackData | null>(null);
-
-  // Stream charging
+  const { isLiked, toggleLike } = useTrackLikes(selectedTrack?.id || "", fanId);
   const { chargeStream, hasBeenCharged } = useStreamCharge(user?.email);
 
-  // Determine artist email for stream charges
-  const [artistEmail, setArtistEmail] = useState<string>("");
-
-  /**
-   * Generate public URL for a storage path if needed
-   */
-  const ensurePublicUrl = async (
-    track: TrackData
-  ): Promise<TrackData> => {
-    // If full_audio_url is already set and valid, return as-is
+  // Generate public URL for storage path if needed
+  const ensurePublicUrl = async (track: TrackData): Promise<TrackData> => {
     if (track.full_audio_url && track.full_audio_url.startsWith("http")) {
       return track;
     }
 
-    // Try to generate URL from stored path pattern
-    // Path format: artists/{artistId}/{trackId}.mp3
     const audioPath = `artists/${track.artist_id}/${track.id}.mp3`;
     const { data: audioData } = supabase.storage
       .from("track_audio")
@@ -102,7 +88,6 @@ const ArtistProfilePage = () => {
 
     const newAudioUrl = audioData?.publicUrl || "";
 
-    // Also check cover
     let newArtworkUrl = track.artwork_url;
     if (!track.artwork_url || !track.artwork_url.startsWith("http")) {
       const coverPath = `artists/${track.artist_id}/${track.id}.jpg`;
@@ -112,10 +97,7 @@ const ArtistProfilePage = () => {
       newArtworkUrl = coverData?.publicUrl || null;
     }
 
-    // Update the database record if we generated new URLs
     if (newAudioUrl && newAudioUrl !== track.full_audio_url) {
-      console.log("[ArtistProfile] Generating missing URL for track:", track.title, { audioPath, newAudioUrl });
-      
       await supabase
         .from("tracks")
         .update({
@@ -142,7 +124,6 @@ const ArtistProfilePage = () => {
       }
 
       try {
-        // Fetch artist profile by ID
         const { data: profile, error: profileError } = await supabase
           .from("artist_profiles")
           .select("id, user_id, artist_name, genre, bio, avatar_url")
@@ -157,17 +138,14 @@ const ArtistProfilePage = () => {
 
         setArtistProfile(profile);
 
-        // Get artist's email for stream charging (from applications or auth)
         const { data: userData } = await supabase
           .from("artist_applications")
           .select("contact_email")
           .eq("artist_name", profile.artist_name)
           .maybeSingle();
 
-        const email = userData?.contact_email || "";
-        setArtistEmail(email);
+        setArtistEmail(userData?.contact_email || "");
 
-        // Fetch tracks for this artist using profile.id (UUID)
         const { data: trackData } = await supabase
           .from("tracks")
           .select("*")
@@ -178,23 +156,17 @@ const ArtistProfilePage = () => {
           .order("created_at", { ascending: false });
 
         if (trackData && trackData.length > 0) {
-          // Ensure all tracks have valid public URLs
           const tracksWithUrls = await Promise.all(
             trackData.map(t => ensurePublicUrl(t))
           );
-          
           setTracks(tracksWithUrls);
 
-          // If highlight track is provided, select it
           if (highlightTrackId) {
             const highlightedTrack = tracksWithUrls.find(t => t.id === highlightTrackId);
             if (highlightedTrack) {
-              setSelectedTrack(highlightedTrack);
+              handleSelectTrack(highlightedTrack);
             }
           }
-
-          // Fetch like counts for all tracks
-          await fetchTrackLikes(tracksWithUrls.map(t => t.id));
         } else {
           setTracks([]);
         }
@@ -214,20 +186,14 @@ const ArtistProfilePage = () => {
     const checkAccess = async () => {
       if (!artistProfile) return;
 
-      // Check if artist owns this profile
       const isOwner = user?.id === artistProfile.user_id;
 
       if (role === "artist" && isOwner) {
-        if (isPreviewMode) {
-          setViewerContext("artist-preview");
-        } else {
-          setViewerContext("artist-own");
-        }
-        setHasVaultAccess(true); // Artists can always access their own content
+        setViewerContext(isPreviewMode ? "artist-preview" : "artist-own");
+        setHasVaultAccess(true);
         return;
       }
 
-      // Fan view - check vault access
       setViewerContext("fan");
 
       if (!user?.email) {
@@ -235,7 +201,6 @@ const ArtistProfilePage = () => {
         return;
       }
 
-      // Check vault membership
       const { data: vaultMember } = await supabase
         .from("vault_members")
         .select("id, vault_access_active")
@@ -253,104 +218,81 @@ const ArtistProfilePage = () => {
     checkAccess();
   }, [artistProfile, user, role, isPreviewMode]);
 
-  // Fetch like counts for tracks
-  const fetchTrackLikes = async (trackIds: string[]) => {
-    const likeStates: Record<string, TrackLikeState> = {};
-
-    for (const trackId of trackIds) {
-      // Get total count
-      const { count } = await supabase
-        .from("track_likes")
-        .select("*", { count: "exact", head: true })
-        .eq("track_id", trackId);
-
-      // Check if current fan has liked
-      let isLiked = false;
-      if (fanId) {
-        const { data } = await supabase
-          .from("track_likes")
-          .select("id")
-          .eq("track_id", trackId)
-          .eq("fan_id", fanId)
-          .maybeSingle();
-        isLiked = !!data;
+  // Scroll to highlighted track
+  useEffect(() => {
+    if (highlightTrackId && tracks.length > 0 && !hasScrolledToTrack.current) {
+      const trackElement = trackRefs.current[highlightTrackId];
+      if (trackElement) {
+        setTimeout(() => {
+          trackElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+        hasScrolledToTrack.current = true;
       }
-
-      likeStates[trackId] = { count: count || 0, isLiked };
     }
+  }, [highlightTrackId, tracks]);
 
-    setTrackLikes(likeStates);
+  const handleSelectTrack = (track: TrackData) => {
+    setSelectedTrack({
+      id: track.id,
+      title: track.title,
+      artist: artistProfile?.artist_name || "Unknown Artist",
+      artworkUrl: track.artwork_url || artistProfile?.avatar_url || artist1,
+      audioUrl: track.full_audio_url || "",
+    });
   };
 
-  // Refresh likes when fanId changes
-  useEffect(() => {
-    if (tracks.length > 0 && fanId) {
-      fetchTrackLikes(tracks.map(t => t.id));
+  const handlePlayAll = () => {
+    if (tracks.length > 0 && !selectedTrack) {
+      handleSelectTrack(tracks[0]);
     }
-  }, [fanId, tracks.length]);
+  };
 
-  // Handle like toggle
-  const handleLikeToggle = async (trackId: string) => {
-    if (!fanId || !hasVaultAccess) {
-      toast.error("Enter the Vault to like and stream exclusive music.");
+  const handleShareTrack = (track: TrackData) => {
+    if (!hasVaultAccess) {
+      toast.error("Enter the Vault to share exclusive music.");
       return;
     }
+    setTrackToShare(track);
+    setShareModalOpen(true);
+  };
 
-    const currentState = trackLikes[trackId] || { count: 0, isLiked: false };
+  const handleShareArtist = () => {
+    if (!hasVaultAccess) {
+      toast.error("Enter the Vault to share artists.");
+      return;
+    }
+    toast.info("Artist sharing coming soon!");
+  };
 
-    if (currentState.isLiked) {
-      // Unlike
-      await supabase
-        .from("track_likes")
-        .delete()
-        .eq("track_id", trackId)
-        .eq("fan_id", fanId);
-
-      setTrackLikes(prev => ({
-        ...prev,
-        [trackId]: { count: Math.max(0, prev[trackId].count - 1), isLiked: false }
-      }));
-    } else {
-      // Like
-      await supabase.from("track_likes").insert({
-        track_id: trackId,
-        fan_id: fanId,
-      });
-
-      setTrackLikes(prev => ({
-        ...prev,
-        [trackId]: { count: (prev[trackId]?.count || 0) + 1, isLiked: true }
-      }));
+  const handlePlayerLike = () => {
+    if (!hasVaultAccess) {
+      toast.error("Enter the Vault to like tracks.");
+      return;
+    }
+    if (fanId) {
+      toggleLike();
     }
   };
 
-  // Handle track selection
-  const handleSelectTrack = (track: TrackData) => {
-    setSelectedTrack(track);
+  const handlePlayerShare = () => {
+    if (selectedTrack) {
+      const track = tracks.find(t => t.id === selectedTrack.id);
+      if (track) {
+        handleShareTrack(track);
+      }
+    }
   };
 
-  // Handle share
-  const handleShare = (track: TrackData) => {
-    setShareTrack(track);
-    setIsShareModalOpen(true);
-  };
-
-  // Handle play (for stream charging)
   const handlePlay = async () => {
     if (!selectedTrack || !artistEmail) return;
-
-    // Check if already charged
     if (hasBeenCharged(selectedTrack.id)) return;
 
-    // Charge the stream
     const result = await chargeStream(selectedTrack.id, artistEmail);
     if (!result.success && result.error === "Insufficient credits") {
-      // Navigate to add credits
       navigate("/fan/payment");
     }
   };
 
-  // Navigation handlers
   const handleBack = () => {
     if (viewerContext === "artist-own" || viewerContext === "artist-preview") {
       navigate("/artist/dashboard");
@@ -359,29 +301,27 @@ const ArtistProfilePage = () => {
     }
   };
 
-  const handleSecondaryNav = () => {
-    navigate("/fan/dashboard");
+  const getBackLabel = () => {
+    if (viewerContext === "artist-own" || viewerContext === "artist-preview") {
+      return "Dashboard";
+    }
+    return "Discovery";
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  // Error state
   if (error || !artistProfile) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
-        <AlertTriangle className="w-12 h-12 text-amber-400 mb-4" />
-        <h1 className="font-display text-xl font-bold text-foreground mb-2">
-          {error || "Artist not found"}
-        </h1>
-        <Button onClick={() => navigate("/discovery")} className="mt-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
+        <Music className="w-12 h-12 text-muted-foreground mb-4" />
+        <p className="text-muted-foreground text-center">{error || "Artist not found"}</p>
+        <Button variant="outline" className="mt-4" onClick={() => navigate("/discovery")}>
           Back to Discovery
         </Button>
       </div>
@@ -389,243 +329,162 @@ const ArtistProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Navigation Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
-        <div className="container max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          {/* Back Button */}
+    <div className="min-h-screen bg-background flex flex-col">
+      {/* Back navigation - Floating */}
+      <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
+        <div className="w-full max-w-lg mx-auto flex items-center justify-between">
           <button
             onClick={handleBack}
-            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-foreground/80 hover:text-foreground hover:bg-background/90 transition-all"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-medium hidden sm:inline">
-              {viewerContext === "fan" ? "Discovery" : "Dashboard"}
-            </span>
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">{getBackLabel()}</span>
           </button>
 
-          {/* Title / Preview Badge */}
-          <div className="flex items-center gap-2">
-            {viewerContext === "artist-preview" && (
-              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-amber-500/20 border border-amber-500/40">
-                <Eye className="w-3 h-3 text-amber-400" />
-                <span className="text-amber-400 text-xs font-display uppercase tracking-wider">
-                  Preview Mode
-                </span>
-              </div>
-            )}
-            <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
-              Artist Profile
-            </span>
-          </div>
-
-          {/* Right Navigation */}
-          {viewerContext === "fan" ? (
-            <button
-              onClick={handleSecondaryNav}
-              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <LayoutDashboard className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate("/discovery")}
-              className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Compass className="w-5 h-5" />
-            </button>
+          {/* Preview mode badge */}
+          {viewerContext === "artist-preview" && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/40">
+              <Eye className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-amber-400 text-xs font-display uppercase tracking-wider">
+                Preview
+              </span>
+            </div>
           )}
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-20 pb-12 px-4">
-        <div className="container max-w-lg md:max-w-xl mx-auto">
-          
-          {/* Artist Header Card */}
-          <GlowCard className="p-0 overflow-hidden mb-6 relative">
-            {/* Vault Portal Background */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="absolute inset-0 bg-secondary/30 blur-[60px] rounded-full scale-75 animate-pulse" />
-              <div className="absolute inset-0 bg-accent/25 blur-[50px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
-              <div className="absolute inset-0 bg-primary/25 blur-[55px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
-              
-              <img
-                src={vaultPortal}
-                alt=""
-                className="w-[120%] h-[120%] object-contain vault-glow opacity-60"
-              />
-              
-              <div className="absolute inset-[15%] rounded-full overflow-hidden mix-blend-screen">
-                <div className="absolute inset-0 animate-vault-lightning-1 opacity-70" />
-                <div className="absolute inset-0 animate-vault-lightning-2 opacity-60" />
-                <div className="absolute inset-0 animate-vault-lightning-3 opacity-50" />
-              </div>
-            </div>
-            
-            {/* Dark overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-card via-card/60 to-card/20 pointer-events-none" />
-            
-            {/* Content */}
-            <div className="relative z-10 px-5 pt-8 pb-5">
-              {/* Artist Image */}
-              <div className="relative w-28 h-28 mb-4 mx-auto">
-                <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-primary via-purple-500 to-pink-500 blur-md opacity-60" />
-                <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-card shadow-2xl">
-                  <img
-                    src={artistProfile.avatar_url || artist1}
-                    alt={artistProfile.artist_name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              </div>
-              
-              {/* Artist Info */}
-              <div className="text-center">
-                <h1 className="font-display text-2xl font-bold text-foreground mb-1">
-                  {artistProfile.artist_name}
-                </h1>
-                
-                {/* Genre Badge */}
-                {artistProfile.genre && (
-                  <p className="text-muted-foreground text-sm font-body mb-3">
-                    {artistProfile.genre}
-                  </p>
-                )}
-                
-                {/* Exclusive Artist Badge with Crown - Neon Purple */}
-                <div 
-                  className="relative inline-flex items-center gap-2 px-4 py-1.5 rounded-full border"
-                  style={{
-                    background: 'hsla(280, 80%, 50%, 0.15)',
-                    borderColor: 'hsla(280, 80%, 60%, 0.4)',
-                    boxShadow: '0 0 15px hsla(280, 80%, 50%, 0.3), inset 0 0 10px hsla(280, 80%, 50%, 0.1)'
-                  }}
-                >
-                  {/* Headphones icon on top-left corner edge */}
-                  <Headphones 
-                    className="absolute -top-[6px] -left-[6px] w-5 h-5 rotate-[-10deg]" 
-                    style={{ 
-                      color: 'hsl(280, 80%, 70%)',
-                      filter: 'drop-shadow(0 0 8px hsla(280, 80%, 60%, 0.9)) drop-shadow(0 0 15px hsla(280, 80%, 50%, 0.6))' 
-                    }} 
-                  />
-                  <span 
-                    className="text-xs font-display uppercase tracking-wider pl-2"
-                    style={{ 
-                      color: 'hsl(280, 80%, 70%)',
-                      textShadow: '0 0 12px hsla(280, 80%, 60%, 0.6)' 
-                    }}
-                  >
-                    Exclusive Artist
-                  </span>
-                </div>
-              </div>
-            </div>
-          </GlowCard>
-
-          {/* Bio Section */}
-          {artistProfile.bio && (
-            <GlowCard className="p-5 mb-6">
-              <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-3">
-                About
-              </h3>
-              <p className="text-muted-foreground text-sm font-body leading-relaxed">
-                {artistProfile.bio}
-              </p>
-            </GlowCard>
-          )}
-
-          {/* Exclusive Music Section */}
-          <section className="mb-6">
-            {/* Section Header with Headphones - Neon Purple */}
-            <div className="flex items-center gap-3 mb-4">
-              <div className="relative inline-block">
-                {/* Headphones icon on top-left corner edge */}
-                <Headphones 
-                  className="absolute -top-[6px] -left-[6px] w-4 h-4 rotate-[-10deg]" 
-                  style={{ 
-                    color: 'hsl(280, 80%, 70%)',
-                    filter: 'drop-shadow(0 0 6px hsla(280, 80%, 60%, 0.9)) drop-shadow(0 0 10px hsla(280, 80%, 50%, 0.5))' 
-                  }} 
-                />
-                <h2 
-                  className="font-display text-lg uppercase tracking-wider font-semibold pl-1"
-                  style={{ 
-                    color: 'hsl(280, 80%, 70%)',
-                    textShadow: '0 0 15px hsla(280, 80%, 60%, 0.5)' 
-                  }}
-                >
-                  Exclusive Music
-                </h2>
-              </div>
-            </div>
-
-            {/* Track List */}
-            {tracks.length === 0 ? (
-              <GlowCard className="p-8 text-center">
-                <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm font-body">
-                  No exclusive tracks yet. New drops will appear here.
-                </p>
-              </GlowCard>
-            ) : (
-              <div className="space-y-3">
-                {tracks.map((track) => (
-                  <ExclusiveTrackCard
-                    key={track.id}
-                    id={track.id}
-                    title={track.title}
-                    artworkUrl={track.artwork_url}
-                    duration={track.duration}
-                    likeCount={trackLikes[track.id]?.count || 0}
-                    isLiked={trackLikes[track.id]?.isLiked || false}
-                    isSelected={selectedTrack?.id === track.id}
-                    canLike={hasVaultAccess && viewerContext === "fan"}
-                    onSelect={() => handleSelectTrack(track)}
-                    onLike={() => handleLikeToggle(track.id)}
-                    onShare={() => handleShare(track)}
-                    fallbackImage={artist1}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Vault Music Player */}
-          <section className="mb-6">
-            <VaultMusicPlayer
-              track={selectedTrack ? {
-                id: selectedTrack.id,
-                title: selectedTrack.title,
-                artist: artistProfile.artist_name,
-                artworkUrl: selectedTrack.artwork_url || artist1,
-                audioUrl: selectedTrack.full_audio_url || "",
-              } : null}
-              hasVaultAccess={hasVaultAccess}
-              onAccessDenied={() => {
-                toast.error("Enter the Vault to stream exclusive music.");
-                navigate("/vault/enter");
-              }}
-              onPlay={handlePlay}
-            />
-          </section>
-        </div>
-      </main>
-
-      {/* Share Modal */}
-      <ShareExclusiveTrackModal
-        open={isShareModalOpen}
-        onOpenChange={setIsShareModalOpen}
-        track={shareTrack ? {
-          id: shareTrack.id,
-          title: shareTrack.title,
-          artistName: artistProfile.artist_name,
-          artworkUrl: shareTrack.artwork_url,
-        } : null}
-        currentUserEmail={user?.email || undefined}
-        artistId={artistId || ""}
+      {/* Hero Section */}
+      <ArtistProfileHero
+        name={artistProfile.artist_name}
+        genre={artistProfile.genre || "Music"}
+        imageUrl={artistProfile.avatar_url || artist1}
+        onPlayAll={handlePlayAll}
+        onShareArtist={handleShareArtist}
+        isPlaying={!!selectedTrack}
       />
+
+      {/* About Section */}
+      <ArtistAboutSection 
+        bio={artistProfile.bio || `Exclusive artist on Music Exclusive™. Experience premium, unreleased music only available inside the Vault.`} 
+      />
+
+      {/* Vault Player */}
+      <CompactVaultPlayer
+        track={selectedTrack}
+        hasVaultAccess={hasVaultAccess}
+        isLiked={isLiked}
+        onAccessDenied={() => setShowAccessGate(true)}
+        onPlay={handlePlay}
+        onLike={handlePlayerLike}
+        onShare={handlePlayerShare}
+      />
+
+      {/* Track List Section */}
+      <section className="px-5 pb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="font-display text-lg font-semibold text-foreground">
+            Top Songs
+          </h2>
+          {/* Section badge with crown */}
+          <div 
+            className="relative px-2.5 py-1 rounded-full"
+            style={{
+              background: 'hsla(280, 80%, 50%, 0.12)',
+            }}
+          >
+            <Crown 
+              className="absolute -top-1.5 -left-0.5 w-3 h-3 rotate-[-12deg]"
+              style={{
+                color: 'hsl(45, 90%, 55%)',
+                filter: 'drop-shadow(0 0 3px hsla(45, 90%, 55%, 0.8))'
+              }}
+              fill="hsl(45, 90%, 55%)"
+            />
+            <span 
+              className="text-[10px] font-display uppercase tracking-wider pl-1"
+              style={{ color: 'hsl(280, 80%, 70%)' }}
+            >
+              Exclusive
+            </span>
+          </div>
+        </div>
+
+        {tracks.length === 0 ? (
+          <div className="rounded-xl bg-muted/20 p-8 text-center border border-border/30">
+            <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">
+              No exclusive tracks available yet.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {tracks.map((track, index) => (
+              <AppleMusicTrackRow
+                key={track.id}
+                ref={(el) => { trackRefs.current[track.id] = el; }}
+                track={{
+                  id: track.id,
+                  title: track.title,
+                  artworkUrl: track.artwork_url,
+                  duration: track.duration,
+                }}
+                index={index}
+                fanId={fanId}
+                hasVaultAccess={hasVaultAccess}
+                isSelected={selectedTrack?.id === track.id}
+                isHighlighted={highlightTrackId === track.id}
+                onSelect={() => handleSelectTrack(track)}
+                onShare={() => handleShareTrack(track)}
+                fallbackImage={artistProfile.avatar_url || artist1}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Share Artist Section */}
+      <ShareArtistSection
+        artistName={artistProfile.artist_name}
+        onShareToInbox={handleShareArtist}
+      />
+
+      {/* Discover More CTA */}
+      <section className="px-5 pb-8">
+        <Button
+          variant="outline"
+          className="w-full rounded-xl"
+          onClick={() => navigate("/discovery")}
+        >
+          Discover More Artists
+        </Button>
+      </section>
+
+      {/* Bottom spacing */}
+      <div className="h-8" />
+
+      {/* Vault Access Gate Modal */}
+      {showAccessGate && (
+        <VaultAccessGate onClose={() => setShowAccessGate(false)} />
+      )}
+
+      {/* Share Track Modal */}
+      {shareModalOpen && trackToShare && artistProfile && (
+        <ShareExclusiveTrackModal
+          open={shareModalOpen}
+          onOpenChange={(open) => {
+            setShareModalOpen(open);
+            if (!open) setTrackToShare(null);
+          }}
+          track={{
+            id: trackToShare.id,
+            title: trackToShare.title,
+            artistName: artistProfile.artist_name,
+            artworkUrl: trackToShare.artwork_url || artistProfile.avatar_url,
+          }}
+          artistId={artistProfile.id}
+          currentUserEmail={user?.email || undefined}
+        />
+      )}
     </div>
   );
 };
