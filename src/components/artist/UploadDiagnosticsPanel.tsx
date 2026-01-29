@@ -10,6 +10,7 @@ interface UploadDiagnosticsPanelProps {
 
 const stepLabels: Record<UploadStep, string> = {
   idle: "Idle",
+  preflight: "Preflight Check",
   session_check: "Session Check",
   cover_upload: "Cover Upload",
   audio_upload: "Audio Upload",
@@ -49,12 +50,17 @@ export function UploadDiagnosticsPanel({ diagnostics, isVisible, isTimedOut }: U
                 ? "bg-destructive/10 border-destructive/30" 
                 : log.status === "success"
                 ? "bg-green-500/10 border-green-500/30"
+                : log.status === "retry"
+                ? "bg-amber-500/10 border-amber-500/30"
                 : "bg-muted/50 border-border/50"
             }`}
           >
             <div className="flex items-center gap-2">
               {log.status === "pending" && (
                 <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              )}
+              {log.status === "retry" && (
+                <Loader2 className="h-3 w-3 animate-spin text-amber-500" />
               )}
               {log.status === "success" && (
                 <CheckCircle className="h-3 w-3 text-green-500" />
