@@ -9,6 +9,7 @@ interface Track {
   id: string;
   title: string;
   artist: string;
+  artistId: string;
   artworkUrl: string;
   audioUrl: string;
 }
@@ -43,15 +44,16 @@ export const VaultMusicPlayer = ({
     seek,
     setVolume,
     loadTrack,
+    retryPlay,
   } = useAudioPlayer();
 
   // Load track when it changes
   useEffect(() => {
     if (track?.audioUrl) {
-      loadTrack(track.audioUrl, track.title);
+      loadTrack(track.audioUrl, track.title, track.id, track.artistId);
       setHasCalledOnPlay(false);
     }
-  }, [track?.id, track?.audioUrl, loadTrack]);
+  }, [track?.id, track?.audioUrl, track?.artistId, loadTrack]);
 
   const handlePlayPause = async () => {
     if (!track) return;
@@ -186,14 +188,30 @@ export const VaultMusicPlayer = ({
           </div>
         </div>
 
-        {/* Error message */}
+        {/* Error message with retry button */}
         {error && (
-          <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-destructive font-medium">Playback Error</p>
-              <p className="text-xs text-destructive/80 mt-0.5">{error}</p>
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+            <div className="flex items-start gap-2 mb-2">
+              <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-destructive font-medium">Playback Failed</p>
+                <p className="text-xs text-destructive/80 mt-0.5">{error}</p>
+              </div>
             </div>
+            <button
+              onClick={retryPlay}
+              disabled={isLoading}
+              className="w-full mt-2 px-3 py-2 rounded-lg bg-destructive/20 hover:bg-destructive/30 text-destructive text-xs font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Retrying...
+                </>
+              ) : (
+                "Tap to Retry"
+              )}
+            </button>
           </div>
         )}
 
@@ -285,6 +303,14 @@ export const VaultMusicPlayer = ({
                 <span className="text-foreground truncate max-w-[180px]">{diagnostics.trackTitle || "—"}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-muted-foreground">Track ID:</span>
+                <span className="text-foreground truncate max-w-[180px] text-[10px]">{diagnostics.trackId || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Artist ID:</span>
+                <span className="text-foreground truncate max-w-[180px] text-[10px]">{diagnostics.artistId || "—"}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Bucket:</span>
                 <span className="text-foreground">{diagnostics.bucketName}</span>
               </div>
@@ -305,6 +331,10 @@ export const VaultMusicPlayer = ({
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Ready State:</span>
                 <span className="text-foreground">{diagnostics.readyState}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Retry Count:</span>
+                <span className="text-foreground">{diagnostics.retryCount}</span>
               </div>
               {diagnostics.lastError && (
                 <div>
