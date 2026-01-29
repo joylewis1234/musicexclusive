@@ -172,30 +172,42 @@ const EditArtistProfile = () => {
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      // Store just the path, not the full URL
-      const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+      console.log("[EditProfile] Uploading avatar via edge function...");
       
-      console.log("[EditProfile] Uploading avatar to:", filePath);
-
-      const { error: uploadError, data: uploadData } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, file, { 
-          cacheControl: "3600", 
-          upsert: true,
-          contentType: file.type 
-        });
-
-      if (uploadError) {
-        console.error("[EditProfile] Upload error:", uploadError);
-        throw uploadError;
+      // Get the current session for authorization
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("No active session");
       }
 
-      console.log("[EditProfile] Upload successful:", uploadData);
+      // Create form data for the upload
+      const formData = new FormData();
+      formData.append("file", file);
+
+      // Upload via edge function to bypass iframe storage limitations
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-avatar`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error("[EditProfile] Upload error:", result);
+        throw new Error(result.error || "Upload failed");
+      }
+
+      console.log("[EditProfile] Upload successful:", result);
 
       // Store the path, generate display URL
-      setAvatarPath(filePath);
-      setAvatarDisplayUrl(getAvatarPublicUrl(filePath));
+      setAvatarPath(result.path);
+      setAvatarDisplayUrl(getAvatarPublicUrl(result.path));
       
       toast.success("Image uploaded successfully");
     } catch (error: any) {
