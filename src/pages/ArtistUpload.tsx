@@ -16,6 +16,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { prepareCoverImage, sanitizeFilename } from "@/utils/imageProcessing";
 
 const GENRES = [
   "Hip-Hop",
@@ -35,7 +36,7 @@ const GENRES = [
   "Other",
 ];
 
-type UploadStatus = "idle" | "uploading_cover" | "uploading_audio" | "saving_track" | "success" | "error";
+type UploadStatus = "idle" | "processing_image" | "uploading_cover" | "uploading_audio" | "saving_track" | "success" | "error";
 
 interface UploadError {
   step: string;
@@ -114,21 +115,27 @@ const ArtistUpload = () => {
   };
 
   const logUploadError = (bucket: string, file: File, error: unknown) => {
-    console.error(`[Upload Error] Bucket: ${bucket}`, {
+    const errorDetails = {
+      bucket,
       fileName: file.name,
       fileType: file.type,
       fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      fileSizeBytes: file.size,
+      networkOnline: navigator.onLine,
+      timestamp: new Date().toISOString(),
       error: error,
       errorString: String(error),
       errorJSON: JSON.stringify(error, Object.getOwnPropertyNames(error as object), 2),
-    });
+    };
+    console.error(`[Upload Error] Bucket: ${bucket}`, errorDetails);
+    return errorDetails;
   };
 
   const handlePublish = async () => {
     if (!isFormValid || !user) return;
 
     setError(null);
-    setStatus("uploading_cover");
+    setStatus("processing_image");
 
     try {
       // Step 1: Get fresh session
@@ -153,25 +160,54 @@ const ArtistUpload = () => {
       const timestamp = Date.now();
       const sanitizedTitle = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
 
-      // Step 3: Upload cover to track_covers bucket
-      const coverExt = coverFile!.name.split(".").pop()?.toLowerCase() || "jpg";
+      // Step 3: Process and prepare cover image
+      console.log("[Upload] Processing cover image...", {
+        originalName: coverFile!.name,
+        originalSize: `${(coverFile!.size / 1024 / 1024).toFixed(2)} MB`,
+        originalType: coverFile!.type,
+      });
+
+      let preparedCover;
+      try {
+        preparedCover = await prepareCoverImage(coverFile!);
+        console.log("[Upload] Cover prepared:", {
+          wasProcessed: preparedCover.wasProcessed,
+          finalName: preparedCover.file.name,
+          finalSize: `${(preparedCover.file.size / 1024).toFixed(0)} KB`,
+          contentType: preparedCover.contentType,
+        });
+      } catch (prepError) {
+        console.error("[Upload] Image processing failed:", prepError);
+        throw {
+          step: "image_processing",
+          message: prepError instanceof Error ? prepError.message : "Failed to process image",
+        };
+      }
+
+      // Step 4: Upload cover to track_covers bucket
+      setStatus("uploading_cover");
+      const coverExt = preparedCover.contentType.split("/")[1] || "jpeg";
       const coverPath = `${artistId}/${sanitizedTitle}-${timestamp}.${coverExt}`;
       
-      console.log(`[Upload] Starting cover upload to track_covers/${coverPath}`);
+      console.log(`[Upload] Starting cover upload to track_covers/${coverPath}`, {
+        fileSize: preparedCover.file.size,
+        contentType: preparedCover.contentType,
+        networkOnline: navigator.onLine,
+      });
       
       const { data: coverData, error: coverError } = await supabase.storage
         .from("track_covers")
-        .upload(coverPath, coverFile!, {
+        .upload(coverPath, preparedCover.file, {
           cacheControl: "3600",
           upsert: false,
-          contentType: coverFile!.type || `image/${coverExt}`,
+          contentType: preparedCover.contentType,
         });
 
       if (coverError) {
-        logUploadError("track_covers", coverFile!, coverError);
+        logUploadError("track_covers", preparedCover.file, coverError);
         throw {
           step: "cover_upload",
-          message: coverError.message || "Cover upload failed",
+          message: "Upload failed. Try a smaller image or different format (JPG/PNG/WEBP).",
           details: JSON.stringify(coverError, null, 2),
         };
       }
@@ -186,11 +222,15 @@ const ArtistUpload = () => {
       const coverUrl = coverUrlData.publicUrl;
       console.log("[Upload] Cover public URL:", coverUrl);
 
-      // Step 4: Upload audio to track_audio bucket
+      // Step 5: Upload audio to track_audio bucket
       setStatus("uploading_audio");
+      const audioSanitizedName = sanitizeFilename(audioFile!.name, 50);
       const audioPath = `${artistId}/${sanitizedTitle}-${timestamp}.mp3`;
       
-      console.log(`[Upload] Starting audio upload to track_audio/${audioPath}`);
+      console.log(`[Upload] Starting audio upload to track_audio/${audioPath}`, {
+        fileSize: audioFile!.size,
+        networkOnline: navigator.onLine,
+      });
       
       const { data: audioData, error: audioError } = await supabase.storage
         .from("track_audio")
@@ -204,7 +244,7 @@ const ArtistUpload = () => {
         logUploadError("track_audio", audioFile!, audioError);
         throw {
           step: "audio_upload",
-          message: audioError.message || "Audio upload failed",
+          message: "Audio upload failed. Try a smaller file or check your connection.",
           details: JSON.stringify(audioError, null, 2),
         };
       }
@@ -219,7 +259,7 @@ const ArtistUpload = () => {
       const audioUrl = audioUrlData.publicUrl;
       console.log("[Upload] Audio public URL:", audioUrl);
 
-      // Step 5: Insert track record
+      // Step 6: Insert track record
       setStatus("saving_track");
       
       const { data: trackData, error: trackError } = await supabase
@@ -290,6 +330,8 @@ const ArtistUpload = () => {
 
   const getStatusMessage = () => {
     switch (status) {
+      case "processing_image":
+        return "Processing cover image...";
       case "uploading_cover":
         return "Uploading cover art...";
       case "uploading_audio":
