@@ -599,6 +599,7 @@ const ArtistProfilePage = () => {
                 id: selectedTrack.id,
                 title: selectedTrack.title,
                 artist: artistProfile.artist_name,
+                artistId: selectedTrack.artist_id,
                 artworkUrl: selectedTrack.artwork_url || artist1,
                 audioUrl: selectedTrack.full_audio_url || "",
               } : null}

@@ -29,6 +29,7 @@ interface DbTrack {
   full_audio_url: string | null;
   artwork_url: string | null;
   created_at: string;
+  artist_id: string;
 }
 
 interface ArtistData {
@@ -44,6 +45,7 @@ interface PlayerTrack {
   id: string;
   title: string;
   artist: string;
+  artistId: string;
   artworkUrl: string;
   audioUrl: string;
 }
@@ -172,7 +174,7 @@ const ArtistProfile = () => {
         // Fetch tracks
         const { data: trackData } = await supabase
           .from("tracks")
-          .select("id, title, genre, duration, full_audio_url, artwork_url, created_at")
+          .select("id, title, genre, duration, full_audio_url, artwork_url, created_at, artist_id")
           .eq("artist_id", artistId)
           .not("genre", "like", "[DELETED]%")
           .not("genre", "like", "[DISABLED]%")
@@ -233,6 +235,7 @@ const ArtistProfile = () => {
       id: track.id,
       title: track.title,
       artist: artist?.name || "Unknown Artist",
+      artistId: track.artist_id,
       artworkUrl: track.artwork_url || artist?.imageUrl || artistImages.default,
       audioUrl: track.full_audio_url || "",
     });
