@@ -3,7 +3,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 serve(async (req) => {
@@ -13,39 +14,41 @@ serve(async (req) => {
   }
 
   try {
-    // Get auth header
+    // Extract Bearer token
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(
         JSON.stringify({ error: "No authorization header" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Create Supabase client with user's auth
+    const token = authHeader.replace("Bearer ", "");
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify the user's token
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-    
-    if (authError || !user) {
-      console.error("[upload-avatar] Auth error:", authError);
+    // Create client with anon key to validate the JWT
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: claimsData, error: claimsError } = await anonClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims?.sub) {
+      console.error("[upload-avatar] Auth error:", claimsError);
       return new Response(
         JSON.stringify({ error: "Invalid token" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("[upload-avatar] User authenticated:", user.id);
+    const userId = claimsData.claims.sub as string;
+    console.log("[upload-avatar] User authenticated:", userId);
 
-    // Get the form data
+    // Parse multipart form
     const formData = await req.formData();
-    const file = formData.get("file") as File;
-    
+    const file = formData.get("file") as File | null;
+
     if (!file) {
       return new Response(
         JSON.stringify({ error: "No file provided" }),
@@ -54,66 +57,134 @@ serve(async (req) => {
     }
 
     // Validate file type
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
-    if (!validTypes.includes(file.type)) {
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
       return new Response(
-        JSON.stringify({ error: "Invalid file type. Please upload JPG, PNG, or WEBP" }),
+        JSON.stringify({ error: `Invalid file type ${file.type}. Please upload JPG, PNG, or WEBP.` }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (max 10 MB)
+    const maxBytes = 10 * 1024 * 1024;
+    if (file.size > maxBytes) {
       return new Response(
-        JSON.stringify({ error: "File too large. Max 5MB allowed" }),
+        JSON.stringify({ error: "File too large. Max 10MB allowed." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Generate file path
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-    const filePath = `${user.id}/avatar-${Date.now()}.${ext}`;
+    // Determine extension
+    const extMap: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+    };
+    const ext = extMap[file.type] || "jpg";
 
-    console.log("[upload-avatar] Uploading to:", filePath);
+    // Deterministic path: {userId}/profile.{ext}
+    const objectPath = `${userId}/profile.${ext}`;
 
-    // Read file as array buffer
+    console.log("[upload-avatar] Uploading to:", objectPath);
+
+    // Read file into buffer
     const arrayBuffer = await file.arrayBuffer();
     const fileBuffer = new Uint8Array(arrayBuffer);
 
-    // Upload to storage using service role (bypasses RLS)
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    // Use service role client for storage (bypasses RLS)
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: uploadData, error: uploadError } = await serviceClient.storage
       .from("avatars")
-      .upload(filePath, fileBuffer, {
-        contentType: file.type,
+      .upload(objectPath, fileBuffer, {
         upsert: true,
+        contentType: file.type,
         cacheControl: "3600",
       });
 
     if (uploadError) {
       console.error("[upload-avatar] Upload error:", uploadError);
       return new Response(
-        JSON.stringify({ error: uploadError.message }),
+        JSON.stringify({
+          error: uploadError.message,
+          name: (uploadError as any)?.name,
+          status: (uploadError as any)?.status,
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log("[upload-avatar] Upload successful:", uploadData);
 
-    // Return the file path (not the full URL)
+    // Get public URL (bucket is public)
+    const { data: publicData } = serviceClient.storage.from("avatars").getPublicUrl(objectPath);
+    const publicUrl = publicData?.publicUrl || "";
+
+    if (!publicUrl) {
+      return new Response(
+        JSON.stringify({ error: "Failed to generate public URL" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("[upload-avatar] Public URL:", publicUrl);
+
+    // Persist the URL to artist_profiles
+    const now = new Date().toISOString();
+    const { data: updated, error: updateError } = await serviceClient
+      .from("artist_profiles")
+      .update({ avatar_url: publicUrl, updated_at: now })
+      .eq("user_id", userId)
+      .select("id")
+      .maybeSingle();
+
+    if (updateError) {
+      console.error("[upload-avatar] DB update error:", updateError);
+      return new Response(
+        JSON.stringify({
+          error: updateError.message,
+          name: (updateError as any)?.name,
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // If no row was updated (profile doesn't exist yet), insert new profile
+    if (!updated) {
+      const { error: insertError } = await serviceClient
+        .from("artist_profiles")
+        .insert({
+          user_id: userId,
+          artist_name: "Artist",
+          avatar_url: publicUrl,
+          updated_at: now,
+        });
+
+      if (insertError) {
+        console.error("[upload-avatar] DB insert error:", insertError);
+        return new Response(
+          JSON.stringify({
+            error: insertError.message,
+            name: (insertError as any)?.name,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        path: filePath,
-        message: "Avatar uploaded successfully"
+      JSON.stringify({
+        success: true,
+        path: objectPath,
+        url: publicUrl,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
-
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Upload failed";
-    console.error("[upload-avatar] Unexpected error:", errorMessage);
+    const msg = error instanceof Error ? error.message : "Unexpected error";
+    console.error("[upload-avatar] Unexpected error:", msg);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
