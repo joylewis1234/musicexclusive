@@ -185,10 +185,20 @@ const ArtistUpload = () => {
   };
 
   const handlePublish = async () => {
-    if (!isFormValid || !user?.id) {
+    // Show specific missing field errors
+    const missingFields: string[] = [];
+    if (!title?.trim()) missingFields.push("Track Title");
+    if (!genre) missingFields.push("Genre");
+    if (!coverFile) missingFields.push("Cover Art");
+    if (!audioFile) missingFields.push("Audio File");
+    if (!agreesToTerms) missingFields.push("Terms Agreement");
+    
+    if (missingFields.length > 0 || !user?.id) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields.",
+        description: missingFields.length > 0 
+          ? `Please fill in: ${missingFields.join(", ")}`
+          : "Please sign in to upload tracks.",
         variant: "destructive",
       });
       return;
