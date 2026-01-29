@@ -463,7 +463,7 @@ const ArtistDashboard = () => {
                     {payoutStatus === "connected" 
                       ? "Payout connected" 
                       : payoutStatus === "pending"
-                      ? "Action required"
+                      ? "Setup in progress"
                       : "Connect payouts"
                     }
                   </p>
@@ -471,7 +471,7 @@ const ArtistDashboard = () => {
                     {payoutStatus === "connected" 
                       ? "Ready to receive earnings"
                       : payoutStatus === "pending"
-                      ? "Complete Stripe setup"
+                      ? "Finish bank & ID verification in Stripe"
                       : "Receive your earnings"
                     }
                   </p>
@@ -490,7 +490,7 @@ const ArtistDashboard = () => {
                     {isConnecting || isVerifying ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : payoutStatus === "pending" ? (
-                      "Fix"
+                      "Continue"
                     ) : (
                       "Connect"
                     )}
