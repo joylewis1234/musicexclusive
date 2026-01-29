@@ -1,7 +1,9 @@
-import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Square, Volume2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Play, Pause, Square, Volume2, Loader2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface Track {
   id: string;
@@ -24,30 +26,34 @@ export const VaultMusicPlayer = ({
   onAccessDenied,
   onPlay,
 }: VaultMusicPlayerProps) => {
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(75);
+  const [hasCalledOnPlay, setHasCalledOnPlay] = useState(false);
+  const [showDebug, setShowDebug] = useState(false);
+  
+  const {
+    isPlaying,
+    currentTime,
+    duration,
+    volume,
+    isLoading,
+    error,
+    diagnostics,
+    play,
+    pause,
+    stop,
+    seek,
+    setVolume,
+    loadTrack,
+  } = useAudioPlayer();
 
-  // Reset player when track changes
+  // Load track when it changes
   useEffect(() => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+    if (track?.audioUrl) {
+      loadTrack(track.audioUrl, track.title);
+      setHasCalledOnPlay(false);
     }
-  }, [track?.id]);
+  }, [track?.id, track?.audioUrl, loadTrack]);
 
-  // Update volume
-  useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume / 100;
-    }
-  }, [volume]);
-
-  const handlePlayPause = () => {
+  const handlePlayPause = async () => {
     if (!track) return;
 
     if (!hasVaultAccess) {
@@ -55,53 +61,37 @@ export const VaultMusicPlayer = ({
       return;
     }
 
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play();
-        // Trigger stream charge on play
+    if (!track.audioUrl) {
+      console.error("[VaultPlayer] No audio URL for track:", track.title);
+      return;
+    }
+
+    if (isPlaying) {
+      pause();
+    } else {
+      await play();
+      // Trigger stream charge on first play
+      if (!hasCalledOnPlay) {
         onPlay?.();
+        setHasCalledOnPlay(true);
       }
-      setIsPlaying(!isPlaying);
     }
   };
 
   const handleStop = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      setIsPlaying(false);
-      setCurrentTime(0);
-    }
-  };
-
-  const handleTimeUpdate = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-    }
-  };
-
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
+    stop();
+    setHasCalledOnPlay(false);
   };
 
   const handleSeek = (value: number[]) => {
-    if (audioRef.current && duration) {
+    if (duration) {
       const newTime = (value[0] / 100) * duration;
-      audioRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
+      seek(newTime);
     }
   };
 
-  const handleEnded = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
-  };
-
   const formatTime = (seconds: number) => {
+    if (!isFinite(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
@@ -109,6 +99,7 @@ export const VaultMusicPlayer = ({
 
   const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
+  // Empty state
   if (!track) {
     return (
       <div className="relative rounded-2xl overflow-hidden">
@@ -167,15 +158,6 @@ export const VaultMusicPlayer = ({
       
       {/* Content */}
       <div className="relative bg-card/95 backdrop-blur-sm rounded-2xl p-5">
-        {/* Hidden audio element */}
-        <audio
-          ref={audioRef}
-          src={track.audioUrl}
-          onTimeUpdate={handleTimeUpdate}
-          onLoadedMetadata={handleLoadedMetadata}
-          onEnded={handleEnded}
-        />
-
         {/* Track info */}
         <div className="flex items-center gap-4 mb-5">
           {/* Album art with glow */}
@@ -195,8 +177,25 @@ export const VaultMusicPlayer = ({
             <p className="text-xs text-muted-foreground truncate">
               {track.artist}
             </p>
+            {isLoading && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                <span className="text-xs text-muted-foreground">Loading...</span>
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Error message */}
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-destructive font-medium">Playback Error</p>
+              <p className="text-xs text-destructive/80 mt-0.5">{error}</p>
+            </div>
+          </div>
+        )}
 
         {/* Progress bar */}
         <div className="mb-4">
@@ -206,7 +205,7 @@ export const VaultMusicPlayer = ({
             max={100}
             step={0.1}
             className="cursor-pointer"
-            disabled={!hasVaultAccess}
+            disabled={!hasVaultAccess || isLoading}
           />
           <div className="flex justify-between mt-1.5 text-xs text-muted-foreground font-mono">
             <span>{formatTime(currentTime)}</span>
@@ -219,7 +218,8 @@ export const VaultMusicPlayer = ({
           {/* Stop button */}
           <button
             onClick={handleStop}
-            className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center hover:bg-muted/50 transition-colors"
+            disabled={isLoading}
+            className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center hover:bg-muted/50 transition-colors disabled:opacity-50"
             aria-label="Stop"
           >
             <Square className="w-4 h-4 text-muted-foreground" />
@@ -228,18 +228,22 @@ export const VaultMusicPlayer = ({
           {/* Play/Pause button */}
           <button
             onClick={handlePlayPause}
+            disabled={isLoading && !isPlaying}
             className={cn(
               "w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300",
               isPlaying
                 ? "bg-primary/30 border-2 border-primary"
-                : "bg-gradient-to-r from-primary to-purple-500 hover:from-primary/80 hover:to-purple-500/80"
+                : "bg-gradient-to-r from-primary to-purple-500 hover:from-primary/80 hover:to-purple-500/80",
+              (isLoading && !isPlaying) && "opacity-70"
             )}
             style={{
               boxShadow: isPlaying ? "0 0 25px hsl(var(--primary) / 0.6)" : "0 0 15px hsl(var(--primary) / 0.3)",
             }}
             aria-label={isPlaying ? "Pause" : "Play"}
           >
-            {isPlaying ? (
+            {isLoading && !isPlaying ? (
+              <Loader2 className="w-6 h-6 animate-spin text-white" />
+            ) : isPlaying ? (
               <Pause className="w-6 h-6 text-primary" />
             ) : (
               <Play className="w-6 h-6 ml-0.5 text-white" />
@@ -267,6 +271,50 @@ export const VaultMusicPlayer = ({
             </p>
           </div>
         )}
+
+        {/* Debug Panel (collapsible) */}
+        <Collapsible open={showDebug} onOpenChange={setShowDebug}>
+          <CollapsibleTrigger className="w-full mt-4 pt-3 border-t border-border/30 flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+            {showDebug ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            <span>Playback Debug</span>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-3 p-3 rounded-lg bg-muted/20 border border-border/30 text-xs font-mono space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Track:</span>
+                <span className="text-foreground truncate max-w-[180px]">{diagnostics.trackTitle || "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Bucket:</span>
+                <span className="text-foreground">{diagnostics.bucketName}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Audio URL:</span>
+                <p className="text-foreground break-all mt-0.5 text-[10px]">{diagnostics.audioUrl || "—"}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Audio Path:</span>
+                <p className="text-foreground break-all mt-0.5 text-[10px]">{diagnostics.audioPath || "—"}</p>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Can Play:</span>
+                <span className={diagnostics.canPlay ? "text-green-400" : "text-amber-400"}>
+                  {diagnostics.canPlay ? "Yes" : "No"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Ready State:</span>
+                <span className="text-foreground">{diagnostics.readyState}</span>
+              </div>
+              {diagnostics.lastError && (
+                <div>
+                  <span className="text-destructive">Last Error:</span>
+                  <p className="text-destructive break-all mt-0.5">{diagnostics.lastError}</p>
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
     </div>
   );
