@@ -1,6 +1,7 @@
+// Context v2 - ensure single React instance
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { User, Session } from "@supabase/supabase-js";
+import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "fan" | "artist";
