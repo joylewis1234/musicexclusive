@@ -5,8 +5,20 @@ export type StorageHealthCheckResult = {
   checkedAt: string;
   session: { ok: boolean; userId?: string; error?: unknown };
   storageBaseUrl: string | null;
-  listBuckets: { ok: boolean; buckets?: Array<{ id: string; name: string; public: boolean }>; error?: unknown };
-  testUpload: { ok: boolean; bucket: string; path?: string; url?: string; error?: unknown };
+  listBuckets: {
+    ok: boolean;
+    buckets?: Array<{ id: string; name: string; public: boolean }>;
+    raw?: unknown;
+    error?: unknown;
+  };
+  testUpload: {
+    ok: boolean;
+    bucket: string;
+    path?: string;
+    url?: string;
+    raw?: unknown;
+    error?: unknown;
+  };
 };
 
 const safeStringify = (value: unknown) => {
@@ -35,6 +47,7 @@ export const useStorageHealthCheck = () => {
 
   const storageBaseUrl = useMemo(() => {
     const anyClient = supabase as any;
+    // supabase-js usually derives Storage URL from supabaseUrl; some builds expose storageUrl
     const raw = anyClient?.storageUrl ?? anyClient?.supabaseUrl ?? null;
     // Ensure we return a string, not a URL object
     if (raw === null || raw === undefined) return null;
@@ -51,6 +64,7 @@ export const useStorageHealthCheck = () => {
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       const userId = sessionData?.session?.user?.id;
       if (sessionError || !userId) {
+        if (sessionError) console.error("[storage-health-check] session error", sessionError);
         const r: StorageHealthCheckResult = {
           checkedAt: new Date().toISOString(),
           session: { ok: false, error: sessionError ?? { reason: "missing session" } },
@@ -70,8 +84,10 @@ export const useStorageHealthCheck = () => {
         listBuckets = {
           ok: true,
           buckets: (buckets ?? []).map((b) => ({ id: b.id, name: b.name, public: b.public })),
+          raw: buckets ?? [],
         };
       } catch (e) {
+        console.error("[storage-health-check] listBuckets error", e);
         listBuckets = { ok: false, error: e };
       }
 
@@ -88,8 +104,15 @@ export const useStorageHealthCheck = () => {
         if (uploadError || !data?.path) throw uploadError ?? new Error("Upload returned no path");
 
         const { data: urlData } = supabase.storage.from("track_covers").getPublicUrl(data.path);
-        testUpload = { ok: true, bucket: "track_covers", path: data.path, url: urlData.publicUrl };
+        testUpload = {
+          ok: true,
+          bucket: "track_covers",
+          path: data.path,
+          url: urlData.publicUrl,
+          raw: { upload: data, publicUrl: urlData },
+        };
       } catch (e) {
+        console.error("[storage-health-check] testUpload error", e);
         testUpload = { ok: false, bucket: "track_covers", error: e };
       }
 
@@ -104,6 +127,7 @@ export const useStorageHealthCheck = () => {
       setResult(r);
       return r;
     } catch (e) {
+      console.error("[storage-health-check] unexpected error", e);
       setError(e instanceof Error ? e.message : String(e));
       return null;
     } finally {
