@@ -34,7 +34,13 @@ export function UploadDiagnosticsPanel({ diagnostics, isVisible, isTimedOut }: U
       </div>
       
       <div className="space-y-2 max-h-48 overflow-y-auto">
-        {diagnostics.map((log, index) => (
+        {diagnostics.map((log, index) => {
+          const ts =
+            log.timestamp instanceof Date
+              ? log.timestamp
+              : new Date((log as any).timestamp ?? Date.now());
+
+          return (
           <div 
             key={index} 
             className={`text-xs p-2 rounded border ${
@@ -57,7 +63,7 @@ export function UploadDiagnosticsPanel({ diagnostics, isVisible, isTimedOut }: U
               )}
               <span className="font-medium">{stepLabels[log.step]}</span>
               <span className="text-muted-foreground ml-auto">
-                {log.timestamp.toLocaleTimeString()}
+                {ts.toLocaleTimeString()}
               </span>
             </div>
             <p className="mt-1 text-muted-foreground">{log.message}</p>
@@ -67,7 +73,8 @@ export function UploadDiagnosticsPanel({ diagnostics, isVisible, isTimedOut }: U
               </pre>
             )}
           </div>
-        ))}
+        );
+        })}
       </div>
     </GlowCard>
   );

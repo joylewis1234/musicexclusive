@@ -388,6 +388,7 @@ export type Database = {
           id: string
           preview_audio_url: string | null
           preview_start_seconds: number
+          status: string
           title: string
           updated_at: string
         }
@@ -402,6 +403,7 @@ export type Database = {
           id?: string
           preview_audio_url?: string | null
           preview_start_seconds?: number
+          status?: string
           title: string
           updated_at?: string
         }
@@ -416,6 +418,7 @@ export type Database = {
           id?: string
           preview_audio_url?: string | null
           preview_start_seconds?: number
+          status?: string
           title?: string
           updated_at?: string
         }
