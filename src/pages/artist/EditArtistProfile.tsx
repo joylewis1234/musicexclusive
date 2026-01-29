@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { GlowCard } from "@/components/ui/GlowCard";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import {
   Select,
   SelectContent,
@@ -16,6 +15,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useAvatarUpload } from "@/hooks/useAvatarUpload";
+import { AvatarUploadDiagnostics } from "@/components/artist/AvatarUploadDiagnostics";
 import {
   ArrowLeft,
   Home,
@@ -26,8 +27,6 @@ import {
   Save,
   User,
 } from "lucide-react";
-
-import artist1 from "@/assets/artist-1.jpg";
 
 const GENRES = [
   "Hip-Hop",
@@ -48,20 +47,20 @@ const GENRES = [
   "Other",
 ];
 
-// TikTok icon component - simple span wrapper to avoid ref issues
+// TikTok icon component
 const TikTokIcon = ({ className }: { className?: string }) => (
-  <span className={className} style={{ display: 'inline-flex' }}>
+  <span className={className} style={{ display: "inline-flex" }}>
     <svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em">
-      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
     </svg>
   </span>
 );
 
-// X (Twitter) icon component - simple span wrapper to avoid ref issues
+// X (Twitter) icon component
 const XIcon = ({ className }: { className?: string }) => (
-  <span className={className} style={{ display: 'inline-flex' }}>
+  <span className={className} style={{ display: "inline-flex" }}>
     <svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em">
-      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
   </span>
 );
@@ -73,36 +72,26 @@ const EditArtistProfile = () => {
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
 
   // Form fields
   const [artistName, setArtistName] = useState("");
   const [bio, setBio] = useState("");
   const [genre, setGenre] = useState("");
-  const [avatarPath, setAvatarPath] = useState(""); // Store path, not URL
-  const [avatarDisplayUrl, setAvatarDisplayUrl] = useState(""); // For display only
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [instagramUrl, setInstagramUrl] = useState("");
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
-  // Helper to generate public URL from storage path
-  const getAvatarPublicUrl = (path: string | null): string => {
-    if (!path) return "";
-    // If it's already a full URL, return as-is (legacy support)
-    if (path.startsWith("http")) return path;
-    // Generate public URL from path
-    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
-    return data.publicUrl;
-  };
+
+  // Hook for avatar upload
+  const avatarUploader = useAvatarUpload({ userId: user?.id });
 
   useEffect(() => {
     const fetchProfile = async () => {
       if (!user) return;
-
       setIsLoading(true);
       try {
-        // First check if artist_profiles exists
         const { data: profile, error: profileError } = await supabase
           .from("artist_profiles")
           .select("*")
@@ -114,112 +103,50 @@ const EditArtistProfile = () => {
         }
 
         if (profile) {
-          console.log("[EditProfile] Loaded profile:", profile);
           setHasExistingProfile(true);
           setArtistName(profile.artist_name || "");
           setBio(profile.bio || "");
           setGenre(profile.genre || "");
-          // Store the path and generate display URL
-          setAvatarPath(profile.avatar_url || "");
-          setAvatarDisplayUrl(getAvatarPublicUrl(profile.avatar_url));
+          setAvatarUrl(profile.avatar_url || "");
           setInstagramUrl(profile.instagram_url || "");
           setTiktokUrl(profile.tiktok_url || "");
           setYoutubeUrl(profile.youtube_url || "");
           setTwitterUrl(profile.twitter_url || "");
         } else {
-          // Fallback to artist_applications for initial data
-          const { data: application } = await supabase
+          // Fallback to application data
+          const { data: app } = await supabase
             .from("artist_applications")
             .select("artist_name, genres")
             .eq("contact_email", user.email)
             .maybeSingle();
-
-          if (application) {
-            setArtistName(application.artist_name || "");
-            setGenre(application.genres || "");
+          if (app) {
+            setArtistName(app.artist_name || "");
+            setGenre(app.genres || "");
           }
         }
-      } catch (error) {
-        console.error("Error fetching profile:", error);
+      } catch (err) {
+        console.error("Error fetching profile:", err);
         toast.error("Could not load profile data");
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchProfile();
   }, [user]);
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) {
-      console.log("[EditProfile] No file selected or user not logged in");
-      return;
+    if (!file) return;
+
+    const result = await avatarUploader.uploadAvatar(file);
+    if (result.ok) {
+      setAvatarUrl(result.url);
+      toast.success("Profile photo updated");
+    } else {
+      toast.error((result as { ok: false; error: { message: string } }).error.message);
     }
-
-    // Validate file type
-    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
-    if (!validTypes.includes(file.type)) {
-      toast.error("Please select a JPG, PNG, or WEBP image");
-      return;
-    }
-
-    // Validate file size (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be less than 5MB");
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      console.log("[EditProfile] Uploading avatar via edge function...");
-      
-      // Get the current session for authorization
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error("No active session");
-      }
-
-      // Create form data for the upload
-      const formData = new FormData();
-      formData.append("file", file);
-
-      // Upload via edge function to bypass iframe storage limitations
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-avatar`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: formData,
-        }
-      );
-
-      const result = await response.json();
-      
-      if (!response.ok) {
-        console.error("[EditProfile] Upload error:", result);
-        throw new Error(result.error || "Upload failed");
-      }
-
-      console.log("[EditProfile] Upload successful:", result);
-
-      // Store the path, generate display URL
-      setAvatarPath(result.path);
-      setAvatarDisplayUrl(getAvatarPublicUrl(result.path));
-      
-      toast.success("Image uploaded successfully");
-    } catch (error: any) {
-      console.error("[EditProfile] Error uploading image:", error);
-      toast.error(error?.message || "Failed to upload image");
-    } finally {
-      setIsUploading(false);
-      // Reset the input so the same file can be re-selected if needed
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    }
+    // Reset input so the same file can be re-selected if needed
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleSave = async () => {
@@ -227,25 +154,18 @@ const EditArtistProfile = () => {
       toast.error("You must be logged in to save");
       return;
     }
-
     if (!artistName.trim()) {
       toast.error("Artist name is required");
       return;
     }
 
     setIsSaving(true);
-    console.log("[EditProfile] Saving profile for user:", user.id);
-    
     try {
-      // Store the path (or full URL for legacy), not regenerate URL
-      const avatarToSave = avatarPath || null;
-      
       const profileData = {
-        user_id: user.id,
         artist_name: artistName.trim(),
         bio: bio.trim() || null,
         genre: genre || null,
-        avatar_url: avatarToSave,
+        avatar_url: avatarUrl.trim() || null,
         instagram_url: instagramUrl.trim() || null,
         tiktok_url: tiktokUrl.trim() || null,
         youtube_url: youtubeUrl.trim() || null,
@@ -253,41 +173,25 @@ const EditArtistProfile = () => {
         updated_at: new Date().toISOString(),
       };
 
-      console.log("[EditProfile] Saving profile data:", profileData);
-
       if (hasExistingProfile) {
-        console.log("[EditProfile] Updating existing profile...");
-        const { error, data } = await supabase
+        const { error } = await supabase
           .from("artist_profiles")
           .update(profileData)
-          .eq("user_id", user.id)
-          .select();
-
-        if (error) {
-          console.error("[EditProfile] Update error:", error);
-          throw error;
-        }
-        console.log("[EditProfile] Update successful:", data);
+          .eq("user_id", user.id);
+        if (error) throw error;
       } else {
-        console.log("[EditProfile] Creating new profile...");
-        const { error, data } = await supabase
+        const { error } = await supabase
           .from("artist_profiles")
-          .insert(profileData)
-          .select();
-
-        if (error) {
-          console.error("[EditProfile] Insert error:", error);
-          throw error;
-        }
-        console.log("[EditProfile] Insert successful:", data);
+          .insert({ user_id: user.id, ...profileData });
+        if (error) throw error;
         setHasExistingProfile(true);
       }
 
       toast.success("Profile saved successfully!");
       navigate("/artist/dashboard");
-    } catch (error: any) {
-      console.error("[EditProfile] Error saving profile:", error);
-      toast.error(error?.message || "Failed to save profile");
+    } catch (err: any) {
+      console.error("[EditProfile] Save error:", err);
+      toast.error(err?.message || "Failed to save profile");
     } finally {
       setIsSaving(false);
     }
@@ -331,14 +235,13 @@ const EditArtistProfile = () => {
       {/* Main Content */}
       <main className="pt-20 pb-12 px-4">
         <div className="container max-w-lg mx-auto space-y-6">
-          
           {/* Profile Image Section */}
           <GlowCard className="p-6">
             <div className="text-center">
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp"
                 onChange={handleImageSelect}
                 className="hidden"
               />
@@ -346,14 +249,13 @@ const EditArtistProfile = () => {
               {/* Avatar Preview */}
               <div className="relative inline-block mb-4">
                 <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary/30 bg-muted/20">
-                  {avatarDisplayUrl ? (
+                  {avatarUrl ? (
                     <img
-                      src={avatarDisplayUrl}
+                      src={avatarUrl}
                       alt="Artist avatar"
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        console.log("[EditProfile] Image load error, clearing display");
-                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).style.display = "none";
                       }}
                     />
                   ) : (
@@ -367,10 +269,10 @@ const EditArtistProfile = () => {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={isUploading}
+                  disabled={avatarUploader.isUploading}
                   className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
                 >
-                  {isUploading ? (
+                  {avatarUploader.isUploading ? (
                     <Loader2 className="w-5 h-5 animate-spin text-primary-foreground" />
                   ) : (
                     <Camera className="w-5 h-5 text-primary-foreground" />
@@ -378,11 +280,16 @@ const EditArtistProfile = () => {
                 </button>
               </div>
 
-              <p className="text-muted-foreground text-xs">
-                Tap to upload your artist photo
-              </p>
+              <p className="text-muted-foreground text-xs">Tap to upload your artist photo</p>
             </div>
           </GlowCard>
+
+          {/* Dev-only diagnostics */}
+          <AvatarUploadDiagnostics
+            userId={user?.id}
+            meta={avatarUploader.lastMeta}
+            error={avatarUploader.lastError}
+          />
 
           {/* Basic Info Section */}
           <GlowCard className="p-5">
@@ -428,9 +335,7 @@ const EditArtistProfile = () => {
                   className="min-h-[120px] resize-none"
                   maxLength={500}
                 />
-                <p className="text-xs text-muted-foreground text-right">
-                  {bio.length}/500
-                </p>
+                <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
               </div>
             </div>
           </GlowCard>
