@@ -2,11 +2,10 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
-import { uploadToStorageWithXhr, checkBucketExists, preflightStorageCheck } from "@/utils/storageUpload";
+import { uploadToStorageWithXhr } from "@/utils/storageUpload";
 
 export type UploadStep =
   | "idle"
-  | "preflight"
   | "session_check"
   | "cover_upload"
   | "audio_upload"
@@ -17,7 +16,7 @@ export type UploadStep =
 
 export interface DiagnosticLog {
   step: UploadStep;
-  status: "pending" | "success" | "error" | "retry";
+  status: "pending" | "success" | "error";
   message: string;
   timestamp: Date;
   details?: string;
@@ -33,7 +32,6 @@ export interface UploadState {
   uploadedAudioPath: string | null;
   isTimedOut: boolean;
   lastFailedStep: UploadStep | null;
-  retryCount: number;
 }
 
 interface UploadParams {
@@ -44,7 +42,7 @@ interface UploadParams {
   userId: string;
 }
 
-const UPLOAD_TIMEOUT_MS = 180000; // 3 minutes for slower networks
+const UPLOAD_TIMEOUT_MS = 120000; // 2 minutes
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 const MAX_COVER_BYTES = 10 * 1024 * 1024;
 
@@ -64,31 +62,6 @@ function getAudioContentType(file: File): string {
   return "audio/mpeg";
 }
 
-function getUserFriendlyError(error: string): string {
-  const lowerError = error.toLowerCase();
-  
-  if (lowerError.includes("failed to fetch") || lowerError.includes("network error")) {
-    return "Network connection lost. Please check your internet and try again.";
-  }
-  if (lowerError.includes("storageunknownerror")) {
-    return "Storage temporarily unavailable. Please wait a moment and retry.";
-  }
-  if (lowerError.includes("unauthorized") || lowerError.includes("401")) {
-    return "Session expired. Please log in again.";
-  }
-  if (lowerError.includes("forbidden") || lowerError.includes("403")) {
-    return "Upload permission denied. Please contact support.";
-  }
-  if (lowerError.includes("too large") || lowerError.includes("413")) {
-    return "File is too large. Please use a smaller file.";
-  }
-  if (lowerError.includes("timeout")) {
-    return "Upload timed out. Please try again with a stable connection.";
-  }
-  
-  return error;
-}
-
 export function useTrackUpload() {
   const [state, setState] = useState<UploadState>({
     step: "idle",
@@ -100,7 +73,6 @@ export function useTrackUpload() {
     uploadedAudioPath: null,
     isTimedOut: false,
     lastFailedStep: null,
-    retryCount: 0,
   });
 
   const abortRef = useRef(false);
@@ -137,64 +109,109 @@ export function useTrackUpload() {
     }
   }, []);
 
-  const runPreflightChecks = useCallback(
-    async (accessToken: string): Promise<{ ok: boolean; error?: string }> => {
-      setStep("preflight", 5);
-      
-      addDiagnostic({
-        step: "preflight",
-        status: "pending",
-        message: "Running preflight checks...",
-        timestamp: new Date(),
-      });
-
-      // Check track_covers bucket
-      const coverBucketCheck = await checkBucketExists({
-        url: SUPABASE_URL,
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        accessToken,
-        bucket: "track_covers",
-      });
-
-      if (!coverBucketCheck.exists) {
+  const storageTest = useCallback(
+    async (userId: string): Promise<{ ok: boolean; publicUrl?: string; error?: string }> => {
+      try {
         addDiagnostic({
-          step: "preflight",
-          status: "error",
-          message: `Cover bucket check failed: ${coverBucketCheck.error}`,
+          step: "session_check",
+          status: "pending",
+          message: "Storage preflight: uploading tiny JPG to verify storage connectivity...",
           timestamp: new Date(),
         });
-        return { ok: false, error: coverBucketCheck.error };
-      }
 
-      // Check track_audio bucket
-      const audioBucketCheck = await checkBucketExists({
-        url: SUPABASE_URL,
-        apikey: SUPABASE_PUBLISHABLE_KEY,
-        accessToken,
-        bucket: "track_audio",
-      });
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const session = sessionData?.session;
+        const accessToken = session?.access_token;
+        if (sessionError || !session || !accessToken) {
+          const msg = sessionError?.message || "No active session for storage test";
+          addDiagnostic({
+            step: "session_check",
+            status: "error",
+            message: msg,
+            timestamp: new Date(),
+            details: safeStringify(sessionError ?? { reason: "missing session/access token" }),
+          });
+          return { ok: false, error: msg };
+        }
 
-      if (!audioBucketCheck.exists) {
-        addDiagnostic({
-          step: "preflight",
-          status: "error",
-          message: `Audio bucket check failed: ${audioBucketCheck.error}`,
-          timestamp: new Date(),
+        const { data: artistProfile, error: profileError } = await supabase
+          .from("artist_profiles")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        const artistId = artistProfile?.id;
+        if (profileError || !artistId) {
+          const msg = profileError?.message || "Artist profile not found";
+          addDiagnostic({
+            step: "session_check",
+            status: "error",
+            message: msg,
+            timestamp: new Date(),
+            details: safeStringify(profileError ?? { reason: "missing artist profile" }),
+          });
+          return { ok: false, error: msg };
+        }
+
+        const bytes = new Uint8Array(1024);
+        try {
+          crypto.getRandomValues(bytes);
+        } catch {
+          // If crypto isn't available for some reason, leave zeros.
+        }
+        const blob = new Blob([bytes], { type: "image/jpeg" });
+        const file = new File([blob], "preflight.jpg", { type: "image/jpeg" });
+        const objectPath = `preflight/${artistId}/${Date.now()}.jpg`;
+
+        const res = await uploadToStorageWithXhr({
+          url: SUPABASE_URL,
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          accessToken,
+          bucket: "track_covers",
+          objectPath,
+          file,
+          contentType: "image/jpeg",
         });
-        return { ok: false, error: audioBucketCheck.error };
+
+        if (!res.ok) {
+          const msg = "Storage preflight failed";
+          addDiagnostic({
+            step: "session_check",
+            status: "error",
+            message: msg,
+            timestamp: new Date(),
+            details: safeStringify({ status: res.status, responseText: res.responseText, objectPath }),
+          });
+          console.error("[Upload] Storage preflight failed:", res);
+          return { ok: false, error: `${msg} (status=${res.status || "?"})` };
+        }
+
+        const publicUrl =
+          supabase.storage.from("track_covers").getPublicUrl(objectPath).data?.publicUrl || "";
+
+        addDiagnostic({
+          step: "session_check",
+          status: "success",
+          message: "Storage preflight succeeded",
+          timestamp: new Date(),
+          details: safeStringify({ objectPath, publicUrl, status: res.status }),
+        });
+
+        return { ok: true, publicUrl };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Storage preflight failed";
+        addDiagnostic({
+          step: "session_check",
+          status: "error",
+          message: msg,
+          timestamp: new Date(),
+          details: safeStringify(err),
+        });
+        console.error("[Upload] Storage preflight unexpected error:", err);
+        return { ok: false, error: msg };
       }
-
-      addDiagnostic({
-        step: "preflight",
-        status: "success",
-        message: "All preflight checks passed",
-        timestamp: new Date(),
-        details: "Buckets track_covers and track_audio are accessible",
-      });
-
-      return { ok: true };
     },
-    [addDiagnostic, setStep]
+    [addDiagnostic]
   );
 
   const reset = useCallback(() => {
@@ -213,7 +230,6 @@ export function useTrackUpload() {
       uploadedAudioPath: null,
       isTimedOut: false,
       lastFailedStep: null,
-      retryCount: 0,
     });
   }, []);
 
@@ -228,6 +244,11 @@ export function useTrackUpload() {
         if (typeof err === "string") return err;
         if (typeof (err as any)?.message === "string") return (err as any).message;
         return fallback;
+      };
+
+      const safeStatus = (err?: unknown): string | undefined => {
+        const sc = (err as any)?.statusCode ?? (err as any)?.status;
+        return sc ? String(sc) : undefined;
       };
 
       const coverExtFromContentType = (ct: string) => {
@@ -317,12 +338,10 @@ export function useTrackUpload() {
         });
         setStep("session_check", 10);
 
-        // Run preflight checks (only for fresh attempts)
+        // Optional preflight (non-blocking). Useful on Android where Storage fetch can fail mid-transfer.
+        // We only run it for a fresh attempt (not for mid-step resume).
         if (!resumeFrom) {
-          const preflightResult = await runPreflightChecks(accessToken);
-          if (!preflightResult.ok) {
-            throw new Error(preflightResult.error || "Preflight checks failed");
-          }
+          await storageTest(userId);
         }
 
         // Step 2: Get artist profile
@@ -370,14 +389,15 @@ export function useTrackUpload() {
             try {
               const { data: trackRow, error: trackErr } = await supabase
                 .from("tracks")
-                .insert({
+                // Cast to any to avoid stale generated types lagging behind migrations
+                .insert(({
                   artist_id: artistId,
                   title: title?.trim() || "Untitled",
                   genre: genre || null,
                   artwork_url: null,
                   full_audio_url: null,
                   status: "uploading",
-                } as any)
+                } as any))
                 .select("id")
                 .maybeSingle();
 
@@ -412,6 +432,7 @@ export function useTrackUpload() {
         }
 
         if (!trackId) {
+          // Should be impossible, but guard anyway.
           throw new Error("Failed to determine track ID for upload.");
         }
 
@@ -421,7 +442,7 @@ export function useTrackUpload() {
         const coverPath = `artists/${artistId}/${trackId}.${coverExt}`;
 
         if (!resumeFrom || resumeFrom === "cover_upload") {
-          setStep("cover_upload", 20);
+          setStep("cover_upload", 30);
           addDiagnostic({
             step: "cover_upload",
             status: "pending",
@@ -436,37 +457,23 @@ export function useTrackUpload() {
           });
 
           try {
-            const res = await uploadToStorageWithXhr(
-              {
-                url: SUPABASE_URL,
-                apikey: SUPABASE_PUBLISHABLE_KEY,
-                accessToken,
-                bucket: "track_covers",
-                objectPath: coverPath,
-                file: coverFile,
-                contentType: coverContentType,
-                onProgress: (pct) => {
-                  // Map 0-100 -> 20-45
-                  const mapped = 20 + Math.round(pct * 0.25);
-                  setStep("cover_upload", mapped);
-                },
+            const res = await uploadToStorageWithXhr({
+              url: SUPABASE_URL,
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              accessToken,
+              bucket: "track_covers",
+              objectPath: coverPath,
+              file: coverFile,
+              contentType: coverContentType,
+              onProgress: (pct) => {
+                // Map 0-100 -> 30-55
+                const mapped = 30 + Math.round(pct * 0.25);
+                setStep("cover_upload", mapped);
               },
-              {
-                maxRetries: 3,
-                onRetry: (attempt, delayMs, error) => {
-                  addDiagnostic({
-                    step: "cover_upload",
-                    status: "retry",
-                    message: `Retry ${attempt}/3 after ${delayMs}ms...`,
-                    timestamp: new Date(),
-                    details: error,
-                  });
-                },
-              }
-            );
+            });
 
             if (!res.ok) {
-              const msg = getUserFriendlyError(res.responseText || `Cover upload failed (status=${res.status})`);
+              const msg = safeMsg("Cover upload failed", res);
               throw { message: msg, statusCode: String(res.status || ""), error: res, data: null };
             }
 
@@ -479,8 +486,7 @@ export function useTrackUpload() {
               details: safeStringify({ path: coverPath, status: res.status }),
             });
           } catch (err) {
-            const rawMsg = safeMsg("Cover upload failed", err);
-            const msg = getUserFriendlyError(rawMsg);
+            const msg = safeMsg("Cover upload failed", err);
             addDiagnostic({
               step: "cover_upload",
               status: "error",
@@ -497,10 +503,11 @@ export function useTrackUpload() {
         // Step 5: Upload audio (unique path based on trackId)
         const audioContentType = getAudioContentType(audioFile);
         const audioExt = audioExtFromContentType(audioContentType);
-        const audioPath = `artists/${artistId}/${trackId}.${audioExt}`;
+        const audioSafeName = sanitizeFilename(audioFile?.name || `audio.${audioExt}`);
+        const audioPath = `artists/${artistId}/${trackId}.${audioExt}`; // ignore user filename; path is trackId
 
         if (!resumeFrom || resumeFrom === "audio_upload") {
-          setStep("audio_upload", 50);
+          setStep("audio_upload", 60);
           addDiagnostic({
             step: "audio_upload",
             status: "pending",
@@ -510,42 +517,29 @@ export function useTrackUpload() {
               path: audioPath,
               contentType: audioContentType,
               fileName: audioFile?.name,
+              sanitizedFileName: audioSafeName,
               fileSize: audioFile?.size,
             }),
           });
 
           try {
-            const res = await uploadToStorageWithXhr(
-              {
-                url: SUPABASE_URL,
-                apikey: SUPABASE_PUBLISHABLE_KEY,
-                accessToken,
-                bucket: "track_audio",
-                objectPath: audioPath,
-                file: audioFile,
-                contentType: audioContentType,
-                onProgress: (pct) => {
-                  // Map 0-100 -> 50-85
-                  const mapped = 50 + Math.round(pct * 0.35);
-                  setStep("audio_upload", mapped);
-                },
+            const res = await uploadToStorageWithXhr({
+              url: SUPABASE_URL,
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              accessToken,
+              bucket: "track_audio",
+              objectPath: audioPath,
+              file: audioFile,
+              contentType: audioContentType,
+              onProgress: (pct) => {
+                // Map 0-100 -> 60-85
+                const mapped = 60 + Math.round(pct * 0.25);
+                setStep("audio_upload", mapped);
               },
-              {
-                maxRetries: 3,
-                onRetry: (attempt, delayMs, error) => {
-                  addDiagnostic({
-                    step: "audio_upload",
-                    status: "retry",
-                    message: `Retry ${attempt}/3 after ${delayMs}ms...`,
-                    timestamp: new Date(),
-                    details: error,
-                  });
-                },
-              }
-            );
+            });
 
             if (!res.ok) {
-              const msg = getUserFriendlyError(res.responseText || `Audio upload failed (status=${res.status})`);
+              const msg = safeMsg("Audio upload failed", res);
               throw { message: msg, statusCode: String(res.status || ""), error: res, data: null };
             }
 
@@ -558,29 +552,23 @@ export function useTrackUpload() {
               details: safeStringify({ path: audioPath, status: res.status }),
             });
           } catch (err) {
-            const rawMsg = safeMsg("Audio upload failed", err);
-            const msg = getUserFriendlyError(rawMsg);
-            
-            // Special message when cover succeeded but audio failed
-            const enhancedMsg = state.uploadedCoverPath 
-              ? `Cover saved — audio failed. ${msg}` 
-              : msg;
-            
+            const msg = safeMsg("Audio upload failed", err);
             addDiagnostic({
               step: "audio_upload",
               status: "error",
-              message: enhancedMsg,
+              message: msg,
               timestamp: new Date(),
               details: safeStringify(err),
             });
             console.error("[Upload] Audio upload failed:", err);
+            // Keep cover uploaded so we can retry audio only.
             setState((prev) => ({ ...prev, lastFailedStep: "audio_upload" }));
-            throw new Error(enhancedMsg);
+            throw new Error(msg);
           }
         }
 
         // Step 6: Update DB with URLs + status=ready
-        setStep("db_update", 90);
+        setStep("db_update", 85);
         addDiagnostic({
           step: "db_update",
           status: "pending",
@@ -594,11 +582,11 @@ export function useTrackUpload() {
         try {
           const { error: updateErr } = await supabase
             .from("tracks")
-            .update({
+            .update(({
               artwork_url: coverPublicUrl,
               full_audio_url: audioPublicUrl,
               status: "ready",
-            } as any)
+            } as any))
             .eq("id", trackId);
 
           if (updateErr) {
@@ -648,8 +636,7 @@ export function useTrackUpload() {
           timeoutRef.current = null;
         }
 
-        const rawErrorMsg = safeMsg("An unexpected error occurred", err);
-        const errorMsg = getUserFriendlyError(rawErrorMsg);
+        const errorMsg = safeMsg("An unexpected error occurred", err);
         console.error("[Upload] Upload failed:", err);
 
         setState((prev) => ({
@@ -661,14 +648,14 @@ export function useTrackUpload() {
         return false;
       }
     },
+    // Intentionally depend on current state to enable resume logic.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [addDiagnostic, cleanup, setStep, state.trackId, state.uploadedCoverPath, runPreflightChecks]
+    [addDiagnostic, cleanup, setStep, state.trackId, state.uploadedCoverPath, storageTest]
   );
 
   const retry = useCallback(
     async (params: UploadParams): Promise<boolean> => {
       const resumeFrom = state.lastFailedStep;
-      setState((prev) => ({ ...prev, retryCount: prev.retryCount + 1 }));
       if (!resumeFrom) return upload(params);
       return upload(params, { resumeFrom });
     },
@@ -681,5 +668,6 @@ export function useTrackUpload() {
     retry,
     reset,
     cleanup,
+    storageTest,
   };
 }

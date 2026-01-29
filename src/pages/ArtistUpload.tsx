@@ -119,7 +119,7 @@ const ArtistUpload = () => {
   }, [uploadState.step, uploadState.errorMessage, toast]);
 
   const isFormValid = title?.trim() && genre && coverFile && audioFile && agreesToTerms;
-  const isUploading = ["preflight", "session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(uploadState.step);
+  const isUploading = ["session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(uploadState.step);
 
   const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -403,10 +403,9 @@ const ArtistUpload = () => {
               </div>
             </div>
             <div className="flex gap-2 mt-3">
-              <Button variant="default" size="sm" onClick={handleRetry} disabled={isUploading}>
+              <Button variant="default" size="sm" onClick={handleRetry}>
                 <RefreshCw className="h-4 w-4 mr-1" />
-                Retry {uploadState.lastFailedStep === "audio_upload" ? "Audio Upload" : "Upload"}
-                {uploadState.retryCount > 0 && ` (${uploadState.retryCount})`}
+                Retry Upload
               </Button>
               <Button variant="outline" size="sm" onClick={handleReset}>
                 Start Over
