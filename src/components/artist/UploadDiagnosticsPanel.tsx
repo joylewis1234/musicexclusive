@@ -1,3 +1,4 @@
+import * as React from "react";
 import { CheckCircle, XCircle, Loader2, Clock } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
 import type { DiagnosticLog, UploadStep } from "@/hooks/useTrackUpload";
@@ -20,11 +21,12 @@ const stepLabels: Record<UploadStep, string> = {
   error: "Error",
 };
 
-export function UploadDiagnosticsPanel({ diagnostics, isVisible, isTimedOut }: UploadDiagnosticsPanelProps) {
-  if (!isVisible || diagnostics.length === 0) return null;
+export const UploadDiagnosticsPanel = React.forwardRef<HTMLDivElement, UploadDiagnosticsPanelProps>(
+  function UploadDiagnosticsPanel({ diagnostics, isVisible, isTimedOut }, ref) {
+    if (!isVisible || diagnostics.length === 0) return null;
 
-  return (
-    <GlowCard className="p-4 mt-4">
+    return (
+      <GlowCard ref={ref} className="p-4 mt-4">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-foreground">Upload Diagnostics</h3>
         {isTimedOut && (
@@ -82,7 +84,10 @@ export function UploadDiagnosticsPanel({ diagnostics, isVisible, isTimedOut }: U
           </div>
         );
         })}
-      </div>
-    </GlowCard>
-  );
-}
+        </div>
+      </GlowCard>
+    );
+  }
+);
+
+UploadDiagnosticsPanel.displayName = "UploadDiagnosticsPanel";
