@@ -1,25 +1,20 @@
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, Home, Loader2, Music, LayoutDashboard, Compass } from "lucide-react";
+import { ChevronLeft, Loader2, Music, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ArtistHeader } from "@/components/profile/ArtistHeader";
-import { TrackListItem } from "@/components/profile/TrackListItem";
-import { VaultMusicPlayer } from "@/components/player/VaultMusicPlayer";
+import { ArtistProfileHero } from "@/components/profile/ArtistProfileHero";
+import { ArtistAboutSection } from "@/components/profile/ArtistAboutSection";
+import { AppleMusicTrackRow } from "@/components/profile/AppleMusicTrackRow";
+import { CompactVaultPlayer } from "@/components/profile/CompactVaultPlayer";
+import { ShareArtistSection } from "@/components/profile/ShareArtistSection";
 import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ShareExclusiveTrackModal } from "@/components/profile/ShareExclusiveTrackModal";
+import { useTrackLikes } from "@/hooks/useTrackLikes";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "@/hooks/use-toast";
 
 import artist1 from "@/assets/artist-1.jpg";
-import artist2 from "@/assets/artist-2.jpg";
-import artist3 from "@/assets/artist-3.jpg";
-
-const artistImages: Record<string, string> = {
-  default: artist1,
-  artist1,
-  artist2,
-  artist3,
-};
 
 interface DbTrack {
   id: string;
@@ -70,10 +65,15 @@ const ArtistProfile = () => {
   const [hasVaultAccess, setHasVaultAccess] = useState(false);
   const [showAccessGate, setShowAccessGate] = useState(false);
   const [viewContext, setViewContext] = useState<ViewContext>("fan");
+  const [shareModalOpen, setShareModalOpen] = useState(false);
+  const [trackToShare, setTrackToShare] = useState<DbTrack | null>(null);
   
   // Refs for scroll-to-track behavior
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
+
+  // Track likes for the selected track
+  const { isLiked, toggleLike } = useTrackLikes(selectedTrack?.id || "", fanId);
 
   // Fetch fan's vault membership
   useEffect(() => {
@@ -102,11 +102,10 @@ const ArtistProfile = () => {
 
       setIsLoading(true);
       try {
-        // Fetch artist profile first - try by user_id first, then by profile id
+        // Fetch artist profile - try by user_id first, then by profile id
         let profile = null;
         let artistUserId = artistId;
         
-        // Try fetching by user_id
         const { data: profileByUserId } = await supabase
           .from("artist_profiles")
           .select("id, user_id, artist_name, genre, bio, avatar_url")
@@ -117,7 +116,6 @@ const ArtistProfile = () => {
           profile = profileByUserId;
           artistUserId = profileByUserId.user_id;
         } else {
-          // Try fetching by profile id
           const { data: profileById } = await supabase
             .from("artist_profiles")
             .select("id, user_id, artist_name, genre, bio, avatar_url")
@@ -136,37 +134,19 @@ const ArtistProfile = () => {
             userId: profile.user_id,
             name: profile.artist_name,
             genre: profile.genre || "Music",
-            bio: profile.bio || `Exclusive artist on Music Exclusive.`,
-            imageUrl: profile.avatar_url || artistImages.default,
+            bio: profile.bio || `Exclusive artist on Music Exclusive™. Experience premium, unreleased music only available inside the Vault.`,
+            imageUrl: profile.avatar_url || artist1,
           });
         } else {
-          // Fallback to artist_applications
-          const { data: application } = await supabase
-            .from("artist_applications")
-            .select("artist_name, genres, contact_email")
-            .eq("contact_email", artistId)
-            .maybeSingle();
-
-          if (application) {
-            setArtist({
-              id: artistId,
-              userId: "",
-              name: application.artist_name,
-              genre: application.genres,
-              bio: `Exclusive artist on Music Exclusive, bringing you premium ${application.genres} content.`,
-              imageUrl: artistImages.default,
-            });
-          } else {
-            // Demo artists fallback
-            const demoArtists: Record<string, ArtistData> = {
-              nova: { id: "nova", userId: "", name: "NOVA", genre: "Electronic", bio: "Pioneering the future of electronic music.", imageUrl: artist1 },
-              aura: { id: "aura", userId: "", name: "AURA", genre: "R&B", bio: "Smooth vocals and ethereal production.", imageUrl: artist2 },
-              echo: { id: "echo", userId: "", name: "ECHO", genre: "Indie", bio: "Raw, authentic indie sound.", imageUrl: artist3 },
-            };
-            if (demoArtists[artistId]) {
-              setArtist(demoArtists[artistId]);
-            }
-          }
+          // Fallback to demo artist
+          setArtist({
+            id: artistId,
+            userId: "",
+            name: "Artist",
+            genre: "Music",
+            bio: "Exclusive artist on Music Exclusive™.",
+            imageUrl: artist1,
+          });
         }
 
         // Fetch tracks
@@ -191,11 +171,10 @@ const ArtistProfile = () => {
     fetchArtistData();
   }, [artistId]);
 
-  // Determine view context based on role, ownership, and query param
+  // Determine view context
   useEffect(() => {
     if (!artist) return;
     
-    // Force fan view if query param is present
     if (forceFanView) {
       setViewContext("fan");
       return;
@@ -210,16 +189,15 @@ const ArtistProfile = () => {
         setViewContext("artist-other");
       }
     } else {
-      setViewContext("fan"); // Default for unauthenticated
+      setViewContext("fan");
     }
   }, [role, user?.id, artist, forceFanView]);
 
-  // Scroll to and highlight selected track from URL param
+  // Scroll to selected track from URL
   useEffect(() => {
     if (selectedTrackId && tracks.length > 0 && !hasScrolledToTrack.current) {
       const trackElement = trackRefs.current[selectedTrackId];
       if (trackElement) {
-        // Scroll with offset for header
         setTimeout(() => {
           trackElement.scrollIntoView({ behavior: "smooth", block: "center" });
         }, 100);
@@ -233,31 +211,87 @@ const ArtistProfile = () => {
       id: track.id,
       title: track.title,
       artist: artist?.name || "Unknown Artist",
-      artworkUrl: track.artwork_url || artist?.imageUrl || artistImages.default,
+      artworkUrl: track.artwork_url || artist?.imageUrl || artist1,
       audioUrl: track.full_audio_url || "",
     });
   };
 
-  // Navigation handlers based on context
-  const handleBack = () => {
-    if (fromRoute) {
-      navigate(fromRoute);
-    } else if (viewContext === "fan" || viewContext === "artist-other") {
-      navigate("/discovery");
-    } else {
-      navigate("/artist/dashboard");
+  const handlePlayAll = () => {
+    if (tracks.length > 0) {
+      if (selectedTrack) {
+        // Already have a track selected, this could toggle play
+        return;
+      }
+      handleSelectTrack(tracks[0]);
     }
   };
 
-  const handleSecondaryNav = () => {
-    if (viewContext === "fan") {
-      navigate("/fan/dashboard");
+  const handleShareTrack = (track: DbTrack) => {
+    if (!hasVaultAccess) {
+      toast({
+        title: "Vault Access Required",
+        description: "Enter the Vault to share exclusive music.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setTrackToShare(track);
+    setShareModalOpen(true);
+  };
+
+  const handleShareArtist = () => {
+    if (!hasVaultAccess) {
+      toast({
+        title: "Vault Access Required",
+        description: "Enter the Vault to share artists.",
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Share Artist",
+      description: "Artist sharing coming soon!",
+    });
+  };
+
+  const handlePlayerLike = () => {
+    if (!hasVaultAccess) {
+      toast({
+        title: "Vault Access Required",
+        description: "Enter the Vault to like tracks.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (fanId) {
+      toggleLike();
+    }
+  };
+
+  const handlePlayerShare = () => {
+    if (selectedTrack) {
+      const track = tracks.find(t => t.id === selectedTrack.id);
+      if (track) {
+        handleShareTrack(track);
+      }
+    }
+  };
+
+  // Navigation handlers
+  const handleBack = () => {
+    if (forceFanView && viewContext === "fan") {
+      // Artist viewing their own profile as fan preview
+      navigate("/artist/dashboard");
+    } else if (fromRoute) {
+      navigate(fromRoute);
+    } else {
+      navigate("/discovery");
     }
   };
 
   const getBackLabel = () => {
-    if (viewContext === "artist-own") {
-      return "Dashboard";
+    if (forceFanView) {
+      return "Artist Dashboard";
     }
     if (fromRoute === "/discovery" || !fromRoute) {
       return "Discovery";
@@ -287,136 +321,147 @@ const ArtistProfile = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Navigation Header - Context Aware */}
-      <header className="fixed top-0 left-0 right-0 z-20 px-4 py-4 bg-gradient-to-b from-background/90 to-transparent">
-        <div className="w-full max-w-md mx-auto flex items-center justify-between">
-          {/* Back Button */}
+      {/* Back navigation - Floating */}
+      <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
+        <div className="w-full max-w-lg mx-auto">
           <button
             onClick={handleBack}
-            className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-foreground/80 hover:text-foreground hover:bg-background/90 transition-all"
           >
-            <ChevronLeft className="w-5 h-5" />
-            <span className="text-sm uppercase tracking-wider">{getBackLabel()}</span>
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">{getBackLabel()}</span>
           </button>
-          
-          {/* Right side navigation - context dependent */}
-          {viewContext === "fan" && !forceFanView ? (
-            <button
-              onClick={handleSecondaryNav}
-              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
-              aria-label="Go to Dashboard"
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              <span className="text-sm uppercase tracking-wider">Dashboard</span>
-            </button>
-          ) : viewContext === "fan" && forceFanView ? (
-            <button
-              onClick={() => navigate("/artist/dashboard")}
-              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
-              aria-label="Back to Artist Dashboard"
-            >
-              <LayoutDashboard className="w-5 h-5" />
-              <span className="text-sm uppercase tracking-wider">Dashboard</span>
-            </button>
-          ) : viewContext === "artist-own" ? (
-            <button
-              onClick={() => navigate("/")}
-              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
-              aria-label="Go home"
-            >
-              <Home className="w-5 h-5" />
-              <span className="text-sm uppercase tracking-wider">Home</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => navigate("/discovery")}
-              className="flex items-center gap-2 text-foreground/80 hover:text-foreground transition-colors"
-              aria-label="Discovery"
-            >
-              <Compass className="w-5 h-5" />
-              <span className="text-sm uppercase tracking-wider">Discover</span>
-            </button>
-          )}
         </div>
       </header>
 
-      {/* Artist Header */}
-      <ArtistHeader
+      {/* Hero Section */}
+      <ArtistProfileHero
         name={artist.name}
         genre={artist.genre}
-        bio={artist.bio}
         imageUrl={artist.imageUrl}
+        onPlayAll={handlePlayAll}
+        onShareArtist={handleShareArtist}
+        isPlaying={!!selectedTrack}
       />
 
-      {/* Content */}
-      <div className="flex-1 px-4 py-6">
-        <div className="w-full max-w-md mx-auto space-y-6">
-          {/* Music Player */}
-          <section className="animate-fade-in">
-            <VaultMusicPlayer
-              track={selectedTrack}
-              hasVaultAccess={hasVaultAccess}
-              onAccessDenied={() => setShowAccessGate(true)}
+      {/* About Section */}
+      <ArtistAboutSection bio={artist.bio} />
+
+      {/* Vault Player */}
+      <CompactVaultPlayer
+        track={selectedTrack}
+        hasVaultAccess={hasVaultAccess}
+        isLiked={isLiked}
+        onAccessDenied={() => setShowAccessGate(true)}
+        onLike={handlePlayerLike}
+        onShare={handlePlayerShare}
+      />
+
+      {/* Track List Section */}
+      <section className="px-5 pb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <h2 className="font-display text-lg font-semibold text-foreground">
+            Top Songs
+          </h2>
+          {/* Section badge with crown */}
+          <div 
+            className="relative px-2.5 py-1 rounded-full"
+            style={{
+              background: 'hsla(280, 80%, 50%, 0.12)',
+            }}
+          >
+            <Crown 
+              className="absolute -top-1.5 -left-0.5 w-3 h-3 rotate-[-12deg]"
+              style={{
+                color: 'hsl(45, 90%, 55%)',
+                filter: 'drop-shadow(0 0 3px hsla(45, 90%, 55%, 0.8))'
+              }}
+              fill="hsl(45, 90%, 55%)"
             />
-          </section>
-
-          {/* Exclusive Music Section */}
-          <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
-            <h2
-              className="font-display text-sm uppercase tracking-wider text-foreground mb-4"
-              style={{ textShadow: "0 0 15px rgba(255, 255, 255, 0.2)" }}
+            <span 
+              className="text-[10px] font-display uppercase tracking-wider pl-1"
+              style={{ color: 'hsl(280, 80%, 70%)' }}
             >
-              Exclusive Music
-            </h2>
-
-            {tracks.length === 0 ? (
-              <div className="rounded-xl bg-card/50 p-6 text-center border border-primary/10">
-                <Music className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground text-sm">
-                  No exclusive tracks available yet.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {tracks.map((track) => (
-                  <TrackListItem
-                    key={track.id}
-                    ref={(el) => { trackRefs.current[track.id] = el; }}
-                    track={{
-                      id: track.id,
-                      title: track.title,
-                      artworkUrl: track.artwork_url,
-                    }}
-                    fanId={fanId}
-                    hasVaultAccess={hasVaultAccess}
-                    isSelected={selectedTrack?.id === track.id}
-                    isHighlighted={selectedTrackId === track.id}
-                    onSelect={() => handleSelectTrack(track)}
-                  />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Discover More CTA */}
-          <section className="pt-4 animate-fade-in" style={{ animationDelay: "200ms" }}>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate("/discovery")}
-            >
-              Discover More Music
-            </Button>
-          </section>
+              Exclusive
+            </span>
+          </div>
         </div>
-      </div>
+
+        {tracks.length === 0 ? (
+          <div className="rounded-xl bg-muted/20 p-8 text-center border border-border/30">
+            <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground text-sm">
+              No exclusive tracks available yet.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {tracks.map((track, index) => (
+              <AppleMusicTrackRow
+                key={track.id}
+                ref={(el) => { trackRefs.current[track.id] = el; }}
+                track={{
+                  id: track.id,
+                  title: track.title,
+                  artworkUrl: track.artwork_url,
+                  duration: track.duration,
+                }}
+                index={index}
+                fanId={fanId}
+                hasVaultAccess={hasVaultAccess}
+                isSelected={selectedTrack?.id === track.id}
+                isHighlighted={selectedTrackId === track.id}
+                onSelect={() => handleSelectTrack(track)}
+                onShare={() => handleShareTrack(track)}
+                fallbackImage={artist.imageUrl}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* Share Artist Section */}
+      <ShareArtistSection
+        artistName={artist.name}
+        onShareToInbox={handleShareArtist}
+      />
+
+      {/* Discover More CTA */}
+      <section className="px-5 pb-8">
+        <Button
+          variant="outline"
+          className="w-full rounded-xl"
+          onClick={() => navigate("/discovery")}
+        >
+          Discover More Artists
+        </Button>
+      </section>
 
       {/* Bottom spacing */}
-      <div className="h-20" />
+      <div className="h-8" />
 
       {/* Vault Access Gate Modal */}
       {showAccessGate && (
         <VaultAccessGate onClose={() => setShowAccessGate(false)} />
+      )}
+
+      {/* Share Track Modal */}
+      {shareModalOpen && trackToShare && artist && fanId && (
+        <ShareExclusiveTrackModal
+          open={shareModalOpen}
+          onOpenChange={(open) => {
+            setShareModalOpen(open);
+            if (!open) setTrackToShare(null);
+          }}
+          track={{
+            id: trackToShare.id,
+            title: trackToShare.title,
+            artistName: artist.name,
+            artworkUrl: trackToShare.artwork_url || artist.imageUrl,
+          }}
+          artistId={artist.id}
+          currentUserEmail={user?.email || undefined}
+        />
       )}
     </div>
   );
