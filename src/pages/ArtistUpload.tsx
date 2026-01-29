@@ -224,7 +224,6 @@ const ArtistUpload = () => {
 
       // Step 5: Upload audio to track_audio bucket
       setStatus("uploading_audio");
-      const audioSanitizedName = sanitizeFilename(audioFile!.name, 50);
       const audioPath = `${artistId}/${sanitizedTitle}-${timestamp}.mp3`;
       
       console.log(`[Upload] Starting audio upload to track_audio/${audioPath}`, {
