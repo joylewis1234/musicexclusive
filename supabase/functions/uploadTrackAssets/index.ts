@@ -107,16 +107,16 @@ serve(async (req) => {
     const genre = form.get("genre");
 
     if (!(coverFile instanceof File)) return json({ error: "Missing coverFile" }, 400);
-    if (!(audioFile instanceof File)) return json({ error: "Missing audioFile" }, 400);
-    if (typeof artistId !== "string" || !artistId || !isUuid(artistId)) {
-      return json({ error: "Invalid artistId" }, 400);
-    }
-    if (typeof title !== "string" || !title.trim() || title.trim().length > 100) {
-      return json({ error: "Invalid title" }, 400);
-    }
-    if (typeof genre !== "string" || !genre.trim() || genre.trim().length > 50) {
-      return json({ error: "Invalid genre" }, 400);
-    }
+    // audioFile is optional for cover-only testing
+  if (typeof artistId !== "string" || !artistId || !isUuid(artistId)) {
+    return json({ error: "Invalid artistId" }, 400);
+  }
+  if (typeof title !== "string" || !title.trim() || title.trim().length > 100) {
+    return json({ error: "Invalid title" }, 400);
+  }
+  if (typeof genre !== "string" || !genre.trim() || genre.trim().length > 50) {
+    return json({ error: "Invalid genre" }, 400);
+  }
 
     // Ensure the authenticated user owns the artist profile.
     const { data: ap, error: apError } = await supabaseAdmin
@@ -130,22 +130,24 @@ serve(async (req) => {
     const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
     const MAX_AUDIO_SIZE = 50 * 1024 * 1024;
 
-    if (coverFile.size > MAX_IMAGE_SIZE) return json({ error: "Image size must be less than 10MB" }, 413);
+  if (coverFile.size > MAX_IMAGE_SIZE) return json({ error: "Image size must be less than 10MB" }, 413);
+
+  // Audio validation only if provided
+  let audioType: string | null = null;
+  if (audioFile instanceof File) {
     if (audioFile.size > MAX_AUDIO_SIZE) return json({ error: "Audio size must be less than 50MB" }, 413);
-
-    const coverType = normalizeImageType(coverFile);
-    if (!coverType) return json({ error: "Please upload a JPG, PNG, or WEBP image" }, 415);
-    const audioType = normalizeAudioType(audioFile);
+    audioType = normalizeAudioType(audioFile);
     if (!audioType) return json({ error: "Please upload an MP3 file" }, 415);
+  }
 
-    const safeBase = sanitizeBase(title);
-    const timestamp = Date.now();
+  const coverType = normalizeImageType(coverFile);
+  if (!coverType) return json({ error: "Please upload a JPG, PNG, or WEBP image" }, 415);
 
-    const coverExt = getFileExt(coverFile.name) || ".jpg";
-    const audioExt = ".mp3"; // we only allow MP3
+  const safeBase = sanitizeBase(title);
+  const timestamp = Date.now();
 
-    const coverPath = `artists/${artistId}/covers/${safeBase}-cover-${timestamp}${coverExt}`;
-    const audioPath = `artists/${artistId}/audio/${safeBase}-full-${timestamp}${audioExt}`;
+  const coverExt = getFileExt(coverFile.name) || ".jpg";
+  const coverPath = `artists/${artistId}/covers/${safeBase}-cover-${timestamp}${coverExt}`;
 
     // 1) upload cover
     const { data: coverData, error: coverError } = await supabaseAdmin.storage
@@ -163,30 +165,35 @@ serve(async (req) => {
       }, 500);
     }
 
-    // 2) upload audio
-    const { data: audioData, error: audioError } = await supabaseAdmin.storage
-      .from("track_audio")
-      .upload(audioPath, audioFile, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: audioType,
-      });
-    if (audioError || !audioData?.path) {
-      return json({
-        error: audioError?.message ?? "Audio upload failed",
-        stage: "audio",
-        details: safeError(audioError),
-      }, 500);
+    // 2) upload audio (only if provided)
+    let audioUrlData = null;
+    if (audioFile instanceof File && audioType) {
+      const audioExt = ".mp3";
+      const audioPath = `artists/${artistId}/audio/${safeBase}-full-${timestamp}${audioExt}`;
+      
+      const { data: audioData, error: audioError } = await supabaseAdmin.storage
+        .from("track_audio")
+        .upload(audioPath, audioFile, {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: audioType,
+        });
+      if (audioError || !audioData?.path) {
+        return json({
+          error: audioError?.message ?? "Audio upload failed",
+          stage: "audio",
+          details: safeError(audioError),
+        }, 500);
+      }
+      audioUrlData = supabaseAdmin.storage.from("track_audio").getPublicUrl(audioData.path);
     }
 
     const { data: coverUrlData } = supabaseAdmin.storage.from("track_covers").getPublicUrl(coverData.path);
-    const { data: audioUrlData } = supabaseAdmin.storage.from("track_audio").getPublicUrl(audioData.path);
 
     return json({
       coverUrl: coverUrlData.publicUrl,
-      audioUrl: audioUrlData.publicUrl,
+      audioUrl: audioUrlData?.data?.publicUrl || null,
       coverPath: coverData.path,
-      audioPath: audioData.path,
     });
   } catch (err) {
     return json({ error: "Unexpected error", details: safeError(err) }, 500);

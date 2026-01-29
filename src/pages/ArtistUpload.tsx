@@ -35,12 +35,16 @@ const GENRES = [
   "Other",
 ];
 
-type UploadStatus = "idle" | "uploading_cover" | "uploading_audio" | "saving_track" | "success" | "error";
+type UploadStatus = "idle" | "uploading_cover" | "success" | "error";
 
 interface UploadError {
   step: string;
   message: string;
   details?: string;
+}
+
+interface UploadResult {
+  coverUrl: string;
 }
 
 const ArtistUpload = () => {
@@ -61,6 +65,7 @@ const ArtistUpload = () => {
   // Upload state
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [error, setError] = useState<UploadError | null>(null);
+  const [uploadResult, setUploadResult] = useState<UploadResult | null>(null);
 
   // Refs
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -73,7 +78,7 @@ const ArtistUpload = () => {
     };
   }, [coverPreview]);
 
-  const isFormValid = title.trim() && genre && coverFile && audioFile && agreesToTerms;
+  const isFormValid = title.trim() && genre && coverFile && agreesToTerms;
 
   const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -117,6 +122,7 @@ const ArtistUpload = () => {
     if (!isFormValid || !user) return;
 
     setError(null);
+    setUploadResult(null);
     setStatus("uploading_cover");
 
     try {
@@ -137,17 +143,14 @@ const ArtistUpload = () => {
         throw { step: "auth", message: "Artist profile not found." };
       }
 
-      // Build form data for server-side upload
+      // Build form data for server-side upload (COVER ONLY)
       const formData = new FormData();
       formData.append("coverFile", coverFile!);
-      formData.append("audioFile", audioFile!);
       formData.append("artistId", artistProfile.id);
       formData.append("title", title.trim());
       formData.append("genre", genre);
 
-      // Call edge function
-      setStatus("uploading_cover");
-      
+      // Call edge function for COVER ONLY TEST
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/uploadTrackAssets`,
         {
@@ -162,40 +165,17 @@ const ArtistUpload = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        const stage = result.stage || "upload";
         throw {
-          step: stage === "cover" ? "cover_upload" : stage === "audio" ? "audio_upload" : "upload",
-          message: result.error || "Upload failed",
+          step: "cover_upload",
+          message: result.error || "Cover upload failed",
           details: JSON.stringify(result, null, 2),
         };
       }
 
-      // Insert track record
-      setStatus("saving_track");
-
-      const { error: insertError } = await supabase.from("tracks").insert({
-        artist_id: artistProfile.id,
-        title: title.trim(),
-        genre,
-        artwork_url: result.coverUrl,
-        full_audio_url: result.audioUrl,
-      });
-
-      if (insertError) {
-        throw {
-          step: "db_insert",
-          message: "Failed to save track",
-          details: insertError.message,
-        };
-      }
-
-      // Success
+      // Success - show the URL
+      setUploadResult({ coverUrl: result.coverUrl });
       setStatus("success");
-      toast({ title: "Success!", description: "Track uploaded successfully" });
-
-      setTimeout(() => {
-        navigate("/artist/dashboard");
-      }, 1500);
+      toast({ title: "Cover uploaded!", description: "URL displayed below" });
 
     } catch (err: any) {
       console.error("Upload error:", err);
@@ -217,12 +197,8 @@ const ArtistUpload = () => {
     switch (status) {
       case "uploading_cover":
         return "Uploading cover art...";
-      case "uploading_audio":
-        return "Uploading audio file...";
-      case "saving_track":
-        return "Saving track...";
       case "success":
-        return "Track uploaded successfully!";
+        return "Cover uploaded successfully!";
       default:
         return "";
     }
@@ -236,7 +212,7 @@ const ArtistUpload = () => {
           <Button variant="ghost" size="icon" onClick={() => navigate("/artist/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-display text-lg font-semibold tracking-wide">Upload Track</h1>
+          <h1 className="font-display text-lg font-semibold tracking-wide">Upload Track (Cover Test Only)</h1>
         </div>
       </div>
 
@@ -305,39 +281,14 @@ const ArtistUpload = () => {
           </GlowCard>
         </div>
 
-        {/* Audio File */}
-        <div className="space-y-2">
-          <Label>Audio File * (MP3 only)</Label>
-          <input
-            ref={audioInputRef}
-            type="file"
-            accept="audio/mpeg,.mp3"
-            onChange={handleAudioSelect}
-            className="hidden"
-            disabled={status !== "idle"}
-          />
-          <GlowCard
-            className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => status === "idle" && audioInputRef.current?.click()}
-          >
-            {audioFile ? (
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
-                  <Music className="h-6 w-6 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{audioFile.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground">
-                <Music className="h-8 w-8" />
-                <span className="text-sm">Tap to select audio file</span>
-              </div>
-            )}
+        {/* Audio File - DISABLED FOR TESTING */}
+        <div className="space-y-2 opacity-50">
+          <Label>Audio File (DISABLED - Cover test only)</Label>
+          <GlowCard className="p-4">
+            <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground">
+              <Music className="h-8 w-8" />
+              <span className="text-sm">Audio upload disabled for this test</span>
+            </div>
           </GlowCard>
         </div>
 
@@ -355,15 +306,32 @@ const ArtistUpload = () => {
         </div>
 
         {/* Upload Progress/Status */}
-        {status !== "idle" && status !== "error" && (
+        {status !== "idle" && status !== "error" && !uploadResult && (
           <GlowCard className="p-4">
             <div className="flex items-center gap-3">
-              {status === "success" ? (
-                <CheckCircle className="h-5 w-5 text-green-500" />
-              ) : (
-                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-              )}
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
               <span className="text-sm font-medium">{getStatusMessage()}</span>
+            </div>
+          </GlowCard>
+        )}
+
+        {/* Success - Show URL */}
+        {status === "success" && uploadResult && (
+          <GlowCard className="p-4 border-green-500/50">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-green-500" />
+                <span className="text-sm font-medium text-green-500">Cover uploaded successfully!</span>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">Cover URL:</Label>
+                <pre className="text-xs bg-muted/50 p-3 rounded-lg overflow-x-auto break-all">
+                  {uploadResult.coverUrl}
+                </pre>
+              </div>
+              <Button variant="secondary" size="sm" onClick={handleRetry}>
+                Upload Another
+              </Button>
             </div>
           </GlowCard>
         )}
@@ -393,22 +361,22 @@ const ArtistUpload = () => {
           </GlowCard>
         )}
 
-        {/* Publish Button */}
+        {/* Test Button */}
         <Button
           className="w-full"
           size="lg"
           disabled={!isFormValid || status !== "idle"}
           onClick={handlePublish}
         >
-          {status !== "idle" && status !== "error" ? (
+          {status === "uploading_cover" ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              Publishing...
+              Uploading Cover...
             </>
           ) : (
             <>
               <Upload className="h-4 w-4 mr-2" />
-              Publish Exclusive Track
+              Test Cover Upload
             </>
           )}
         </Button>
