@@ -40,11 +40,14 @@ const GENRES = [
 
 function validateAudioFile(file: File): string | null {
   const validExtensions = ["mp3", "wav"];
+  const validTypes = ["audio/mpeg", "audio/mp3", "audio/wav", "audio/wave", "audio/x-wav"];
   const maxSize = 50 * 1024 * 1024; // 50MB
   
   const ext = file?.name?.split(".")?.pop()?.toLowerCase() || "";
-  if (!ext || !validExtensions.includes(ext)) {
-    return "Invalid format. Please upload an MP3 or WAV file.";
+  const mime = file?.type?.toLowerCase() || "";
+  const isValid = (ext && validExtensions.includes(ext)) || (mime && validTypes.includes(mime));
+  if (!isValid) {
+    return "Invalid format. Please upload an MP3 (audio/mpeg) or WAV (audio/wav) file.";
   }
   
   if (file?.size > maxSize) {
@@ -58,7 +61,7 @@ const ArtistUpload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { state: uploadState, upload, reset: resetUpload } = useTrackUpload();
+  const { state: uploadState, upload, retry, reset: resetUpload } = useTrackUpload();
 
   // Form fields
   const [title, setTitle] = useState("");
@@ -208,8 +211,15 @@ const ArtistUpload = () => {
   };
 
   const handleRetry = () => {
-    resetUpload();
-    handlePublish();
+    if (!user?.id || !coverFile || !audioFile) return;
+    setShowDiagnostics(true);
+    retry({
+      title,
+      genre,
+      coverFile,
+      audioFile,
+      userId: user.id,
+    }).catch((err) => console.error("[Upload] Retry error:", err));
   };
 
   const handleReset = () => {
@@ -262,7 +272,7 @@ const ArtistUpload = () => {
 
         {/* Cover Art */}
         <div className="space-y-2">
-          <Label>Cover Art * (JPG, PNG, or WEBP, max 1.5MB)</Label>
+          <Label>Cover Art * (JPG, PNG, or WEBP, max 10MB)</Label>
           <input
             ref={coverInputRef}
             type="file"

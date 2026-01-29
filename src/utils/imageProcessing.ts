@@ -31,7 +31,8 @@ export function sanitizeFilename(filename: string, maxLength = 60): string {
  */
 export function validateCoverImage(file: File): string | null {
   const validTypes = ["image/jpeg", "image/png", "image/webp"];
-  const maxSize = 1.5 * 1024 * 1024; // 1.5MB
+  // Align with storage bucket constraints (10MB)
+  const maxSize = 10 * 1024 * 1024; // 10MB
 
   // Check type by MIME or extension
   const ext = file.name.split(".").pop()?.toLowerCase();
@@ -43,7 +44,7 @@ export function validateCoverImage(file: File): string | null {
   }
 
   if (file.size > maxSize) {
-    return "Cover image too large. Please upload a JPG under 1.5MB.";
+    return "Cover image too large. Please upload an image under 10MB.";
   }
 
   return null;
