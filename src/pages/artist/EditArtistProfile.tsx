@@ -134,19 +134,34 @@ const EditArtistProfile = () => {
     fetchProfile();
   }, [user]);
 
+  // Process image on file select (compress + preview)
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const result = await avatarUploader.uploadAvatar(file);
-    if (result.ok) {
-      setAvatarUrl(result.url);
-      toast.success("Profile photo updated");
-    } else {
-      toast.error((result as { ok: false; error: { message: string } }).error.message);
+    // Process image first (compress, resize)
+    const processResult = await avatarUploader.processImage(file);
+    if (!processResult.ok) {
+      toast.error((processResult as { ok: false; error: { message: string } }).error.message);
     }
     // Reset input so the same file can be re-selected if needed
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  // Upload processed image
+  const handleUploadProcessed = async () => {
+    const result = await avatarUploader.uploadAvatar();
+    if (result.ok) {
+      setAvatarUrl(result.url);
+      toast.success("Profile image updated!");
+    } else {
+      toast.error((result as { ok: false; error: { message: string } }).error.message);
+    }
+  };
+
+  // Cancel processed image (discard preview)
+  const handleCancelProcessed = () => {
+    avatarUploader.clearProcessedImage();
   };
 
   const handleSave = async () => {
@@ -241,15 +256,21 @@ const EditArtistProfile = () => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                 onChange={handleImageSelect}
                 className="hidden"
               />
 
-              {/* Avatar Preview */}
+              {/* Avatar Preview - show processed image if available */}
               <div className="relative inline-block mb-4">
                 <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary/30 bg-muted/20">
-                  {avatarUrl ? (
+                  {avatarUploader.processedImage?.previewUrl ? (
+                    <img
+                      src={avatarUploader.processedImage.previewUrl}
+                      alt="Processed preview"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : avatarUrl ? (
                     <img
                       src={avatarUrl}
                       alt="Artist avatar"
@@ -265,22 +286,73 @@ const EditArtistProfile = () => {
                   )}
                 </div>
 
-                {/* Upload Button Overlay */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={avatarUploader.isUploading}
-                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
-                >
-                  {avatarUploader.isUploading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-primary-foreground" />
-                  ) : (
-                    <Camera className="w-5 h-5 text-primary-foreground" />
-                  )}
-                </button>
+                {/* Processing/Upload indicator */}
+                {avatarUploader.isProcessing && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                )}
+
+                {/* Upload Button Overlay - only show when not processing */}
+                {!avatarUploader.processedImage && !avatarUploader.isProcessing && (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={avatarUploader.isUploading}
+                    className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
+                  >
+                    {avatarUploader.isUploading ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-primary-foreground" />
+                    ) : (
+                      <Camera className="w-5 h-5 text-primary-foreground" />
+                    )}
+                  </button>
+                )}
               </div>
 
-              <p className="text-muted-foreground text-xs">Tap to upload your artist photo</p>
+              {/* Show compression info when processed image available */}
+              {avatarUploader.processedImage && avatarUploader.lastMeta?.compression && (
+                <div className="mb-4 text-xs text-muted-foreground">
+                  <p>
+                    Compressed: {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.originalSize)} → {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.compressedSize)}
+                    <span className="text-primary ml-1">({avatarUploader.lastMeta.compression.ratio} saved)</span>
+                  </p>
+                </div>
+              )}
+
+              {/* Confirm/Cancel buttons for processed image */}
+              {avatarUploader.processedImage && (
+                <div className="flex gap-3 justify-center mb-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelProcessed}
+                    disabled={avatarUploader.isUploading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleUploadProcessed}
+                    disabled={avatarUploader.isUploading}
+                  >
+                    {avatarUploader.isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Uploading...
+                      </>
+                    ) : (
+                      "Upload Photo"
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {!avatarUploader.processedImage && (
+                <p className="text-muted-foreground text-xs">
+                  Tap to select your artist photo (auto-compressed to 1MB)
+                </p>
+              )}
             </div>
           </GlowCard>
 

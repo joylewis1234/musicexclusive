@@ -1,5 +1,6 @@
 import { GlowCard } from "@/components/ui/GlowCard";
 import type { AvatarUploadError, AvatarUploadMeta } from "@/hooks/useAvatarUpload";
+import { formatFileSize } from "@/utils/imageProcessing";
 
 type Props = {
   userId?: string | null;
@@ -23,12 +24,28 @@ export const AvatarUploadDiagnostics = ({ userId, meta, error }: Props) => {
           <Row label="bucket" value="avatars" />
           <Row label="upload path" value={meta?.displayPath} />
           <Row label="file.type" value={meta?.file?.type} />
-          <Row label="file.size" value={meta?.file?.size != null ? String(meta.file.size) : undefined} />
+          <Row label="file.size" value={meta?.file?.size != null ? formatFileSize(meta.file.size) : undefined} />
+          
+          {meta?.original && (
+            <>
+              <div className="border-t border-border/30 my-1" />
+              <Row label="original name" value={meta.original.name} />
+              <Row label="original size" value={formatFileSize(meta.original.size)} />
+            </>
+          )}
+          
+          {meta?.compression && (
+            <>
+              <div className="border-t border-border/30 my-1" />
+              <Row label="compression" value={`${formatFileSize(meta.compression.originalSize)} → ${formatFileSize(meta.compression.compressedSize)}`} />
+              <Row label="saved" value={meta.compression.ratio} />
+            </>
+          )}
         </div>
 
         {error ? (
-          <div className="mt-2 rounded-lg border border-border/50 bg-muted/20 p-3">
-            <p className="text-xs font-medium text-foreground">Last upload error</p>
+          <div className="mt-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+            <p className="text-xs font-medium text-foreground">Upload error @ {error.step || "unknown"}</p>
             <p className="text-xs text-muted-foreground font-mono break-words mt-1">
               {error.name ? `${error.name}: ` : ""}
               {error.message}
@@ -36,7 +53,7 @@ export const AvatarUploadDiagnostics = ({ userId, meta, error }: Props) => {
             </p>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground text-center">No upload error yet.</p>
+          <p className="text-xs text-muted-foreground text-center">No upload error.</p>
         )}
       </div>
     </GlowCard>
