@@ -48,18 +48,22 @@ const GENRES = [
   "Other",
 ];
 
-// TikTok icon component
+// TikTok icon component - simple span wrapper to avoid ref issues
 const TikTokIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
-  </svg>
+  <span className={className} style={{ display: 'inline-flex' }}>
+    <svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em">
+      <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/>
+    </svg>
+  </span>
 );
 
-// X (Twitter) icon component
+// X (Twitter) icon component - simple span wrapper to avoid ref issues
 const XIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-  </svg>
+  <span className={className} style={{ display: 'inline-flex' }}>
+    <svg viewBox="0 0 24 24" fill="currentColor" width="1em" height="1em">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+    </svg>
+  </span>
 );
 
 const EditArtistProfile = () => {
@@ -76,11 +80,21 @@ const EditArtistProfile = () => {
   const [artistName, setArtistName] = useState("");
   const [bio, setBio] = useState("");
   const [genre, setGenre] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarPath, setAvatarPath] = useState(""); // Store path, not URL
+  const [avatarDisplayUrl, setAvatarDisplayUrl] = useState(""); // For display only
   const [instagramUrl, setInstagramUrl] = useState("");
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
+  // Helper to generate public URL from storage path
+  const getAvatarPublicUrl = (path: string | null): string => {
+    if (!path) return "";
+    // If it's already a full URL, return as-is (legacy support)
+    if (path.startsWith("http")) return path;
+    // Generate public URL from path
+    const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+    return data.publicUrl;
+  };
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -89,18 +103,25 @@ const EditArtistProfile = () => {
       setIsLoading(true);
       try {
         // First check if artist_profiles exists
-        const { data: profile } = await supabase
+        const { data: profile, error: profileError } = await supabase
           .from("artist_profiles")
           .select("*")
           .eq("user_id", user.id)
           .maybeSingle();
 
+        if (profileError) {
+          console.error("[EditProfile] Error fetching profile:", profileError);
+        }
+
         if (profile) {
+          console.log("[EditProfile] Loaded profile:", profile);
           setHasExistingProfile(true);
           setArtistName(profile.artist_name || "");
           setBio(profile.bio || "");
           setGenre(profile.genre || "");
-          setAvatarUrl(profile.avatar_url || "");
+          // Store the path and generate display URL
+          setAvatarPath(profile.avatar_url || "");
+          setAvatarDisplayUrl(getAvatarPublicUrl(profile.avatar_url));
           setInstagramUrl(profile.instagram_url || "");
           setTiktokUrl(profile.tiktok_url || "");
           setYoutubeUrl(profile.youtube_url || "");
@@ -152,6 +173,7 @@ const EditArtistProfile = () => {
     setIsUploading(true);
     try {
       const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      // Store just the path, not the full URL
       const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
       
       console.log("[EditProfile] Uploading avatar to:", filePath);
@@ -171,20 +193,20 @@ const EditArtistProfile = () => {
 
       console.log("[EditProfile] Upload successful:", uploadData);
 
-      const { data: urlData } = supabase.storage
-        .from("avatars")
-        .getPublicUrl(filePath);
-
-      const newAvatarUrl = urlData.publicUrl;
-      console.log("[EditProfile] Public URL:", newAvatarUrl);
+      // Store the path, generate display URL
+      setAvatarPath(filePath);
+      setAvatarDisplayUrl(getAvatarPublicUrl(filePath));
       
-      setAvatarUrl(newAvatarUrl);
       toast.success("Image uploaded successfully");
     } catch (error: any) {
       console.error("[EditProfile] Error uploading image:", error);
       toast.error(error?.message || "Failed to upload image");
     } finally {
       setIsUploading(false);
+      // Reset the input so the same file can be re-selected if needed
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     }
   };
 
@@ -203,12 +225,15 @@ const EditArtistProfile = () => {
     console.log("[EditProfile] Saving profile for user:", user.id);
     
     try {
+      // Store the path (or full URL for legacy), not regenerate URL
+      const avatarToSave = avatarPath || null;
+      
       const profileData = {
         user_id: user.id,
         artist_name: artistName.trim(),
         bio: bio.trim() || null,
         genre: genre || null,
-        avatar_url: avatarUrl || null,
+        avatar_url: avatarToSave,
         instagram_url: instagramUrl.trim() || null,
         tiktok_url: tiktokUrl.trim() || null,
         youtube_url: youtubeUrl.trim() || null,
@@ -216,7 +241,7 @@ const EditArtistProfile = () => {
         updated_at: new Date().toISOString(),
       };
 
-      console.log("[EditProfile] Profile data:", profileData);
+      console.log("[EditProfile] Saving profile data:", profileData);
 
       if (hasExistingProfile) {
         console.log("[EditProfile] Updating existing profile...");
@@ -309,11 +334,15 @@ const EditArtistProfile = () => {
               {/* Avatar Preview */}
               <div className="relative inline-block mb-4">
                 <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary/30 bg-muted/20">
-                  {avatarUrl ? (
+                  {avatarDisplayUrl ? (
                     <img
-                      src={avatarUrl}
+                      src={avatarDisplayUrl}
                       alt="Artist avatar"
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.log("[EditProfile] Image load error, clearing display");
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
