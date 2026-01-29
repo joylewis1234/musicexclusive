@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.create-test-artist]
 verify_jwt = false
+
+[functions.upload-avatar]
+verify_jwt = false
