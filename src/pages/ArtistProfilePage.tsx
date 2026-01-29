@@ -82,6 +82,56 @@ const ArtistProfilePage = () => {
   // Determine artist email for stream charges
   const [artistEmail, setArtistEmail] = useState<string>("");
 
+  /**
+   * Generate public URL for a storage path if needed
+   */
+  const ensurePublicUrl = async (
+    track: TrackData
+  ): Promise<TrackData> => {
+    // If full_audio_url is already set and valid, return as-is
+    if (track.full_audio_url && track.full_audio_url.startsWith("http")) {
+      return track;
+    }
+
+    // Try to generate URL from stored path pattern
+    // Path format: artists/{artistId}/{trackId}.mp3
+    const audioPath = `artists/${track.artist_id}/${track.id}.mp3`;
+    const { data: audioData } = supabase.storage
+      .from("track_audio")
+      .getPublicUrl(audioPath);
+
+    const newAudioUrl = audioData?.publicUrl || "";
+
+    // Also check cover
+    let newArtworkUrl = track.artwork_url;
+    if (!track.artwork_url || !track.artwork_url.startsWith("http")) {
+      const coverPath = `artists/${track.artist_id}/${track.id}.jpg`;
+      const { data: coverData } = supabase.storage
+        .from("track_covers")
+        .getPublicUrl(coverPath);
+      newArtworkUrl = coverData?.publicUrl || null;
+    }
+
+    // Update the database record if we generated new URLs
+    if (newAudioUrl && newAudioUrl !== track.full_audio_url) {
+      console.log("[ArtistProfile] Generating missing URL for track:", track.title, { audioPath, newAudioUrl });
+      
+      await supabase
+        .from("tracks")
+        .update({
+          full_audio_url: newAudioUrl,
+          artwork_url: newArtworkUrl,
+        } as any)
+        .eq("id", track.id);
+    }
+
+    return {
+      ...track,
+      full_audio_url: newAudioUrl,
+      artwork_url: newArtworkUrl,
+    };
+  };
+
   // Load artist profile and tracks
   useEffect(() => {
     const fetchData = async () => {
@@ -122,25 +172,31 @@ const ArtistProfilePage = () => {
           .from("tracks")
           .select("*")
           .eq("artist_id", profile.id)
+          .eq("status", "ready")
           .not("genre", "like", "[DELETED]%")
           .not("genre", "like", "[DISABLED]%")
           .order("created_at", { ascending: false });
 
-        if (trackData) {
-          setTracks(trackData);
+        if (trackData && trackData.length > 0) {
+          // Ensure all tracks have valid public URLs
+          const tracksWithUrls = await Promise.all(
+            trackData.map(t => ensurePublicUrl(t))
+          );
+          
+          setTracks(tracksWithUrls);
 
           // If highlight track is provided, select it
           if (highlightTrackId) {
-            const highlightedTrack = trackData.find(t => t.id === highlightTrackId);
+            const highlightedTrack = tracksWithUrls.find(t => t.id === highlightTrackId);
             if (highlightedTrack) {
               setSelectedTrack(highlightedTrack);
             }
           }
 
           // Fetch like counts for all tracks
-          if (trackData.length > 0) {
-            await fetchTrackLikes(trackData.map(t => t.id));
-          }
+          await fetchTrackLikes(tracksWithUrls.map(t => t.id));
+        } else {
+          setTracks([]);
         }
       } catch (err) {
         console.error("Error fetching artist data:", err);
