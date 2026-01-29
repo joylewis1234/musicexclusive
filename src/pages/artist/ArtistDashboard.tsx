@@ -1,14 +1,18 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ExclusiveSongCard, ExclusiveSong } from "@/components/artist/ExclusiveSongCard";
 import EarningsDashboard from "@/components/artist/EarningsDashboard";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  BrowserDiagnosticsPanel,
+  type DiagnosticsState,
+} from "@/components/debug/BrowserDiagnosticsPanel";
+import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { 
   Home, 
   Upload, 
@@ -29,7 +33,6 @@ type PayoutStatus = "not_connected" | "pending" | "connected";
 // Component to fetch artist profile ID and navigate to fan view
 const ViewProfileButton = ({ userId }: { userId?: string }) => {
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
   const [profileId, setProfileId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -52,7 +55,6 @@ const ViewProfileButton = ({ userId }: { userId?: string }) => {
 
   const handleClick = () => {
     if (profileId) {
-      // Use /artist/view/ route which is protected for artists, not /artist/ which is for fans
       navigate(`/artist/view/${profileId}?view=fan`);
     } else {
       toast.info("Profile not found. Please set up your profile first.");
@@ -81,17 +83,36 @@ const ViewProfileButton = ({ userId }: { userId?: string }) => {
 const ArtistDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, signOut } = useAuth();
+  const abortRef = useRef<AbortController | null>(null);
+
+  const [userId, setUserId] = useState<string | null>(null);
   const [artistName, setArtistName] = useState("Artist");
   const [artistProfileId, setArtistProfileId] = useState<string | null>(null);
   const [songs, setSongs] = useState<ExclusiveSong[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [songsLoading, setSongsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [songsError, setSongsError] = useState<string | null>(null);
   const [payoutStatus, setPayoutStatus] = useState<PayoutStatus>("not_connected");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // Diagnostics state
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsState>({
+    hasSession: null,
+    userId: null,
+    artistRowFound: null,
+    tracksFetchedCount: null,
+    lastError: null,
+  });
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
+
   const verifyConnectStatus = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       toast.error("Please log in to check payout status.");
       navigate("/artist/login");
       return;
@@ -114,45 +135,127 @@ const ArtistDashboard = () => {
     } finally {
       setIsVerifying(false);
     }
-  }, [user]);
+  }, [userId, navigate]);
 
   const fetchArtistData = useCallback(async () => {
-    if (!user?.id) return;
+    // Abort any previous request
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
+    setIsLoading(true);
+    setSongsLoading(true);
+    setLoadError(null);
+    setSongsError(null);
+    setDiagnostics((prev) => ({ ...prev, lastError: null }));
 
     try {
-      // Fetch artist profile for name and payout status
-      const { data: profile } = await supabase
+      // Step 1: Get authenticated user (with 10s timeout)
+      const authResult = await withTimeout(getAuthedUserOrFail(signal), 10000);
+
+      if (authResult.ok === false) {
+        setDiagnostics((prev) => ({
+          ...prev,
+          hasSession: false,
+          lastError: authResult.error,
+        }));
+        setLoadError(authResult.error);
+        toast.error(authResult.error);
+        setIsLoading(false);
+        setSongsLoading(false);
+        return;
+      }
+
+      const { user } = authResult;
+      setUserId(user.id);
+      setDiagnostics((prev) => ({
+        ...prev,
+        hasSession: true,
+        userId: user.id,
+      }));
+
+      if (signal.aborted) return;
+
+      // Step 2: Fetch artist profile
+      const { data: profile, error: profileError } = await supabase
         .from("artist_profiles")
         .select("id, artist_name, payout_status")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (profile) {
-        setArtistName(profile.artist_name);
-        setArtistProfileId(profile.id);
-        if (profile.payout_status) {
-          setPayoutStatus(profile.payout_status as PayoutStatus);
-        }
+      if (signal.aborted) return;
 
-        // Fetch songs using artist_profiles.id (UUID)
-        const { data: songData, error: songsError } = await supabase
-          .from("tracks")
-          .select("id, title, artwork_url, full_audio_url, genre, created_at")
-          .eq("artist_id", profile.id)
-          .order("created_at", { ascending: false });
-
-        if (songsError) {
-          console.error("Error fetching songs:", songsError);
-        } else if (songData) {
-          setSongs(songData);
-        }
+      if (profileError) {
+        console.error("[Dashboard] Error fetching profile:", profileError);
+        setDiagnostics((prev) => ({
+          ...prev,
+          artistRowFound: false,
+          lastError: profileError.message,
+        }));
+        setLoadError(profileError.message);
+        toast.error("Could not load profile: " + profileError.message);
+        setIsLoading(false);
+        setSongsLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Error fetching artist data:", error);
+
+      if (!profile) {
+        setDiagnostics((prev) => ({ ...prev, artistRowFound: false }));
+        setLoadError("Artist profile not found. Please set up your profile first.");
+        setIsLoading(false);
+        setSongsLoading(false);
+        return;
+      }
+
+      setDiagnostics((prev) => ({ ...prev, artistRowFound: true }));
+      setArtistName(profile.artist_name);
+      setArtistProfileId(profile.id);
+      if (profile.payout_status) {
+        setPayoutStatus(profile.payout_status as PayoutStatus);
+      }
+
+      setIsLoading(false);
+
+      if (signal.aborted) return;
+
+      // Step 3: Fetch songs using artist_profiles.id (UUID)
+      const { data: songData, error: songsError } = await supabase
+        .from("tracks")
+        .select("id, title, artwork_url, full_audio_url, genre, created_at")
+        .eq("artist_id", profile.id)
+        .order("created_at", { ascending: false });
+
+      if (signal.aborted) return;
+
+      if (songsError) {
+        console.error("[Dashboard] Error fetching songs:", songsError);
+        setDiagnostics((prev) => ({
+          ...prev,
+          lastError: songsError.message,
+        }));
+        setSongsError(songsError.message);
+        toast.error("Could not load songs: " + songsError.message);
+      } else {
+        setSongs(songData || []);
+        setDiagnostics((prev) => ({
+          ...prev,
+          tracksFetchedCount: songData?.length ?? 0,
+        }));
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError" || signal?.aborted) return;
+      console.error("[Dashboard] Fetch error:", err);
+      const msg = err?.message || "Could not load dashboard data";
+      setDiagnostics((prev) => ({ ...prev, lastError: msg }));
+      setLoadError(msg);
+      toast.error(msg);
     } finally {
       setIsLoading(false);
+      setSongsLoading(false);
     }
-  }, [user]);
+  }, []);
 
   // Handle connect return from Stripe
   useEffect(() => {
@@ -162,7 +265,6 @@ const ArtistDashboard = () => {
       verifyConnectStatus().then(() => {
         toast.success("Payout account connected!");
       });
-      // Clear the URL parameter
       setSearchParams({});
     } else if (connectParam === "refresh") {
       toast.info("Please complete the payout setup.");
@@ -172,20 +274,24 @@ const ArtistDashboard = () => {
 
   useEffect(() => {
     fetchArtistData();
+
+    return () => {
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+    };
   }, [fetchArtistData]);
 
   const handleSignOut = async () => {
     await signOut();
-    navigate("/");
   };
 
   const handleSongDeleted = () => {
-    // Refresh songs list
     fetchArtistData();
   };
 
   const handleConnectPayout = async () => {
-    if (!user) {
+    if (!userId) {
       toast.error("Please log in to connect your payout account.");
       navigate("/artist/login");
       return;
@@ -210,7 +316,6 @@ const ArtistDashboard = () => {
       }
       
       if (data?.url) {
-        // Redirect to Stripe Connect onboarding in new tab (better mobile support)
         window.open(data.url, "_blank");
         toast.info("Complete the setup in the new tab, then return here.");
       } else {
@@ -224,8 +329,44 @@ const ArtistDashboard = () => {
     }
   };
 
+  // Error state with retry
+  if (loadError && !isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <GlowCard className="p-8 max-w-sm w-full text-center">
+          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h2 className="font-display text-lg font-semibold mb-2">
+            {loadError === "Please sign in again" ? "Session Expired" : "Load Error"}
+          </h2>
+          <p className="text-muted-foreground text-sm mb-6">{loadError}</p>
+
+          {loadError === "Please sign in again" ? (
+            <Button onClick={() => navigate("/artist/login")} className="w-full">
+              Go to Login
+            </Button>
+          ) : (
+            <Button onClick={fetchArtistData} className="w-full gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Retry
+            </Button>
+          )}
+        </GlowCard>
+        <BrowserDiagnosticsPanel state={diagnostics} />
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <BrowserDiagnosticsPanel state={diagnostics} />
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/20">
         <div className="container max-w-lg md:max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -401,7 +542,7 @@ const ArtistDashboard = () => {
           </div>
 
           {/* View Profile as Fan */}
-          <ViewProfileButton userId={user?.id} />
+          <ViewProfileButton userId={userId || undefined} />
 
           {/* Your Exclusive Songs Section */}
           <section 
@@ -410,9 +551,23 @@ const ArtistDashboard = () => {
           >
             <SectionHeader title="Your Exclusive Songs" align="left" />
 
-            {isLoading ? (
+            {songsLoading ? (
               <GlowCard variant="flat" className="p-8 text-center">
                 <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+              </GlowCard>
+            ) : songsError ? (
+              <GlowCard variant="flat" className="p-8 text-center">
+                <AlertCircle className="w-10 h-10 text-destructive mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm mb-4">{songsError}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  className="rounded-xl gap-2"
+                  onClick={fetchArtistData}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                  Retry
+                </Button>
               </GlowCard>
             ) : songs.length === 0 ? (
               <GlowCard variant="flat" className="p-8 text-center">
@@ -461,6 +616,9 @@ const ArtistDashboard = () => {
           </Tabs>
         </div>
       </main>
+
+      {/* Browser diagnostics panel */}
+      <BrowserDiagnosticsPanel state={diagnostics} />
     </div>
   );
 };
