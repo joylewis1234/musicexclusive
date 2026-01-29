@@ -131,11 +131,15 @@ const EditArtistProfile = () => {
 
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file || !user) {
+      console.log("[EditProfile] No file selected or user not logged in");
+      return;
+    }
 
     // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file");
+    const validTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Please select a JPG, PNG, or WEBP image");
       return;
     }
 
@@ -147,31 +151,48 @@ const EditArtistProfile = () => {
 
     setIsUploading(true);
     try {
-      const fileExt = file.name.split(".").pop();
+      const fileExt = file.name.split(".").pop()?.toLowerCase() || "jpg";
       const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+      
+      console.log("[EditProfile] Uploading avatar to:", filePath);
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
         .from("avatars")
-        .upload(filePath, file, { cacheControl: "3600", upsert: true });
+        .upload(filePath, file, { 
+          cacheControl: "3600", 
+          upsert: true,
+          contentType: file.type 
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.error("[EditProfile] Upload error:", uploadError);
+        throw uploadError;
+      }
+
+      console.log("[EditProfile] Upload successful:", uploadData);
 
       const { data: urlData } = supabase.storage
         .from("avatars")
         .getPublicUrl(filePath);
 
-      setAvatarUrl(urlData.publicUrl);
-      toast.success("Image uploaded");
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      toast.error("Failed to upload image");
+      const newAvatarUrl = urlData.publicUrl;
+      console.log("[EditProfile] Public URL:", newAvatarUrl);
+      
+      setAvatarUrl(newAvatarUrl);
+      toast.success("Image uploaded successfully");
+    } catch (error: any) {
+      console.error("[EditProfile] Error uploading image:", error);
+      toast.error(error?.message || "Failed to upload image");
     } finally {
       setIsUploading(false);
     }
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("You must be logged in to save");
+      return;
+    }
 
     if (!artistName.trim()) {
       toast.error("Artist name is required");
@@ -179,6 +200,8 @@ const EditArtistProfile = () => {
     }
 
     setIsSaving(true);
+    console.log("[EditProfile] Saving profile for user:", user.id);
+    
     try {
       const profileData = {
         user_id: user.id,
@@ -193,27 +216,41 @@ const EditArtistProfile = () => {
         updated_at: new Date().toISOString(),
       };
 
+      console.log("[EditProfile] Profile data:", profileData);
+
       if (hasExistingProfile) {
-        const { error } = await supabase
+        console.log("[EditProfile] Updating existing profile...");
+        const { error, data } = await supabase
           .from("artist_profiles")
           .update(profileData)
-          .eq("user_id", user.id);
+          .eq("user_id", user.id)
+          .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error("[EditProfile] Update error:", error);
+          throw error;
+        }
+        console.log("[EditProfile] Update successful:", data);
       } else {
-        const { error } = await supabase
+        console.log("[EditProfile] Creating new profile...");
+        const { error, data } = await supabase
           .from("artist_profiles")
-          .insert(profileData);
+          .insert(profileData)
+          .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error("[EditProfile] Insert error:", error);
+          throw error;
+        }
+        console.log("[EditProfile] Insert successful:", data);
         setHasExistingProfile(true);
       }
 
-      toast.success("Profile saved successfully");
+      toast.success("Profile saved successfully!");
       navigate("/artist/dashboard");
-    } catch (error) {
-      console.error("Error saving profile:", error);
-      toast.error("Failed to save profile");
+    } catch (error: any) {
+      console.error("[EditProfile] Error saving profile:", error);
+      toast.error(error?.message || "Failed to save profile");
     } finally {
       setIsSaving(false);
     }
