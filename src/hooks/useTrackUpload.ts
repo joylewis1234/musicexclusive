@@ -2,8 +2,17 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
+import { uploadToStorageWithXhr } from "@/utils/storageUpload";
 
-export type UploadStep = "idle" | "session_check" | "cover_upload" | "audio_upload" | "db_insert" | "success" | "error";
+export type UploadStep =
+  | "idle"
+  | "session_check"
+  | "cover_upload"
+  | "audio_upload"
+  | "db_insert"
+  | "db_update"
+  | "success"
+  | "error";
 
 export interface DiagnosticLog {
   step: UploadStep;
@@ -34,6 +43,11 @@ interface UploadParams {
 }
 
 const UPLOAD_TIMEOUT_MS = 120000; // 2 minutes
+const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+const MAX_COVER_BYTES = 10 * 1024 * 1024;
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 function getAudioContentType(file: File): string {
   const type = file?.type?.toLowerCase() || "";
@@ -94,6 +108,111 @@ export function useTrackUpload() {
       return false;
     }
   }, []);
+
+  const storageTest = useCallback(
+    async (userId: string): Promise<{ ok: boolean; publicUrl?: string; error?: string }> => {
+      try {
+        addDiagnostic({
+          step: "session_check",
+          status: "pending",
+          message: "Storage preflight: uploading tiny JPG to verify storage connectivity...",
+          timestamp: new Date(),
+        });
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        const session = sessionData?.session;
+        const accessToken = session?.access_token;
+        if (sessionError || !session || !accessToken) {
+          const msg = sessionError?.message || "No active session for storage test";
+          addDiagnostic({
+            step: "session_check",
+            status: "error",
+            message: msg,
+            timestamp: new Date(),
+            details: safeStringify(sessionError ?? { reason: "missing session/access token" }),
+          });
+          return { ok: false, error: msg };
+        }
+
+        const { data: artistProfile, error: profileError } = await supabase
+          .from("artist_profiles")
+          .select("id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        const artistId = artistProfile?.id;
+        if (profileError || !artistId) {
+          const msg = profileError?.message || "Artist profile not found";
+          addDiagnostic({
+            step: "session_check",
+            status: "error",
+            message: msg,
+            timestamp: new Date(),
+            details: safeStringify(profileError ?? { reason: "missing artist profile" }),
+          });
+          return { ok: false, error: msg };
+        }
+
+        const bytes = new Uint8Array(1024);
+        try {
+          crypto.getRandomValues(bytes);
+        } catch {
+          // If crypto isn't available for some reason, leave zeros.
+        }
+        const blob = new Blob([bytes], { type: "image/jpeg" });
+        const file = new File([blob], "preflight.jpg", { type: "image/jpeg" });
+        const objectPath = `preflight/${artistId}/${Date.now()}.jpg`;
+
+        const res = await uploadToStorageWithXhr({
+          url: SUPABASE_URL,
+          apikey: SUPABASE_PUBLISHABLE_KEY,
+          accessToken,
+          bucket: "track_covers",
+          objectPath,
+          file,
+          contentType: "image/jpeg",
+        });
+
+        if (!res.ok) {
+          const msg = "Storage preflight failed";
+          addDiagnostic({
+            step: "session_check",
+            status: "error",
+            message: msg,
+            timestamp: new Date(),
+            details: safeStringify({ status: res.status, responseText: res.responseText, objectPath }),
+          });
+          console.error("[Upload] Storage preflight failed:", res);
+          return { ok: false, error: `${msg} (status=${res.status || "?"})` };
+        }
+
+        const publicUrl =
+          supabase.storage.from("track_covers").getPublicUrl(objectPath).data?.publicUrl || "";
+
+        addDiagnostic({
+          step: "session_check",
+          status: "success",
+          message: "Storage preflight succeeded",
+          timestamp: new Date(),
+          details: safeStringify({ objectPath, publicUrl, status: res.status }),
+        });
+
+        return { ok: true, publicUrl };
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Storage preflight failed";
+        addDiagnostic({
+          step: "session_check",
+          status: "error",
+          message: msg,
+          timestamp: new Date(),
+          details: safeStringify(err),
+        });
+        console.error("[Upload] Storage preflight unexpected error:", err);
+        return { ok: false, error: msg };
+      }
+    },
+    [addDiagnostic]
+  );
 
   const reset = useCallback(() => {
     abortRef.current = false;
@@ -160,6 +279,21 @@ export function useTrackUpload() {
       }, UPLOAD_TIMEOUT_MS);
 
       try {
+        // Local file guards (avoid white screens from unexpected null access)
+        if (!coverFile || !(coverFile instanceof File)) {
+          throw new Error("Missing cover file");
+        }
+        if (!audioFile || !(audioFile instanceof File)) {
+          throw new Error("Missing audio file");
+        }
+
+        if (coverFile.size > MAX_COVER_BYTES) {
+          throw new Error("Cover image too large. Please upload a file under 10MB.");
+        }
+        if (audioFile.size > MAX_AUDIO_BYTES) {
+          throw new Error("Audio file too large. Please upload a file under 50MB.");
+        }
+
         // Step 1: Session check
         addDiagnostic({
           step: "session_check",
@@ -171,6 +305,7 @@ export function useTrackUpload() {
 
         const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         const session = sessionData?.session;
+        const accessToken = session?.access_token;
         if (sessionError || !session) {
           const msg = safeMsg("No active session. Please log in again.", sessionError);
           addDiagnostic({
@@ -183,6 +318,17 @@ export function useTrackUpload() {
           console.error("[Upload] Session check failed:", sessionError);
           throw new Error(msg);
         }
+        if (!accessToken) {
+          const msg = "Missing access token. Please log in again.";
+          addDiagnostic({
+            step: "session_check",
+            status: "error",
+            message: msg,
+            timestamp: new Date(),
+            details: safeStringify({ reason: "missing session.access_token" }),
+          });
+          throw new Error(msg);
+        }
 
         addDiagnostic({
           step: "session_check",
@@ -191,6 +337,12 @@ export function useTrackUpload() {
           timestamp: new Date(),
         });
         setStep("session_check", 10);
+
+        // Optional preflight (non-blocking). Useful on Android where Storage fetch can fail mid-transfer.
+        // We only run it for a fresh attempt (not for mid-step resume).
+        if (!resumeFrom) {
+          await storageTest(userId);
+        }
 
         // Step 2: Get artist profile
         let artistId: string;
@@ -285,7 +437,7 @@ export function useTrackUpload() {
         }
 
         // Step 4: Upload cover (unique path based on trackId)
-        const coverContentType = getImageContentType(coverFile);
+        const coverContentType = (coverFile?.type || getImageContentType(coverFile) || "image/jpeg").toLowerCase();
         const coverExt = coverExtFromContentType(coverContentType);
         const coverPath = `artists/${artistId}/${trackId}.${coverExt}`;
 
@@ -305,27 +457,33 @@ export function useTrackUpload() {
           });
 
           try {
-            const { data: coverData, error: coverError } = await supabase.storage
-              .from("track_covers")
-              .upload(coverPath, coverFile, {
-                cacheControl: "3600",
-                upsert: true,
-                contentType: coverContentType,
-              });
+            const res = await uploadToStorageWithXhr({
+              url: SUPABASE_URL,
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              accessToken,
+              bucket: "track_covers",
+              objectPath: coverPath,
+              file: coverFile,
+              contentType: coverContentType,
+              onProgress: (pct) => {
+                // Map 0-100 -> 30-55
+                const mapped = 30 + Math.round(pct * 0.25);
+                setStep("cover_upload", mapped);
+              },
+            });
 
-            if (coverError || !coverData?.path) {
-              const msg = safeMsg("Cover upload failed", coverError ?? coverData);
-              const sc = safeStatus(coverError);
-              throw { message: msg, statusCode: sc, error: coverError, data: coverData };
+            if (!res.ok) {
+              const msg = safeMsg("Cover upload failed", res);
+              throw { message: msg, statusCode: String(res.status || ""), error: res, data: null };
             }
 
-            setState((prev) => ({ ...prev, uploadedCoverPath: coverData.path }));
+            setState((prev) => ({ ...prev, uploadedCoverPath: coverPath }));
             addDiagnostic({
               step: "cover_upload",
               status: "success",
               message: "Cover uploaded",
               timestamp: new Date(),
-              details: `path=${coverData.path}`,
+              details: safeStringify({ path: coverPath, status: res.status }),
             });
           } catch (err) {
             const msg = safeMsg("Cover upload failed", err);
@@ -365,36 +523,35 @@ export function useTrackUpload() {
           });
 
           try {
-            const { data: audioData, error: audioError } = await supabase.storage
-              .from("track_audio")
-              .upload(audioPath, audioFile, {
-                cacheControl: "3600",
-                upsert: true,
-                contentType: audioContentType,
-              });
+            const res = await uploadToStorageWithXhr({
+              url: SUPABASE_URL,
+              apikey: SUPABASE_PUBLISHABLE_KEY,
+              accessToken,
+              bucket: "track_audio",
+              objectPath: audioPath,
+              file: audioFile,
+              contentType: audioContentType,
+              onProgress: (pct) => {
+                // Map 0-100 -> 60-85
+                const mapped = 60 + Math.round(pct * 0.25);
+                setStep("audio_upload", mapped);
+              },
+            });
 
-            if (audioError || !audioData?.path) {
-              const msg = safeMsg("Audio upload failed", audioError ?? audioData);
-              const sc = safeStatus(audioError);
-              throw { message: msg, statusCode: sc, error: audioError, data: audioData };
+            if (!res.ok) {
+              const msg = safeMsg("Audio upload failed", res);
+              throw { message: msg, statusCode: String(res.status || ""), error: res, data: null };
             }
 
-            setState((prev) => ({ ...prev, uploadedAudioPath: audioData.path }));
+            setState((prev) => ({ ...prev, uploadedAudioPath: audioPath }));
             addDiagnostic({
               step: "audio_upload",
               status: "success",
               message: "Audio uploaded",
               timestamp: new Date(),
-              details: `path=${audioData.path}`,
+              details: safeStringify({ path: audioPath, status: res.status }),
             });
           } catch (err) {
-            // Cleanup cover if audio fails (or force re-upload on retry)
-            const coverPathToCleanup = state.uploadedCoverPath ?? coverPath;
-            const deleted = await cleanup(coverPathToCleanup).catch(() => false);
-            if (deleted) {
-              setState((prev) => ({ ...prev, uploadedCoverPath: null }));
-            }
-
             const msg = safeMsg("Audio upload failed", err);
             addDiagnostic({
               step: "audio_upload",
@@ -404,15 +561,16 @@ export function useTrackUpload() {
               details: safeStringify(err),
             });
             console.error("[Upload] Audio upload failed:", err);
-            setState((prev) => ({ ...prev, lastFailedStep: deleted ? "cover_upload" : "audio_upload" }));
+            // Keep cover uploaded so we can retry audio only.
+            setState((prev) => ({ ...prev, lastFailedStep: "audio_upload" }));
             throw new Error(msg);
           }
         }
 
         // Step 6: Update DB with URLs + status=ready
-        setStep("db_insert", 85);
+        setStep("db_update", 85);
         addDiagnostic({
-          step: "db_insert",
+          step: "db_update",
           status: "pending",
           message: "Finalizing track (saving URLs)...",
           timestamp: new Date(),
@@ -437,7 +595,7 @@ export function useTrackUpload() {
           }
 
           addDiagnostic({
-            step: "db_insert",
+            step: "db_update",
             status: "success",
             message: "Track finalized",
             timestamp: new Date(),
@@ -446,14 +604,14 @@ export function useTrackUpload() {
         } catch (err) {
           const msg = safeMsg("Failed to finalize track", err);
           addDiagnostic({
-            step: "db_insert",
+            step: "db_update",
             status: "error",
             message: msg,
             timestamp: new Date(),
             details: safeStringify(err),
           });
           console.error("[Upload] Track finalize failed:", err);
-          setState((prev) => ({ ...prev, lastFailedStep: "db_insert" }));
+          setState((prev) => ({ ...prev, lastFailedStep: "db_update" }));
           throw new Error(msg);
         }
 
@@ -492,7 +650,7 @@ export function useTrackUpload() {
     },
     // Intentionally depend on current state to enable resume logic.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [addDiagnostic, cleanup, setStep, state.trackId, state.uploadedCoverPath]
+    [addDiagnostic, cleanup, setStep, state.trackId, state.uploadedCoverPath, storageTest]
   );
 
   const retry = useCallback(
@@ -510,5 +668,6 @@ export function useTrackUpload() {
     retry,
     reset,
     cleanup,
+    storageTest,
   };
 }

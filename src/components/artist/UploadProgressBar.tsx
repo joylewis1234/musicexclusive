@@ -15,6 +15,7 @@ const stepMessages: Record<UploadStep, string> = {
   cover_upload: "Uploading cover art...",
   audio_upload: "Uploading audio file...",
   db_insert: "Saving track...",
+  db_update: "Finalizing track...",
   success: "Track published!",
   error: "Upload failed",
 };
@@ -23,7 +24,7 @@ export const UploadProgressBar = React.forwardRef<HTMLDivElement, UploadProgress
   ({ step, progress, isTimedOut }, ref) => {
   if (step === "idle") return null;
 
-  const isUploading = ["session_check", "cover_upload", "audio_upload", "db_insert"].includes(step);
+  const isUploading = ["session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(step);
   const isSuccess = step === "success";
   const isError = step === "error";
 
