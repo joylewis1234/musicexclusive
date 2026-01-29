@@ -257,22 +257,24 @@ const ArtistDashboard = () => {
     }
   }, []);
 
-  // Handle connect return from Stripe
+  // Track if we already fetched to avoid double-fetch from Stripe redirect
+  const hasFetchedRef = useRef(false);
+  const isStripeReturnRef = useRef(false);
+
+  // Handle connect return from Stripe - check BEFORE main fetch
   useEffect(() => {
     const connectParam = searchParams.get("connect");
-    if (connectParam === "success") {
-      toast.success("Verifying payout account...");
-      verifyConnectStatus().then(() => {
-        toast.success("Payout account connected!");
-      });
-      setSearchParams({});
-    } else if (connectParam === "refresh") {
-      toast.info("Please complete the payout setup.");
-      setSearchParams({});
+    if (connectParam === "success" || connectParam === "refresh") {
+      isStripeReturnRef.current = true;
     }
-  }, [searchParams, setSearchParams, verifyConnectStatus]);
+  }, []); // Only on mount
 
+  // Main data fetch effect
   useEffect(() => {
+    // Skip if already fetched
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     fetchArtistData();
 
     return () => {
@@ -281,6 +283,25 @@ const ArtistDashboard = () => {
       }
     };
   }, [fetchArtistData]);
+
+  // Handle Stripe return AFTER initial data load completes
+  useEffect(() => {
+    // Wait until main loading is done
+    if (isLoading) return;
+    
+    const connectParam = searchParams.get("connect");
+    if (connectParam === "success") {
+      toast.success("Verifying payout account...");
+      verifyConnectStatus().then(() => {
+        toast.success("Payout account connected!");
+      });
+      // Clear param without triggering re-fetch
+      setSearchParams({}, { replace: true });
+    } else if (connectParam === "refresh") {
+      toast.info("Please complete the payout setup.");
+      setSearchParams({}, { replace: true });
+    }
+  }, [isLoading, searchParams, setSearchParams, verifyConnectStatus]);
 
   const handleSignOut = async () => {
     await signOut();
