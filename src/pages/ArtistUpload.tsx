@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, Music, ImageIcon, Loader2, CheckCircle, AlertCircle } from "lucide-react";
+import { ArrowLeft, Upload, Music, ImageIcon, Loader2, CheckCircle, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,43 @@ const GENRES = [
 
 type UploadStatus = "idle" | "uploading_cover" | "uploading_audio" | "saving_track" | "success" | "error";
 
+/**
+ * Get proper content type for audio files
+ */
+function getAudioContentType(file: File): string {
+  const type = file.type.toLowerCase();
+  
+  if (type === "audio/mpeg" || type === "audio/mp3") return "audio/mpeg";
+  if (type === "audio/wav" || type === "audio/wave") return "audio/wav";
+  if (type === "audio/x-wav") return "audio/wav";
+  
+  // Fallback based on extension
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (ext === "mp3") return "audio/mpeg";
+  if (ext === "wav") return "audio/wav";
+  
+  return "audio/mpeg"; // Default fallback
+}
+
+/**
+ * Validate audio file
+ */
+function validateAudioFile(file: File): string | null {
+  const validExtensions = ["mp3", "wav"];
+  const maxSize = 50 * 1024 * 1024; // 50MB
+  
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (!ext || !validExtensions.includes(ext)) {
+    return "Invalid format. Please upload an MP3 or WAV file.";
+  }
+  
+  if (file.size > maxSize) {
+    return "Audio file too large. Please upload a file under 50MB.";
+  }
+  
+  return null;
+}
+
 const ArtistUpload = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -56,6 +93,11 @@ const ArtistUpload = () => {
   // Upload state
   const [status, setStatus] = useState<UploadStatus>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
+  const [lastFailedStep, setLastFailedStep] = useState<"cover" | "audio" | "database" | null>(null);
+
+  // Upload progress tracking
+  const [uploadedCoverUrl, setUploadedCoverUrl] = useState<string | null>(null);
 
   // Refs
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +118,6 @@ const ArtistUpload = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate the cover image
     const validationError = validateCoverImage(file);
     if (validationError) {
       toast({ 
@@ -88,34 +129,25 @@ const ArtistUpload = () => {
       return;
     }
 
-    // Clean up old preview
     if (coverPreview) {
       URL.revokeObjectURL(coverPreview);
     }
 
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
+    // Reset uploaded URL if user selects a new file
+    setUploadedCoverUrl(null);
   };
 
   const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const ext = file.name.toLowerCase().split(".").pop();
-    if (ext !== "mp3") {
+    const validationError = validateAudioFile(file);
+    if (validationError) {
       toast({ 
-        title: "Invalid file", 
-        description: "Please upload an MP3 file", 
-        variant: "destructive" 
-      });
-      e.target.value = "";
-      return;
-    }
-
-    if (file.size > 50 * 1024 * 1024) {
-      toast({ 
-        title: "File too large", 
-        description: "Audio must be under 50MB", 
+        title: "Invalid audio file", 
+        description: validationError, 
         variant: "destructive" 
       });
       e.target.value = "";
@@ -125,17 +157,18 @@ const ArtistUpload = () => {
     setAudioFile(file);
   };
 
-  const handlePublish = async () => {
+  const handlePublish = async (retryFromStep?: "cover" | "audio" | "database") => {
     if (!isFormValid || !user) return;
 
     setErrorMessage(null);
-    setStatus("uploading_cover");
+    setErrorDetails(null);
+    setLastFailedStep(null);
 
     try {
       // Step 1: Get fresh session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !sessionData.session) {
-        throw new Error("Session expired. Please log in again.");
+        throw { step: "auth", message: "Session expired. Please log in again." };
       }
 
       // Step 2: Get artist profile
@@ -146,127 +179,173 @@ const ArtistUpload = () => {
         .maybeSingle();
 
       if (profileError || !artistProfile) {
-        console.error("Artist profile error:", profileError);
-        throw new Error("Artist profile not found.");
+        console.error("[Upload] Artist profile error:", profileError);
+        throw { step: "auth", message: "Artist profile not found. Please complete your profile setup." };
       }
 
       const artistId = artistProfile.id;
       const timestamp = Date.now();
       const sanitizedTitle = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
 
-      // Step 3: Upload cover to track_covers bucket
-      const coverExt = coverFile!.name.split(".").pop()?.toLowerCase() || "jpg";
-      const coverPath = `${artistId}/${sanitizedTitle}-${timestamp}.${coverExt}`;
-      const coverContentType = getImageContentType(coverFile!);
+      let coverUrl = uploadedCoverUrl;
 
-      console.log("[Upload] Starting cover upload:", {
-        path: coverPath,
-        size: `${(coverFile!.size / 1024).toFixed(0)} KB`,
-        type: coverContentType,
-        online: navigator.onLine,
-      });
+      // Step 3: Upload cover (skip if already uploaded during retry)
+      if (!retryFromStep || retryFromStep === "cover" || !coverUrl) {
+        setStatus("uploading_cover");
+        
+        const coverExt = coverFile!.name.split(".").pop()?.toLowerCase() || "jpg";
+        const sanitizedCoverName = sanitizeFilename(coverFile!.name);
+        const coverPath = `${artistId}/${timestamp}-${sanitizedCoverName}`;
+        const coverContentType = getImageContentType(coverFile!);
 
-      const { data: coverData, error: coverError } = await supabase.storage
-        .from("track_covers")
-        .upload(coverPath, coverFile!, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: coverContentType,
-        });
-
-      if (coverError) {
-        console.error("[Upload] Cover upload failed:", {
-          error: coverError,
+        console.log("[Upload] Starting cover upload:", {
+          bucket: "track_covers",
+          path: coverPath,
           fileName: coverFile!.name,
-          fileSize: coverFile!.size,
+          fileSize: `${(coverFile!.size / 1024).toFixed(0)} KB`,
+          fileType: coverFile!.type,
+          contentType: coverContentType,
           online: navigator.onLine,
         });
-        throw new Error("Cover upload failed. Try a smaller image or different format (JPG/PNG/WEBP).");
+
+        const { data: coverData, error: coverError } = await supabase.storage
+          .from("track_covers")
+          .upload(coverPath, coverFile!, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: coverContentType,
+          });
+
+        if (coverError) {
+          console.error("[Upload] Cover upload failed:", {
+            error: coverError,
+            errorMessage: coverError.message,
+            errorName: (coverError as any).name,
+            fileName: coverFile!.name,
+            fileSize: coverFile!.size,
+            online: navigator.onLine,
+          });
+          setLastFailedStep("cover");
+          throw { 
+            step: "cover", 
+            message: "Cover upload failed. Please try again.",
+            details: `Error: ${coverError.message || JSON.stringify(coverError)}`
+          };
+        }
+
+        console.log("[Upload] Cover uploaded successfully:", coverData.path);
+
+        const { data: coverUrlData } = supabase.storage
+          .from("track_covers")
+          .getPublicUrl(coverData.path);
+
+        coverUrl = coverUrlData.publicUrl;
+        setUploadedCoverUrl(coverUrl);
       }
 
-      console.log("[Upload] Cover uploaded:", coverData.path);
+      // Step 4: Upload audio
+      if (!retryFromStep || retryFromStep === "cover" || retryFromStep === "audio") {
+        setStatus("uploading_audio");
+        
+        const audioExt = audioFile!.name.split(".").pop()?.toLowerCase() || "mp3";
+        const sanitizedAudioName = sanitizeFilename(audioFile!.name);
+        const audioPath = `${artistId}/${timestamp}-${sanitizedAudioName}`;
+        const audioContentType = getAudioContentType(audioFile!);
 
-      // Get cover public URL
-      const { data: coverUrlData } = supabase.storage
-        .from("track_covers")
-        .getPublicUrl(coverData.path);
-
-      const coverUrl = coverUrlData.publicUrl;
-
-      // Step 4: Upload audio to track_audio bucket
-      setStatus("uploading_audio");
-      const audioPath = `${artistId}/${sanitizedTitle}-${timestamp}.mp3`;
-
-      console.log("[Upload] Starting audio upload:", {
-        path: audioPath,
-        size: `${(audioFile!.size / (1024 * 1024)).toFixed(2)} MB`,
-        online: navigator.onLine,
-      });
-
-      const { data: audioData, error: audioError } = await supabase.storage
-        .from("track_audio")
-        .upload(audioPath, audioFile!, {
-          cacheControl: "3600",
-          upsert: false,
-          contentType: "audio/mpeg",
-        });
-
-      if (audioError) {
-        console.error("[Upload] Audio upload failed:", {
-          error: audioError,
+        console.log("[Upload] Starting audio upload:", {
+          bucket: "track_audio",
+          path: audioPath,
           fileName: audioFile!.name,
-          fileSize: audioFile!.size,
+          fileSize: `${(audioFile!.size / (1024 * 1024)).toFixed(2)} MB`,
+          fileType: audioFile!.type,
+          contentType: audioContentType,
           online: navigator.onLine,
         });
-        throw new Error("Audio upload failed. Try a smaller file or check your connection.");
+
+        const { data: audioData, error: audioError } = await supabase.storage
+          .from("track_audio")
+          .upload(audioPath, audioFile!, {
+            cacheControl: "3600",
+            upsert: false,
+            contentType: audioContentType,
+          });
+
+        if (audioError) {
+          console.error("[Upload] Audio upload failed:", {
+            error: audioError,
+            errorMessage: audioError.message,
+            errorName: (audioError as any).name,
+            statusCode: (audioError as any).statusCode,
+            fileName: audioFile!.name,
+            fileSize: audioFile!.size,
+            fileType: audioFile!.type,
+            online: navigator.onLine,
+          });
+          setLastFailedStep("audio");
+          throw { 
+            step: "audio", 
+            message: "Audio upload failed. Please check your connection and try again.",
+            details: `Error: ${audioError.message || JSON.stringify(audioError)}`
+          };
+        }
+
+        console.log("[Upload] Audio uploaded successfully:", audioData.path);
+
+        const { data: audioUrlData } = supabase.storage
+          .from("track_audio")
+          .getPublicUrl(audioData.path);
+
+        const audioUrl = audioUrlData.publicUrl;
+
+        // Step 5: Save track to database
+        setStatus("saving_track");
+
+        const { data: trackData, error: trackError } = await supabase
+          .from("tracks")
+          .insert({
+            artist_id: artistId,
+            title: title.trim(),
+            genre: genre,
+            artwork_url: coverUrl,
+            full_audio_url: audioUrl,
+          })
+          .select("id")
+          .single();
+
+        if (trackError) {
+          console.error("[Upload] Track insert error:", trackError);
+          setLastFailedStep("database");
+          throw { 
+            step: "database", 
+            message: "Failed to save track. Please try again.",
+            details: `Error: ${trackError.message || JSON.stringify(trackError)}`
+          };
+        }
+
+        console.log("[Upload] Track saved successfully:", trackData.id);
       }
-
-      console.log("[Upload] Audio uploaded:", audioData.path);
-
-      // Get audio public URL
-      const { data: audioUrlData } = supabase.storage
-        .from("track_audio")
-        .getPublicUrl(audioData.path);
-
-      const audioUrl = audioUrlData.publicUrl;
-
-      // Step 5: Insert track record
-      setStatus("saving_track");
-
-      const { data: trackData, error: trackError } = await supabase
-        .from("tracks")
-        .insert({
-          artist_id: artistId,
-          title: title.trim(),
-          genre: genre,
-          artwork_url: coverUrl,
-          full_audio_url: audioUrl,
-        })
-        .select("id")
-        .single();
-
-      if (trackError) {
-        console.error("[Upload] Track insert error:", trackError);
-        throw new Error(trackError.message || "Failed to save track");
-      }
-
-      console.log("[Upload] Track saved:", trackData.id);
 
       // Success!
       setStatus("success");
-      toast({ title: "Track uploaded!", description: "Your exclusive track is now live." });
+      toast({ 
+        title: "Track published successfully!", 
+        description: "Your exclusive track is now live." 
+      });
 
       // Redirect to dashboard after short delay
       setTimeout(() => {
         navigate("/artist/dashboard");
       }, 1500);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error("[Upload] Error:", err);
       setStatus("error");
       
-      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      const message = err?.message || "An unexpected error occurred";
+      const details = err?.details || null;
+      
       setErrorMessage(message);
+      setErrorDetails(details);
       
       toast({
         title: "Upload failed",
@@ -277,8 +356,19 @@ const ArtistUpload = () => {
   };
 
   const handleRetry = () => {
+    // Retry from the last failed step without resetting the form
+    if (lastFailedStep) {
+      handlePublish(lastFailedStep);
+    } else {
+      handlePublish();
+    }
+  };
+
+  const handleReset = () => {
     setStatus("idle");
     setErrorMessage(null);
+    setErrorDetails(null);
+    setLastFailedStep(null);
   };
 
   const getStatusMessage = () => {
@@ -290,7 +380,7 @@ const ArtistUpload = () => {
       case "saving_track":
         return "Saving track...";
       case "success":
-        return "Track uploaded successfully!";
+        return "Track published successfully!";
       default:
         return "";
     }
@@ -363,6 +453,7 @@ const ArtistUpload = () => {
                   <p className="text-sm font-medium truncate">{coverFile?.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {coverFile && (coverFile.size / 1024).toFixed(0)} KB
+                    {uploadedCoverUrl && <span className="text-green-500 ml-2">✓ Uploaded</span>}
                   </p>
                 </div>
               </div>
@@ -377,11 +468,11 @@ const ArtistUpload = () => {
 
         {/* Audio File */}
         <div className="space-y-2">
-          <Label>Audio File * (MP3 only, max 50MB)</Label>
+          <Label>Audio File * (MP3 or WAV, max 50MB)</Label>
           <input
             ref={audioInputRef}
             type="file"
-            accept="audio/mpeg,audio/mp3"
+            accept="audio/mpeg,audio/mp3,audio/wav,audio/wave,.mp3,.wav"
             onChange={handleAudioSelect}
             className="hidden"
             disabled={isUploading}
@@ -453,11 +544,22 @@ const ArtistUpload = () => {
               <div className="flex-1">
                 <p className="text-sm font-medium text-destructive">Upload failed</p>
                 <p className="text-sm text-muted-foreground mt-1">{errorMessage}</p>
+                {errorDetails && (
+                  <p className="text-xs text-muted-foreground mt-2 font-mono bg-muted/50 p-2 rounded">
+                    {errorDetails}
+                  </p>
+                )}
               </div>
             </div>
-            <Button variant="secondary" size="sm" className="mt-3" onClick={handleRetry}>
-              Try Again
-            </Button>
+            <div className="flex gap-2 mt-3">
+              <Button variant="default" size="sm" onClick={handleRetry}>
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Retry Upload
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleReset}>
+                Start Over
+              </Button>
+            </div>
           </GlowCard>
         )}
 
@@ -466,7 +568,7 @@ const ArtistUpload = () => {
           className="w-full"
           size="lg"
           disabled={!isFormValid || isUploading || status === "success"}
-          onClick={handlePublish}
+          onClick={() => handlePublish()}
         >
           {isUploading ? (
             <>
