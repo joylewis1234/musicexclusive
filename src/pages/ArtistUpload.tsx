@@ -278,6 +278,16 @@ const ArtistUpload = () => {
     setError(null);
   };
 
+  // Auto-reset to idle after error so button becomes clickable again
+  useEffect(() => {
+    if (status === "error") {
+      const timer = setTimeout(() => {
+        setStatus("idle");
+      }, 5000); // Reset after 5 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [status]);
+
   const getStatusMessage = () => {
     switch (status) {
       case "uploading_cover":
@@ -441,16 +451,19 @@ const ArtistUpload = () => {
         )}
 
         {/* Error Display */}
-        {status === "error" && error && (
-          <GlowCard className="p-4 border-destructive/50">
+        {error && (
+          <GlowCard className="p-4 border-destructive/50 bg-destructive/5">
             <div className="space-y-3">
               <div className="flex items-start gap-3">
                 <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-destructive">
-                    Failed at: {error.step}
+                    Upload failed at: {error.step}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {status === "idle" ? "You can try again now." : "Resetting in a few seconds..."}
+                  </p>
                 </div>
               </div>
               {error.details && (
@@ -459,7 +472,7 @@ const ArtistUpload = () => {
                 </pre>
               )}
               <Button variant="secondary" size="sm" onClick={handleRetry}>
-                Try Again
+                Clear Error & Try Again
               </Button>
             </div>
           </GlowCard>
@@ -469,10 +482,10 @@ const ArtistUpload = () => {
         <Button
           className="w-full"
           size="lg"
-          disabled={!isFormValid || status !== "idle"}
+          disabled={!isFormValid || (status !== "idle" && status !== "error")}
           onClick={handlePublish}
         >
-          {status === "idle" ? (
+          {status === "idle" || status === "error" ? (
             <>
               <Upload className="h-4 w-4 mr-2" />
               Publish Exclusive Track
@@ -484,6 +497,11 @@ const ArtistUpload = () => {
             </>
           )}
         </Button>
+
+        {/* Debug: Current Status */}
+        <p className="text-xs text-muted-foreground text-center">
+          Status: {status} | Form valid: {isFormValid ? "Yes" : "No"}
+        </p>
       </div>
     </div>
   );
