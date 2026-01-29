@@ -3,15 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface PlaybackDiagnostics {
   trackTitle: string | null;
-  trackId: string | null;
-  artistId: string | null;
   audioUrl: string | null;
   audioPath: string | null;
   bucketName: string;
   lastError: string | null;
   canPlay: boolean;
   readyState: number;
-  retryCount: number;
 }
 
 export interface UseAudioPlayerReturn {
@@ -27,8 +24,7 @@ export interface UseAudioPlayerReturn {
   stop: () => void;
   seek: (time: number) => void;
   setVolume: (vol: number) => void;
-  loadTrack: (audioUrl: string, trackTitle?: string, trackId?: string, artistId?: string) => void;
-  retryPlay: () => Promise<void>;
+  loadTrack: (audioUrl: string, trackTitle?: string) => void;
 }
 
 /**
@@ -46,7 +42,7 @@ function extractPathFromUrl(url: string | null): string | null {
 }
 
 /**
- * Generate a public URL from a storage path
+ * Generate a public URL from a storage path if the URL is missing
  */
 export function generatePublicUrl(
   bucket: "track_audio" | "track_covers",
@@ -54,18 +50,6 @@ export function generatePublicUrl(
 ): string {
   const { data } = supabase.storage.from(bucket).getPublicUrl(path);
   return data?.publicUrl || "";
-}
-
-/**
- * Generate audio URL using multiple file extension attempts
- */
-function generateAudioUrlWithExtensions(artistId: string, trackId: string): string[] {
-  const extensions = [".mp3", ".wav", ".m4a", ".ogg"];
-  return extensions.map(ext => {
-    const path = `artists/${artistId}/${trackId}${ext}`;
-    const { data } = supabase.storage.from("track_audio").getPublicUrl(path);
-    return data?.publicUrl || "";
-  }).filter(Boolean);
 }
 
 export function useAudioPlayer(): UseAudioPlayerReturn {
@@ -76,32 +60,15 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [volume, setVolumeState] = useState(75);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [retryCount, setRetryCount] = useState(0);
-  
-  // Store track metadata for retry logic
-  const trackMetaRef = useRef<{
-    trackId: string | null;
-    artistId: string | null;
-    title: string | null;
-    originalUrl: string | null;
-  }>({
-    trackId: null,
-    artistId: null,
-    title: null,
-    originalUrl: null,
-  });
   
   const [diagnostics, setDiagnostics] = useState<PlaybackDiagnostics>({
     trackTitle: null,
-    trackId: null,
-    artistId: null,
     audioUrl: null,
     audioPath: null,
     bucketName: "track_audio",
     lastError: null,
     canPlay: false,
     readyState: 0,
-    retryCount: 0,
   });
 
   // Initialize audio element
@@ -209,7 +176,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     }
   }, [volume]);
 
-  const loadTrack = useCallback((audioUrl: string, trackTitle?: string, trackId?: string, artistId?: string) => {
+  const loadTrack = useCallback((audioUrl: string, trackTitle?: string) => {
     if (!audioRef.current) return;
 
     // Reset state
@@ -218,36 +185,24 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setCurrentTime(0);
     setDuration(0);
     setIsLoading(true);
-    setRetryCount(0);
-
-    // Store metadata for retry
-    trackMetaRef.current = {
-      trackId: trackId || null,
-      artistId: artistId || null,
-      title: trackTitle || null,
-      originalUrl: audioUrl,
-    };
 
     const audioPath = extractPathFromUrl(audioUrl);
 
     setDiagnostics({
       trackTitle: trackTitle || null,
-      trackId: trackId || null,
-      artistId: artistId || null,
       audioUrl,
       audioPath,
       bucketName: "track_audio",
       lastError: null,
       canPlay: false,
       readyState: 0,
-      retryCount: 0,
     });
 
     // Load the new source
     audioRef.current.src = audioUrl;
     audioRef.current.load();
     
-    console.log("[AudioPlayer] Loading track:", { trackTitle, trackId, artistId, audioUrl, audioPath });
+    console.log("[AudioPlayer] Loading track:", { trackTitle, audioUrl, audioPath });
   }, []);
 
   const play = useCallback(async () => {
@@ -309,97 +264,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setVolumeState(Math.max(0, Math.min(100, vol)));
   }, []);
 
-  /**
-   * Retry playback with alternative URLs if available
-   */
-  const retryPlay = useCallback(async () => {
-    const { trackId, artistId, title } = trackMetaRef.current;
-    
-    if (!audioRef.current) {
-      setError("Audio player not initialized");
-      return;
-    }
-
-    const newRetryCount = retryCount + 1;
-    setRetryCount(newRetryCount);
-    setError(null);
-    setIsLoading(true);
-
-    console.log("[AudioPlayer] Retry attempt:", newRetryCount, { trackId, artistId });
-
-    // If we have trackId and artistId, try generating URLs with different extensions
-    if (trackId && artistId) {
-      const alternativeUrls = generateAudioUrlWithExtensions(artistId, trackId);
-      
-      // Try each URL in sequence
-      for (let i = 0; i < alternativeUrls.length; i++) {
-        const url = alternativeUrls[i];
-        console.log("[AudioPlayer] Trying alternative URL:", url);
-        
-        try {
-          audioRef.current.src = url;
-          audioRef.current.load();
-          
-          // Wait for canplay or error
-          await new Promise<void>((resolve, reject) => {
-            const audio = audioRef.current!;
-            
-            const onCanPlay = () => {
-              audio.removeEventListener("canplay", onCanPlay);
-              audio.removeEventListener("error", onError);
-              resolve();
-            };
-            
-            const onError = () => {
-              audio.removeEventListener("canplay", onCanPlay);
-              audio.removeEventListener("error", onError);
-              reject(new Error("Failed to load"));
-            };
-            
-            audio.addEventListener("canplay", onCanPlay, { once: true });
-            audio.addEventListener("error", onError, { once: true });
-            
-            // Timeout after 5 seconds
-            setTimeout(() => {
-              audio.removeEventListener("canplay", onCanPlay);
-              audio.removeEventListener("error", onError);
-              reject(new Error("Load timeout"));
-            }, 5000);
-          });
-
-          // Success - update diagnostics and play
-          setDiagnostics(prev => ({
-            ...prev,
-            audioUrl: url,
-            audioPath: extractPathFromUrl(url),
-            retryCount: newRetryCount,
-            lastError: null,
-            canPlay: true,
-          }));
-          
-          await audioRef.current.play();
-          setIsPlaying(true);
-          setIsLoading(false);
-          return;
-        } catch (err) {
-          console.log("[AudioPlayer] URL failed:", url, err);
-          continue; // Try next URL
-        }
-      }
-    }
-
-    // All retries failed
-    setIsLoading(false);
-    const errorMsg = "Playback failed — tap to retry.";
-    setError(errorMsg);
-    setDiagnostics(prev => ({
-      ...prev,
-      lastError: errorMsg,
-      retryCount: newRetryCount,
-      canPlay: false,
-    }));
-  }, [retryCount]);
-
   return {
     isPlaying,
     currentTime,
@@ -414,6 +278,5 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     seek,
     setVolume,
     loadTrack,
-    retryPlay,
   };
 }
