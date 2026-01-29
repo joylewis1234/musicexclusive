@@ -16,6 +16,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { StorageHealthCheckPanel } from "@/components/artist/StorageHealthCheckPanel";
 
 const GENRES = [
   "Hip-Hop",
@@ -217,6 +218,9 @@ const ArtistUpload = () => {
       </div>
 
       <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
+        {/* Storage diagnostics */}
+        <StorageHealthCheckPanel />
+
         {/* Track Title */}
         <div className="space-y-2">
           <Label htmlFor="title">Track Title *</Label>

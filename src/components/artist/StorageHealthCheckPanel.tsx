@@ -33,45 +33,33 @@ export const StorageHealthCheckPanel = () => {
       <div className="mt-4 space-y-3 text-sm">
         <Row label="auth session exists?" value={result ? String(result.session.ok) : isRunning ? "checking…" : "—"} />
         <Row label="storage base URL" value={result?.storageBaseUrl ?? "—"} monospace />
-        <Row
-          label="list buckets"
-          value={
-            result
-              ? result.listBuckets.ok
-                ? `ok (${result.listBuckets.buckets?.length ?? 0})`
-                : "failed"
-              : isRunning
-                ? "checking…"
-                : "—"
-          }
-        />
-        <Row
-          label="test upload (1KB)"
-          value={
-            result
-              ? result.testUpload.ok
-                ? "ok"
-                : "failed"
-              : isRunning
-                ? "checking…"
-                : "—"
-          }
-        />
 
-        {(error || (result && (!result.listBuckets.ok || !result.testUpload.ok))) && (
-          <div className="rounded-lg border border-border/40 bg-muted/20 p-3">
-            <p className="text-xs text-muted-foreground mb-2">Details</p>
+        <div className="rounded-lg border border-border/40 bg-muted/20 p-3 space-y-3">
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">listBuckets()</p>
             <pre className="text-xs whitespace-pre-wrap break-words text-foreground/90">
-              {error
-                ? error
-                : safeStringify({
-                    session: result?.session,
-                    listBuckets: result?.listBuckets,
-                    testUpload: result?.testUpload,
-                  })}
+              {result ? safeStringify(result.listBuckets) : isRunning ? "checking…" : "—"}
             </pre>
           </div>
-        )}
+          <div className="h-px bg-border/40" />
+          <div>
+            <p className="text-xs text-muted-foreground mb-2">test upload (1KB) → track_covers/test.txt</p>
+            <pre className="text-xs whitespace-pre-wrap break-words text-foreground/90">
+              {result ? safeStringify(result.testUpload) : isRunning ? "checking…" : "—"}
+            </pre>
+          </div>
+          {(error || (result && (!result.session.ok || !result.listBuckets.ok || !result.testUpload.ok))) && (
+            <>
+              <div className="h-px bg-border/40" />
+              <div>
+                <p className="text-xs text-muted-foreground mb-2">Top-level error</p>
+                <pre className="text-xs whitespace-pre-wrap break-words text-foreground/90">
+                  {error ? error : "—"}
+                </pre>
+              </div>
+            </>
+          )}
+        </div>
       </div>
     </GlowCard>
   );
