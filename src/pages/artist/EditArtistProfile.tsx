@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload";
 import { AvatarUploadDiagnostics } from "@/components/artist/AvatarUploadDiagnostics";
+import {
+  BrowserDiagnosticsPanel,
+  type DiagnosticsState,
+} from "@/components/debug/BrowserDiagnosticsPanel";
+import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import {
   ArrowLeft,
   Home,
@@ -26,6 +30,8 @@ import {
   Loader2,
   Save,
   User,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 
 const GENRES = [
@@ -67,12 +73,23 @@ const XIcon = ({ className }: { className?: string }) => (
 
 const EditArtistProfile = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Diagnostics state
+  const [diagnostics, setDiagnostics] = useState<DiagnosticsState>({
+    hasSession: null,
+    userId: null,
+    artistRowFound: null,
+    tracksFetchedCount: null,
+    lastError: null,
+  });
 
   // Form fields
   const [artistName, setArtistName] = useState("");
@@ -85,54 +102,145 @@ const EditArtistProfile = () => {
   const [twitterUrl, setTwitterUrl] = useState("");
 
   // Hook for avatar upload
-  const avatarUploader = useAvatarUpload({ userId: user?.id });
+  const avatarUploader = useAvatarUpload({ userId });
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!user) return;
-      setIsLoading(true);
-      try {
-        const { data: profile, error: profileError } = await supabase
-          .from("artist_profiles")
-          .select("*")
-          .eq("user_id", user.id)
+  const fetchProfile = useCallback(async () => {
+    // Abort any previous request
+    if (abortRef.current) {
+      abortRef.current.abort();
+    }
+    abortRef.current = new AbortController();
+    const signal = abortRef.current.signal;
+
+    setIsLoading(true);
+    setLoadError(null);
+    setDiagnostics((prev) => ({ ...prev, lastError: null }));
+
+    try {
+      // Step 1: Get authenticated user (with 10s timeout)
+      const authResult = await withTimeout(getAuthedUserOrFail(signal), 10000);
+
+      if (authResult.ok === false) {
+        setDiagnostics((prev) => ({
+          ...prev,
+          hasSession: false,
+          lastError: authResult.error,
+        }));
+        setLoadError(authResult.error);
+        toast.error(authResult.error);
+        return;
+      }
+
+      const { user } = authResult;
+      setUserId(user.id);
+      setDiagnostics((prev) => ({
+        ...prev,
+        hasSession: true,
+        userId: user.id,
+      }));
+
+      if (signal.aborted) return;
+
+      // Step 2: Fetch artist profile (Supabase queries are already Promises via .then())
+      const { data: profile, error: profileError } = await supabase
+        .from("artist_profiles")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (signal.aborted) return;
+
+      if (profileError) {
+        console.error("[EditProfile] Error fetching profile:", profileError);
+        setDiagnostics((prev) => ({
+          ...prev,
+          artistRowFound: false,
+          lastError: profileError.message,
+        }));
+        setLoadError(profileError.message);
+        toast.error("Could not load profile: " + profileError.message);
+        return;
+      }
+
+      if (profile) {
+        setDiagnostics((prev) => ({ ...prev, artistRowFound: true }));
+        setHasExistingProfile(true);
+        setArtistName(profile.artist_name || "");
+        setBio(profile.bio || "");
+        setGenre(profile.genre || "");
+        setAvatarUrl(profile.avatar_url || "");
+        setInstagramUrl(profile.instagram_url || "");
+        setTiktokUrl(profile.tiktok_url || "");
+        setYoutubeUrl(profile.youtube_url || "");
+        setTwitterUrl(profile.twitter_url || "");
+      } else {
+        // No profile exists - try to get info from application and create profile
+        setDiagnostics((prev) => ({ ...prev, artistRowFound: false }));
+
+        const { data: app } = await supabase
+          .from("artist_applications")
+          .select("artist_name, genres")
+          .eq("contact_email", user.email)
           .maybeSingle();
 
-        if (profileError) {
-          console.error("[EditProfile] Error fetching profile:", profileError);
+        if (signal.aborted) return;
+
+        const defaultName = app?.artist_name || "";
+        const defaultGenre = app?.genres || "";
+
+        // Create the profile via upsert
+        const { data: newProfile, error: upsertError } = await supabase
+          .from("artist_profiles")
+          .upsert(
+            {
+              user_id: user.id,
+              artist_name: defaultName || "New Artist",
+            },
+            { onConflict: "user_id" }
+          )
+          .select()
+          .single();
+
+        if (signal.aborted) return;
+
+        if (upsertError) {
+          console.error("[EditProfile] Upsert error:", upsertError);
+          setDiagnostics((prev) => ({
+            ...prev,
+            lastError: upsertError.message,
+          }));
+          setLoadError(upsertError.message);
+          toast.error("Could not create profile: " + upsertError.message);
+          return;
         }
 
-        if (profile) {
-          setHasExistingProfile(true);
-          setArtistName(profile.artist_name || "");
-          setBio(profile.bio || "");
-          setGenre(profile.genre || "");
-          setAvatarUrl(profile.avatar_url || "");
-          setInstagramUrl(profile.instagram_url || "");
-          setTiktokUrl(profile.tiktok_url || "");
-          setYoutubeUrl(profile.youtube_url || "");
-          setTwitterUrl(profile.twitter_url || "");
-        } else {
-          // Fallback to application data
-          const { data: app } = await supabase
-            .from("artist_applications")
-            .select("artist_name, genres")
-            .eq("contact_email", user.email)
-            .maybeSingle();
-          if (app) {
-            setArtistName(app.artist_name || "");
-            setGenre(app.genres || "");
-          }
-        }
-      } catch (err) {
-        console.error("Error fetching profile:", err);
-        toast.error("Could not load profile data");
-      } finally {
-        setIsLoading(false);
+        setDiagnostics((prev) => ({ ...prev, artistRowFound: true }));
+        setHasExistingProfile(true);
+        setArtistName(newProfile?.artist_name || defaultName);
+        setGenre(defaultGenre);
+      }
+    } catch (err: any) {
+      if (err?.name === "AbortError" || signal.aborted) return;
+      console.error("[EditProfile] Fetch error:", err);
+      const msg = err?.message || "Could not load profile data";
+      setDiagnostics((prev) => ({ ...prev, lastError: msg }));
+      setLoadError(msg);
+      toast.error(msg);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchProfile();
+
+    return () => {
+      // Cleanup: abort any pending requests
+      if (abortRef.current) {
+        abortRef.current.abort();
       }
     };
-    fetchProfile();
-  }, [user]);
+  }, [fetchProfile]);
 
   // Process image on file select (compress + preview)
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,7 +250,10 @@ const EditArtistProfile = () => {
     // Process image first (compress, resize)
     const processResult = await avatarUploader.processImage(file);
     if (!processResult.ok) {
-      toast.error((processResult as { ok: false; error: { message: string } }).error.message);
+      toast.error(
+        (processResult as { ok: false; error: { message: string } }).error
+          .message
+      );
     }
     // Reset input so the same file can be re-selected if needed
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -155,7 +266,9 @@ const EditArtistProfile = () => {
       setAvatarUrl(result.url);
       toast.success("Profile image updated!");
     } else {
-      toast.error((result as { ok: false; error: { message: string } }).error.message);
+      toast.error(
+        (result as { ok: false; error: { message: string } }).error.message
+      );
     }
   };
 
@@ -165,7 +278,7 @@ const EditArtistProfile = () => {
   };
 
   const handleSave = async () => {
-    if (!user) {
+    if (!userId) {
       toast.error("You must be logged in to save");
       return;
     }
@@ -192,12 +305,12 @@ const EditArtistProfile = () => {
         const { error } = await supabase
           .from("artist_profiles")
           .update(profileData)
-          .eq("user_id", user.id);
+          .eq("user_id", userId);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("artist_profiles")
-          .insert({ user_id: user.id, ...profileData });
+          .insert({ user_id: userId, ...profileData });
         if (error) throw error;
         setHasExistingProfile(true);
       }
@@ -212,16 +325,46 @@ const EditArtistProfile = () => {
     }
   };
 
+  // Error state with retry
+  if (loadError && !isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <GlowCard className="p-8 max-w-sm w-full text-center">
+          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
+          <h2 className="font-display text-lg font-semibold mb-2">
+            {loadError === "Please sign in again"
+              ? "Session Expired"
+              : "Load Error"}
+          </h2>
+          <p className="text-muted-foreground text-sm mb-6">{loadError}</p>
+
+          {loadError === "Please sign in again" ? (
+            <Button onClick={() => navigate("/artist/login")} className="w-full">
+              Go to Login
+            </Button>
+          ) : (
+            <Button onClick={fetchProfile} className="w-full gap-2">
+              <RefreshCw className="w-4 h-4" />
+              Retry
+            </Button>
+          )}
+        </GlowCard>
+        <BrowserDiagnosticsPanel state={diagnostics} />
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <BrowserDiagnosticsPanel state={diagnostics} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-16">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="container max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -294,31 +437,42 @@ const EditArtistProfile = () => {
                 )}
 
                 {/* Upload Button Overlay - only show when not processing */}
-                {!avatarUploader.processedImage && !avatarUploader.isProcessing && (
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={avatarUploader.isUploading}
-                    className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
-                  >
-                    {avatarUploader.isUploading ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-primary-foreground" />
-                    ) : (
-                      <Camera className="w-5 h-5 text-primary-foreground" />
-                    )}
-                  </button>
-                )}
+                {!avatarUploader.processedImage &&
+                  !avatarUploader.isProcessing && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={avatarUploader.isUploading}
+                      className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
+                    >
+                      {avatarUploader.isUploading ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-primary-foreground" />
+                      ) : (
+                        <Camera className="w-5 h-5 text-primary-foreground" />
+                      )}
+                    </button>
+                  )}
               </div>
 
               {/* Show compression info when processed image available */}
-              {avatarUploader.processedImage && avatarUploader.lastMeta?.compression && (
-                <div className="mb-4 text-xs text-muted-foreground">
-                  <p>
-                    Compressed: {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.originalSize)} → {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.compressedSize)}
-                    <span className="text-primary ml-1">({avatarUploader.lastMeta.compression.ratio} saved)</span>
-                  </p>
-                </div>
-              )}
+              {avatarUploader.processedImage &&
+                avatarUploader.lastMeta?.compression && (
+                  <div className="mb-4 text-xs text-muted-foreground">
+                    <p>
+                      Compressed:{" "}
+                      {avatarUploader.formatFileSize(
+                        avatarUploader.lastMeta.compression.originalSize
+                      )}{" "}
+                      →{" "}
+                      {avatarUploader.formatFileSize(
+                        avatarUploader.lastMeta.compression.compressedSize
+                      )}
+                      <span className="text-primary ml-1">
+                        ({avatarUploader.lastMeta.compression.ratio} saved)
+                      </span>
+                    </p>
+                  </div>
+                )}
 
               {/* Confirm/Cancel buttons for processed image */}
               {avatarUploader.processedImage && (
@@ -358,7 +512,7 @@ const EditArtistProfile = () => {
 
           {/* Dev-only diagnostics */}
           <AvatarUploadDiagnostics
-            userId={user?.id}
+            userId={userId}
             meta={avatarUploader.lastMeta}
             error={avatarUploader.lastError}
           />
@@ -407,7 +561,9 @@ const EditArtistProfile = () => {
                   className="min-h-[120px] resize-none"
                   maxLength={500}
                 />
-                <p className="text-xs text-muted-foreground text-right">{bio.length}/500</p>
+                <p className="text-xs text-muted-foreground text-right">
+                  {bio.length}/500
+                </p>
               </div>
             </div>
           </GlowCard>
@@ -482,21 +638,25 @@ const EditArtistProfile = () => {
             size="lg"
             className="w-full h-14"
             onClick={handleSave}
-            disabled={isSaving || !artistName.trim()}
+            disabled={isSaving}
           >
             {isSaving ? (
-              <Loader2 className="w-5 h-5 animate-spin mr-2" />
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Saving...
+              </>
             ) : (
-              <Save className="w-5 h-5 mr-2" />
+              <>
+                <Save className="w-5 h-5 mr-2" />
+                Save Profile
+              </>
             )}
-            Save Profile
           </Button>
-
-          <p className="text-center text-muted-foreground text-xs">
-            Changes will appear on your Artist Profile and Discovery.
-          </p>
         </div>
       </main>
+
+      {/* Browser diagnostics panel */}
+      <BrowserDiagnosticsPanel state={diagnostics} />
     </div>
   );
 };
