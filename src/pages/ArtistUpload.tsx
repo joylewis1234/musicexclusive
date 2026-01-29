@@ -119,7 +119,7 @@ const ArtistUpload = () => {
   }, [uploadState.step, uploadState.errorMessage, toast]);
 
   const isFormValid = title?.trim() && genre && coverFile && audioFile && agreesToTerms;
-  const isUploading = ["session_check", "cover_upload", "audio_upload", "db_insert"].includes(uploadState.step);
+  const isUploading = ["session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(uploadState.step);
 
   const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
