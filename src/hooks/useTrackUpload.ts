@@ -42,7 +42,7 @@ interface UploadParams {
   userId: string;
 }
 
-const UPLOAD_TIMEOUT_MS = 120000; // 2 minutes
+const UPLOAD_TIMEOUT_MS = 180000; // 3 minutes to allow for retries
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 const MAX_COVER_BYTES = 10 * 1024 * 1024;
 
