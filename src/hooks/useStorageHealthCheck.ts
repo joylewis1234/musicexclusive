@@ -91,15 +91,25 @@ export const useStorageHealthCheck = () => {
         listBuckets = { ok: false, error: e };
       }
 
-      // 2) test upload (client-side) into track_covers/test.txt as requested
+      // 2) test upload (client-side) into track_covers/test.jpg (image/jpeg)
       let testUpload: StorageHealthCheckResult["testUpload"] = { ok: false, bucket: "track_covers" };
       try {
-        const path = "test.txt";
-        const content = new Blob([new Uint8Array(1024)], { type: "text/plain" });
+        const path = `test-${Date.now()}.jpg`;
+        // Minimal JPEG header/body (then padded to ~1KB)
+        const minimalJpeg = new Uint8Array([
+          0xff, 0xd8, // SOI
+          0xff, 0xe0, 0x00, 0x10, // APP0
+          0x4a, 0x46, 0x49, 0x46, 0x00, // JFIF\0
+          0x01, 0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+          0xff, 0xd9, // EOI
+        ]);
+        const jpegBytes = new Uint8Array(1024);
+        jpegBytes.set(minimalJpeg, 0);
+        const content = new Blob([jpegBytes], { type: "image/jpeg" });
         const { data, error: uploadError } = await supabase.storage.from("track_covers").upload(path, content, {
           cacheControl: "60",
           upsert: true,
-          contentType: "text/plain",
+          contentType: "image/jpeg",
         });
         if (uploadError || !data?.path) throw uploadError ?? new Error("Upload returned no path");
 

@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Progress } from "@/components/ui/progress";
 import { Loader2 } from "lucide-react";
 import type { UploadStep } from "@/hooks/useTrackUpload";
@@ -18,7 +19,8 @@ const stepMessages: Record<UploadStep, string> = {
   error: "Upload failed",
 };
 
-export function UploadProgressBar({ step, progress, isTimedOut }: UploadProgressBarProps) {
+export const UploadProgressBar = React.forwardRef<HTMLDivElement, UploadProgressBarProps>(
+  ({ step, progress, isTimedOut }, ref) => {
   if (step === "idle") return null;
 
   const isUploading = ["session_check", "cover_upload", "audio_upload", "db_insert"].includes(step);
@@ -26,7 +28,7 @@ export function UploadProgressBar({ step, progress, isTimedOut }: UploadProgress
   const isError = step === "error";
 
   return (
-    <div className="space-y-2">
+    <div ref={ref} className="space-y-2">
       <div className="flex items-center justify-between text-sm">
         <div className="flex items-center gap-2">
           {isUploading && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
@@ -49,4 +51,6 @@ export function UploadProgressBar({ step, progress, isTimedOut }: UploadProgress
       )}
     </div>
   );
-}
+});
+
+UploadProgressBar.displayName = "UploadProgressBar";
