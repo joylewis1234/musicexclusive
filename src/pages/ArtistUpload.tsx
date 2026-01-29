@@ -16,7 +16,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { prepareCoverImage, sanitizeFilename } from "@/utils/imageProcessing";
+import { sanitizeFilename, validateCoverImage, getImageContentType } from "@/utils/imageProcessing";
 
 const GENRES = [
   "Hip-Hop",
@@ -36,13 +36,7 @@ const GENRES = [
   "Other",
 ];
 
-type UploadStatus = "idle" | "processing_image" | "uploading_cover" | "uploading_audio" | "saving_track" | "success" | "error";
-
-interface UploadError {
-  step: string;
-  message: string;
-  details?: string;
-}
+type UploadStatus = "idle" | "uploading_cover" | "uploading_audio" | "saving_track" | "success" | "error";
 
 const ArtistUpload = () => {
   const navigate = useNavigate();
@@ -61,7 +55,7 @@ const ArtistUpload = () => {
 
   // Upload state
   const [status, setStatus] = useState<UploadStatus>("idle");
-  const [error, setError] = useState<UploadError | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Refs
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +64,9 @@ const ArtistUpload = () => {
   // Cleanup preview URL on unmount
   useEffect(() => {
     return () => {
-      if (coverPreview) URL.revokeObjectURL(coverPreview);
+      if (coverPreview) {
+        URL.revokeObjectURL(coverPreview);
+      }
     };
   }, [coverPreview]);
 
@@ -80,18 +76,23 @@ const ArtistUpload = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const ext = file.name.toLowerCase().split(".").pop();
-    if (!["jpg", "jpeg", "png", "webp"].includes(ext || "")) {
-      toast({ title: "Invalid file", description: "Please upload a JPG, PNG, or WEBP image", variant: "destructive" });
+    // Validate the cover image
+    const validationError = validateCoverImage(file);
+    if (validationError) {
+      toast({ 
+        title: "Invalid cover image", 
+        description: validationError, 
+        variant: "destructive" 
+      });
+      e.target.value = "";
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Image must be under 10MB", variant: "destructive" });
-      return;
+    // Clean up old preview
+    if (coverPreview) {
+      URL.revokeObjectURL(coverPreview);
     }
 
-    if (coverPreview) URL.revokeObjectURL(coverPreview);
     setCoverFile(file);
     setCoverPreview(URL.createObjectURL(file));
   };
@@ -102,46 +103,39 @@ const ArtistUpload = () => {
 
     const ext = file.name.toLowerCase().split(".").pop();
     if (ext !== "mp3") {
-      toast({ title: "Invalid file", description: "Please upload an MP3 file", variant: "destructive" });
+      toast({ 
+        title: "Invalid file", 
+        description: "Please upload an MP3 file", 
+        variant: "destructive" 
+      });
+      e.target.value = "";
       return;
     }
 
     if (file.size > 50 * 1024 * 1024) {
-      toast({ title: "File too large", description: "Audio must be under 50MB", variant: "destructive" });
+      toast({ 
+        title: "File too large", 
+        description: "Audio must be under 50MB", 
+        variant: "destructive" 
+      });
+      e.target.value = "";
       return;
     }
 
     setAudioFile(file);
   };
 
-  const logUploadError = (bucket: string, file: File, error: unknown) => {
-    const errorDetails = {
-      bucket,
-      fileName: file.name,
-      fileType: file.type,
-      fileSize: `${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      fileSizeBytes: file.size,
-      networkOnline: navigator.onLine,
-      timestamp: new Date().toISOString(),
-      error: error,
-      errorString: String(error),
-      errorJSON: JSON.stringify(error, Object.getOwnPropertyNames(error as object), 2),
-    };
-    console.error(`[Upload Error] Bucket: ${bucket}`, errorDetails);
-    return errorDetails;
-  };
-
   const handlePublish = async () => {
     if (!isFormValid || !user) return;
 
-    setError(null);
-    setStatus("processing_image");
+    setErrorMessage(null);
+    setStatus("uploading_cover");
 
     try {
       // Step 1: Get fresh session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError || !sessionData.session) {
-        throw { step: "auth", message: "Session expired. Please log in again." };
+        throw new Error("Session expired. Please log in again.");
       }
 
       // Step 2: Get artist profile
@@ -153,84 +147,62 @@ const ArtistUpload = () => {
 
       if (profileError || !artistProfile) {
         console.error("Artist profile error:", profileError);
-        throw { step: "auth", message: "Artist profile not found." };
+        throw new Error("Artist profile not found.");
       }
 
       const artistId = artistProfile.id;
       const timestamp = Date.now();
       const sanitizedTitle = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
 
-      // Step 3: Process and prepare cover image
-      console.log("[Upload] Processing cover image...", {
-        originalName: coverFile!.name,
-        originalSize: `${(coverFile!.size / 1024 / 1024).toFixed(2)} MB`,
-        originalType: coverFile!.type,
-      });
-
-      let preparedCover;
-      try {
-        preparedCover = await prepareCoverImage(coverFile!);
-        console.log("[Upload] Cover prepared:", {
-          wasProcessed: preparedCover.wasProcessed,
-          finalName: preparedCover.file.name,
-          finalSize: `${(preparedCover.file.size / 1024).toFixed(0)} KB`,
-          contentType: preparedCover.contentType,
-        });
-      } catch (prepError) {
-        console.error("[Upload] Image processing failed:", prepError);
-        throw {
-          step: "image_processing",
-          message: prepError instanceof Error ? prepError.message : "Failed to process image",
-        };
-      }
-
-      // Step 4: Upload cover to track_covers bucket
-      setStatus("uploading_cover");
-      const coverExt = preparedCover.contentType.split("/")[1] || "jpeg";
+      // Step 3: Upload cover to track_covers bucket
+      const coverExt = coverFile!.name.split(".").pop()?.toLowerCase() || "jpg";
       const coverPath = `${artistId}/${sanitizedTitle}-${timestamp}.${coverExt}`;
-      
-      console.log(`[Upload] Starting cover upload to track_covers/${coverPath}`, {
-        fileSize: preparedCover.file.size,
-        contentType: preparedCover.contentType,
-        networkOnline: navigator.onLine,
+      const coverContentType = getImageContentType(coverFile!);
+
+      console.log("[Upload] Starting cover upload:", {
+        path: coverPath,
+        size: `${(coverFile!.size / 1024).toFixed(0)} KB`,
+        type: coverContentType,
+        online: navigator.onLine,
       });
-      
+
       const { data: coverData, error: coverError } = await supabase.storage
         .from("track_covers")
-        .upload(coverPath, preparedCover.file, {
+        .upload(coverPath, coverFile!, {
           cacheControl: "3600",
           upsert: false,
-          contentType: preparedCover.contentType,
+          contentType: coverContentType,
         });
 
       if (coverError) {
-        logUploadError("track_covers", preparedCover.file, coverError);
-        throw {
-          step: "cover_upload",
-          message: "Upload failed. Try a smaller image or different format (JPG/PNG/WEBP).",
-          details: JSON.stringify(coverError, null, 2),
-        };
+        console.error("[Upload] Cover upload failed:", {
+          error: coverError,
+          fileName: coverFile!.name,
+          fileSize: coverFile!.size,
+          online: navigator.onLine,
+        });
+        throw new Error("Cover upload failed. Try a smaller image or different format (JPG/PNG/WEBP).");
       }
 
-      console.log("[Upload] Cover uploaded successfully:", coverData);
+      console.log("[Upload] Cover uploaded:", coverData.path);
 
       // Get cover public URL
       const { data: coverUrlData } = supabase.storage
         .from("track_covers")
         .getPublicUrl(coverData.path);
-      
-      const coverUrl = coverUrlData.publicUrl;
-      console.log("[Upload] Cover public URL:", coverUrl);
 
-      // Step 5: Upload audio to track_audio bucket
+      const coverUrl = coverUrlData.publicUrl;
+
+      // Step 4: Upload audio to track_audio bucket
       setStatus("uploading_audio");
       const audioPath = `${artistId}/${sanitizedTitle}-${timestamp}.mp3`;
-      
-      console.log(`[Upload] Starting audio upload to track_audio/${audioPath}`, {
-        fileSize: audioFile!.size,
-        networkOnline: navigator.onLine,
+
+      console.log("[Upload] Starting audio upload:", {
+        path: audioPath,
+        size: `${(audioFile!.size / (1024 * 1024)).toFixed(2)} MB`,
+        online: navigator.onLine,
       });
-      
+
       const { data: audioData, error: audioError } = await supabase.storage
         .from("track_audio")
         .upload(audioPath, audioFile!, {
@@ -240,27 +212,27 @@ const ArtistUpload = () => {
         });
 
       if (audioError) {
-        logUploadError("track_audio", audioFile!, audioError);
-        throw {
-          step: "audio_upload",
-          message: "Audio upload failed. Try a smaller file or check your connection.",
-          details: JSON.stringify(audioError, null, 2),
-        };
+        console.error("[Upload] Audio upload failed:", {
+          error: audioError,
+          fileName: audioFile!.name,
+          fileSize: audioFile!.size,
+          online: navigator.onLine,
+        });
+        throw new Error("Audio upload failed. Try a smaller file or check your connection.");
       }
 
-      console.log("[Upload] Audio uploaded successfully:", audioData);
+      console.log("[Upload] Audio uploaded:", audioData.path);
 
       // Get audio public URL
       const { data: audioUrlData } = supabase.storage
         .from("track_audio")
         .getPublicUrl(audioData.path);
-      
-      const audioUrl = audioUrlData.publicUrl;
-      console.log("[Upload] Audio public URL:", audioUrl);
 
-      // Step 6: Insert track record
+      const audioUrl = audioUrlData.publicUrl;
+
+      // Step 5: Insert track record
       setStatus("saving_track");
-      
+
       const { data: trackData, error: trackError } = await supabase
         .from("tracks")
         .insert({
@@ -275,38 +247,30 @@ const ArtistUpload = () => {
 
       if (trackError) {
         console.error("[Upload] Track insert error:", trackError);
-        throw {
-          step: "database",
-          message: trackError.message || "Failed to save track",
-          details: JSON.stringify(trackError, null, 2),
-        };
+        throw new Error(trackError.message || "Failed to save track");
       }
 
-      console.log("[Upload] Track saved successfully:", trackData);
+      console.log("[Upload] Track saved:", trackData.id);
 
       // Success!
       setStatus("success");
       toast({ title: "Track uploaded!", description: "Your exclusive track is now live." });
-      
+
       // Redirect to dashboard after short delay
       setTimeout(() => {
         navigate("/artist/dashboard");
       }, 1500);
 
-    } catch (err: unknown) {
-      console.error("Upload error:", err);
+    } catch (err) {
+      console.error("[Upload] Error:", err);
       setStatus("error");
       
-      const uploadError = err as UploadError;
-      setError({
-        step: uploadError.step || "unknown",
-        message: uploadError.message || "An unexpected error occurred",
-        details: uploadError.details,
-      });
+      const message = err instanceof Error ? err.message : "An unexpected error occurred";
+      setErrorMessage(message);
       
       toast({
         title: "Upload failed",
-        description: uploadError.message || "Something went wrong. Please try again.",
+        description: message,
         variant: "destructive",
       });
     }
@@ -314,23 +278,11 @@ const ArtistUpload = () => {
 
   const handleRetry = () => {
     setStatus("idle");
-    setError(null);
+    setErrorMessage(null);
   };
-
-  // Auto-reset to idle after error so button becomes clickable again
-  useEffect(() => {
-    if (status === "error") {
-      const timer = setTimeout(() => {
-        setStatus("idle");
-      }, 5000); // Reset after 5 seconds
-      return () => clearTimeout(timer);
-    }
-  }, [status]);
 
   const getStatusMessage = () => {
     switch (status) {
-      case "processing_image":
-        return "Processing cover image...";
       case "uploading_cover":
         return "Uploading cover art...";
       case "uploading_audio":
@@ -343,6 +295,8 @@ const ArtistUpload = () => {
         return "";
     }
   };
+
+  const isUploading = status === "uploading_cover" || status === "uploading_audio" || status === "saving_track";
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -366,14 +320,14 @@ const ArtistUpload = () => {
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter track title"
             maxLength={100}
-            disabled={status !== "idle"}
+            disabled={isUploading}
           />
         </div>
 
         {/* Genre */}
         <div className="space-y-2">
           <Label>Genre *</Label>
-          <Select value={genre} onValueChange={setGenre} disabled={status !== "idle"}>
+          <Select value={genre} onValueChange={setGenre} disabled={isUploading}>
             <SelectTrigger>
               <SelectValue placeholder="Select genre" />
             </SelectTrigger>
@@ -389,18 +343,18 @@ const ArtistUpload = () => {
 
         {/* Cover Art */}
         <div className="space-y-2">
-          <Label>Cover Art * (JPG, PNG, or WEBP, max 10MB)</Label>
+          <Label>Cover Art * (JPG, PNG, or WEBP, max 1.5MB)</Label>
           <input
             ref={coverInputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp"
             onChange={handleCoverSelect}
             className="hidden"
-            disabled={status !== "idle"}
+            disabled={isUploading}
           />
           <GlowCard
             className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => status === "idle" && coverInputRef.current?.click()}
+            onClick={() => !isUploading && coverInputRef.current?.click()}
           >
             {coverPreview ? (
               <div className="flex items-center gap-4">
@@ -408,7 +362,7 @@ const ArtistUpload = () => {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{coverFile?.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {coverFile && (coverFile.size / (1024 * 1024)).toFixed(2)} MB
+                    {coverFile && (coverFile.size / 1024).toFixed(0)} KB
                   </p>
                 </div>
               </div>
@@ -430,11 +384,11 @@ const ArtistUpload = () => {
             accept="audio/mpeg,audio/mp3"
             onChange={handleAudioSelect}
             className="hidden"
-            disabled={status !== "idle"}
+            disabled={isUploading}
           />
           <GlowCard
             className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => status === "idle" && audioInputRef.current?.click()}
+            onClick={() => !isUploading && audioInputRef.current?.click()}
           >
             {audioFile ? (
               <div className="flex items-center gap-4">
@@ -463,7 +417,7 @@ const ArtistUpload = () => {
             id="terms"
             checked={agreesToTerms}
             onCheckedChange={(checked) => setAgreesToTerms(checked === true)}
-            disabled={status !== "idle"}
+            disabled={isUploading}
           />
           <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
             I agree to the Artist Terms of Service and confirm I own all rights to this music.
@@ -471,7 +425,7 @@ const ArtistUpload = () => {
         </div>
 
         {/* Upload Progress/Status */}
-        {status !== "idle" && status !== "error" && status !== "success" && (
+        {isUploading && (
           <GlowCard className="p-4">
             <div className="flex items-center gap-3">
               <Loader2 className="h-5 w-5 animate-spin text-primary" />
@@ -492,30 +446,18 @@ const ArtistUpload = () => {
         )}
 
         {/* Error Display */}
-        {error && (
+        {status === "error" && errorMessage && (
           <GlowCard className="p-4 border-destructive/50 bg-destructive/5">
-            <div className="space-y-3">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-destructive">
-                    Upload failed at: {error.step}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {status === "idle" ? "You can try again now." : "Resetting in a few seconds..."}
-                  </p>
-                </div>
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-destructive">Upload failed</p>
+                <p className="text-sm text-muted-foreground mt-1">{errorMessage}</p>
               </div>
-              {error.details && (
-                <pre className="text-xs bg-muted/50 p-3 rounded-lg overflow-x-auto max-h-40">
-                  {error.details}
-                </pre>
-              )}
-              <Button variant="secondary" size="sm" onClick={handleRetry}>
-                Clear Error & Try Again
-              </Button>
             </div>
+            <Button variant="secondary" size="sm" className="mt-3" onClick={handleRetry}>
+              Try Again
+            </Button>
           </GlowCard>
         )}
 
@@ -523,26 +465,21 @@ const ArtistUpload = () => {
         <Button
           className="w-full"
           size="lg"
-          disabled={!isFormValid || (status !== "idle" && status !== "error")}
+          disabled={!isFormValid || isUploading || status === "success"}
           onClick={handlePublish}
         >
-          {status === "idle" || status === "error" ? (
-            <>
-              <Upload className="h-4 w-4 mr-2" />
-              Publish Exclusive Track
-            </>
-          ) : (
+          {isUploading ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
               {getStatusMessage()}
             </>
+          ) : (
+            <>
+              <Upload className="h-4 w-4 mr-2" />
+              Publish Exclusive Track
+            </>
           )}
         </Button>
-
-        {/* Debug: Current Status */}
-        <p className="text-xs text-muted-foreground text-center">
-          Status: {status} | Form valid: {isFormValid ? "Yes" : "No"}
-        </p>
       </div>
     </div>
   );
