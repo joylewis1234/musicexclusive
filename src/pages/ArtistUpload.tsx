@@ -1,13 +1,11 @@
-import { useMemo, useRef, useEffect, useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Home, Upload, Music, X, Check, Loader2, Info, Lock, Play, Pause, ImageIcon } from "lucide-react";
+import { ArrowLeft, Upload, Music, ImageIcon, Loader2, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { GlowCard } from "@/components/ui/GlowCard";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import {
   Select,
   SelectContent,
@@ -18,8 +16,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
-import { StorageHealthCheckPanel } from "@/components/artist/StorageHealthCheckPanel";
 
 const GENRES = [
   "Hip-Hop",
@@ -39,137 +35,12 @@ const GENRES = [
   "Other",
 ];
 
-const EXCLUSIVE_PERIODS = [
-  { value: "3", label: "3 Weeks (Minimum)" },
-  { value: "4", label: "4 Weeks" },
-  { value: "6", label: "6 Weeks" },
-  { value: "8", label: "8 Weeks" },
-  { value: "12", label: "12 Weeks" },
-];
+type UploadStatus = "idle" | "uploading_cover" | "uploading_audio" | "saving_track" | "success" | "error";
 
-// NOTE: Many hosted storage setups enforce a 50MB max object size by default.
-// Keeping this aligned prevents hard failures during upload.
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-
-const getFileExt = (name: string) => {
-  const i = name.lastIndexOf(".");
-  return i >= 0 ? name.slice(i).toLowerCase() : "";
-};
-
-// Some mobile browsers provide non-standard/empty MIME types.
-// Normalize them so uploads pass bucket MIME allow-lists.
-const normalizeMimeType = (file: File): string | undefined => {
-  const ext = getFileExt(file.name);
-  const t = (file.type || "").toLowerCase();
-  const isOctetStream = t === "application/octet-stream";
-
-  // Images
-  if (t === "image/jpg") return "image/jpeg";
-  if (isOctetStream && (ext === ".jpg" || ext === ".jpeg")) return "image/jpeg";
-  if (isOctetStream && ext === ".png") return "image/png";
-  if (isOctetStream && ext === ".webp") return "image/webp";
-  if (!t && ext === ".jpg") return "image/jpeg";
-  if (!t && ext === ".jpeg") return "image/jpeg";
-  if (!t && ext === ".png") return "image/png";
-  if (!t && ext === ".webp") return "image/webp";
-
-  // Audio
-  if (t === "audio/mp3") return "audio/mpeg";
-  if (isOctetStream && ext === ".mp3") return "audio/mpeg";
-  if (isOctetStream && ext === ".wav") return "audio/wav";
-  if (!t && ext === ".mp3") return "audio/mpeg";
-  if (!t && ext === ".wav") return "audio/wav";
-
-  return t || undefined;
-};
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
-type UploadStep = "session" | "cover_upload" | "audio_upload" | "db_insert";
-
-type UploadErrorReport = {
-  step: UploadStep;
-  userMessage: string;
-  rawError: unknown;
-  stringifiedError: string;
-  http?: {
-    status?: number;
-    statusText?: string;
-    responseText?: string;
-  };
-  hint?: string;
-};
-
-const extractHttpDetails = async (err: unknown): Promise<UploadErrorReport["http"] | undefined> => {
-  try {
-    const anyErr = err as any;
-    const ctx = anyErr?.context;
-    if (ctx && typeof ctx === "object" && typeof ctx.clone === "function" && typeof ctx.text === "function") {
-      const responseText = await ctx.clone().text().catch(() => undefined);
-      return { status: ctx.status, statusText: ctx.statusText, responseText };
-    }
-  } catch {
-    // ignore
-  }
-  return undefined;
-};
-
-const isFetchLikeFailure = (message?: string) => {
-  if (!message) return false;
-  return /failed to fetch|networkerror|load failed|fetch/i.test(message);
-};
-
-const safeStringify = (value: unknown) => {
-  try {
-    if (value instanceof Error) {
-      return JSON.stringify(
-        {
-          name: value.name,
-          message: value.message,
-          stack: value.stack,
-          ...(value as any),
-        },
-        null,
-        2,
-      );
-    }
-    return JSON.stringify(value, null, 2);
-  } catch {
-    try {
-      return String(value);
-    } catch {
-      return "[unstringifiable error]";
-    }
-  }
-};
-
-const withTimeout = async <T,>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> => {
-  let timeoutId: number | undefined;
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timeoutId = window.setTimeout(() => {
-      reject(new Error(`${label} timed out after ${Math.round(ms / 1000)}s`));
-    }, ms);
-  });
-
-  try {
-    // Supabase query builders are PromiseLike (thenable) but not typed as Promise.
-    return await Promise.race([Promise.resolve(promise as any) as Promise<T>, timeoutPromise]);
-  } finally {
-    if (timeoutId) window.clearTimeout(timeoutId);
-  }
-};
-
-interface UploadedFile {
-  file: File;
-  name: string;
-  objectUrl?: string;
-}
-
-interface UploadedImage {
-  file: File;
-  name: string;
-  previewUrl: string;
+interface UploadError {
+  step: string;
+  message: string;
+  details?: string;
 }
 
 const ArtistUpload = () => {
@@ -177,1087 +48,371 @@ const ArtistUpload = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [uploadStep, setUploadStep] = useState<UploadStep | null>(null);
-  const [uploadError, setUploadError] = useState<UploadErrorReport | null>(null);
-  const lastSuccessfulRef = useRef<{
-    artistProfileId?: string;
-    artworkUrl?: string;
-    fullAudioUrl?: string;
-    coverPath?: string;
-    audioPath?: string;
-    timestamp?: number;
-    sanitizedTitle?: string;
-  }>({});
-  
-  // Section 1: Track Details
+  // Form fields
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
-  const [description, setDescription] = useState("");
-  
-  // Section 2: Cover Art
-  const [coverArt, setCoverArt] = useState<UploadedImage | null>(null);
-  const coverArtInputRef = useRef<HTMLInputElement>(null);
-  
-  // Section 3: Audio File
-  const [fullTrack, setFullTrack] = useState<UploadedFile | null>(null);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [previewStartSeconds, setPreviewStartSeconds] = useState(0);
-  
-  // Full track player state
-  const [isFullTrackPlaying, setIsFullTrackPlaying] = useState(false);
-  const fullTrackAudioRef = useRef<HTMLAudioElement | null>(null);
-  
-  // Section 3: Release Settings
-  const [exclusivePeriod, setExclusivePeriod] = useState("3");
-  
-  // Section 4: Rights Confirmation
-  const [ownsRights, setOwnsRights] = useState(false);
-  const [hasExclusiveRights, setHasExclusiveRights] = useState(false);
   const [agreesToTerms, setAgreesToTerms] = useState(false);
-  
-  // Upload state
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  
-  const fullTrackInputRef = useRef<HTMLInputElement>(null);
 
-  // Cleanup object URLs on unmount
+  // Files
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [coverPreview, setCoverPreview] = useState<string | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+
+  // Upload state
+  const [status, setStatus] = useState<UploadStatus>("idle");
+  const [error, setError] = useState<UploadError | null>(null);
+
+  // Refs
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // Cleanup preview URL on unmount
   useEffect(() => {
     return () => {
-      if (fullTrack?.objectUrl) {
-        URL.revokeObjectURL(fullTrack.objectUrl);
-      }
-      if (coverArt?.previewUrl) {
-        URL.revokeObjectURL(coverArt.previewUrl);
-      }
-      if (fullTrackAudioRef.current) {
-        fullTrackAudioRef.current.pause();
-        fullTrackAudioRef.current = null;
-      }
+      if (coverPreview) URL.revokeObjectURL(coverPreview);
     };
-  }, []);
+  }, [coverPreview]);
 
-  const validateFullTrack = (file: File): string | null => {
-    const type = normalizeMimeType(file);
-    const validAudioTypes = ["audio/mpeg", "audio/mp3"]; // keep tolerant for weird browsers
-    const validExtensions = [".mp3"];
-    const ext = getFileExt(file.name);
-    
-    if (!validExtensions.includes(ext) && !(type && validAudioTypes.includes(type))) {
-      return "Please upload an MP3 file";
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      return "File size must be less than 50MB";
-    }
-    return null;
-  };
+  const isFormValid = title.trim() && genre && coverFile && audioFile && agreesToTerms;
 
-  const validateCoverArt = (file: File): string | null => {
-    const type = normalizeMimeType(file);
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-    if (!type || !validTypes.includes(type)) {
-      return "Please upload a JPG, PNG, or WEBP image";
-    }
-    if (file.size > MAX_IMAGE_SIZE) {
-      return "Image size must be less than 10MB";
-    }
-    return null;
-  };
-
-  const handleCoverArtSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const error = validateCoverArt(file);
-    if (error) {
-      toast({ title: "Invalid file", description: error, variant: "destructive" });
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (!["jpg", "jpeg", "png", "webp"].includes(ext || "")) {
+      toast({ title: "Invalid file", description: "Please upload a JPG, PNG, or WEBP image", variant: "destructive" });
       return;
     }
 
-    try {
-      // Revoke old preview URL if exists
-      if (coverArt?.previewUrl) {
-        URL.revokeObjectURL(coverArt.previewUrl);
-      }
-
-      const previewUrl = URL.createObjectURL(file);
-      
-      // Verify the image can be loaded before setting state
-      const img = new Image();
-      img.onload = () => {
-        setCoverArt({ file, name: file.name, previewUrl });
-      };
-      img.onerror = () => {
-        URL.revokeObjectURL(previewUrl);
-        toast({ title: "Invalid image", description: "Could not load the selected image", variant: "destructive" });
-      };
-      img.src = previewUrl;
-    } catch (err) {
-      console.error("Error handling cover art:", err);
-      toast({ title: "Error", description: "Failed to process image", variant: "destructive" });
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Image must be under 10MB", variant: "destructive" });
+      return;
     }
+
+    if (coverPreview) URL.revokeObjectURL(coverPreview);
+    setCoverFile(file);
+    setCoverPreview(URL.createObjectURL(file));
   };
 
-  const handleRemoveCoverArt = () => {
-    if (coverArt?.previewUrl) {
-      URL.revokeObjectURL(coverArt.previewUrl);
-    }
-    setCoverArt(null);
-    if (coverArtInputRef.current) {
-      coverArtInputRef.current.value = "";
-    }
-  };
-
-  const handleFullTrackSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAudioSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const error = validateFullTrack(file);
-    if (error) {
-      toast({ title: "Invalid file", description: error, variant: "destructive" });
+    const ext = file.name.toLowerCase().split(".").pop();
+    if (ext !== "mp3") {
+      toast({ title: "Invalid file", description: "Please upload an MP3 file", variant: "destructive" });
       return;
     }
 
+    if (file.size > 50 * 1024 * 1024) {
+      toast({ title: "File too large", description: "Audio must be under 50MB", variant: "destructive" });
+      return;
+    }
+
+    setAudioFile(file);
+  };
+
+  const handlePublish = async () => {
+    if (!isFormValid || !user) return;
+
+    setError(null);
+    setStatus("uploading_cover");
+
     try {
-      // Revoke old object URL if exists
-      if (fullTrack?.objectUrl) {
-        URL.revokeObjectURL(fullTrack.objectUrl);
-      }
-
-      // Create object URL for playback
-      const objectUrl = URL.createObjectURL(file);
-
-      // Get audio duration with proper error handling
-      const audio = new Audio();
-      
-      audio.addEventListener("loadedmetadata", () => {
-        setAudioDuration(Math.floor(audio.duration));
-        setFullTrack({ file, name: file.name, objectUrl });
-        setPreviewStartSeconds(0);
-      });
-      
-      audio.addEventListener("error", () => {
-        URL.revokeObjectURL(objectUrl);
-        toast({ 
-          title: "Invalid audio file", 
-          description: "Could not load the selected audio file. Please try a different file.", 
-          variant: "destructive" 
-        });
-      });
-      
-      audio.src = objectUrl;
-      audio.load();
-    } catch (err) {
-      console.error("Error handling audio file:", err);
-      toast({ title: "Error", description: "Failed to process audio file", variant: "destructive" });
-    }
-  };
-
-  const handleRemoveFullTrack = () => {
-    if (fullTrack?.objectUrl) {
-      URL.revokeObjectURL(fullTrack.objectUrl);
-    }
-    if (fullTrackAudioRef.current) {
-      fullTrackAudioRef.current.pause();
-      fullTrackAudioRef.current = null;
-    }
-    setFullTrack(null);
-    setAudioDuration(0);
-    setPreviewStartSeconds(0);
-    setIsFullTrackPlaying(false);
-  };
-
-  const toggleFullTrackPlay = () => {
-    if (!fullTrack?.objectUrl) return;
-
-    if (isFullTrackPlaying) {
-      fullTrackAudioRef.current?.pause();
-      setIsFullTrackPlaying(false);
-    } else {
-      if (!fullTrackAudioRef.current) {
-        fullTrackAudioRef.current = new Audio(fullTrack.objectUrl);
-        fullTrackAudioRef.current.addEventListener("ended", () => {
-          setIsFullTrackPlaying(false);
-        });
-      }
-      fullTrackAudioRef.current.play();
-      setIsFullTrackPlaying(true);
-    }
-  };
-
-  const uploadFileToBucket = async (
-    bucket: string, 
-    file: File, 
-    path: string
-  ): Promise<{ url: string | null; error: UploadErrorReport | null }> => {
-    try {
-      const contentType = normalizeMimeType(file);
-      const MAX_RETRIES = 3;
-      let lastErr: unknown;
-
-      for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          const { data, error } = await supabase.storage
-            .from(bucket)
-            .upload(path, file, {
-              cacheControl: "3600",
-              upsert: false,
-              contentType,
-            });
-
-          if (error) {
-            const http = await extractHttpDetails(error);
-            const report: UploadErrorReport = {
-              step: bucket === "track_covers" ? "cover_upload" : "audio_upload",
-              userMessage: error.message,
-              rawError: error,
-              stringifiedError: safeStringify(error),
-              http: http ?? { status: (error as any)?.statusCode ?? (error as any)?.status },
-            };
-
-            console.error(`Upload error to ${bucket}:`, {
-              attempt,
-              path,
-              file: { name: file.name, size: file.size, type: file.type, normalizedType: contentType },
-              message: error.message,
-              name: (error as any)?.name,
-              status: (error as any)?.status,
-              statusCode: (error as any)?.statusCode,
-              error: (error as any)?.error,
-            });
-
-            return { url: null, error: report };
-          }
-
-          const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(data.path);
-          return { url: urlData.publicUrl, error: null };
-        } catch (err) {
-          lastErr = err;
-          const msg = err instanceof Error ? err.message : String(err);
-          const isTransientFetch = /failed to fetch|networkerror|load failed|fetch/i.test(msg);
-
-          console.error("Upload exception:", {
-            bucket,
-            attempt,
-            path,
-            isTransientFetch,
-            file: { name: file.name, size: file.size, type: file.type, normalizedType: contentType },
-            error: err,
-          });
-
-          if (!isTransientFetch || attempt === MAX_RETRIES) {
-            break;
-          }
-          // Backoff: 400ms, 800ms, 1600ms
-          await sleep(400 * Math.pow(2, attempt - 1));
-        }
-      }
-
-      const report: UploadErrorReport = {
-        step: bucket === "track_covers" ? "cover_upload" : "audio_upload",
-        userMessage: lastErr instanceof Error ? lastErr.message : "Failed to fetch",
-        rawError: lastErr,
-        stringifiedError: safeStringify(lastErr),
-        hint: lastErr ? undefined : "No error details were provided by the browser. This is usually a network/CORS interruption.",
-      };
-      return { url: null, error: report };
-    } catch (err) {
-      console.error("Unexpected upload exception:", err);
-      const http = await extractHttpDetails(err);
-      const report: UploadErrorReport = {
-        step: bucket === "track_covers" ? "cover_upload" : "audio_upload",
-        userMessage: err instanceof Error ? err.message : "Unknown error",
-        rawError: err,
-        stringifiedError: safeStringify(err),
-        http,
-      };
-      return { url: null, error: report };
-    }
-  };
-
-  const uploadViaFallback = async (params: {
-    kind: "cover" | "audio";
-    artistProfileId: string;
-    file: File;
-    base: string;
-  }): Promise<{ url: string | null; path?: string; error: UploadErrorReport | null }> => {
-    try {
-      const fd = new FormData();
-      fd.append("file", params.file);
-      fd.append("kind", params.kind);
-      fd.append("artistProfileId", params.artistProfileId);
-      fd.append("base", params.base);
-
-      const { data, error } = await supabase.functions.invoke("upload-track-media", { body: fd });
-      if (error) {
-        const http = await extractHttpDetails(error);
-        const report: UploadErrorReport = {
-          step: params.kind === "cover" ? "cover_upload" : "audio_upload",
-          userMessage: error.message,
-          rawError: error,
-          stringifiedError: safeStringify(error),
-          http,
-        };
-        return { url: null, error: report };
-      }
-
-      const url = typeof (data as any)?.url === "string" ? (data as any).url : null;
-      const path = typeof (data as any)?.path === "string" ? (data as any).path : undefined;
-      return { url, path, error: null };
-    } catch (err) {
-      const report: UploadErrorReport = {
-        step: params.kind === "cover" ? "cover_upload" : "audio_upload",
-        userMessage: err instanceof Error ? err.message : "Unknown error",
-        rawError: err,
-        stringifiedError: safeStringify(err),
-      };
-      return { url: null, error: report };
-    }
-  };
-
-  const uploadTrackAssetsServerSide = async (params: {
-    artistId: string;
-    title: string;
-    genre: string;
-    coverFile: File;
-    audioFile: File;
-  }): Promise<
-    | { ok: true; coverUrl: string; audioUrl: string; coverPath?: string; audioPath?: string }
-    | { ok: false; report: UploadErrorReport }
-  > => {
-    try {
+      // Get fresh session
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
-      if (sessionError || !accessToken) {
-        return {
-          ok: false,
-          report: {
-            step: "session",
-            userMessage: "Session expired — please log in again",
-            rawError: sessionError ?? { reason: "missing access token" },
-            stringifiedError: safeStringify(sessionError ?? { reason: "missing access token" }),
-          },
-        };
+      if (sessionError || !sessionData.session) {
+        throw { step: "auth", message: "Session expired. Please log in again." };
       }
 
-      const fd = new FormData();
-      fd.append("coverFile", params.coverFile);
-      fd.append("audioFile", params.audioFile);
-      fd.append("artistId", params.artistId);
-      fd.append("title", params.title);
-      fd.append("genre", params.genre);
-
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/uploadTrackAssets`;
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        },
-        body: fd,
-      });
-
-      const responseText = await res.text().catch(() => "");
-      if (!res.ok) {
-        return {
-          ok: false,
-          report: {
-            step: "cover_upload",
-            userMessage: `Server upload failed (${res.status})`,
-            rawError: { status: res.status, statusText: res.statusText, responseText },
-            stringifiedError: safeStringify({ status: res.status, statusText: res.statusText, responseText }),
-            http: { status: res.status, statusText: res.statusText, responseText },
-          },
-        };
-      }
-
-      const parsed = responseText ? (JSON.parse(responseText) as any) : {};
-      const coverUrl = typeof parsed?.coverUrl === "string" ? parsed.coverUrl : null;
-      const audioUrl = typeof parsed?.audioUrl === "string" ? parsed.audioUrl : null;
-
-      if (!coverUrl || !audioUrl) {
-        return {
-          ok: false,
-          report: {
-            step: "cover_upload",
-            userMessage: "Server upload returned an invalid response",
-            rawError: parsed,
-            stringifiedError: safeStringify(parsed),
-            http: { status: res.status, statusText: res.statusText, responseText },
-          },
-        };
-      }
-
-      return {
-        ok: true,
-        coverUrl,
-        audioUrl,
-        coverPath: typeof parsed?.coverPath === "string" ? parsed.coverPath : undefined,
-        audioPath: typeof parsed?.audioPath === "string" ? parsed.audioPath : undefined,
-      };
-    } catch (err) {
-      return {
-        ok: false,
-        report: {
-          step: "cover_upload",
-          userMessage: err instanceof Error ? err.message : "Unknown error",
-          rawError: err,
-          stringifiedError: safeStringify(err),
-        },
-      };
-    }
-  };
-
-  const isFormValid = 
-    title.trim() && 
-    genre && 
-    coverArt &&
-    fullTrack && 
-    ownsRights && 
-    hasExclusiveRights && 
-    agreesToTerms;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    setUploadError(null);
-    lastSuccessfulRef.current = {};
-
-    if (!isFormValid) {
-      toast({
-        title: "Missing Required Fields",
-        description: "Please complete all required fields and confirm the rights checkboxes.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(10);
-
-    try {
-      setUploadStep("session");
-      const { data: sessionData, error: sessionError } = await withTimeout(
-        supabase.auth.getSession(),
-        15_000,
-        "Session check",
-      );
-      const currentUser = sessionData?.session?.user;
-
-      if (sessionError || !currentUser?.id) {
-        const report: UploadErrorReport = {
-          step: "session",
-          userMessage: "Session expired — please log in again",
-          rawError: sessionError ?? null,
-          stringifiedError: safeStringify(sessionError ?? { reason: "missing session" }),
-          hint: "Tap Log In and try again.",
-        };
-        console.log("[ArtistUpload] Upload failed:", report);
-        setUploadError(report);
-        toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
-        return;
-      }
-
-      // First, get the artist profile ID for the current user
-      const { data: artistProfile, error: profileError } = await withTimeout(
-        supabase
-          .from("artist_profiles")
-          .select("id")
-          .eq("user_id", currentUser.id)
-          .maybeSingle(),
-        20_000,
-        "Artist profile lookup",
-      );
+      // Get artist profile
+      const { data: artistProfile, error: profileError } = await supabase
+        .from("artist_profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .maybeSingle();
 
       if (profileError || !artistProfile) {
-        const report: UploadErrorReport = {
-          step: "session",
-          userMessage: "Artist profile not found — please finish setup and try again",
-          rawError: profileError ?? { reason: "no artist_profiles row" },
-          stringifiedError: safeStringify(profileError ?? { reason: "no artist_profiles row" }),
-        };
-        console.log("[ArtistUpload] Upload failed:", report);
-        setUploadError(report);
-        toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
-        return;
+        throw { step: "auth", message: "Artist profile not found." };
       }
 
-      const artistProfileId = artistProfile.id;
-      const timestamp = Date.now();
-      const sanitizedTitle = title.toLowerCase().replace(/[^a-z0-9]/g, "-");
+      // Build form data for server-side upload
+      const formData = new FormData();
+      formData.append("coverFile", coverFile!);
+      formData.append("audioFile", audioFile!);
+      formData.append("artistId", artistProfile.id);
+      formData.append("title", title.trim());
+      formData.append("genre", genre);
 
-      lastSuccessfulRef.current.artistProfileId = artistProfileId;
-      lastSuccessfulRef.current.timestamp = timestamp;
-      lastSuccessfulRef.current.sanitizedTitle = sanitizedTitle;
-
-      // SERVER-SIDE upload (single request) to avoid mobile Storage fetch failures.
-      setUploadStep("cover_upload");
-      setUploadProgress(20);
-
-      // Best-effort UX: advance label while request is in-flight.
-      const audioStepTimer = window.setTimeout(() => {
-        setUploadStep((s) => (s === "cover_upload" ? "audio_upload" : s));
-      }, 900);
-
-      const uploadResult = await withTimeout(
-        uploadTrackAssetsServerSide({
-          artistId: artistProfileId,
-          title: title.trim(),
-          genre,
-          coverFile: coverArt!.file,
-          audioFile: fullTrack!.file,
-        }),
-        180_000,
-        "Server upload",
-      );
-
-      window.clearTimeout(audioStepTimer);
-
-      if (uploadResult.ok === false) {
-        const report = uploadResult.report;
-        report.userMessage = `Upload failed: ${report.userMessage}`;
-        console.log("[ArtistUpload] Upload failed:", report);
-        setUploadError(report);
-        toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
-        return;
-      }
-
-      const artworkUrl = uploadResult.coverUrl;
-      const fullAudioUrl = uploadResult.audioUrl;
-      lastSuccessfulRef.current.artworkUrl = artworkUrl;
-      lastSuccessfulRef.current.fullAudioUrl = fullAudioUrl;
-      lastSuccessfulRef.current.coverPath = uploadResult.coverPath;
-      lastSuccessfulRef.current.audioPath = uploadResult.audioPath;
-
-      setUploadProgress(70);
-
-      // Save to database with artist profile ID (UUID)
-      setUploadStep("db_insert");
-      const { error: dbError } = await withTimeout(
-        supabase.from("tracks").insert({
-          artist_id: artistProfileId,
-          title: title.trim(),
-          genre: genre,
-          duration: audioDuration,
-          artwork_url: artworkUrl,
-          full_audio_url: fullAudioUrl,
-          preview_audio_url: fullAudioUrl, // Use same URL, fans will seek to preview_start_seconds
-          preview_start_seconds: previewStartSeconds,
-        }),
-        30_000,
-        "Saving track",
-      );
-
-      if (dbError) {
-        const report: UploadErrorReport = {
-          step: "db_insert",
-          userMessage: "DB insert failed",
-          rawError: dbError,
-          stringifiedError: safeStringify(dbError),
-          http: {
-            status: (dbError as any)?.status,
+      // Call edge function
+      setStatus("uploading_cover");
+      
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/uploadTrackAssets`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
           },
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        const stage = result.stage || "upload";
+        throw {
+          step: stage === "cover" ? "cover_upload" : stage === "audio" ? "audio_upload" : "upload",
+          message: result.error || "Upload failed",
+          details: JSON.stringify(result, null, 2),
         };
-        console.log("[ArtistUpload] Upload failed:", report);
-        setUploadError(report);
-        toast({ title: "Upload Failed", description: "DB insert failed — see details below", variant: "destructive" });
-        return;
       }
 
-      setUploadProgress(100);
+      // Insert track record
+      setStatus("saving_track");
 
-      toast({
-        title: "🎉 Track Published!",
-        description: "Your exclusive track is now live on Music Exclusive.",
+      const { error: insertError } = await supabase.from("tracks").insert({
+        artist_id: artistProfile.id,
+        title: title.trim(),
+        genre,
+        artwork_url: result.coverUrl,
+        full_audio_url: result.audioUrl,
       });
 
-      // Navigate to dashboard after short delay
-      setTimeout(() => navigate("/artist/dashboard"), 1500);
+      if (insertError) {
+        throw {
+          step: "db_insert",
+          message: "Failed to save track",
+          details: insertError.message,
+        };
+      }
 
-    } catch (error) {
-      const report: UploadErrorReport = {
-        step: uploadStep ?? "session",
-        userMessage: error instanceof Error ? error.message : "Unknown error",
-        rawError: error,
-        stringifiedError: safeStringify(error),
-      };
-      console.log("[ArtistUpload] Upload failed:", report);
-      console.error("Upload error:", error);
-      setUploadError(report);
-      toast({ title: "Upload Failed", description: report.userMessage, variant: "destructive" });
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-      setUploadStep(null);
+      // Success
+      setStatus("success");
+      toast({ title: "Success!", description: "Track uploaded successfully" });
+
+      setTimeout(() => {
+        navigate("/artist/dashboard");
+      }, 1500);
+
+    } catch (err: any) {
+      console.error("Upload error:", err);
+      setStatus("error");
+      setError({
+        step: err.step || "unknown",
+        message: err.message || "An unexpected error occurred",
+        details: err.details,
+      });
     }
   };
 
-  const stepLabel = useMemo(() => {
-    switch (uploadStep) {
-      case "session":
-        return "Checking session…";
-      case "cover_upload":
-        return "Uploading cover…";
-      case "audio_upload":
-        return "Uploading audio…";
-      case "db_insert":
-        return "Saving track…";
-      default:
-        return null;
-    }
-  }, [uploadStep]);
+  const handleRetry = () => {
+    setStatus("idle");
+    setError(null);
+  };
 
-  const formatDuration = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+  const getStatusMessage = () => {
+    switch (status) {
+      case "uploading_cover":
+        return "Uploading cover art...";
+      case "uploading_audio":
+        return "Uploading audio file...";
+      case "saving_track":
+        return "Saving track...";
+      case "success":
+        return "Track uploaded successfully!";
+      default:
+        return "";
+    }
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-24">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
-        <div className="container max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
-            Upload Track
-          </span>
-
-          <button
-            onClick={() => navigate("/")}
-            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Go home"
-          >
-            <Home className="w-5 h-5" />
-          </button>
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => navigate("/artist/dashboard")}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="font-display text-lg font-semibold tracking-wide">Upload Track</h1>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="pt-20 pb-12 px-4">
-        <div className="container max-w-lg md:max-w-xl mx-auto">
-          
-          {/* Page Header */}
-          <div className="text-center mb-8">
-            <SectionHeader title="Upload New Track" align="center" framed />
-            <p className="text-muted-foreground text-sm font-body mt-4">
-              Share your exclusive music with fans inside the Vault.
-            </p>
-          </div>
+      <div className="px-4 py-6 space-y-6 max-w-lg mx-auto">
+        {/* Track Title */}
+        <div className="space-y-2">
+          <Label htmlFor="title">Track Title *</Label>
+          <Input
+            id="title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter track title"
+            maxLength={100}
+            disabled={status !== "idle"}
+          />
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Genre */}
+        <div className="space-y-2">
+          <Label>Genre *</Label>
+          <Select value={genre} onValueChange={setGenre} disabled={status !== "idle"}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select genre" />
+            </SelectTrigger>
+            <SelectContent>
+              {GENRES.map((g) => (
+                <SelectItem key={g} value={g}>
+                  {g}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-            {/* Storage Health Check (runs before upload) */}
-            <StorageHealthCheckPanel />
-            
-            {/* SECTION 1: Track Details */}
-            <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
-                Track Details
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm">Track Title *</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter your track title"
-                    className="h-12 text-base"
-                    maxLength={100}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm">Genre *</Label>
-                  <Select value={genre} onValueChange={setGenre}>
-                    <SelectTrigger className="bg-card h-12 text-base">
-                      <SelectValue placeholder="Select genre" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border z-50">
-                      {GENRES.map((g) => (
-                        <SelectItem key={g} value={g} className="text-base py-3">
-                          {g}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm">Short Description (Optional)</Label>
-                  <Textarea
-                    id="description"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Tell fans about this track..."
-                    className="min-h-[80px] text-base resize-none"
-                    maxLength={280}
-                  />
-                  <p className="text-xs text-muted-foreground text-right">
-                    {description.length}/280
-                  </p>
-                </div>
-              </div>
-            </GlowCard>
-
-            {/* SECTION 2: Cover Art */}
-            <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
-                Cover Art
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5 text-primary" />
-                    <Label className="text-sm">Upload Cover Art *</Label>
-                  </div>
+        {/* Cover Art */}
+        <div className="space-y-2">
+          <Label>Cover Art * (JPG, PNG, or WEBP)</Label>
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            onChange={handleCoverSelect}
+            className="hidden"
+            disabled={status !== "idle"}
+          />
+          <GlowCard
+            className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => status === "idle" && coverInputRef.current?.click()}
+          >
+            {coverPreview ? (
+              <div className="flex items-center gap-4">
+                <img src={coverPreview} alt="Cover" className="w-16 h-16 rounded-lg object-cover" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{coverFile?.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    Square image, 1500×1500 or higher recommended. JPG, PNG, or WEBP.
+                    {coverFile && (coverFile.size / (1024 * 1024)).toFixed(2)} MB
                   </p>
-
-                  <input
-                    ref={coverArtInputRef}
-                    type="file"
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    onChange={handleCoverArtSelect}
-                    className="hidden"
-                  />
-
-                  {coverArt ? (
-                    <div className="space-y-3">
-                      {/* Image preview */}
-                      <div className="relative aspect-square w-full max-w-[200px] mx-auto rounded-xl overflow-hidden border border-primary/30">
-                        <img
-                          src={coverArt.previewUrl}
-                          alt="Cover art preview"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            console.error("Image failed to load");
-                            e.currentTarget.src = "/placeholder.svg";
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={handleRemoveCoverArt}
-                          className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 text-foreground hover:bg-background transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      
-                      {/* File info */}
-                      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                        <Check className="w-4 h-4 text-primary" />
-                        <span className="truncate max-w-[200px]">{coverArt.name}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => coverArtInputRef.current?.click()}
-                      className="w-full aspect-square max-w-[200px] mx-auto rounded-xl border-2 border-dashed border-border/50 hover:border-primary/50 transition-colors flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
-                    >
-                      <ImageIcon className="w-10 h-10" />
-                      <span className="text-sm">Click to upload</span>
-                    </button>
-                  )}
                 </div>
               </div>
-            </GlowCard>
-
-            {/* SECTION 3: Audio Upload & Preview Selection */}
-            <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
-                Audio File
-              </h3>
-              
-              <div className="space-y-5">
-                {/* Full Track Upload */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Music className="w-5 h-5 text-primary" />
-                    <Label className="text-sm">Upload Full Track (MP3) *</Label>
-                  </div>
-
-                  <input
-                    ref={fullTrackInputRef}
-                    type="file"
-                    accept=".mp3,audio/mpeg,audio/mp3"
-                    onChange={handleFullTrackSelect}
-                    className="hidden"
-                  />
-
-                  {fullTrack ? (
-                    <div className="space-y-3">
-                      {/* File info + remove */}
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-primary/10 border border-primary/30">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Check className="w-4 h-4 text-primary flex-shrink-0" />
-                          <span className="text-sm text-foreground truncate">{fullTrack.name}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleRemoveFullTrack}
-                          className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Full track player */}
-                      <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/20 border border-border/30">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={toggleFullTrackPlay}
-                          className="h-10 w-10 flex-shrink-0"
-                        >
-                          {isFullTrackPlaying ? (
-                            <Pause className="w-4 h-4" />
-                          ) : (
-                            <Play className="w-4 h-4" />
-                          )}
-                        </Button>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">Full Track Preview</p>
-                          <p className="text-xs text-muted-foreground">
-                            Duration: {formatDuration(audioDuration)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => fullTrackInputRef.current?.click()}
-                      className="w-full p-6 rounded-lg border-2 border-dashed border-border/50 hover:border-primary/50 transition-colors flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground"
-                    >
-                      <Upload className="w-8 h-8" />
-                      <span className="text-sm">Click to upload MP3 file</span>
-                      <span className="text-xs text-muted-foreground">Max 50MB</span>
-                    </button>
-                  )}
-                </div>
-
-                {/* Preview Selection (only show after track upload) */}
-                {fullTrack && audioDuration > 0 && (
-                  <div className="pt-4 border-t border-border/30">
-                    <div className="flex items-start gap-2 p-3 rounded-lg bg-accent/10 border border-accent/20 mb-4">
-                      <Info className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-foreground">
-                        Select the best 15-second hook for Discovery. Fans will hear this preview before unlocking the full track.
-                      </p>
-                    </div>
-
-                    <PreviewTimeSelector
-                      audioUrl={fullTrack.objectUrl || null}
-                      audioDuration={audioDuration}
-                      previewStartSeconds={previewStartSeconds}
-                      onPreviewStartChange={setPreviewStartSeconds}
-                    />
-                  </div>
-                )}
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground">
+                <ImageIcon className="h-8 w-8" />
+                <span className="text-sm">Tap to select cover art</span>
               </div>
-            </GlowCard>
+            )}
+          </GlowCard>
+        </div>
 
-            {/* SECTION 3: Exclusive Release Settings */}
-            <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
-                Exclusive Release Settings
-              </h3>
-              
-              <div className="space-y-4">
-                {/* Release Type Badge */}
-                <div className="flex justify-center">
-                  <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30">
-                    <Lock className="w-4 h-4 text-primary" />
-                    <span className="text-primary text-sm font-display uppercase tracking-wider">
-                      Exclusive Release
-                    </span>
-                  </div>
+        {/* Audio File */}
+        <div className="space-y-2">
+          <Label>Audio File * (MP3 only)</Label>
+          <input
+            ref={audioInputRef}
+            type="file"
+            accept="audio/mpeg,.mp3"
+            onChange={handleAudioSelect}
+            className="hidden"
+            disabled={status !== "idle"}
+          />
+          <GlowCard
+            className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => status === "idle" && audioInputRef.current?.click()}
+          >
+            {audioFile ? (
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Music className="h-6 w-6 text-primary" />
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm">Exclusive Period</Label>
-                  <Select value={exclusivePeriod} onValueChange={setExclusivePeriod}>
-                    <SelectTrigger className="bg-card h-12 text-base">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-card border-border z-50">
-                      {EXCLUSIVE_PERIODS.map((period) => (
-                        <SelectItem key={period.value} value={period.value} className="text-base py-3">
-                          {period.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Helper text */}
-                <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 border border-border/30">
-                  <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{audioFile.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    During this period, your music is only available on Music Exclusive.
+                    {(audioFile.size / (1024 * 1024)).toFixed(2)} MB
                   </p>
                 </div>
               </div>
-            </GlowCard>
-
-            {/* SECTION 4: Rights Confirmation */}
-            <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-5 text-center">
-                Rights Confirmation
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="flex items-start gap-4">
-                  <Checkbox
-                    id="ownsRights"
-                    checked={ownsRights}
-                    onCheckedChange={(checked) => setOwnsRights(checked as boolean)}
-                    className="mt-0.5 h-5 w-5"
-                  />
-                  <Label htmlFor="ownsRights" className="text-sm font-normal leading-relaxed cursor-pointer">
-                    I own or control all rights to this music *
-                  </Label>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <Checkbox
-                    id="hasExclusiveRights"
-                    checked={hasExclusiveRights}
-                    onCheckedChange={(checked) => setHasExclusiveRights(checked as boolean)}
-                    className="mt-0.5 h-5 w-5"
-                  />
-                  <Label htmlFor="hasExclusiveRights" className="text-sm font-normal leading-relaxed cursor-pointer">
-                    I have the right to release this music exclusively *
-                  </Label>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <Checkbox
-                    id="agreesToTerms"
-                    checked={agreesToTerms}
-                    onCheckedChange={(checked) => setAgreesToTerms(checked as boolean)}
-                    className="mt-0.5 h-5 w-5"
-                  />
-                  <Label htmlFor="agreesToTerms" className="text-sm font-normal leading-relaxed cursor-pointer">
-                    I agree to the Artist Terms of Service *
-                  </Label>
-                </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground">
+                <Music className="h-8 w-8" />
+                <span className="text-sm">Tap to select audio file</span>
               </div>
-            </GlowCard>
-
-            {/* Upload Progress */}
-            {isUploading && (
-              <GlowCard className="p-4" unlocking>
-                <div className="flex items-center gap-3 mb-3">
-                  <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                  <span className="text-sm font-display uppercase tracking-wider text-foreground">
-                    {stepLabel ?? "Publishing your track..."}
-                  </span>
-                </div>
-                <div className="h-2 bg-muted/30 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-              </GlowCard>
             )}
+          </GlowCard>
+        </div>
 
-            {/* Detailed error reporting + retry */}
-            {uploadError && !isUploading && (
-              <GlowCard className="p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h4 className="font-display text-sm uppercase tracking-widest text-foreground">
-                      Upload diagnostics
-                    </h4>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Step failed: <span className="text-foreground font-medium">{uploadError.step}</span>
-                    </p>
-                    <p className="text-sm text-foreground mt-2">{uploadError.userMessage}</p>
-                    {uploadError.hint && (
-                      <p className="text-xs text-muted-foreground mt-1">{uploadError.hint}</p>
-                    )}
-                  </div>
-                </div>
+        {/* Terms Checkbox */}
+        <div className="flex items-start gap-3 pt-2">
+          <Checkbox
+            id="terms"
+            checked={agreesToTerms}
+            onCheckedChange={(checked) => setAgreesToTerms(checked === true)}
+            disabled={status !== "idle"}
+          />
+          <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
+            I agree to the Artist Terms of Service and confirm I own all rights to this music.
+          </Label>
+        </div>
 
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-lg border border-border/40 bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground mb-2">Error object (stringified)</p>
-                    <pre className="text-xs whitespace-pre-wrap break-words text-foreground/90">
-                      {uploadError.stringifiedError}
-                    </pre>
-                  </div>
-
-                  {uploadError.http && (uploadError.http.status || uploadError.http.responseText) && (
-                    <div className="rounded-lg border border-border/40 bg-muted/20 p-3">
-                      <p className="text-xs text-muted-foreground mb-2">HTTP details</p>
-                      <pre className="text-xs whitespace-pre-wrap break-words text-foreground/90">
-                        {safeStringify(uploadError.http)}
-                      </pre>
-                    </div>
-                  )}
-
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => {
-                        // Re-run full flow (sequential, no next-step on failure)
-                        const fakeEvent = { preventDefault: () => {} } as unknown as React.FormEvent;
-                        handleSubmit(fakeEvent);
-                      }}
-                    >
-                      Retry
-                    </Button>
-                    {uploadError.step === "session" && (
-                      <Button type="button" onClick={() => navigate("/artist/login")}>
-                        Log In
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </GlowCard>
-            )}
-
-            {/* Primary CTA */}
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full h-14 font-display uppercase tracking-wider"
-              disabled={isUploading || !isFormValid}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Publishing...
-                </>
+        {/* Upload Progress/Status */}
+        {status !== "idle" && status !== "error" && (
+          <GlowCard className="p-4">
+            <div className="flex items-center gap-3">
+              {status === "success" ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
               ) : (
-                <>
-                  <Upload className="w-5 h-5 mr-2" />
-                  Publish Exclusive Track
-                </>
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
               )}
-            </Button>
+              <span className="text-sm font-medium">{getStatusMessage()}</span>
+            </div>
+          </GlowCard>
+        )}
 
-          </form>
-        </div>
-      </main>
+        {/* Error Display */}
+        {status === "error" && error && (
+          <GlowCard className="p-4 border-destructive/50">
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-destructive">
+                    Failed at: {error.step}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">{error.message}</p>
+                </div>
+              </div>
+              {error.details && (
+                <pre className="text-xs bg-muted/50 p-3 rounded-lg overflow-x-auto max-h-40">
+                  {error.details}
+                </pre>
+              )}
+              <Button variant="secondary" size="sm" onClick={handleRetry}>
+                Try Again
+              </Button>
+            </div>
+          </GlowCard>
+        )}
+
+        {/* Publish Button */}
+        <Button
+          className="w-full"
+          size="lg"
+          disabled={!isFormValid || status !== "idle"}
+          onClick={handlePublish}
+        >
+          {status !== "idle" && status !== "error" ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              Publishing...
+            </>
+          ) : (
+            <>
+              <Upload className="h-4 w-4 mr-2" />
+              Publish Exclusive Track
+            </>
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
