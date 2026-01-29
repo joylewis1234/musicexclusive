@@ -52,7 +52,8 @@ const ViewProfileButton = ({ userId }: { userId?: string }) => {
 
   const handleClick = () => {
     if (profileId) {
-      navigate(`/artist/${profileId}?view=fan`);
+      // Use /artist/view/ route which is protected for artists, not /artist/ which is for fans
+      navigate(`/artist/view/${profileId}?view=fan`);
     } else {
       toast.info("Profile not found. Please set up your profile first.");
     }
