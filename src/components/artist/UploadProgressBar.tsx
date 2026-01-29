@@ -11,6 +11,7 @@ interface UploadProgressBarProps {
 
 const stepMessages: Record<UploadStep, string> = {
   idle: "",
+  preflight: "Running preflight checks...",
   session_check: "Verifying session...",
   cover_upload: "Uploading cover art...",
   audio_upload: "Uploading audio file...",
