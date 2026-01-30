@@ -5,8 +5,7 @@ import { ExclusiveSongCard, ExclusiveSong } from "@/components/artist/ExclusiveS
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
-import { ArtistTutorial, TutorialHelpButton } from "@/components/artist/tutorial/ArtistTutorial";
-import { useArtistTutorial } from "@/hooks/useArtistTutorial";
+import { ArtistTutorial } from "@/components/artist/tutorial/ArtistTutorial";
 import { 
   Upload, 
   LogOut,
@@ -19,7 +18,6 @@ import {
   Plus,
   Crown,
   ChevronLeft,
-  HelpCircle,
 } from "lucide-react";
 
 type PayoutStatus = "not_connected" | "pending" | "connected";
@@ -42,8 +40,6 @@ const ArtistDashboard = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Tutorial hook - MUST be called unconditionally at top level (Rules of Hooks)
-  const tutorialHook = useArtistTutorial(userId);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -303,9 +299,6 @@ const ArtistDashboard = () => {
           </button>
 
           <div className="flex items-center gap-2">
-            {/* Help button to reopen tutorial */}
-            <TutorialHelpButton onClick={tutorialHook.restartTutorial} />
-            
             <Button
               variant="ghost"
               size="sm"
@@ -322,19 +315,6 @@ const ArtistDashboard = () => {
       {/* Hero Section */}
       <div className="relative pt-20 pb-6 px-5">
         <div className="w-full max-w-lg mx-auto">
-          {/* Inline "New? Start Here" chip - only show if tutorial not completed */}
-          {!tutorialHook.hasCompleted && !tutorialHook.isOpen && (
-            <div className="mb-4">
-              <button
-                onClick={tutorialHook.startTutorial}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 hover:border-primary/50 transition-all duration-300 animate-pulse-glow"
-              >
-                <span>✨</span>
-                <span>New? Start Here</span>
-              </button>
-            </div>
-          )}
-          
           {/* Artist Avatar */}
           <div className="relative w-24 h-24 mb-4">
             <div 
