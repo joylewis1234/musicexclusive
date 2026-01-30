@@ -1,11 +1,34 @@
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Home, Sparkles } from "lucide-react";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
+import { useCredits } from "@/hooks/useCredits";
+import { toast } from "sonner";
 
 const FanDashboard = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { refetch } = useCredits();
+
+  // Handle payment success redirect - refresh credits
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    const creditsAdded = searchParams.get("credits");
+    
+    if (paymentStatus === "success") {
+      // Refetch credits to get updated balance from Stripe webhook
+      refetch();
+      toast.success(
+        creditsAdded 
+          ? `Payment successful! ${creditsAdded} credits added.`
+          : "Payment successful! Credits added to your wallet."
+      );
+      // Clear URL params
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams, refetch]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">
