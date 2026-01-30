@@ -26,13 +26,12 @@ export const DiscoveryHeader = () => {
 
       {/* Page Title with Vault Glow */}
       <section className="relative text-center mb-8 animate-fade-in">
-        {/* Animated vault glow background */}
+        {/* Vault glow background (static) */}
         <div 
           className="absolute inset-0 -z-10 opacity-60"
           style={{
             background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
             filter: "blur(40px)",
-            animation: "pulse 4s ease-in-out infinite",
           }}
         />
         <div 
@@ -40,7 +39,6 @@ export const DiscoveryHeader = () => {
           style={{
             background: "radial-gradient(ellipse at center, hsl(var(--accent) / 0.1) 0%, transparent 50%)",
             filter: "blur(60px)",
-            animation: "pulse 6s ease-in-out infinite reverse",
           }}
         />
 
