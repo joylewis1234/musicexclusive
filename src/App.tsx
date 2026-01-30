@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Public pages
 import Index from "./pages/Index";
+import ArtistBenefits from "./pages/ArtistBenefits";
 import EnterVault from "./pages/EnterVault";
 import SubmitVaultCode from "./pages/SubmitVaultCode";
 import VaultStatus from "./pages/VaultStatus";
@@ -68,9 +69,10 @@ const App = () => (
           <BrowserRouter>
             <ErrorBoundary>
               <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<Index />} />
-              <Route path="/vault/enter" element={<EnterVault />} />
+{/* Public routes */}
+<Route path="/" element={<Index />} />
+<Route path="/artist-benefits" element={<ArtistBenefits />} />
+<Route path="/vault/enter" element={<EnterVault />} />
               <Route path="/vault/submit" element={<SubmitVaultCode />} />
               <Route path="/vault/status" element={<VaultStatus />} />
               <Route path="/agreements/fan" element={<Agreements />} />
