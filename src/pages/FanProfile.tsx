@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -8,6 +8,7 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ChevronLeft, Home, Play, User, Camera, Pencil, Check, X, Loader2, LogOut } from "lucide-react";
 import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
 import { useFanProfile } from "@/hooks/useFanProfile";
+import { useAuth } from "@/contexts/AuthContext";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,9 +49,31 @@ const FanProfile = () => {
     clearProcessedImage,
   } = useFanProfile();
 
+  const { user } = useAuth();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isSuperfan, setIsSuperfan] = useState(false);
+
+  // Fetch superfan status from vault_members
+  useEffect(() => {
+    const fetchSuperfanStatus = async () => {
+      if (!user?.email) return;
+      
+      const { data } = await supabase
+        .from("vault_members")
+        .select("vault_access_active, credits")
+        .eq("email", user.email)
+        .maybeSingle();
+      
+      // Superfan = has vault_access_active AND has credits (indicating subscription)
+      if (data) {
+        setIsSuperfan(data.vault_access_active && data.credits > 0);
+      }
+    };
+    
+    fetchSuperfanStatus();
+  }, [user?.email]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -255,8 +278,8 @@ const FanProfile = () => {
             </div>
           )}
           
-          <StatusBadge variant="member" size="default">
-            Vault Member
+          <StatusBadge variant={isSuperfan ? "superfan" : "default"} size="default">
+            {isSuperfan ? "Superfan" : "Fan"}
           </StatusBadge>
         </section>
 
