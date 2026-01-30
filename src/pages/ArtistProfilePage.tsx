@@ -1,5 +1,5 @@
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, Loader2, Music, Crown, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtistProfileHero } from "@/components/profile/ArtistProfileHero";
@@ -9,8 +9,10 @@ import { CompactVaultPlayer } from "@/components/profile/CompactVaultPlayer";
 import { ShareArtistSection } from "@/components/profile/ShareArtistSection";
 import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { ShareExclusiveTrackModal } from "@/components/profile/ShareExclusiveTrackModal";
+import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import { useTrackLikes } from "@/hooks/useTrackLikes";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
+import { useCredits } from "@/hooks/useCredits";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -68,12 +70,16 @@ const ArtistProfilePage = () => {
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [trackToShare, setTrackToShare] = useState<TrackData | null>(null);
   const [artistEmail, setArtistEmail] = useState<string>("");
+  const [showStreamConfirm, setShowStreamConfirm] = useState(false);
+  const [pendingPlayTrack, setPendingPlayTrack] = useState<PlayerTrack | null>(null);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
 
   const { isLiked, toggleLike } = useTrackLikes(selectedTrack?.id || "", fanId);
-  const { chargeStream, hasBeenCharged } = useStreamCharge(user?.email);
+  const { chargeStream, hasBeenCharged, isProcessing: isCharging } = useStreamCharge(user?.email);
+  const { credits, refetch: refetchCredits } = useCredits();
 
   // Generate public URL for storage path if needed
   const ensurePublicUrl = async (track: TrackData): Promise<TrackData> => {
@@ -283,15 +289,42 @@ const ArtistProfilePage = () => {
     }
   };
 
-  const handlePlay = async () => {
+  // Called when user clicks play on the player - shows confirmation modal
+  const handlePlayRequest = useCallback(() => {
     if (!selectedTrack || !artistEmail) return;
-    if (hasBeenCharged(selectedTrack.id)) return;
-
-    const result = await chargeStream(selectedTrack.id, artistEmail);
-    if (!result.success && result.error === "Insufficient credits") {
-      navigate("/fan/payment");
+    
+    // If already charged in this session, just play (no modal)
+    if (hasBeenCharged(selectedTrack.id)) {
+      return; // Let the player play without modal
     }
-  };
+    
+    // Show confirmation modal
+    setPendingPlayTrack(selectedTrack);
+    setShowStreamConfirm(true);
+  }, [selectedTrack, artistEmail, hasBeenCharged]);
+
+  // Called when user confirms the stream in the modal
+  const handleStreamConfirm = useCallback(async () => {
+    if (!pendingPlayTrack || !artistEmail) return;
+
+    const result = await chargeStream(pendingPlayTrack.id, artistEmail);
+    
+    if (result.success) {
+      // Refresh credits to show updated balance
+      refetchCredits();
+      // Trigger auto-play after modal closes
+      setShouldAutoPlay(true);
+    } else if (result.error === "Insufficient credits") {
+      // Modal will handle this via the "Add Credits" button
+      throw new Error("Insufficient credits");
+    } else {
+      throw new Error(result.error || "Failed to process stream");
+    }
+  }, [pendingPlayTrack, artistEmail, chargeStream, refetchCredits]);
+
+  const handleAddCredits = useCallback(() => {
+    navigate("/fan/payment");
+  }, [navigate]);
 
   const handleBack = () => {
     if (viewerContext === "artist-own" || viewerContext === "artist-preview") {
@@ -374,9 +407,12 @@ const ArtistProfilePage = () => {
         hasVaultAccess={hasVaultAccess}
         isLiked={isLiked}
         onAccessDenied={() => setShowAccessGate(true)}
-        onPlay={handlePlay}
+        onPlay={handlePlayRequest}
         onLike={handlePlayerLike}
         onShare={handlePlayerShare}
+        skipPlayConfirm={selectedTrack ? hasBeenCharged(selectedTrack.id) : false}
+        autoPlay={shouldAutoPlay}
+        onAutoPlayConsumed={() => setShouldAutoPlay(false)}
       />
 
       {/* Track List Section */}
@@ -485,6 +521,17 @@ const ArtistProfilePage = () => {
           currentUserEmail={user?.email || undefined}
         />
       )}
+
+      {/* Stream Confirmation Modal */}
+      <StreamConfirmModal
+        open={showStreamConfirm}
+        onOpenChange={setShowStreamConfirm}
+        artistName={artistProfile.artist_name}
+        trackTitle={pendingPlayTrack?.title || ""}
+        userCredits={credits}
+        onConfirm={handleStreamConfirm}
+        onAddCredits={handleAddCredits}
+      />
     </div>
   );
 };
