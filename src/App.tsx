@@ -24,6 +24,8 @@ import LoadCredits from "./pages/LoadCredits";
 import Payment from "./pages/Payment";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -86,6 +88,8 @@ const App = () => (
               <Route path="/auth/fan" element={<FanAuth />} />
               <Route path="/auth/artist" element={<ArtistAuth />} />
               <Route path="/artist/login" element={<ArtistLogin />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/access-restricted" element={<AccessRestricted />} />
               
               {/* Fan routes with persistent mini-player (protected) */}
