@@ -223,7 +223,7 @@ const ArtistDashboard = () => {
       // Step 3: Fetch songs using artist_profiles.id (UUID)
       const { data: songData, error: songsError } = await supabase
         .from("tracks")
-        .select("id, title, artwork_url, full_audio_url, genre, created_at")
+        .select("id, title, artwork_url, full_audio_url, genre, created_at, preview_start_seconds, duration")
         .eq("artist_id", profile.id)
         .order("created_at", { ascending: false });
 
