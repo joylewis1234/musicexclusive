@@ -117,13 +117,15 @@ export const HotNewTracks = ({
                     e.stopPropagation();
                     onStreamClick(track);
                   }}
-                  className="w-full flex items-center justify-center gap-1 py-1 rounded bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all"
+                  className="w-full flex items-center justify-center gap-1 py-1 rounded border transition-all animate-pulse"
                   style={{
-                    boxShadow: "0 0 8px hsl(var(--primary) / 0.1)",
+                    background: "hsla(280, 80%, 70%, 0.12)",
+                    borderColor: "hsla(280, 80%, 70%, 0.35)",
+                    boxShadow: "0 0 10px hsla(280, 80%, 70%, 0.2)",
                   }}
                 >
-                  <Play className="w-2.5 h-2.5 text-primary fill-primary/50" />
-                  <span className="text-[8px] font-display uppercase tracking-wider text-primary font-semibold">
+                  <Play className="w-2.5 h-2.5" style={{ color: "hsl(280, 80%, 70%)", fill: "hsla(280, 80%, 70%, 0.5)" }} />
+                  <span className="text-[8px] font-display uppercase tracking-wider font-semibold" style={{ color: "hsl(280, 80%, 70%)" }}>
                     Stream (1 credit)
                   </span>
                 </button>

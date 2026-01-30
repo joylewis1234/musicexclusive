@@ -154,14 +154,16 @@ export const DiscoveryTrackCard = ({
             e.stopPropagation();
             onStream();
           }}
-          className="w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all duration-300 group"
+          className="w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-lg border transition-all duration-300 group animate-pulse"
           style={{
-            boxShadow: "0 0 12px hsl(var(--primary) / 0.15)",
+            background: "hsla(280, 80%, 70%, 0.15)",
+            borderColor: "hsla(280, 80%, 70%, 0.4)",
+            boxShadow: "0 0 16px hsla(280, 80%, 70%, 0.25), inset 0 0 8px hsla(280, 80%, 70%, 0.1)",
           }}
         >
-          <Play className="w-3.5 h-3.5 text-primary fill-primary/50 group-hover:fill-primary/80 transition-all" />
-          <span className="text-xs font-display uppercase tracking-wider text-primary font-semibold">
-            Stream Now <span className="text-primary/70">(1 credit = $0.20)</span>
+          <Play className="w-3.5 h-3.5 transition-all" style={{ color: "hsl(280, 80%, 70%)", fill: "hsla(280, 80%, 70%, 0.5)" }} />
+          <span className="text-xs font-display uppercase tracking-wider font-semibold" style={{ color: "hsl(280, 80%, 70%)" }}>
+            Stream Now <span style={{ color: "hsla(280, 80%, 70%, 0.7)" }}>(1 credit = $0.20)</span>
           </span>
         </button>
 
