@@ -176,7 +176,7 @@ const FanAuth = () => {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
             <button
               type="button"
               onClick={() => setIsSignUp(!isSignUp)}
@@ -186,6 +186,18 @@ const FanAuth = () => {
                 ? "Already have an account? Sign in"
                 : "Don't have an account? Sign up"}
             </button>
+            
+            {!isSignUp && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password?type=fan")}
+                  className="text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Forgot your password?
+                </button>
+              </div>
+            )}
           </div>
         </GlowCard>
       </main>

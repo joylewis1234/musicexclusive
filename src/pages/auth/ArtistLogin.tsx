@@ -224,6 +224,16 @@ const ArtistLogin = () => {
           {/* Secondary Links */}
           <div className="mt-6 space-y-3 text-center">
             <div>
+              <button
+                type="button"
+                onClick={() => navigate("/forgot-password?type=artist")}
+                className="text-sm text-primary hover:underline"
+              >
+                Forgot your password?
+              </button>
+            </div>
+            
+            <div>
               <span className="text-muted-foreground text-sm">Applied but not approved yet? </span>
               <button
                 type="button"
