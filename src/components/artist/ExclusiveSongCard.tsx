@@ -12,10 +12,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Eye, Trash2, Lock, Loader2, Music } from "lucide-react";
+import { Eye, Trash2, Lock, Loader2, Music, Clock } from "lucide-react";
+import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 
 export interface ExclusiveSong {
   id: string;
@@ -24,6 +33,8 @@ export interface ExclusiveSong {
   full_audio_url: string | null;
   genre: string | null;
   created_at: string;
+  preview_start_seconds?: number;
+  duration?: number;
 }
 
 // Helper to extract storage path and bucket from Supabase URL
@@ -51,6 +62,9 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
   const navigate = useNavigate();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isPreviewEditOpen, setIsPreviewEditOpen] = useState(false);
+  const [previewStartSeconds, setPreviewStartSeconds] = useState(song.preview_start_seconds || 0);
+  const [isSavingPreview, setIsSavingPreview] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -114,6 +128,27 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
     navigate(`/artist/view/${encodeURIComponent(artistId)}?view=fan&track=${song.id}`);
   };
 
+  const handleSavePreviewTime = async () => {
+    setIsSavingPreview(true);
+    try {
+      const { error } = await supabase
+        .from("tracks")
+        .update({ preview_start_seconds: previewStartSeconds })
+        .eq("id", song.id);
+
+      if (error) throw error;
+
+      toast.success("Hook preview time updated");
+      setIsPreviewEditOpen(false);
+      onDeleted(); // Refresh the list
+    } catch (error) {
+      console.error("Error updating preview time:", error);
+      toast.error("Failed to update preview time");
+    } finally {
+      setIsSavingPreview(false);
+    }
+  };
+
   return (
     <>
       <GlowCard variant="flat" className="p-4 group">
@@ -167,6 +202,18 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
               <Eye className="w-3.5 h-3.5 mr-1.5" />
               View
             </Button>
+            {/* Hook Preview Time Button - only show if track has audio & duration */}
+            {song.full_audio_url && (song.duration ?? 0) > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPreviewEditOpen(true)}
+                className="h-8 px-3 text-xs rounded-lg hover:bg-accent/10 hover:text-accent"
+              >
+                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                Hook
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -216,6 +263,37 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Hook Preview Time Edit Dialog */}
+      <Dialog open={isPreviewEditOpen} onOpenChange={setIsPreviewEditOpen}>
+        <DialogContent className="bg-card border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="font-display">Set Hook Preview Time</DialogTitle>
+            <DialogDescription>
+              Choose which 15-second section fans hear on Discovery.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            <PreviewTimeSelector
+              audioUrl={song.full_audio_url}
+              audioDuration={song.duration || 0}
+              previewStartSeconds={previewStartSeconds}
+              onPreviewStartChange={setPreviewStartSeconds}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="ghost" onClick={() => setIsPreviewEditOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSavePreviewTime} disabled={isSavingPreview}>
+              {isSavingPreview ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+              Save Hook Time
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
