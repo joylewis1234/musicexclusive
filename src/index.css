@@ -530,7 +530,7 @@
 
 @layer utilities {
   .animate-glow-pulse {
-    animation: glow-pulse 2s ease-in-out infinite;
+    animation: glow-pulse 3s ease-in-out infinite;
   }
 
   @keyframes glow-pulse {
