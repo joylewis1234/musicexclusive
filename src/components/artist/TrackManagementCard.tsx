@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +81,8 @@ export interface Track {
   created_at: string;
   preview_audio_url: string | null;
   full_audio_url: string | null;
+  preview_start_seconds: number;
+  duration: number;
   status: "exclusive" | "scheduled" | "ended" | "disabled";
   exclusive_weeks?: number;
 }
@@ -97,6 +100,7 @@ export const TrackManagementCard = ({ track, onTrackUpdated }: TrackManagementCa
   const [editTitle, setEditTitle] = useState(track.title);
   const [editGenre, setEditGenre] = useState(track.genre || "");
   const [editDescription, setEditDescription] = useState("");
+  const [editPreviewStart, setEditPreviewStart] = useState(track.preview_start_seconds || 0);
   const [isSaving, setIsSaving] = useState(false);
   
   // Replace hook preview state
@@ -162,6 +166,7 @@ export const TrackManagementCard = ({ track, onTrackUpdated }: TrackManagementCa
         .update({
           title: editTitle.trim(),
           genre: editGenre || null,
+          preview_start_seconds: editPreviewStart,
         })
         .eq("id", track.id);
 
@@ -372,11 +377,23 @@ export const TrackManagementCard = ({ track, onTrackUpdated }: TrackManagementCa
               />
             </div>
 
+            {/* Hook Preview Start Time Selector */}
+            {track.full_audio_url && track.duration > 0 && (
+              <div className="pt-2 border-t border-border/30">
+                <PreviewTimeSelector
+                  audioUrl={track.full_audio_url}
+                  audioDuration={track.duration}
+                  previewStartSeconds={editPreviewStart}
+                  onPreviewStartChange={setEditPreviewStart}
+                />
+              </div>
+            )}
+
             {/* Info about full audio */}
             <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/30 border border-border/30">
               <Info className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
               <p className="text-xs text-muted-foreground">
-                Full track audio cannot be replaced once published. Use "Replace Hook Preview" to update the discovery preview.
+                The hook preview start time determines which 15-second segment fans hear on Discovery. Use the slider to select the best part of your track.
               </p>
             </div>
           </div>
