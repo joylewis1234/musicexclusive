@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ArtistProtectedRoute } from "@/components/auth/ArtistProtectedRoute";
 import { FanLayout } from "@/layouts/FanLayout";
+import { ArtistLayout } from "@/layouts/ArtistLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 // Public pages
@@ -47,6 +48,7 @@ import ArtistApplicationStatus from "./pages/ArtistApplicationStatus";
 import ArtistProfilePage from "./pages/ArtistProfilePage";
 import ArtistUpload from "./pages/ArtistUpload";
 import ArtistDashboard from "./pages/artist/ArtistDashboard";
+import ArtistEarnings from "./pages/artist/ArtistEarnings";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
 import EditArtistProfile from "./pages/artist/EditArtistProfile";
 import { ArtistProfilePreviewWrapper } from "./components/artist/ArtistProfilePreviewWrapper";
@@ -71,111 +73,109 @@ const App = () => (
           <BrowserRouter>
             <ErrorBoundary>
               <Routes>
-{/* Public routes */}
-<Route path="/" element={<Index />} />
-<Route path="/artist-benefits" element={<ArtistBenefits />} />
-<Route path="/vault/enter" element={<EnterVault />} />
-              <Route path="/vault/submit" element={<SubmitVaultCode />} />
-              <Route path="/vault/status" element={<VaultStatus />} />
-              <Route path="/agreements/fan" element={<Agreements />} />
-              <Route path="/onboarding/listen" element={<ChooseAccess />} />
-              <Route path="/subscribe" element={<Subscribe />} />
-              <Route path="/load-credits" element={<LoadCredits />} />
-              
-              {/* Login selector page */}
-              <Route path="/login" element={<Login />} />
-              {/* Auth routes */}
-              <Route path="/auth/fan" element={<FanAuth />} />
-              <Route path="/auth/artist" element={<ArtistAuth />} />
-              <Route path="/artist/login" element={<ArtistLogin />} />
-              <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/access-restricted" element={<AccessRestricted />} />
-              
-              {/* Fan routes with persistent mini-player (protected) */}
-              <Route element={
-                <ProtectedRoute allowedRole="fan">
-                  <FanLayout />
-                </ProtectedRoute>
-              }>
-                <Route path="/fan/dashboard" element={<FanDashboard />} />
-                <Route path="/fan/profile" element={<FanProfile />} />
-                <Route path="/fan/inbox" element={<FanInbox />} />
-                <Route path="/fan/payment" element={<Payment />} />
-                <Route path="/discovery" element={<Discovery />} />
-                {/* Fan access to artist profiles */}
-                <Route path="/artist/:artistId" element={<ArtistProfilePage />} />
-              </Route>
-              
-              {/* Full player for fans (protected) */}
-              <Route path="/player/:trackId" element={
-                <ProtectedRoute allowedRole="fan">
-                  <MusicPlayer />
-                </ProtectedRoute>
-              } />
-              <Route path="/player" element={
-                <ProtectedRoute allowedRole="fan">
-                  <MusicPlayer />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/artist/apply" element={<ArtistApply />} />
-              <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
-              <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
-              
-              {/* Artist protected routes - requires active status */}
-              <Route path="/artist/dashboard" element={
-                <ArtistProtectedRoute>
-                  <ArtistDashboard />
-                </ArtistProtectedRoute>
-              } />
-              {/* Artist preview of their own profile - redirects to unified route */}
-              <Route path="/artist/profile" element={
-                <ArtistProtectedRoute>
-                  <ArtistProfilePreviewWrapper />
-                </ArtistProtectedRoute>
-              } />
-              {/* Artist viewing any artist profile (including their own via direct URL) */}
-              <Route path="/artist/view/:artistId" element={
-                <ArtistProtectedRoute>
-                  <ArtistProfilePage />
-                </ArtistProtectedRoute>
-              } />
-              <Route path="/artist/profile/edit" element={
-                <ArtistProtectedRoute>
-                  <EditArtistProfile />
-                </ArtistProtectedRoute>
-              } />
-              <Route path="/artist/upload" element={
-                <ArtistProtectedRoute>
-                  <ArtistUpload />
-                </ArtistProtectedRoute>
-              } />
-              <Route path="/artist/setup-account" element={
-                <ArtistProtectedRoute>
-                  <ArtistSetupAccount />
-                </ArtistProtectedRoute>
-              } />
-              
-              {/* Admin routes */}
-              <Route path="/admin/reports" element={
-                <AdminProtectedRoute>
-                  <AdminReports />
-                </AdminProtectedRoute>
-              } />
-              <Route path="/admin/test-tools" element={
-                <AdminProtectedRoute>
-                  <AdminTestTools />
-                </AdminProtectedRoute>
-              } />
-              
-              {/* Testing routes (temporary - no auth required) */}
-              <Route path="/testing/tools" element={<TestTools />} />
-              <Route path="/testing/payouts" element={<TestPayouts />} />
-              
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-              <Route path="*" element={<NotFound />} />
+                {/* Public routes */}
+                <Route path="/" element={<Index />} />
+                <Route path="/artist-benefits" element={<ArtistBenefits />} />
+                <Route path="/vault/enter" element={<EnterVault />} />
+                <Route path="/vault/submit" element={<SubmitVaultCode />} />
+                <Route path="/vault/status" element={<VaultStatus />} />
+                <Route path="/agreements/fan" element={<Agreements />} />
+                <Route path="/onboarding/listen" element={<ChooseAccess />} />
+                <Route path="/subscribe" element={<Subscribe />} />
+                <Route path="/load-credits" element={<LoadCredits />} />
+                
+                {/* Login selector page */}
+                <Route path="/login" element={<Login />} />
+                {/* Auth routes */}
+                <Route path="/auth/fan" element={<FanAuth />} />
+                <Route path="/auth/artist" element={<ArtistAuth />} />
+                <Route path="/artist/login" element={<ArtistLogin />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/access-restricted" element={<AccessRestricted />} />
+                
+                {/* Fan routes with persistent mini-player (protected) */}
+                <Route element={
+                  <ProtectedRoute allowedRole="fan">
+                    <FanLayout />
+                  </ProtectedRoute>
+                }>
+                  <Route path="/fan/dashboard" element={<FanDashboard />} />
+                  <Route path="/fan/profile" element={<FanProfile />} />
+                  <Route path="/fan/inbox" element={<FanInbox />} />
+                  <Route path="/fan/payment" element={<Payment />} />
+                  <Route path="/discovery" element={<Discovery />} />
+                  {/* Fan access to artist profiles */}
+                  <Route path="/artist/:artistId" element={<ArtistProfilePage />} />
+                </Route>
+                
+                {/* Full player for fans (protected) */}
+                <Route path="/player/:trackId" element={
+                  <ProtectedRoute allowedRole="fan">
+                    <MusicPlayer />
+                  </ProtectedRoute>
+                } />
+                <Route path="/player" element={
+                  <ProtectedRoute allowedRole="fan">
+                    <MusicPlayer />
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/artist/apply" element={<ArtistApply />} />
+                <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
+                <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
+                
+                {/* Artist protected routes with bottom nav */}
+                <Route element={
+                  <ArtistProtectedRoute>
+                    <ArtistLayout />
+                  </ArtistProtectedRoute>
+                }>
+                  <Route path="/artist/dashboard" element={<ArtistDashboard />} />
+                  <Route path="/artist/profile/edit" element={<EditArtistProfile />} />
+                  <Route path="/artist/earnings" element={<ArtistEarnings />} />
+                </Route>
+                
+                {/* Artist routes without bottom nav */}
+                <Route path="/artist/profile" element={
+                  <ArtistProtectedRoute>
+                    <ArtistProfilePreviewWrapper />
+                  </ArtistProtectedRoute>
+                } />
+                <Route path="/artist/view/:artistId" element={
+                  <ArtistProtectedRoute>
+                    <ArtistProfilePage />
+                  </ArtistProtectedRoute>
+                } />
+                <Route path="/artist/upload" element={
+                  <ArtistProtectedRoute>
+                    <ArtistUpload />
+                  </ArtistProtectedRoute>
+                } />
+                <Route path="/artist/setup-account" element={
+                  <ArtistProtectedRoute>
+                    <ArtistSetupAccount />
+                  </ArtistProtectedRoute>
+                } />
+                
+                {/* Admin routes */}
+                <Route path="/admin/reports" element={
+                  <AdminProtectedRoute>
+                    <AdminReports />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/admin/test-tools" element={
+                  <AdminProtectedRoute>
+                    <AdminTestTools />
+                  </AdminProtectedRoute>
+                } />
+                
+                {/* Testing routes (temporary - no auth required) */}
+                <Route path="/testing/tools" element={<TestTools />} />
+                <Route path="/testing/payouts" element={<TestPayouts />} />
+                
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </ErrorBoundary>
           </BrowserRouter>
