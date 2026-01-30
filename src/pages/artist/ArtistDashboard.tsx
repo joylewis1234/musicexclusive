@@ -285,7 +285,7 @@ const ArtistDashboard = () => {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Tutorial System */}
-      <ArtistTutorial userId={userId} showInlineButton={false} />
+      <ArtistTutorial userId={userId} />
       
       {/* Floating Header */}
       <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
