@@ -114,7 +114,7 @@ export const DiscoveryTrackCard = ({
         {(isPreviewPlaying || isPreviewLoading) && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div 
-              className={`w-16 h-16 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center ${isPreviewPlaying ? "animate-pulse-slow" : ""}`}
+              className="w-16 h-16 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center ring-1 ring-primary/30"
               style={{
                 boxShadow: "0 0 40px hsl(var(--primary) / 0.5)",
               }}
@@ -154,7 +154,7 @@ export const DiscoveryTrackCard = ({
             e.stopPropagation();
             onStream();
           }}
-          className="w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-lg border transition-all duration-300 group animate-pulse-slow"
+          className="w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-lg border transition-all duration-300 group hover:brightness-110"
           style={{
             background: "hsla(280, 80%, 70%, 0.15)",
             borderColor: "hsla(280, 80%, 70%, 0.4)",
@@ -194,7 +194,7 @@ export const DiscoveryTrackCard = ({
         {/* Playing Label */}
         {isPreviewPlaying && (
           <div className="mb-3 flex items-center gap-2">
-            <span className="text-xs text-primary font-display uppercase tracking-wider animate-pulse-slow">
+            <span className="text-xs text-primary font-display uppercase tracking-wider">
               ▶ Playing Hook Preview
             </span>
           </div>
@@ -236,7 +236,7 @@ export const DiscoveryTrackCard = ({
             size="sm"
             onClick={onStream}
             className={`flex-1 gap-1.5 text-[10px] uppercase tracking-wider font-semibold ${
-              isPreviewDisabled || showError ? "ring-2 ring-accent/50 animate-pulse-slow" : ""
+              isPreviewDisabled || showError ? "ring-2 ring-accent/50" : ""
             }`}
           >
             <Headphones className="w-3.5 h-3.5" />

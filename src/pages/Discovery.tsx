@@ -231,7 +231,7 @@ const Discovery = () => {
         {/* Loading State */}
         {isLoadingTracks ? (
           <div className="text-center py-12">
-            <p className="text-muted-foreground font-display animate-pulse">
+             <p className="text-muted-foreground font-display">
               Loading tracks...
             </p>
           </div>
