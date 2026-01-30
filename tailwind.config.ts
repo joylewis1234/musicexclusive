@@ -127,7 +127,7 @@ export default {
         },
         "pulse-slow": {
           "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.6" },
+          "50%": { opacity: "0.5" },
         },
       },
       animation: {
@@ -138,7 +138,7 @@ export default {
         float: "float 6s ease-in-out infinite",
         "scroll-slow": "scroll-slow 30s linear infinite",
         "scroll-cards": "scroll-cards 40s linear infinite",
-        "pulse-slow": "pulse-slow 3s ease-in-out infinite",
+        "pulse-slow": "pulse-slow 4s ease-in-out infinite",
       },
     },
   },
