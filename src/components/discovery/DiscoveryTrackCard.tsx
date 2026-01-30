@@ -181,6 +181,13 @@ export const DiscoveryTrackCard = ({
           </div>
         )}
 
+        {/* Streaming Cost Info */}
+        <div className="mb-3 text-center">
+          <p className="text-xs text-muted-foreground">
+            <span className="text-primary font-semibold">$0.20</span> • Unlock full stream
+          </p>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex gap-2">
           <Button
@@ -208,7 +215,7 @@ export const DiscoveryTrackCard = ({
             ) : (
               <>
                 <Play className="w-3.5 h-3.5" />
-                Preview 15s
+                Preview
               </>
             )}
           </Button>
@@ -216,12 +223,12 @@ export const DiscoveryTrackCard = ({
             variant="accent"
             size="sm"
             onClick={onStream}
-            className={`flex-1 gap-1.5 text-xs uppercase tracking-wider ${
+            className={`flex-1 gap-1.5 text-[10px] uppercase tracking-wider font-semibold ${
               isPreviewDisabled || showError ? "ring-2 ring-accent/50 animate-pulse" : ""
             }`}
           >
             <Headphones className="w-3.5 h-3.5" />
-            Stream
+            Stream (1 Credit)
           </Button>
         </div>
       </div>
