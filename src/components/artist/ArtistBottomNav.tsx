@@ -33,10 +33,18 @@ const ArtistBottomNav = () => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
 
+          // Add data-tutorial attribute for the tutorial system
+          const tutorialAttr = item.path === "/artist/profile/edit" 
+            ? "profile-tab" 
+            : item.path === "/artist/earnings" 
+            ? "earnings-tab" 
+            : undefined;
+          
           return (
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
+              data-tutorial={tutorialAttr}
               className={cn(
                 "relative flex flex-col items-center justify-center gap-1 flex-1 py-2 transition-all duration-200",
                 isActive

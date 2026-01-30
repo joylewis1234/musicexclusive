@@ -341,7 +341,7 @@ const ArtistEarnings = () => {
         <div className="w-full max-w-lg mx-auto space-y-6">
           
           {/* Earnings Summary Cards */}
-          <div className="grid grid-cols-3 gap-3 animate-fade-in">
+          <div data-tutorial="earnings-cards" className="grid grid-cols-3 gap-3 animate-fade-in">
             {/* Lifetime */}
             <div 
               className="p-4 rounded-2xl text-center"
@@ -446,7 +446,7 @@ const ArtistEarnings = () => {
           </div>
 
           {/* Weekly Transparency Report */}
-          <section className="space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <section data-tutorial="weekly-report" className="space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
             <div className="flex items-center gap-2">
               <h2 className="font-display text-lg font-semibold text-foreground">
                 Weekly Report

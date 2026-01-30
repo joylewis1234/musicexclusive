@@ -125,6 +125,7 @@ export type Database = {
           payout_status: string | null
           stripe_account_id: string | null
           tiktok_url: string | null
+          tutorial_completed: boolean | null
           twitter_url: string | null
           updated_at: string
           user_id: string
@@ -141,6 +142,7 @@ export type Database = {
           payout_status?: string | null
           stripe_account_id?: string | null
           tiktok_url?: string | null
+          tutorial_completed?: boolean | null
           twitter_url?: string | null
           updated_at?: string
           user_id: string
@@ -157,6 +159,7 @@ export type Database = {
           payout_status?: string | null
           stripe_account_id?: string | null
           tiktok_url?: string | null
+          tutorial_completed?: boolean | null
           twitter_url?: string | null
           updated_at?: string
           user_id?: string
