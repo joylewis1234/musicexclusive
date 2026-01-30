@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { StartHereButton } from './StartHereButton';
 import { TutorialPage } from './TutorialPage';
-import { HelpCircle } from 'lucide-react';
+import { WelcomeModal } from './WelcomeModal';
 
 const STORAGE_KEY = 'tutorial_artist_dashboard_completed';
+const WELCOME_SHOWN_KEY = 'tutorial_welcome_shown';
 
 interface ArtistTutorialProps {
   userId: string | null;
-  showInlineButton?: boolean;
 }
 
-export const ArtistTutorial = ({ userId, showInlineButton = true }: ArtistTutorialProps) => {
-  const [isOpen, setIsOpen] = useState(false);
+export const ArtistTutorial = ({ userId }: ArtistTutorialProps) => {
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
   const [hasCompleted, setHasCompleted] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -57,6 +57,23 @@ export const ArtistTutorial = ({ userId, showInlineButton = true }: ArtistTutori
     loadCompletionState();
   }, [userId]);
 
+  // Show welcome modal after a short delay if tutorial not completed
+  useEffect(() => {
+    if (isLoading || hasCompleted) return;
+
+    // Check if welcome was already shown this session
+    const welcomeShown = sessionStorage.getItem(WELCOME_SHOWN_KEY) === 'true';
+    if (welcomeShown) return;
+
+    // Show welcome modal after 1.5 seconds
+    const timer = setTimeout(() => {
+      setIsWelcomeOpen(true);
+      sessionStorage.setItem(WELCOME_SHOWN_KEY, 'true');
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [isLoading, hasCompleted]);
+
   // Save completion state
   const markCompleted = useCallback(async () => {
     localStorage.setItem(STORAGE_KEY, 'true');
@@ -75,66 +92,36 @@ export const ArtistTutorial = ({ userId, showInlineButton = true }: ArtistTutori
   }, [userId]);
 
   const openTutorial = useCallback(() => {
-    setIsOpen(true);
+    setIsWelcomeOpen(false);
+    setIsTutorialOpen(true);
   }, []);
 
   const closeTutorial = useCallback(() => {
-    setIsOpen(false);
+    setIsTutorialOpen(false);
   }, []);
 
-  const restartTutorial = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
-    setHasCompleted(false);
-    setIsOpen(true);
+  const dismissWelcome = useCallback(() => {
+    setIsWelcomeOpen(false);
   }, []);
 
   if (isLoading) return null;
 
   return (
     <>
-      {/* Floating Start Here button - show if not completed */}
-      {!hasCompleted && !isOpen && (
-        <StartHereButton onClick={openTutorial} variant="floating" />
-      )}
-
-      {/* Inline "New? Start Here" chip */}
-      {showInlineButton && !hasCompleted && !isOpen && (
-        <div className="mb-4">
-          <StartHereButton onClick={openTutorial} variant="inline" />
-        </div>
-      )}
+      {/* Welcome modal - appears shortly after page load */}
+      <WelcomeModal
+        isOpen={isWelcomeOpen}
+        onStartTutorial={openTutorial}
+        onDismiss={dismissWelcome}
+        onDontShowAgain={markCompleted}
+      />
 
       {/* Tutorial page overlay */}
       <TutorialPage
-        isOpen={isOpen}
+        isOpen={isTutorialOpen}
         onClose={closeTutorial}
         onDontShowAgain={markCompleted}
       />
     </>
-  );
-};
-
-// Export hook-like utilities for external control
-export const useArtistTutorialControls = () => {
-  const restartTutorial = () => {
-    localStorage.removeItem(STORAGE_KEY);
-    // Dispatch custom event that ArtistTutorial can listen to
-    window.dispatchEvent(new CustomEvent('restart-artist-tutorial'));
-  };
-
-  return { restartTutorial };
-};
-
-// Help button to reopen tutorial
-export const TutorialHelpButton = ({ onClick }: { onClick: () => void }) => {
-  return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-foreground hover:bg-background/90 transition-all"
-      title="Reopen tutorial"
-    >
-      <HelpCircle className="w-4 h-4" />
-      <span className="text-sm font-medium sr-only sm:not-sr-only">Help</span>
-    </button>
   );
 };
