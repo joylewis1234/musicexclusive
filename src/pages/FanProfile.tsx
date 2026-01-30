@@ -1,10 +1,15 @@
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Home, Play, User } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { ChevronLeft, Home, Play, User, Camera, Pencil, Check, X, Loader2 } from "lucide-react";
 import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
+import { useFanProfile } from "@/hooks/useFanProfile";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
+import { toast } from "sonner";
 
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
@@ -27,6 +32,23 @@ const sharedTracks = [
 const FanProfile = () => {
   const navigate = useNavigate();
   const { playTrack } = usePlayer();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const {
+    profile,
+    isLoading,
+    isUploading,
+    isProcessing,
+    isSaving,
+    processedImage,
+    processImage,
+    uploadAvatar,
+    updateDisplayName,
+    clearProcessedImage,
+  } = useFanProfile();
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedName, setEditedName] = useState("");
 
   const handlePlayTrack = (trackId: string) => {
     const track = tracksLibrary[trackId];
@@ -34,6 +56,55 @@ const FanProfile = () => {
       playTrack(track);
     }
   };
+
+  // Handle file selection
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const result = await processImage(file);
+    if (!result.ok && "error" in result) {
+      toast.error(result.error.message);
+    }
+    
+    // Reset input so same file can be selected again
+    e.target.value = "";
+  };
+
+  // Handle upload confirmation
+  const handleConfirmUpload = async () => {
+    const result = await uploadAvatar();
+    if (result.ok) {
+      toast.success("Profile photo updated!");
+    } else if ("error" in result) {
+      toast.error(result.error.message);
+    }
+  };
+
+  // Handle name edit
+  const handleStartEditName = () => {
+    setEditedName(profile?.display_name || "");
+    setIsEditingName(true);
+  };
+
+  const handleSaveName = async () => {
+    const result = await updateDisplayName(editedName);
+    if (result.ok) {
+      toast.success("Name updated!");
+      setIsEditingName(false);
+    } else if ("error" in result) {
+      toast.error(result.error.message);
+    }
+  };
+
+  const handleCancelEditName = () => {
+    setIsEditingName(false);
+    setEditedName("");
+  };
+
+  // Get display image URL
+  const displayImageUrl = processedImage?.previewUrl || profile?.avatar_url;
+  const displayName = profile?.display_name || "Fan";
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">
@@ -58,17 +129,116 @@ const FanProfile = () => {
       <div className="flex-1 w-full max-w-md mx-auto space-y-6">
         {/* Profile Header */}
         <section className="text-center animate-fade-in">
-          <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted/30 border border-border flex items-center justify-center">
-            <User className="w-10 h-10 text-muted-foreground" />
+          {/* Avatar with upload */}
+          <div className="relative w-24 h-24 mx-auto mb-4">
+            <Avatar className="w-24 h-24 border-2 border-border">
+              {displayImageUrl ? (
+                <AvatarImage src={displayImageUrl} alt="Profile" className="object-cover" />
+              ) : (
+                <AvatarFallback className="bg-muted/30">
+                  <User className="w-10 h-10 text-muted-foreground" />
+                </AvatarFallback>
+              )}
+            </Avatar>
+            
+            {/* Camera button overlay */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading || isProcessing}
+              className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              {isProcessing ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Camera className="w-4 h-4" />
+              )}
+            </button>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/heic"
+              onChange={handleFileSelect}
+              className="hidden"
+            />
           </div>
-          <h1 
-            className="font-display text-2xl md:text-3xl font-bold uppercase tracking-wider text-foreground mb-2"
-            style={{
-              textShadow: "0 0 20px rgba(0, 255, 255, 0.3)"
-            }}
-          >
-            Alex Rivera
-          </h1>
+
+          {/* Pending upload confirmation */}
+          {processedImage && (
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <Button
+                size="sm"
+                onClick={handleConfirmUpload}
+                disabled={isUploading}
+                className="gap-1"
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                Save Photo
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={clearProcessedImage}
+                disabled={isUploading}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Name with edit */}
+          {isEditingName ? (
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Input
+                value={editedName}
+                onChange={(e) => setEditedName(e.target.value)}
+                className="max-w-[200px] text-center"
+                placeholder="Your name"
+                autoFocus
+              />
+              <Button
+                size="sm"
+                onClick={handleSaveName}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancelEditName}
+                disabled={isSaving}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <h1 
+                className="font-display text-2xl md:text-3xl font-bold uppercase tracking-wider text-foreground"
+                style={{
+                  textShadow: "0 0 20px rgba(0, 255, 255, 0.3)"
+                }}
+              >
+                {isLoading ? "Loading..." : displayName}
+              </h1>
+              <button
+                onClick={handleStartEditName}
+                className="text-muted-foreground hover:text-foreground transition-colors p-1"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          
           <StatusBadge variant="member" size="default">
             Vault Member
           </StatusBadge>
