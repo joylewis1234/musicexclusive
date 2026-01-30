@@ -114,7 +114,7 @@ export const DiscoveryTrackCard = ({
         {(isPreviewPlaying || isPreviewLoading) && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div 
-              className={`w-16 h-16 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center ${isPreviewPlaying ? "animate-pulse" : ""}`}
+              className={`w-16 h-16 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center ${isPreviewPlaying ? "animate-pulse-slow" : ""}`}
               style={{
                 boxShadow: "0 0 40px hsl(var(--primary) / 0.5)",
               }}
@@ -194,7 +194,7 @@ export const DiscoveryTrackCard = ({
         {/* Playing Label */}
         {isPreviewPlaying && (
           <div className="mb-3 flex items-center gap-2">
-            <span className="text-xs text-primary font-display uppercase tracking-wider animate-pulse">
+            <span className="text-xs text-primary font-display uppercase tracking-wider animate-pulse-slow">
               ▶ Playing Hook Preview
             </span>
           </div>
@@ -236,7 +236,7 @@ export const DiscoveryTrackCard = ({
             size="sm"
             onClick={onStream}
             className={`flex-1 gap-1.5 text-[10px] uppercase tracking-wider font-semibold ${
-              isPreviewDisabled || showError ? "ring-2 ring-accent/50 animate-pulse" : ""
+              isPreviewDisabled || showError ? "ring-2 ring-accent/50 animate-pulse-slow" : ""
             }`}
           >
             <Headphones className="w-3.5 h-3.5" />
