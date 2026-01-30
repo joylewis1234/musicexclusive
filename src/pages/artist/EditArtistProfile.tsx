@@ -347,7 +347,7 @@ const EditArtistProfile = () => {
             className="hidden"
           />
 
-          <div className="relative inline-block mb-4">
+          <div data-tutorial="avatar-upload" className="relative inline-block mb-4">
             <div className="relative w-28 h-28">
               <div 
                 className="absolute -inset-1 rounded-full blur-sm"

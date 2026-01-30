@@ -5,6 +5,8 @@ import { ExclusiveSongCard, ExclusiveSong } from "@/components/artist/ExclusiveS
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
+import { ArtistTutorial, TutorialHelpButton } from "@/components/artist/tutorial/ArtistTutorial";
+import { useArtistTutorial } from "@/hooks/useArtistTutorial";
 import { 
   Upload, 
   LogOut,
@@ -16,7 +18,8 @@ import {
   RefreshCw,
   Plus,
   Crown,
-  ChevronLeft
+  ChevronLeft,
+  HelpCircle,
 } from "lucide-react";
 
 type PayoutStatus = "not_connected" | "pending" | "connected";
@@ -280,8 +283,14 @@ const ArtistDashboard = () => {
     );
   }
 
+  // Tutorial hook
+  const tutorialHook = useArtistTutorial(userId);
+
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* Tutorial System */}
+      <ArtistTutorial userId={userId} showInlineButton={false} />
+      
       {/* Floating Header */}
       <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
         <div className="w-full max-w-lg mx-auto flex items-center justify-between">
@@ -293,21 +302,39 @@ const ArtistDashboard = () => {
             <span className="text-sm font-medium">Home</span>
           </button>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleSignOut}
-            className="rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-foreground gap-1.5 px-3"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Help button to reopen tutorial */}
+            <TutorialHelpButton onClick={tutorialHook.restartTutorial} />
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-foreground gap-1.5 px-3"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
+          </div>
         </div>
       </header>
 
       {/* Hero Section */}
       <div className="relative pt-20 pb-6 px-5">
         <div className="w-full max-w-lg mx-auto">
+          {/* Inline "New? Start Here" chip - only show if tutorial not completed */}
+          {!tutorialHook.hasCompleted && !tutorialHook.isOpen && (
+            <div className="mb-4">
+              <button
+                onClick={tutorialHook.startTutorial}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 hover:border-primary/50 transition-all duration-300 animate-pulse-glow"
+              >
+                <span>✨</span>
+                <span>New? Start Here</span>
+              </button>
+            </div>
+          )}
+          
           {/* Artist Avatar */}
           <div className="relative w-24 h-24 mb-4">
             <div 
@@ -490,6 +517,7 @@ const ArtistDashboard = () => {
                 </div>
               </div>
               <Button
+                data-tutorial="upload-button"
                 size="sm"
                 className="rounded-full gap-1.5 px-4"
                 style={{
@@ -540,7 +568,7 @@ const ArtistDashboard = () => {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div data-tutorial="songs-list" className="space-y-2">
                 {songs.map((song, index) => (
                   <div 
                     key={song.id}
