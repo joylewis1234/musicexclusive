@@ -5,11 +5,12 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, Home, Play, User, Camera, Pencil, Check, X, Loader2 } from "lucide-react";
+import { ChevronLeft, Home, Play, User, Camera, Pencil, Check, X, Loader2, LogOut } from "lucide-react";
 import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
 import { useFanProfile } from "@/hooks/useFanProfile";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
@@ -49,6 +50,21 @@ const FanProfile = () => {
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      await supabase.auth.signOut();
+      toast.success("Logged out successfully");
+      navigate("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to log out");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   const handlePlayTrack = (trackId: string) => {
     const track = tracksLibrary[trackId];
@@ -332,6 +348,24 @@ const FanProfile = () => {
               </GlowCard>
             ))}
           </div>
+        </section>
+
+        {/* Logout Section */}
+        <section className="animate-fade-in pt-4 pb-8" style={{ animationDelay: "400ms" }}>
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full gap-2 text-muted-foreground hover:text-destructive hover:border-destructive"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+          >
+            {isLoggingOut ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <LogOut className="w-4 h-4" />
+            )}
+            Log Out
+          </Button>
         </section>
       </div>
     </div>
