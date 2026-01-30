@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, Home, Play, User, Camera, Pencil, Check, X, Loader2, LogOut, Crown } from "lucide-react";
+import { ChevronLeft, Home, Play, User, Camera, Pencil, Check, X, Loader2, LogOut, Coins } from "lucide-react";
 import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
 import { useFanProfile } from "@/hooks/useFanProfile";
 import { useAuth } from "@/contexts/AuthContext";
@@ -279,7 +279,7 @@ const FanProfile = () => {
           )}
           
           <div className="relative inline-block">
-            <Crown 
+            <Coins 
               className="absolute -top-[6px] -left-[6px] w-4 h-4 text-yellow-400 drop-shadow-[0_0_4px_rgba(250,204,21,0.6)] rotate-[-10deg] z-10" 
               fill="currentColor"
             />
