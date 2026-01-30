@@ -92,9 +92,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
       chargedTracksRef.current.add(trackId);
 
       // Show encouraging toast
-      toast.success("Thank you for supporting this artist 💜", {
-        description: "Your stream helps them grow."
-      });
+      toast.success("1 credit used • Enjoy 🎶");
 
       return { success: true };
     } catch (error) {

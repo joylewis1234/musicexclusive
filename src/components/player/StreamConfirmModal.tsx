@@ -95,41 +95,41 @@ export const StreamConfirmModal = ({
 
           <DialogHeader className="space-y-3 text-center">
             <DialogTitle className="font-display text-xl font-semibold text-foreground">
-              {hasEnoughCredits ? "Support the Artist" : "Out of Credits"}
+              {hasEnoughCredits ? "Stream this song?" : "Not Enough Credits"}
             </DialogTitle>
             
             <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
               {hasEnoughCredits ? (
-                <>
-                  This stream costs{" "}
-                  <span 
-                    className="font-semibold"
-                    style={{ 
-                      color: "hsl(280, 80%, 65%)",
-                      textShadow: "0 0 8px hsla(280, 80%, 50%, 0.5)"
-                    }}
-                  >
-                    1 Credit ($0.20)
+                <span className="space-y-2 block">
+                  <span className="block">
+                    <span className="text-foreground font-medium">Cost:</span>{" "}
+                    <span 
+                      className="font-semibold"
+                      style={{ 
+                        color: "hsl(280, 80%, 65%)",
+                        textShadow: "0 0 8px hsla(280, 80%, 50%, 0.5)"
+                      }}
+                    >
+                      1 credit ($0.20)
+                    </span>
                   </span>
-                  .
-                  <br />
-                  <span className="mt-2 block">
-                    Thank you for supporting <span className="text-foreground font-medium">{artistName}</span> — every stream helps artists earn more and grow.
+                  <span className="block mt-2">
+                    Thank you for supporting this artist — every stream truly matters.
                   </span>
-                </>
+                </span>
               ) : (
                 <>
-                  You need credits to stream "<span className="text-foreground">{trackTitle}</span>".
+                  You don't have enough credits to stream this track.
                   <br />
                   <span className="mt-2 block">
-                    Add more credits to keep supporting your favorite artists.
+                    Add credits to continue supporting your favorite artists.
                   </span>
                 </>
               )}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Cost breakdown for sufficient credits */}
+          {/* Balance info for sufficient credits */}
           {hasEnoughCredits && (
             <div 
               className="mt-5 p-3 rounded-xl text-center"
@@ -178,7 +178,7 @@ export const StreamConfirmModal = ({
                       Processing...
                     </>
                   ) : (
-                    "Play & Support"
+                    "Stream Now (1 Credit)"
                   )}
                 </Button>
                 
@@ -188,7 +188,7 @@ export const StreamConfirmModal = ({
                   disabled={isProcessing}
                   className="w-full h-10 rounded-xl text-muted-foreground hover:text-foreground"
                 >
-                  Cancel
+                  Not Now
                 </Button>
               </>
             ) : (
@@ -213,7 +213,7 @@ export const StreamConfirmModal = ({
                   onClick={() => onOpenChange(false)}
                   className="w-full h-10 rounded-xl text-muted-foreground hover:text-foreground"
                 >
-                  Maybe Later
+                  Cancel
                 </Button>
               </>
             )}
