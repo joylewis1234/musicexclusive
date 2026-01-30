@@ -154,7 +154,7 @@ export const DiscoveryTrackCard = ({
             e.stopPropagation();
             onStream();
           }}
-          className="w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-lg border transition-all duration-300 group animate-pulse"
+          className="w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-lg border transition-all duration-300 group animate-pulse-slow"
           style={{
             background: "hsla(280, 80%, 70%, 0.15)",
             borderColor: "hsla(280, 80%, 70%, 0.4)",
