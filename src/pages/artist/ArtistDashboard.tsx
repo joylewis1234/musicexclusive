@@ -42,6 +42,9 @@ const ArtistDashboard = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // Tutorial hook - MUST be called unconditionally at top level (Rules of Hooks)
+  const tutorialHook = useArtistTutorial(userId);
+
   const signOut = async () => {
     await supabase.auth.signOut();
     navigate("/");
@@ -282,9 +285,6 @@ const ArtistDashboard = () => {
       </div>
     );
   }
-
-  // Tutorial hook
-  const tutorialHook = useArtistTutorial(userId);
 
   return (
     <div className="min-h-screen bg-background pb-24">
