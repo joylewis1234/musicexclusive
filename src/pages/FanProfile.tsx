@@ -24,9 +24,9 @@ const topArtists = [
 ];
 
 const sharedTracks = [
-  { id: "1", artist: "NOVA", track: "Midnight Protocol", sharedBy: "Alex" },
-  { id: "2", artist: "AURA", track: "Velvet Skies", sharedBy: "Jordan" },
-  { id: "3", artist: "ECHO", track: "Lost Frequency", sharedBy: "Sam" },
+  { id: "1", artistId: "1", artist: "NOVA", track: "Midnight Protocol", sharedBy: "Alex" },
+  { id: "2", artistId: "2", artist: "AURA", track: "Velvet Skies", sharedBy: "Jordan" },
+  { id: "3", artistId: "3", artist: "ECHO", track: "Lost Frequency", sharedBy: "Sam" },
 ];
 
 const FanProfile = () => {
@@ -305,17 +305,20 @@ const FanProfile = () => {
             {sharedTracks.map((item) => (
               <GlowCard key={item.id} glowColor="accent" hover>
                 <div className="p-4 flex items-center justify-between">
-                  <div className="flex-1 min-w-0">
+                  <button
+                    className="flex-1 min-w-0 text-left"
+                    onClick={() => navigate(`/artist/${item.artistId}`)}
+                  >
                     <p className="font-display text-sm font-semibold text-foreground truncate">
                       {item.track}
                     </p>
-                    <p className="text-xs text-primary truncate">
+                    <p className="text-xs text-primary truncate hover:underline">
                       {item.artist}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-1">
                       From {item.sharedBy}
                     </p>
-                  </div>
+                  </button>
                   <Button
                     variant="accent"
                     size="sm"
