@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Play, Pause, Square, Heart, Share2, Loader2, AlertCircle, Crown } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -17,9 +17,15 @@ interface CompactVaultPlayerProps {
   hasVaultAccess: boolean;
   isLiked?: boolean;
   onAccessDenied?: () => void;
-  onPlay?: () => void;
+  onPlay?: () => void; // Called BEFORE playback starts (for confirmation modal)
   onLike?: () => void;
   onShare?: () => void;
+  /** If true, skip the onPlay callback and play directly */
+  skipPlayConfirm?: boolean;
+  /** Trigger auto-play when this becomes true */
+  autoPlay?: boolean;
+  /** Called when autoPlay has been consumed */
+  onAutoPlayConsumed?: () => void;
 }
 
 export const CompactVaultPlayer = ({
@@ -30,6 +36,9 @@ export const CompactVaultPlayer = ({
   onPlay,
   onLike,
   onShare,
+  skipPlayConfirm = false,
+  autoPlay = false,
+  onAutoPlayConsumed,
 }: CompactVaultPlayerProps) => {
   const [hasCalledOnPlay, setHasCalledOnPlay] = useState(false);
   
@@ -54,6 +63,16 @@ export const CompactVaultPlayer = ({
     }
   }, [track?.id, track?.audioUrl, loadTrack]);
 
+  // Handle auto-play trigger from parent (after confirmation modal)
+  useEffect(() => {
+    if (autoPlay && track?.audioUrl && hasVaultAccess) {
+      play().then(() => {
+        setHasCalledOnPlay(true);
+        onAutoPlayConsumed?.();
+      });
+    }
+  }, [autoPlay, track?.audioUrl, hasVaultAccess, play, onAutoPlayConsumed]);
+
   const handlePlayPause = async () => {
     if (!track) return;
 
@@ -70,12 +89,24 @@ export const CompactVaultPlayer = ({
     if (isPlaying) {
       pause();
     } else {
-      await play();
-      if (!hasCalledOnPlay) {
-        onPlay?.();
-        setHasCalledOnPlay(true);
+      // If not already charged this session, call onPlay to show confirmation modal
+      if (!hasCalledOnPlay && !skipPlayConfirm && onPlay) {
+        onPlay(); // This opens the confirmation modal
+        // Don't play yet - wait for modal confirmation
+        return;
       }
+      
+      // Either already charged, or no confirmation needed - play directly
+      await play();
+      setHasCalledOnPlay(true);
     }
+  };
+
+  // External method to start playback after confirmation
+  const startPlayback = async () => {
+    if (!track?.audioUrl) return;
+    await play();
+    setHasCalledOnPlay(true);
   };
 
   const handleStop = () => {
