@@ -223,8 +223,9 @@ const ArtistDashboard = () => {
       // Step 3: Fetch songs using artist_profiles.id (UUID)
       const { data: songData, error: songsError } = await supabase
         .from("tracks")
-        .select("id, title, artwork_url, full_audio_url, genre, created_at, preview_start_seconds, duration")
+        .select("id, title, artwork_url, full_audio_url, genre, created_at, preview_start_seconds, duration, status")
         .eq("artist_id", profile.id)
+        .neq("status", "disabled")
         .order("created_at", { ascending: false });
 
       if (signal.aborted) return;
