@@ -157,24 +157,24 @@ const Header = () => {
         {/* Logo (centered) */}
         <button 
           onClick={() => navigate("/")}
-          className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2"
+          className="absolute left-1/2 -translate-x-1/2 flex items-center gap-1.5"
         >
           {/* ME Monogram Badge */}
           <div 
-            className="relative flex items-center justify-center w-5 h-5 rounded-full shrink-0"
+            className="relative flex items-center justify-center w-[18px] h-[18px] rounded-full shrink-0 border border-primary/50"
             style={{
-              background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(280 80% 50%))',
-              boxShadow: '0 0 8px hsla(var(--primary) / 0.5), 0 0 16px hsla(280, 80%, 50%, 0.3)',
+              background: 'hsla(var(--primary) / 0.15)',
+              boxShadow: '0 0 6px hsla(var(--primary) / 0.4)',
             }}
           >
-            <span className="text-[8px] font-display font-bold tracking-tight text-white/90">
+            <span className="text-[7px] font-display font-bold tracking-tight text-primary">
               ME
             </span>
           </div>
-          <span className="font-display text-xl font-bold tracking-widest uppercase whitespace-nowrap">
+          <span className="font-display text-base font-bold tracking-widest uppercase whitespace-nowrap">
             <span className="text-foreground">MUSIC </span>
             <span className="text-primary">EXCLUSIVE</span>
-            <span className="text-muted-foreground text-[8px] align-super ml-0.5">™</span>
+            <span className="text-muted-foreground text-[6px] align-super ml-0.5">™</span>
           </span>
         </button>
 
