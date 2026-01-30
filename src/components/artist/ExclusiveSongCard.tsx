@@ -69,55 +69,21 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // 1. Delete associated likes first (foreign key constraint)
-      const { error: likesError } = await supabase
-        .from("track_likes")
-        .delete()
-        .eq("track_id", song.id);
-
-      if (likesError) {
-        console.warn("Error deleting likes (may not exist):", likesError);
-        // Continue anyway - likes might not exist
-      }
-
-      // 2. Delete storage files from respective buckets
-      const artworkInfo = getStorageInfoFromUrl(song.artwork_url);
-      const audioInfo = getStorageInfoFromUrl(song.full_audio_url);
-
-      if (artworkInfo) {
-        const { error: artworkError } = await supabase.storage
-          .from(artworkInfo.bucket)
-          .remove([artworkInfo.path]);
-
-        if (artworkError) {
-          console.warn("Error deleting artwork:", artworkError);
-        }
-      }
-
-      if (audioInfo) {
-        const { error: audioError } = await supabase.storage
-          .from(audioInfo.bucket)
-          .remove([audioInfo.path]);
-
-        if (audioError) {
-          console.warn("Error deleting audio:", audioError);
-        }
-      }
-
-      // 3. Hard delete the track record
-      const { error: deleteError } = await supabase
+      // Soft delete: Update status to 'disabled' instead of hard delete
+      // This hides the track from the artist's page but preserves it for ledger/audit purposes
+      const { error: updateError } = await supabase
         .from("tracks")
-        .delete()
+        .update({ status: "disabled" })
         .eq("id", song.id);
 
-      if (deleteError) throw deleteError;
+      if (updateError) throw updateError;
 
-      toast.success("Song permanently deleted");
+      toast.success("Song removed from your profile");
       setIsDeleteOpen(false);
       onDeleted();
     } catch (error) {
-      console.error("Error deleting song:", error);
-      toast.error(`Failed to delete song: ${(error as Error).message || "Unknown error"}`);
+      console.error("Error disabling song:", error);
+      toast.error(`Failed to remove song: ${(error as Error).message || "Unknown error"}`);
     } finally {
       setIsDeleting(false);
     }
@@ -232,11 +198,11 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
         <AlertDialogContent className="bg-card border-border max-w-sm">
           <AlertDialogHeader>
             <AlertDialogTitle className="font-display text-destructive">
-              Delete this song permanently?
+              Remove this song?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-muted-foreground">
-              This will remove it from Discovery and your Artist Profile.{" "}
-              <span className="text-foreground font-medium">This cannot be undone.</span>
+              This will hide the song from Discovery and your Artist Profile.{" "}
+              <span className="text-foreground font-medium">Your earnings history will be preserved.</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -251,12 +217,12 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
               {isDeleting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Deleting...
+                  Removing...
                 </>
               ) : (
                 <>
                   <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Permanently
+                  Remove Song
                 </>
               )}
             </AlertDialogAction>
