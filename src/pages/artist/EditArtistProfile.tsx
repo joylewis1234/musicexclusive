@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { GlowCard } from "@/components/ui/GlowCard";
 import {
   Select,
   SelectContent,
@@ -15,15 +14,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload";
-import { AvatarUploadDiagnostics } from "@/components/artist/AvatarUploadDiagnostics";
-import {
-  BrowserDiagnosticsPanel,
-  type DiagnosticsState,
-} from "@/components/debug/BrowserDiagnosticsPanel";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import {
-  ArrowLeft,
-  Home,
+  ChevronLeft,
   Camera,
   Instagram,
   Youtube,
@@ -33,6 +26,7 @@ import {
   RefreshCw,
   AlertCircle,
   Eye,
+  Crown,
 } from "lucide-react";
 
 const GENRES = [
@@ -84,15 +78,6 @@ const EditArtistProfile = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [artistProfileId, setArtistProfileId] = useState<string | null>(null);
 
-  // Diagnostics state
-  const [diagnostics, setDiagnostics] = useState<DiagnosticsState>({
-    hasSession: null,
-    userId: null,
-    artistRowFound: null,
-    tracksFetchedCount: null,
-    lastError: null,
-  });
-
   // Form fields
   const [artistName, setArtistName] = useState("");
   const [bio, setBio] = useState("");
@@ -107,7 +92,6 @@ const EditArtistProfile = () => {
   const avatarUploader = useAvatarUpload({ userId });
 
   const fetchProfile = useCallback(async () => {
-    // Abort any previous request
     if (abortRef.current) {
       abortRef.current.abort();
     }
@@ -116,18 +100,11 @@ const EditArtistProfile = () => {
 
     setIsLoading(true);
     setLoadError(null);
-    setDiagnostics((prev) => ({ ...prev, lastError: null }));
 
     try {
-      // Step 1: Get authenticated user (with 10s timeout)
       const authResult = await withTimeout(getAuthedUserOrFail(signal), 10000);
 
       if (authResult.ok === false) {
-        setDiagnostics((prev) => ({
-          ...prev,
-          hasSession: false,
-          lastError: authResult.error,
-        }));
         setLoadError(authResult.error);
         toast.error(authResult.error);
         return;
@@ -135,15 +112,9 @@ const EditArtistProfile = () => {
 
       const { user } = authResult;
       setUserId(user.id);
-      setDiagnostics((prev) => ({
-        ...prev,
-        hasSession: true,
-        userId: user.id,
-      }));
 
       if (signal.aborted) return;
 
-      // Step 2: Fetch artist profile (Supabase queries are already Promises via .then())
       const { data: profile, error: profileError } = await supabase
         .from("artist_profiles")
         .select("*")
@@ -154,18 +125,12 @@ const EditArtistProfile = () => {
 
       if (profileError) {
         console.error("[EditProfile] Error fetching profile:", profileError);
-        setDiagnostics((prev) => ({
-          ...prev,
-          artistRowFound: false,
-          lastError: profileError.message,
-        }));
         setLoadError(profileError.message);
         toast.error("Could not load profile: " + profileError.message);
         return;
       }
 
       if (profile) {
-        setDiagnostics((prev) => ({ ...prev, artistRowFound: true }));
         setHasExistingProfile(true);
         setArtistProfileId(profile.id);
         setArtistName(profile.artist_name || "");
@@ -177,9 +142,6 @@ const EditArtistProfile = () => {
         setYoutubeUrl(profile.youtube_url || "");
         setTwitterUrl(profile.twitter_url || "");
       } else {
-        // No profile exists - try to get info from application and create profile
-        setDiagnostics((prev) => ({ ...prev, artistRowFound: false }));
-
         const { data: app } = await supabase
           .from("artist_applications")
           .select("artist_name, genres")
@@ -191,7 +153,6 @@ const EditArtistProfile = () => {
         const defaultName = app?.artist_name || "";
         const defaultGenre = app?.genres || "";
 
-        // Create the profile via upsert
         const { data: newProfile, error: upsertError } = await supabase
           .from("artist_profiles")
           .upsert(
@@ -208,16 +169,11 @@ const EditArtistProfile = () => {
 
         if (upsertError) {
           console.error("[EditProfile] Upsert error:", upsertError);
-          setDiagnostics((prev) => ({
-            ...prev,
-            lastError: upsertError.message,
-          }));
           setLoadError(upsertError.message);
           toast.error("Could not create profile: " + upsertError.message);
           return;
         }
 
-        setDiagnostics((prev) => ({ ...prev, artistRowFound: true }));
         setHasExistingProfile(true);
         if (newProfile?.id) setArtistProfileId(newProfile.id);
         setArtistName(newProfile?.artist_name || defaultName);
@@ -227,7 +183,6 @@ const EditArtistProfile = () => {
       if (err?.name === "AbortError" || signal.aborted) return;
       console.error("[EditProfile] Fetch error:", err);
       const msg = err?.message || "Could not load profile data";
-      setDiagnostics((prev) => ({ ...prev, lastError: msg }));
       setLoadError(msg);
       toast.error(msg);
     } finally {
@@ -239,31 +194,25 @@ const EditArtistProfile = () => {
     fetchProfile();
 
     return () => {
-      // Cleanup: abort any pending requests
       if (abortRef.current) {
         abortRef.current.abort();
       }
     };
   }, [fetchProfile]);
 
-  // Process image on file select (compress + preview)
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Process image first (compress, resize)
     const processResult = await avatarUploader.processImage(file);
     if (!processResult.ok) {
       toast.error(
-        (processResult as { ok: false; error: { message: string } }).error
-          .message
+        (processResult as { ok: false; error: { message: string } }).error.message
       );
     }
-    // Reset input so the same file can be re-selected if needed
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // Upload processed image
   const handleUploadProcessed = async () => {
     const result = await avatarUploader.uploadAvatar();
     if (result.ok) {
@@ -276,7 +225,6 @@ const EditArtistProfile = () => {
     }
   };
 
-  // Cancel processed image (discard preview)
   const handleCancelProcessed = () => {
     avatarUploader.clearProcessedImage();
   };
@@ -329,31 +277,28 @@ const EditArtistProfile = () => {
     }
   };
 
-  // Error state with retry
+  // Error state
   if (loadError && !isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
-        <GlowCard className="p-8 max-w-sm w-full text-center">
+        <div className="p-8 max-w-sm w-full text-center rounded-2xl bg-card/50 border border-border/30">
           <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
           <h2 className="font-display text-lg font-semibold mb-2">
-            {loadError === "Please sign in again"
-              ? "Session Expired"
-              : "Load Error"}
+            {loadError === "Please sign in again" ? "Session Expired" : "Load Error"}
           </h2>
           <p className="text-muted-foreground text-sm mb-6">{loadError}</p>
 
           {loadError === "Please sign in again" ? (
-            <Button onClick={() => navigate("/artist/login")} className="w-full">
+            <Button onClick={() => navigate("/artist/login")} className="w-full rounded-full">
               Go to Login
             </Button>
           ) : (
-            <Button onClick={fetchProfile} className="w-full gap-2">
+            <Button onClick={fetchProfile} className="w-full gap-2 rounded-full">
               <RefreshCw className="w-4 h-4" />
               Retry
             </Button>
           )}
-        </GlowCard>
-        <BrowserDiagnosticsPanel state={diagnostics} />
+        </div>
       </div>
     );
   }
@@ -361,173 +306,178 @@ const EditArtistProfile = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <BrowserDiagnosticsPanel state={diagnostics} />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(280, 80%, 70%)' }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-16">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
-        <div className="container max-w-lg md:max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+    <div className="min-h-screen bg-background pb-24">
+      {/* Floating Header */}
+      <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
+        <div className="w-full max-w-lg mx-auto flex items-center justify-between">
           <button
-            onClick={() => navigate(-1)}
-            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Go back"
+            onClick={() => navigate("/artist/dashboard")}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-foreground/80 hover:text-foreground hover:bg-background/90 transition-all"
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">Dashboard</span>
           </button>
 
-          <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
-            Edit Profile
-          </span>
-
-          <button
-            onClick={() => navigate("/")}
-            className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-            aria-label="Go home"
+          {/* Title badge */}
+          <div 
+            className="relative px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-border/50"
           >
-            <Home className="w-5 h-5" />
-          </button>
+            <span className="text-sm font-display uppercase tracking-wider text-foreground/80">
+              Edit Profile
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-20 pb-12 px-4">
-        <div className="container max-w-lg mx-auto space-y-6">
-          {/* Profile Image Section */}
-          <GlowCard className="p-6">
-            <div className="text-center">
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
-                onChange={handleImageSelect}
-                className="hidden"
-              />
-
-              {/* Avatar Preview - show processed image if available */}
-              <div className="relative inline-block mb-4">
-                <div className="w-28 h-28 rounded-full overflow-hidden border-4 border-primary/30 bg-muted/20">
-                  {avatarUploader.processedImage?.previewUrl ? (
-                    <img
-                      src={avatarUploader.processedImage.previewUrl}
-                      alt="Processed preview"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : avatarUrl ? (
-                    <img
-                      src={avatarUrl}
-                      alt="Artist avatar"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <User className="w-12 h-12 text-muted-foreground" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Processing/Upload indicator */}
-                {avatarUploader.isProcessing && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  </div>
-                )}
-
-                {/* Upload Button Overlay - only show when not processing */}
-                {!avatarUploader.processedImage &&
-                  !avatarUploader.isProcessing && (
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={avatarUploader.isUploading}
-                      className="absolute bottom-0 right-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center hover:bg-primary/90 transition-colors disabled:opacity-50"
-                    >
-                      {avatarUploader.isUploading ? (
-                        <Loader2 className="w-5 h-5 animate-spin text-primary-foreground" />
-                      ) : (
-                        <Camera className="w-5 h-5 text-primary-foreground" />
-                      )}
-                    </button>
-                  )}
-              </div>
-
-              {/* Show compression info when processed image available */}
-              {avatarUploader.processedImage &&
-                avatarUploader.lastMeta?.compression && (
-                  <div className="mb-4 text-xs text-muted-foreground">
-                    <p>
-                      Compressed:{" "}
-                      {avatarUploader.formatFileSize(
-                        avatarUploader.lastMeta.compression.originalSize
-                      )}{" "}
-                      →{" "}
-                      {avatarUploader.formatFileSize(
-                        avatarUploader.lastMeta.compression.compressedSize
-                      )}
-                      <span className="text-primary ml-1">
-                        ({avatarUploader.lastMeta.compression.ratio} saved)
-                      </span>
-                    </p>
-                  </div>
-                )}
-
-              {/* Confirm/Cancel buttons for processed image */}
-              {avatarUploader.processedImage && (
-                <div className="flex gap-3 justify-center mb-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleCancelProcessed}
-                    disabled={avatarUploader.isUploading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={handleUploadProcessed}
-                    disabled={avatarUploader.isUploading}
-                  >
-                    {avatarUploader.isUploading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                        Uploading...
-                      </>
-                    ) : (
-                      "Upload Photo"
-                    )}
-                  </Button>
-                </div>
-              )}
-
-              {!avatarUploader.processedImage && (
-                <p className="text-muted-foreground text-xs">
-                  Tap to select your artist photo (auto-compressed to 1MB)
-                </p>
-              )}
-            </div>
-          </GlowCard>
-
-          {/* Dev-only diagnostics */}
-          <AvatarUploadDiagnostics
-            userId={userId}
-            meta={avatarUploader.lastMeta}
-            error={avatarUploader.lastError}
+      {/* Hero Section */}
+      <div className="relative pt-24 pb-6 px-5">
+        <div className="w-full max-w-lg mx-auto text-center">
+          {/* Avatar with glow */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+            onChange={handleImageSelect}
+            className="hidden"
           />
 
-          {/* Basic Info Section */}
-          <GlowCard className="p-5">
-            <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-4 text-center">
-              Basic Info
-            </h3>
+          <div className="relative inline-block mb-4">
+            <div className="relative w-28 h-28">
+              <div 
+                className="absolute -inset-1 rounded-full blur-sm"
+                style={{ 
+                  background: 'linear-gradient(135deg, hsl(280, 80%, 50%), hsl(45, 90%, 55%))' 
+                }}
+              />
+              <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-background bg-muted/20">
+                {avatarUploader.processedImage?.previewUrl ? (
+                  <img
+                    src={avatarUploader.processedImage.previewUrl}
+                    alt="Processed preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : avatarUrl ? (
+                  <img
+                    src={avatarUrl}
+                    alt="Artist avatar"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <User className="w-12 h-12 text-muted-foreground" />
+                  </div>
+                )}
+              </div>
 
-            <div className="space-y-4">
+              {avatarUploader.isProcessing && (
+                <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                  <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(280, 80%, 70%)' }} />
+                </div>
+              )}
+
+              {!avatarUploader.processedImage && !avatarUploader.isProcessing && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarUploader.isUploading}
+                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+                  style={{
+                    background: 'hsl(280, 80%, 50%)',
+                    boxShadow: '0 0 12px hsla(280, 80%, 50%, 0.5)',
+                  }}
+                >
+                  {avatarUploader.isUploading ? (
+                    <Loader2 className="w-5 h-5 animate-spin text-white" />
+                  ) : (
+                    <Camera className="w-5 h-5 text-white" />
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Compression info */}
+          {avatarUploader.processedImage && avatarUploader.lastMeta?.compression && (
+            <div className="mb-4 text-xs text-muted-foreground">
+              <p>
+                Compressed:{" "}
+                {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.originalSize)}
+                {" → "}
+                {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.compressedSize)}
+                <span className="ml-1" style={{ color: 'hsl(280, 80%, 70%)' }}>
+                  ({avatarUploader.lastMeta.compression.ratio} saved)
+                </span>
+              </p>
+            </div>
+          )}
+
+          {/* Confirm/Cancel for processed image */}
+          {avatarUploader.processedImage && (
+            <div className="flex gap-3 justify-center mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancelProcessed}
+                disabled={avatarUploader.isUploading}
+                className="rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleUploadProcessed}
+                disabled={avatarUploader.isUploading}
+                className="rounded-full"
+                style={{ background: 'hsl(280, 80%, 50%)' }}
+              >
+                {avatarUploader.isUploading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Uploading...
+                  </>
+                ) : (
+                  "Upload Photo"
+                )}
+              </Button>
+            </div>
+          )}
+
+          {!avatarUploader.processedImage && (
+            <p className="text-muted-foreground text-xs">
+              Tap to select your artist photo
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <main className="px-5 pb-12">
+        <div className="w-full max-w-lg mx-auto space-y-6">
+          
+          {/* Basic Info Section */}
+          <section className="animate-fade-in">
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="font-display text-sm uppercase tracking-widest" style={{ color: 'hsl(280, 80%, 70%)' }}>
+                Basic Info
+              </h3>
+            </div>
+
+            <div 
+              className="p-5 rounded-2xl space-y-4"
+              style={{
+                background: 'hsla(0, 0%, 100%, 0.02)',
+                border: '1px solid hsla(280, 80%, 50%, 0.15)',
+              }}
+            >
               <div className="space-y-2">
                 <Label htmlFor="artist-name">Artist Name *</Label>
                 <Input
@@ -535,14 +485,14 @@ const EditArtistProfile = () => {
                   value={artistName}
                   onChange={(e) => setArtistName(e.target.value)}
                   placeholder="Your artist name"
-                  className="h-11"
+                  className="h-11 rounded-xl"
                 />
               </div>
 
               <div className="space-y-2">
                 <Label>Primary Genre</Label>
                 <Select value={genre} onValueChange={setGenre}>
-                  <SelectTrigger className="h-11 bg-background">
+                  <SelectTrigger className="h-11 bg-background rounded-xl">
                     <SelectValue placeholder="Select genre" />
                   </SelectTrigger>
                   <SelectContent className="bg-card border-border z-50">
@@ -562,7 +512,7 @@ const EditArtistProfile = () => {
                   value={bio}
                   onChange={(e) => setBio(e.target.value.slice(0, 500))}
                   placeholder="Tell fans about yourself and your music..."
-                  className="min-h-[120px] resize-none"
+                  className="min-h-[120px] resize-none rounded-xl"
                   maxLength={500}
                 />
                 <p className="text-xs text-muted-foreground text-right">
@@ -570,15 +520,23 @@ const EditArtistProfile = () => {
                 </p>
               </div>
             </div>
-          </GlowCard>
+          </section>
 
           {/* Social Links Section */}
-          <GlowCard className="p-5">
-            <h3 className="font-display text-xs uppercase tracking-widest text-primary mb-4 text-center">
-              Social Links
-            </h3>
+          <section className="animate-fade-in" style={{ animationDelay: '50ms' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="font-display text-sm uppercase tracking-widest" style={{ color: 'hsl(280, 80%, 70%)' }}>
+                Social Links
+              </h3>
+            </div>
 
-            <div className="space-y-4">
+            <div 
+              className="p-5 rounded-2xl space-y-4"
+              style={{
+                background: 'hsla(0, 0%, 100%, 0.02)',
+                border: '1px solid hsla(280, 80%, 50%, 0.15)',
+              }}
+            >
               <div className="space-y-2">
                 <Label htmlFor="instagram" className="flex items-center gap-2">
                   <Instagram className="w-4 h-4" />
@@ -589,7 +547,7 @@ const EditArtistProfile = () => {
                   value={instagramUrl}
                   onChange={(e) => setInstagramUrl(e.target.value)}
                   placeholder="https://instagram.com/yourhandle"
-                  className="h-11"
+                  className="h-11 rounded-xl"
                 />
               </div>
 
@@ -603,7 +561,7 @@ const EditArtistProfile = () => {
                   value={tiktokUrl}
                   onChange={(e) => setTiktokUrl(e.target.value)}
                   placeholder="https://tiktok.com/@yourhandle"
-                  className="h-11"
+                  className="h-11 rounded-xl"
                 />
               </div>
 
@@ -617,7 +575,7 @@ const EditArtistProfile = () => {
                   value={youtubeUrl}
                   onChange={(e) => setYoutubeUrl(e.target.value)}
                   placeholder="https://youtube.com/@yourchannel"
-                  className="h-11"
+                  className="h-11 rounded-xl"
                 />
               </div>
 
@@ -631,18 +589,19 @@ const EditArtistProfile = () => {
                   value={twitterUrl}
                   onChange={(e) => setTwitterUrl(e.target.value)}
                   placeholder="https://x.com/yourhandle"
-                  className="h-11"
+                  className="h-11 rounded-xl"
                 />
               </div>
             </div>
-          </GlowCard>
+          </section>
 
-          {/* View My Profile (Fan View) Button */}
+          {/* View My Profile Button */}
           {artistProfileId && (
             <Button
               variant="outline"
               size="lg"
-              className="w-full h-12 gap-2"
+              className="w-full h-12 gap-2 rounded-full animate-fade-in"
+              style={{ animationDelay: '100ms' }}
               onClick={() => navigate(`/artist/view/${artistProfileId}`)}
             >
               <Eye className="w-5 h-5" />
@@ -653,7 +612,12 @@ const EditArtistProfile = () => {
           {/* Save Button */}
           <Button
             size="lg"
-            className="w-full h-14"
+            className="w-full h-14 rounded-full animate-fade-in"
+            style={{ 
+              animationDelay: '150ms',
+              background: 'hsl(280, 80%, 50%)',
+              boxShadow: '0 0 20px hsla(280, 80%, 50%, 0.4)',
+            }}
             onClick={handleSave}
             disabled={isSaving}
           >
@@ -671,9 +635,6 @@ const EditArtistProfile = () => {
           </Button>
         </div>
       </main>
-
-      {/* Browser diagnostics panel */}
-      <BrowserDiagnosticsPanel state={diagnostics} />
     </div>
   );
 };

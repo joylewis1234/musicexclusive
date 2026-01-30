@@ -1,8 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { GlowCard } from "@/components/ui/GlowCard";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,21 +10,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { format, startOfWeek, endOfWeek, subWeeks } from "date-fns";
+import { format, startOfWeek } from "date-fns";
 import {
   DollarSign,
   Clock,
   CheckCircle2,
   TrendingUp,
   Music,
-  Calendar,
-  ChevronRight,
+  ChevronLeft,
   Loader2,
   XCircle,
-  Home,
   LogOut,
-  Mic2,
   Eye,
+  Crown,
 } from "lucide-react";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 
@@ -93,7 +89,6 @@ const ArtistEarnings = () => {
       const { user } = authResult;
       setUserId(user.id);
       
-      // Get artist profile
       const { data: profile } = await supabase
         .from("artist_profiles")
         .select("id")
@@ -107,7 +102,6 @@ const ArtistEarnings = () => {
       
       setArtistId(profile.id);
       
-      // Fetch payout batches
       const { data: batchData } = await supabase
         .from("payout_batches")
         .select("*")
@@ -116,7 +110,6 @@ const ArtistEarnings = () => {
         
       setBatches(batchData || []);
       
-      // Calculate totals
       const pending = (batchData || [])
         .filter((b) => b.status === "pending" || b.status === "processing")
         .reduce((sum, b) => sum + Number(b.total_usd), 0);
@@ -125,7 +118,6 @@ const ArtistEarnings = () => {
         .reduce((sum, b) => sum + Number(b.total_usd), 0);
       const lifetime = pending + paid;
       
-      // Get last payout date
       const lastPaid = (batchData || []).find((b) => b.status === "paid" && b.paid_at);
       
       setTotals({
@@ -136,14 +128,12 @@ const ArtistEarnings = () => {
       });
       setLastPayoutDate(lastPaid?.paid_at || null);
       
-      // Fetch track earnings from ledger
       const { data: ledgerData } = await supabase
         .from("credit_ledger")
         .select("reference, credits_delta, usd_delta")
         .eq("user_email", user.email || "")
         .eq("type", "ARTIST_EARNING");
         
-      // Group by track
       const trackMap = new Map<string, { streams: number; earned: number }>();
       (ledgerData || []).forEach((entry) => {
         const trackId = entry.reference?.replace("track:", "") || "";
@@ -156,7 +146,6 @@ const ArtistEarnings = () => {
         }
       });
       
-      // Fetch track details
       const trackIds = Array.from(trackMap.keys());
       if (trackIds.length > 0) {
         const { data: tracks } = await supabase
@@ -194,7 +183,6 @@ const ArtistEarnings = () => {
     setIsLoadingDetails(true);
     
     try {
-      // Fetch ledger entries for this batch
       const { data } = await supabase
         .from("credit_ledger")
         .select("*")
@@ -249,7 +237,6 @@ const ArtistEarnings = () => {
     }
   };
 
-  // Calculate next payout date (next Monday)
   const getNextPayoutDate = () => {
     const now = new Date();
     const nextMonday = startOfWeek(now, { weekStartsOn: 1 });
@@ -262,19 +249,17 @@ const ArtistEarnings = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background pb-24">
-        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/20">
-          <div className="container max-w-lg md:max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-primary" />
-              <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
-                Earnings
-              </span>
+        <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
+          <div className="w-full max-w-lg mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50">
+              <ChevronLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Dashboard</span>
             </div>
           </div>
         </header>
         
-        <main className="pt-20 pb-12 px-4">
-          <div className="container max-w-lg md:max-w-3xl mx-auto space-y-4">
+        <main className="pt-24 pb-12 px-5">
+          <div className="w-full max-w-lg mx-auto space-y-4">
             <div className="grid grid-cols-3 gap-3">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-24 rounded-2xl" />
@@ -290,91 +275,155 @@ const ArtistEarnings = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/20">
-        <div className="container max-w-lg md:max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-primary" />
-            <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
-              Earnings
-            </span>
-          </div>
+      {/* Floating Header */}
+      <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
+        <div className="w-full max-w-lg mx-auto flex items-center justify-between">
+          <button
+            onClick={() => navigate("/artist/dashboard")}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-foreground/80 hover:text-foreground hover:bg-background/90 transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">Dashboard</span>
+          </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/")}
-              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200"
-              aria-label="Go home"
-            >
-              <Home className="w-5 h-5" />
-            </button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="text-muted-foreground hover:text-foreground gap-1.5"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-foreground gap-1.5 px-3"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </Button>
         </div>
       </header>
 
+      {/* Hero Section */}
+      <div className="relative pt-24 pb-6 px-5">
+        <div className="w-full max-w-lg mx-auto">
+          <h1
+            className="font-display text-3xl font-bold text-foreground tracking-tight mb-2"
+            style={{ textShadow: "0 2px 20px rgba(0, 0, 0, 0.5)" }}
+          >
+            Earnings
+          </h1>
+
+          {/* Earnings Badge */}
+          <div className="relative inline-flex items-center gap-2">
+            <div 
+              className="relative px-3 py-1.5 rounded-full"
+              style={{
+                background: 'hsla(280, 80%, 50%, 0.2)',
+                boxShadow: '0 0 12px hsla(280, 80%, 50%, 0.3), inset 0 0 8px hsla(280, 80%, 50%, 0.1)'
+              }}
+            >
+              <Crown 
+                className="absolute -top-2 -left-1 w-4 h-4 rotate-[-15deg]"
+                style={{
+                  color: 'hsl(45, 90%, 55%)',
+                  filter: 'drop-shadow(0 0 4px hsla(45, 90%, 55%, 0.8)) drop-shadow(0 0 8px hsla(45, 90%, 50%, 0.4))'
+                }}
+                fill="hsl(45, 90%, 55%)"
+              />
+              <span 
+                className="text-xs font-display uppercase tracking-widest pl-2"
+                style={{ color: 'hsl(280, 80%, 70%)' }}
+              >
+                Revenue Dashboard
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Main Content */}
-      <main className="pt-20 pb-12 px-4">
-        <div className="container max-w-lg md:max-w-3xl mx-auto space-y-6">
+      <main className="px-5 pb-12">
+        <div className="w-full max-w-lg mx-auto space-y-6">
           
           {/* Earnings Summary Cards */}
           <div className="grid grid-cols-3 gap-3 animate-fade-in">
-            <GlowCard variant="flat" glowColor="primary" className="p-4">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mb-2">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                </div>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                  Lifetime
-                </span>
-                <p className="text-lg font-display font-bold text-foreground">
-                  ${totals.lifetime.toFixed(2)}
-                </p>
+            {/* Lifetime */}
+            <div 
+              className="p-4 rounded-2xl text-center"
+              style={{
+                background: 'hsla(0, 0%, 100%, 0.02)',
+                border: '1px solid hsla(280, 80%, 50%, 0.2)',
+              }}
+            >
+              <div 
+                className="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center"
+                style={{ background: 'hsla(280, 80%, 50%, 0.15)' }}
+              >
+                <TrendingUp className="w-5 h-5" style={{ color: 'hsl(280, 80%, 70%)' }} />
               </div>
-            </GlowCard>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">
+                Lifetime
+              </span>
+              <p className="text-lg font-display font-bold text-foreground">
+                ${totals.lifetime.toFixed(2)}
+              </p>
+            </div>
 
-            <GlowCard variant="flat" glowColor="subtle" className="p-4">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center mb-2">
-                  <Clock className="w-5 h-5 text-amber-400" />
-                </div>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                  Pending
-                </span>
-                <p className="text-lg font-display font-bold text-foreground">
-                  ${totals.pending.toFixed(2)}
-                </p>
+            {/* Pending */}
+            <div 
+              className="p-4 rounded-2xl text-center"
+              style={{
+                background: 'hsla(0, 0%, 100%, 0.02)',
+                border: '1px solid hsla(45, 90%, 50%, 0.2)',
+              }}
+            >
+              <div 
+                className="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center"
+                style={{ background: 'hsla(45, 90%, 50%, 0.15)' }}
+              >
+                <Clock className="w-5 h-5 text-amber-400" />
               </div>
-            </GlowCard>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">
+                Pending
+              </span>
+              <p className="text-lg font-display font-bold text-foreground">
+                ${totals.pending.toFixed(2)}
+              </p>
+            </div>
 
-            <GlowCard variant="flat" glowColor="subtle" className="p-4">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mb-2">
-                  <CheckCircle2 className="w-5 h-5 text-green-400" />
-                </div>
-                <span className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                  Paid
-                </span>
-                <p className="text-lg font-display font-bold text-foreground">
-                  ${totals.paid.toFixed(2)}
-                </p>
+            {/* Paid */}
+            <div 
+              className="p-4 rounded-2xl text-center"
+              style={{
+                background: 'hsla(0, 0%, 100%, 0.02)',
+                border: '1px solid hsla(142, 70%, 45%, 0.2)',
+              }}
+            >
+              <div 
+                className="w-10 h-10 rounded-xl mx-auto mb-2 flex items-center justify-center"
+                style={{ background: 'hsla(142, 70%, 45%, 0.15)' }}
+              >
+                <CheckCircle2 className="w-5 h-5 text-green-400" />
               </div>
-            </GlowCard>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">
+                Paid
+              </span>
+              <p className="text-lg font-display font-bold text-foreground">
+                ${totals.paid.toFixed(2)}
+              </p>
+            </div>
           </div>
 
           {/* Total Payouts Card */}
-          <GlowCard variant="elevated" glowColor="gradient" className="p-5 animate-fade-in" style={{ animationDelay: '50ms' }}>
+          <div 
+            className="p-5 rounded-2xl animate-fade-in"
+            style={{ 
+              animationDelay: '50ms',
+              background: 'hsla(0, 0%, 100%, 0.02)',
+              border: '1px solid hsla(280, 80%, 50%, 0.15)',
+            }}
+          >
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-primary" />
+              <div 
+                className="w-10 h-10 rounded-xl flex items-center justify-center"
+                style={{ background: 'hsla(280, 80%, 50%, 0.15)' }}
+              >
+                <DollarSign className="w-5 h-5" style={{ color: 'hsl(280, 80%, 70%)' }} />
               </div>
               <div>
                 <h3 className="font-display font-semibold text-foreground">Total Payouts</h3>
@@ -394,13 +443,42 @@ const ArtistEarnings = () => {
                 <p className="text-sm font-medium text-foreground">{getNextPayoutDate()}</p>
               </div>
             </div>
-          </GlowCard>
+          </div>
 
           {/* Weekly Transparency Report */}
           <section className="space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <SectionHeader title="Weekly Transparency Report" align="left" />
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-lg font-semibold text-foreground">
+                Weekly Report
+              </h2>
+              <div 
+                className="relative px-2.5 py-1 rounded-full"
+                style={{ background: 'hsla(280, 80%, 50%, 0.12)' }}
+              >
+                <Crown 
+                  className="absolute -top-1.5 -left-0.5 w-3 h-3 rotate-[-12deg]"
+                  style={{
+                    color: 'hsl(45, 90%, 55%)',
+                    filter: 'drop-shadow(0 0 3px hsla(45, 90%, 55%, 0.8))'
+                  }}
+                  fill="hsl(45, 90%, 55%)"
+                />
+                <span 
+                  className="text-[10px] font-display uppercase tracking-wider pl-1"
+                  style={{ color: 'hsl(280, 80%, 70%)' }}
+                >
+                  Transparency
+                </span>
+              </div>
+            </div>
             
-            <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <div 
+              className="p-4 rounded-2xl"
+              style={{
+                background: 'hsla(0, 0%, 100%, 0.02)',
+                border: '1px solid hsla(280, 80%, 50%, 0.15)',
+              }}
+            >
               {batches.length === 0 ? (
                 <p className="text-muted-foreground text-sm text-center py-4">
                   No earnings yet. Start uploading tracks to earn!
@@ -410,7 +488,7 @@ const ArtistEarnings = () => {
                   {batches.map((batch) => (
                     <div
                       key={batch.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors duration-200"
+                      className="flex items-center justify-between p-3 rounded-xl bg-muted/20 hover:bg-muted/30 transition-colors duration-200"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">
@@ -428,7 +506,7 @@ const ArtistEarnings = () => {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="rounded-xl w-8 h-8 p-0"
+                          className="rounded-full w-8 h-8 p-0"
                           onClick={() => handleViewReport(batch)}
                         >
                           <Eye className="w-4 h-4" />
@@ -438,14 +516,24 @@ const ArtistEarnings = () => {
                   ))}
                 </div>
               )}
-            </GlowCard>
+            </div>
           </section>
 
           {/* Track Earnings Breakdown */}
           <section className="space-y-4 animate-fade-in" style={{ animationDelay: '150ms' }}>
-            <SectionHeader title="Track Earnings" align="left" />
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-lg font-semibold text-foreground">
+                Track Earnings
+              </h2>
+            </div>
             
-            <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <div 
+              className="p-4 rounded-2xl"
+              style={{
+                background: 'hsla(0, 0%, 100%, 0.02)',
+                border: '1px solid hsla(280, 80%, 50%, 0.15)',
+              }}
+            >
               {trackEarnings.length === 0 ? (
                 <p className="text-muted-foreground text-sm text-center py-4">
                   No track earnings yet.
@@ -455,7 +543,7 @@ const ArtistEarnings = () => {
                   {trackEarnings.map((track) => (
                     <div
                       key={track.track_id}
-                      className="flex items-center gap-3 p-3 rounded-xl bg-muted/30"
+                      className="flex items-center gap-3 p-3 rounded-xl bg-muted/20"
                     >
                       <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                         {track.artwork_url ? (
@@ -477,7 +565,7 @@ const ArtistEarnings = () => {
                         </p>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="text-sm font-semibold text-green-400">
+                        <p className="text-sm font-display font-bold" style={{ color: 'hsl(280, 80%, 70%)' }}>
                           ${track.total_earned.toFixed(2)}
                         </p>
                       </div>
@@ -485,17 +573,27 @@ const ArtistEarnings = () => {
                   ))}
                 </div>
               )}
-            </GlowCard>
+            </div>
           </section>
 
           {/* Payout History */}
           <section className="space-y-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <SectionHeader title="Payout History" align="left" />
+            <div className="flex items-center gap-2">
+              <h2 className="font-display text-lg font-semibold text-foreground">
+                Payout History
+              </h2>
+            </div>
             
-            <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <div 
+              className="p-4 rounded-2xl"
+              style={{
+                background: 'hsla(0, 0%, 100%, 0.02)',
+                border: '1px solid hsla(280, 80%, 50%, 0.15)',
+              }}
+            >
               {batches.filter((b) => b.status === "paid").length === 0 ? (
                 <p className="text-muted-foreground text-sm text-center py-4">
-                  No payouts yet.
+                  No completed payouts yet.
                 </p>
               ) : (
                 <div className="space-y-2">
@@ -504,121 +602,140 @@ const ArtistEarnings = () => {
                     .map((batch) => (
                       <div
                         key={batch.id}
-                        className="flex items-center justify-between p-3 rounded-xl bg-muted/30"
+                        className="flex items-center justify-between p-3 rounded-xl bg-muted/20"
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                            <CheckCircle2 className="w-5 h-5 text-green-400" />
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-foreground">
-                              ${Number(batch.total_usd).toFixed(2)}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {batch.paid_at
-                                ? format(new Date(batch.paid_at), "MMM d, yyyy")
-                                : "Date unknown"}
-                            </p>
-                          </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">
+                            {batch.paid_at ? format(new Date(batch.paid_at), "MMM d, yyyy") : "N/A"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Connected payout method
+                          </p>
                         </div>
-                        <Badge className="bg-green-500/20 text-green-400 border-green-500/40">
-                          Paid
-                        </Badge>
+                        <div className="flex items-center gap-3 flex-shrink-0">
+                          <p className="text-sm font-display font-bold" style={{ color: 'hsl(142, 70%, 50%)' }}>
+                            ${Number(batch.total_usd).toFixed(2)}
+                          </p>
+                          {getStatusBadge(batch.status)}
+                        </div>
                       </div>
                     ))}
                 </div>
               )}
-            </GlowCard>
+            </div>
           </section>
         </div>
       </main>
 
-      {/* Weekly Report Modal */}
+      {/* Weekly Report Detail Modal */}
       <Dialog open={!!selectedBatch} onOpenChange={() => setSelectedBatch(null)}>
-        <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+        <DialogContent 
+          className="max-w-md rounded-2xl"
+          style={{
+            background: 'hsl(0, 0%, 5%)',
+            border: '1px solid hsla(280, 80%, 50%, 0.3)',
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="font-display">
               Weekly Report
-              {selectedBatch && (
-                <span className="block text-sm font-normal text-muted-foreground mt-1">
-                  {format(new Date(selectedBatch.week_start), "MMM d")} –{" "}
-                  {format(new Date(selectedBatch.week_end), "MMM d, yyyy")}
-                </span>
-              )}
             </DialogTitle>
           </DialogHeader>
           
           {selectedBatch && (
-            <div className="space-y-4 pt-4">
-              {/* Summary Stats */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-muted/30">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                    Total Streams
-                  </span>
-                  <p className="text-lg font-display font-bold text-foreground">
-                    {selectedBatch.total_credits}
-                  </p>
-                </div>
-                <div className="p-3 rounded-xl bg-muted/30">
-                  <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                    Credits Collected
-                  </span>
-                  <p className="text-lg font-display font-bold text-foreground">
-                    {selectedBatch.total_credits}
-                  </p>
+            <div className="space-y-4">
+              {/* Week range */}
+              <div 
+                className="p-4 rounded-xl"
+                style={{
+                  background: 'hsla(0, 0%, 100%, 0.03)',
+                  border: '1px solid hsla(280, 80%, 50%, 0.15)',
+                }}
+              >
+                <p className="text-sm text-muted-foreground mb-1">Week</p>
+                <p className="font-medium text-foreground">
+                  {format(new Date(selectedBatch.week_start), "MMM d")} –{" "}
+                  {format(new Date(selectedBatch.week_end), "MMM d, yyyy")}
+                </p>
+              </div>
+
+              {/* Revenue breakdown */}
+              <div 
+                className="p-4 rounded-xl space-y-3"
+                style={{
+                  background: 'hsla(0, 0%, 100%, 0.03)',
+                  border: '1px solid hsla(280, 80%, 50%, 0.15)',
+                }}
+              >
+                <p className="text-sm font-display uppercase tracking-wider" style={{ color: 'hsl(280, 80%, 70%)' }}>
+                  Revenue Breakdown
+                </p>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Streams</span>
+                    <span className="font-medium text-foreground">{selectedBatch.total_credits}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Credits Spent (Fans)</span>
+                    <span className="font-medium text-foreground">{selectedBatch.total_credits} credits</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Value</span>
+                    <span className="font-medium text-foreground">${(selectedBatch.total_credits * 0.20).toFixed(2)}</span>
+                  </div>
+                  <hr className="border-border/30" />
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Platform (50%)</span>
+                    <span className="font-medium text-foreground">${(selectedBatch.total_credits * 0.10).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Artist (50%)</span>
+                    <span className="font-bold" style={{ color: 'hsl(280, 80%, 70%)' }}>
+                      ${Number(selectedBatch.total_usd).toFixed(2)}
+                    </span>
+                  </div>
                 </div>
               </div>
-              
-              {/* Revenue Split */}
-              <div className="p-4 rounded-xl bg-muted/30 space-y-3">
-                <h4 className="text-sm font-semibold text-foreground">Revenue Split</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total Revenue</span>
-                    <span className="font-medium">${(Number(selectedBatch.total_usd) * 2).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Platform Share (50%)</span>
-                    <span className="font-medium">${Number(selectedBatch.total_usd).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-sm border-t border-border pt-2">
-                    <span className="text-foreground font-medium">Your Earnings (50%)</span>
-                    <span className="font-bold text-green-400">${Number(selectedBatch.total_usd).toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-              
+
               {/* Status */}
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+              <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Status</span>
                 {getStatusBadge(selectedBatch.status)}
               </div>
-              
-              {/* Ledger Entries */}
+
+              {/* Ledger entries */}
               {isLoadingDetails ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'hsl(280, 80%, 70%)' }} />
                 </div>
               ) : batchLedgerEntries.length > 0 ? (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-foreground">Transaction Log</h4>
-                  <div className="max-h-48 overflow-y-auto space-y-1">
-                    {batchLedgerEntries.map((entry) => (
-                      <div
-                        key={entry.id}
-                        className="flex items-center justify-between p-2 rounded-lg bg-muted/20 text-xs"
-                      >
-                        <div>
-                          <span className="text-muted-foreground">
-                            {format(new Date(entry.created_at), "MMM d, h:mm a")}
-                          </span>
-                        </div>
+                <div 
+                  className="p-4 rounded-xl max-h-48 overflow-y-auto"
+                  style={{
+                    background: 'hsla(0, 0%, 100%, 0.03)',
+                    border: '1px solid hsla(280, 80%, 50%, 0.15)',
+                  }}
+                >
+                  <p className="text-sm font-display uppercase tracking-wider mb-3" style={{ color: 'hsl(280, 80%, 70%)' }}>
+                    Ledger Entries
+                  </p>
+                  <div className="space-y-2">
+                    {batchLedgerEntries.slice(0, 10).map((entry) => (
+                      <div key={entry.id} className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {format(new Date(entry.created_at), "MMM d, h:mm a")}
+                        </span>
                         <span className="font-medium text-green-400">
                           +${Math.abs(Number(entry.usd_delta)).toFixed(2)}
                         </span>
                       </div>
                     ))}
+                    {batchLedgerEntries.length > 10 && (
+                      <p className="text-xs text-muted-foreground text-center pt-2">
+                        +{batchLedgerEntries.length - 10} more entries
+                      </p>
+                    )}
                   </div>
                 </div>
               ) : null}
