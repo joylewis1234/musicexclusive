@@ -214,6 +214,7 @@ const Discovery = () => {
           tracks={displayedFeaturedTracks}
           onRefresh={handleRefreshFeatured}
           onTrackClick={handleTrackClick}
+          onStreamClick={handleStreamTrack}
           isRefreshing={isRefreshing}
         />
 

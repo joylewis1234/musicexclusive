@@ -142,10 +142,27 @@ export const DiscoveryTrackCard = ({
             e.stopPropagation();
             onArtistClick();
           }}
-          className="flex items-center gap-1.5 text-primary text-sm font-display uppercase tracking-wider mb-3 hover:underline transition-all"
+          className="flex items-center gap-1.5 text-primary text-sm font-display uppercase tracking-wider mb-2 hover:underline transition-all"
         >
           <User className="w-3 h-3" />
           {artistName}
+        </button>
+
+        {/* Stream Now CTA - navigates to artist profile */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onStream();
+          }}
+          className="w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-lg bg-primary/10 border border-primary/30 hover:bg-primary/20 hover:border-primary/50 transition-all duration-300 group"
+          style={{
+            boxShadow: "0 0 12px hsl(var(--primary) / 0.15)",
+          }}
+        >
+          <Play className="w-3.5 h-3.5 text-primary fill-primary/50 group-hover:fill-primary/80 transition-all" />
+          <span className="text-xs font-display uppercase tracking-wider text-primary font-semibold">
+            Stream Now <span className="text-primary/70">(1 credit = $0.20)</span>
+          </span>
         </button>
 
         {/* Error / No Preview Message */}
@@ -180,13 +197,6 @@ export const DiscoveryTrackCard = ({
             </span>
           </div>
         )}
-
-        {/* Streaming Cost Info */}
-        <div className="mb-3 text-center">
-          <p className="text-xs text-muted-foreground">
-            <span className="text-primary font-semibold">$0.20</span> • Unlock full stream
-          </p>
-        </div>
 
         {/* Action Buttons */}
         <div className="flex gap-2">
