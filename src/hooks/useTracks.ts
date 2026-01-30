@@ -66,7 +66,30 @@ export const getArtistName = (artistId: string): string => {
     zenith: "ZENITH",
     luna: "LUNA",
   };
-  return artistNames[artistId] || artistId.toUpperCase();
+  
+  // Check if in mapping first
+  if (artistNames[artistId]) {
+    return artistNames[artistId];
+  }
+  
+  // If it's an email, extract a clean name before @
+  if (artistId.includes("@")) {
+    const namePart = artistId.split("@")[0];
+    // Capitalize and clean up (replace dots/underscores with spaces)
+    return namePart
+      .replace(/[._-]/g, " ")
+      .split(" ")
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+  }
+  
+  // If it looks like a UUID (contains dashes and is long), return generic "Artist"
+  if (artistId.includes("-") && artistId.length > 20) {
+    return "Artist";
+  }
+  
+  // Fallback: just capitalize
+  return artistId.charAt(0).toUpperCase() + artistId.slice(1);
 };
 
 // Get artist image fallback
