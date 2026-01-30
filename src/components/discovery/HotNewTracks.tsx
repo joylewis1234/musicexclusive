@@ -1,4 +1,4 @@
-import { RefreshCw, Flame } from "lucide-react";
+import { RefreshCw, Flame, Play } from "lucide-react";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 
@@ -21,6 +21,7 @@ interface HotNewTracksProps {
   tracks: DbTrack[];
   onRefresh: () => void;
   onTrackClick: (track: DbTrack) => void;
+  onStreamClick: (track: DbTrack) => void;
   isRefreshing: boolean;
 }
 
@@ -28,6 +29,7 @@ export const HotNewTracks = ({
   tracks,
   onRefresh,
   onTrackClick,
+  onStreamClick,
   isRefreshing,
 }: HotNewTracksProps) => {
   if (tracks.length === 0) return null;
@@ -105,9 +107,26 @@ export const HotNewTracks = ({
                 <h3 className="font-display text-sm font-bold text-foreground tracking-wide truncate">
                   {track.title}
                 </h3>
-                <p className="text-primary text-[10px] font-display uppercase tracking-wider truncate">
+                <p className="text-primary text-[10px] font-display uppercase tracking-wider truncate mb-1.5">
                   {artistName}
                 </p>
+                
+                {/* Stream Now CTA */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStreamClick(track);
+                  }}
+                  className="w-full flex items-center justify-center gap-1 py-1 rounded bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-all"
+                  style={{
+                    boxShadow: "0 0 8px hsl(var(--primary) / 0.1)",
+                  }}
+                >
+                  <Play className="w-2.5 h-2.5 text-primary fill-primary/50" />
+                  <span className="text-[8px] font-display uppercase tracking-wider text-primary font-semibold">
+                    Stream (1 credit)
+                  </span>
+                </button>
               </button>
             );
           })}
