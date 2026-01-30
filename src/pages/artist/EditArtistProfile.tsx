@@ -32,6 +32,7 @@ import {
   User,
   RefreshCw,
   AlertCircle,
+  Eye,
 } from "lucide-react";
 
 const GENRES = [
@@ -81,6 +82,7 @@ const EditArtistProfile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasExistingProfile, setHasExistingProfile] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [artistProfileId, setArtistProfileId] = useState<string | null>(null);
 
   // Diagnostics state
   const [diagnostics, setDiagnostics] = useState<DiagnosticsState>({
@@ -165,6 +167,7 @@ const EditArtistProfile = () => {
       if (profile) {
         setDiagnostics((prev) => ({ ...prev, artistRowFound: true }));
         setHasExistingProfile(true);
+        setArtistProfileId(profile.id);
         setArtistName(profile.artist_name || "");
         setBio(profile.bio || "");
         setGenre(profile.genre || "");
@@ -216,6 +219,7 @@ const EditArtistProfile = () => {
 
         setDiagnostics((prev) => ({ ...prev, artistRowFound: true }));
         setHasExistingProfile(true);
+        if (newProfile?.id) setArtistProfileId(newProfile.id);
         setArtistName(newProfile?.artist_name || defaultName);
         setGenre(defaultGenre);
       }
@@ -632,6 +636,19 @@ const EditArtistProfile = () => {
               </div>
             </div>
           </GlowCard>
+
+          {/* View My Profile (Fan View) Button */}
+          {artistProfileId && (
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full h-12 gap-2"
+              onClick={() => navigate(`/artist/view/${artistProfileId}`)}
+            >
+              <Eye className="w-5 h-5" />
+              View My Profile (Fan View)
+            </Button>
+          )}
 
           {/* Save Button */}
           <Button
