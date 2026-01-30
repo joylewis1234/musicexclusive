@@ -125,7 +125,7 @@ export default {
           "0%": { transform: "translateX(0)" },
           "100%": { transform: "translateX(calc(-50% - 12px))" },
         },
-        "pulse-slow": {
+        "slow-fade": {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
@@ -138,7 +138,7 @@ export default {
         float: "float 6s ease-in-out infinite",
         "scroll-slow": "scroll-slow 30s linear infinite",
         "scroll-cards": "scroll-cards 40s linear infinite",
-        "pulse-slow": "pulse-slow 4s ease-in-out infinite",
+        "pulse-slow": "slow-fade 5s ease-in-out infinite",
       },
     },
   },
