@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { GlowCard } from "@/components/ui/GlowCard";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -117,81 +117,95 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
 
   return (
     <>
-      <GlowCard variant="flat" className="p-4 group">
-        <div className="flex gap-4">
-          {/* Cover Art Thumbnail */}
-          <div className="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 rounded-xl overflow-hidden bg-muted/30 border border-border/20">
-            {song.artwork_url ? (
-              <img
-                src={song.artwork_url}
-                alt={song.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <Music className="w-6 h-6 text-muted-foreground" />
+      {/* Glassmorphism Track Card */}
+      <div 
+        className={cn(
+          "group relative rounded-[20px] overflow-hidden transition-all duration-200",
+          "active:scale-[0.99]",
+          "hover:shadow-lg hover:shadow-primary/5"
+        )}
+      >
+        {/* Subtle gradient border */}
+        <div className="absolute inset-0 rounded-[20px] p-[1px] bg-gradient-to-r from-primary/20 via-purple-500/10 to-primary/20 opacity-60 group-hover:opacity-80 transition-opacity" />
+        
+        {/* Glass background */}
+        <div className="relative rounded-[19px] bg-[rgba(10,10,15,0.75)] backdrop-blur-xl border border-white/[0.06]">
+          <div className="flex gap-4 p-4 md:p-5">
+            {/* Left accent bar */}
+            <div className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full bg-gradient-to-b from-primary via-purple-500 to-primary/50 opacity-70" />
+            
+            {/* Cover Art Thumbnail with subtle glow */}
+            <div className="relative flex-shrink-0 ml-2">
+              <div className="absolute -inset-1 rounded-xl bg-primary/20 blur-md opacity-0 group-hover:opacity-50 transition-opacity" />
+              <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden bg-muted/20 border border-white/[0.08] shadow-lg">
+                {song.artwork_url ? (
+                  <img
+                    src={song.artwork_url}
+                    alt={song.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted/30 to-muted/10">
+                    <Music className="w-5 h-5 text-muted-foreground/60" />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Song Info */}
-          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-            <div>
-              <h3 className="font-display text-sm md:text-base font-semibold text-foreground truncate">
+            {/* Song Info */}
+            <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+              <h3 className="font-display text-sm md:text-base font-semibold text-foreground truncate leading-tight">
                 {song.title}
               </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-primary/15 text-primary/90 border border-primary/20">
+                  <Lock className="w-2 h-2" />
+                  Exclusive
+                </span>
+                {song.genre && !song.genre.startsWith("[") && (
+                  <span className="text-[11px] text-muted-foreground/70">{song.genre}</span>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground/50 mt-0.5">
                 Uploaded {format(new Date(song.created_at), "MMM d, yyyy")}
               </p>
             </div>
 
-            {/* Status Badge */}
-            <div className="flex items-center gap-2 mt-2">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider bg-primary/20 text-primary border border-primary/30">
-                <Lock className="w-2.5 h-2.5" />
-                Exclusive
-              </span>
-              {song.genre && !song.genre.startsWith("[") && (
-                <span className="text-xs text-muted-foreground">{song.genre}</span>
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex flex-col gap-2 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleView}
-              className="h-8 px-3 text-xs rounded-lg hover:bg-primary/10 hover:text-primary"
-            >
-              <Eye className="w-3.5 h-3.5 mr-1.5" />
-              View
-            </Button>
-            {/* Hook Preview Time Button - only show if track has audio & duration */}
-            {song.full_audio_url && (song.duration ?? 0) > 0 && (
+            {/* Actions */}
+            <div className="flex flex-col gap-1.5 flex-shrink-0 justify-center">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsPreviewEditOpen(true)}
-                className="h-8 px-3 text-xs rounded-lg hover:bg-accent/10 hover:text-accent"
+                onClick={handleView}
+                className="h-7 px-2.5 text-[11px] rounded-lg bg-white/[0.04] hover:bg-primary/15 hover:text-primary border border-white/[0.06] transition-colors"
               >
-                <Clock className="w-3.5 h-3.5 mr-1.5" />
-                Hook
+                <Eye className="w-3 h-3 mr-1" />
+                View
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsDeleteOpen(true)}
-              className="h-8 px-3 text-xs rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-            >
-              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-              Delete
-            </Button>
+              {song.full_audio_url && (song.duration ?? 0) > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsPreviewEditOpen(true)}
+                  className="h-7 px-2.5 text-[11px] rounded-lg bg-white/[0.04] hover:bg-purple-500/15 hover:text-purple-400 border border-white/[0.06] transition-colors"
+                >
+                  <Clock className="w-3 h-3 mr-1" />
+                  Hook
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsDeleteOpen(true)}
+                className="h-7 px-2.5 text-[11px] rounded-lg bg-white/[0.04] text-muted-foreground/70 hover:bg-destructive/15 hover:text-destructive border border-white/[0.06] transition-colors"
+              >
+                <Trash2 className="w-3 h-3 mr-1" />
+                Delete
+              </Button>
+            </div>
           </div>
         </div>
-      </GlowCard>
+      </div>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
