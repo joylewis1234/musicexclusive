@@ -280,7 +280,7 @@ const FanProfile = () => {
           
           <div className="relative inline-block">
             <Star 
-              className="absolute -top-[8px] -left-[8px] w-5 h-5 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)] z-10" 
+              className="absolute -top-[8px] -left-[8px] w-5 h-5 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)] z-10 animate-[pulse_2s_ease-in-out_infinite]" 
               fill="currentColor"
             />
             <StatusBadge variant={isSuperfan ? "superfan" : "default"} size="lg">
