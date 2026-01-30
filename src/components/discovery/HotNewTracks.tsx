@@ -117,7 +117,7 @@ export const HotNewTracks = ({
                     e.stopPropagation();
                     onStreamClick(track);
                   }}
-                  className="w-full flex items-center justify-center gap-1 py-1 rounded border transition-all animate-pulse"
+                  className="w-full flex items-center justify-center gap-1 py-1 rounded border transition-all animate-pulse-slow"
                   style={{
                     background: "hsla(280, 80%, 70%, 0.12)",
                     borderColor: "hsla(280, 80%, 70%, 0.35)",
