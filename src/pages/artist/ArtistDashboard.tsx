@@ -1,24 +1,22 @@
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { GlowCard } from "@/components/ui/GlowCard";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ExclusiveSongCard, ExclusiveSong } from "@/components/artist/ExclusiveSongCard";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { 
-  Home, 
   Upload, 
   LogOut,
-  Mic2,
   Music,
   Loader2,
   Wallet,
   CheckCircle2,
   AlertCircle,
   RefreshCw,
-  Plus
+  Plus,
+  Crown,
+  ChevronLeft
 } from "lucide-react";
 
 type PayoutStatus = "not_connected" | "pending" | "connected";
@@ -31,6 +29,7 @@ const ArtistDashboard = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [artistName, setArtistName] = useState("Artist");
   const [artistProfileId, setArtistProfileId] = useState<string | null>(null);
+  const [artistAvatarUrl, setArtistAvatarUrl] = useState<string | null>(null);
   const [songs, setSongs] = useState<ExclusiveSong[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [songsLoading, setSongsLoading] = useState(true);
@@ -101,7 +100,7 @@ const ArtistDashboard = () => {
 
       const { data: profile, error: profileError } = await supabase
         .from("artist_profiles")
-        .select("id, artist_name, payout_status")
+        .select("id, artist_name, payout_status, avatar_url")
         .eq("user_id", user.id)
         .maybeSingle();
 
@@ -125,6 +124,7 @@ const ArtistDashboard = () => {
 
       setArtistName(profile.artist_name);
       setArtistProfileId(profile.id);
+      setArtistAvatarUrl(profile.avatar_url);
       if (profile.payout_status) {
         setPayoutStatus(profile.payout_status as PayoutStatus);
       }
@@ -250,7 +250,7 @@ const ArtistDashboard = () => {
   if (loadError && !isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center px-4 pb-24">
-        <GlowCard className="p-8 max-w-sm w-full text-center">
+        <div className="p-8 max-w-sm w-full text-center rounded-2xl bg-card/50 border border-border/30">
           <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
           <h2 className="font-display text-lg font-semibold mb-2">
             {loadError === "Please sign in again" ? "Session Expired" : "Load Error"}
@@ -258,16 +258,16 @@ const ArtistDashboard = () => {
           <p className="text-muted-foreground text-sm mb-6">{loadError}</p>
 
           {loadError === "Please sign in again" ? (
-            <Button onClick={() => navigate("/artist/login")} className="w-full">
+            <Button onClick={() => navigate("/artist/login")} className="w-full rounded-full">
               Go to Login
             </Button>
           ) : (
-            <Button onClick={fetchArtistData} className="w-full gap-2">
+            <Button onClick={fetchArtistData} className="w-full gap-2 rounded-full">
               <RefreshCw className="w-4 h-4" />
               Retry
             </Button>
           )}
-        </GlowCard>
+        </div>
       </div>
     );
   }
@@ -275,72 +275,111 @@ const ArtistDashboard = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center pb-24">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(280, 80%, 70%)' }} />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/20">
-        <div className="container max-w-lg md:max-w-3xl mx-auto px-4 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Mic2 className="w-5 h-5 text-primary" />
-            <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
-              Dashboard
-            </span>
-          </div>
+      {/* Floating Header */}
+      <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
+        <div className="w-full max-w-lg mx-auto flex items-center justify-between">
+          <button
+            onClick={() => navigate("/")}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-foreground/80 hover:text-foreground hover:bg-background/90 transition-all"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">Home</span>
+          </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => navigate("/")}
-              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl transition-all duration-200"
-              aria-label="Go home"
-            >
-              <Home className="w-5 h-5" />
-            </button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleSignOut}
-              className="text-muted-foreground hover:text-foreground gap-1.5"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSignOut}
+            className="rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-foreground gap-1.5 px-3"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="hidden sm:inline">Logout</span>
+          </Button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="pt-20 pb-12 px-4">
-        <div className="container max-w-lg md:max-w-3xl mx-auto space-y-6">
-          
-          {/* Welcome Header */}
-          <GlowCard variant="elevated" glowColor="gradient" className="p-6 text-center animate-fade-in">
-            <h1 className="font-display text-xl md:text-2xl font-bold text-foreground mb-3">
-              Welcome, {artistName}
-            </h1>
-            
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-4">
-              <Mic2 className="w-4 h-4 text-primary" />
-              <span className="text-primary text-sm font-display uppercase tracking-wider">
+      {/* Hero Section */}
+      <div className="relative pt-20 pb-6 px-5">
+        <div className="w-full max-w-lg mx-auto">
+          {/* Artist Avatar */}
+          <div className="relative w-24 h-24 mb-4">
+            <div 
+              className="absolute -inset-1 rounded-full blur-sm"
+              style={{ 
+                background: 'linear-gradient(135deg, hsl(280, 80%, 50%), hsl(45, 90%, 55%))' 
+              }}
+            />
+            {artistAvatarUrl ? (
+              <img
+                src={artistAvatarUrl}
+                alt={artistName}
+                className="relative w-full h-full rounded-full object-cover border-2 border-background"
+              />
+            ) : (
+              <div className="relative w-full h-full rounded-full bg-muted flex items-center justify-center border-2 border-background">
+                <Music className="w-8 h-8 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+
+          {/* Welcome text */}
+          <h1
+            className="font-display text-3xl font-bold text-foreground tracking-tight mb-2"
+            style={{ textShadow: "0 2px 20px rgba(0, 0, 0, 0.5)" }}
+          >
+            Welcome, {artistName}
+          </h1>
+
+          {/* Exclusive Artist Badge */}
+          <div className="relative inline-flex items-center gap-2 mb-5">
+            <div 
+              className="relative px-3 py-1.5 rounded-full"
+              style={{
+                background: 'hsla(280, 80%, 50%, 0.2)',
+                boxShadow: '0 0 12px hsla(280, 80%, 50%, 0.3), inset 0 0 8px hsla(280, 80%, 50%, 0.1)'
+              }}
+            >
+              <Crown 
+                className="absolute -top-2 -left-1 w-4 h-4 rotate-[-15deg]"
+                style={{
+                  color: 'hsl(45, 90%, 55%)',
+                  filter: 'drop-shadow(0 0 4px hsla(45, 90%, 55%, 0.8)) drop-shadow(0 0 8px hsla(45, 90%, 50%, 0.4))'
+                }}
+                fill="hsl(45, 90%, 55%)"
+              />
+              <span 
+                className="text-xs font-display uppercase tracking-widest pl-2"
+                style={{ color: 'hsl(280, 80%, 70%)' }}
+              >
                 Exclusive Artist
               </span>
             </div>
-            
-            <p className="text-muted-foreground text-sm font-body leading-relaxed max-w-sm mx-auto">
-              Release your music early to fans inside the Vault.
-            </p>
-          </GlowCard>
+          </div>
+        </div>
+      </div>
 
-          {/* Payout Account Status Card */}
-          <GlowCard 
-            variant="flat" 
-            glowColor={payoutStatus === "connected" ? "primary" : "subtle"} 
-            className="p-5 animate-fade-in"
-            style={{ animationDelay: '50ms' }}
+      {/* Main Content */}
+      <main className="px-5 pb-12">
+        <div className="w-full max-w-lg mx-auto space-y-6">
+          
+          {/* Payout Account Status */}
+          <div 
+            className="p-4 rounded-2xl border animate-fade-in"
+            style={{
+              background: 'hsla(0, 0%, 100%, 0.02)',
+              borderColor: payoutStatus === "connected" 
+                ? 'hsla(142, 70%, 45%, 0.3)' 
+                : payoutStatus === "pending" 
+                ? 'hsla(45, 90%, 50%, 0.3)' 
+                : 'hsla(280, 80%, 50%, 0.2)',
+            }}
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -383,10 +422,15 @@ const ArtistDashboard = () => {
                 {payoutStatus !== "connected" && (
                   <Button
                     size="sm"
-                    variant={payoutStatus === "pending" ? "destructive" : "secondary"}
                     onClick={handleConnectPayout}
                     disabled={isConnecting || isVerifying}
-                    className="rounded-xl"
+                    className="rounded-full"
+                    style={{
+                      background: payoutStatus === "pending" 
+                        ? 'hsla(45, 90%, 50%, 0.9)' 
+                        : 'hsl(280, 80%, 50%)',
+                      color: payoutStatus === "pending" ? 'hsl(0, 0%, 0%)' : 'white',
+                    }}
                   >
                     {isConnecting || isVerifying ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
@@ -406,68 +450,97 @@ const ArtistDashboard = () => {
                     toast.info("Checking payout status...");
                   }}
                   disabled={isVerifying}
-                  className="rounded-xl w-9 h-9 p-0"
+                  className="rounded-full w-9 h-9 p-0"
                   title="Refresh payout status"
                 >
                   <RefreshCw className={`w-4 h-4 ${isVerifying ? 'animate-spin' : ''}`} />
                 </Button>
               </div>
             </div>
-          </GlowCard>
+          </div>
 
           {/* Your Exclusive Songs Section */}
-          <section 
-            className="space-y-4 animate-fade-in"
-            style={{ animationDelay: '100ms' }}
-          >
+          <section className="space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
             <div className="flex items-center justify-between">
-              <SectionHeader title="Your Exclusive Songs" align="left" />
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-lg font-semibold text-foreground">
+                  Your Songs
+                </h2>
+                {/* Exclusive badge */}
+                <div 
+                  className="relative px-2.5 py-1 rounded-full"
+                  style={{
+                    background: 'hsla(280, 80%, 50%, 0.12)',
+                  }}
+                >
+                  <Crown 
+                    className="absolute -top-1.5 -left-0.5 w-3 h-3 rotate-[-12deg]"
+                    style={{
+                      color: 'hsl(45, 90%, 55%)',
+                      filter: 'drop-shadow(0 0 3px hsla(45, 90%, 55%, 0.8))'
+                    }}
+                    fill="hsl(45, 90%, 55%)"
+                  />
+                  <span 
+                    className="text-[10px] font-display uppercase tracking-wider pl-1"
+                    style={{ color: 'hsl(280, 80%, 70%)' }}
+                  >
+                    Exclusive
+                  </span>
+                </div>
+              </div>
               <Button
                 size="sm"
-                className="rounded-xl bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg shadow-primary/20"
+                className="rounded-full gap-1.5 px-4"
+                style={{
+                  background: 'hsl(280, 80%, 50%)',
+                  boxShadow: '0 0 15px hsla(280, 80%, 50%, 0.3)',
+                }}
                 onClick={() => navigate("/artist/upload")}
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className="w-4 h-4" />
                 Upload
               </Button>
             </div>
 
             {songsLoading ? (
-              <GlowCard variant="flat" className="p-8 text-center">
-                <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
-              </GlowCard>
+              <div className="p-8 text-center rounded-xl bg-muted/20 border border-border/30">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto" style={{ color: 'hsl(280, 80%, 70%)' }} />
+              </div>
             ) : songsError ? (
-              <GlowCard variant="flat" className="p-8 text-center">
+              <div className="p-8 text-center rounded-xl bg-muted/20 border border-border/30">
                 <AlertCircle className="w-10 h-10 text-destructive mx-auto mb-3" />
                 <p className="text-muted-foreground text-sm mb-4">{songsError}</p>
                 <Button 
                   variant="outline" 
                   size="sm"
-                  className="rounded-xl gap-2"
+                  className="rounded-full gap-2"
                   onClick={fetchArtistData}
                 >
                   <RefreshCw className="w-4 h-4" />
                   Retry
                 </Button>
-              </GlowCard>
+              </div>
             ) : songs.length === 0 ? (
-              <GlowCard variant="flat" className="p-8 text-center">
+              <div className="p-8 text-center rounded-xl bg-muted/20 border border-border/30">
                 <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground text-sm mb-4">
                   You haven't uploaded any songs yet.
                 </p>
                 <Button 
-                  variant="outline" 
                   size="sm"
-                  className="rounded-xl"
+                  className="rounded-full"
+                  style={{
+                    background: 'hsl(280, 80%, 50%)',
+                  }}
                   onClick={() => navigate("/artist/upload")}
                 >
                   <Upload className="w-4 h-4 mr-2" />
                   Upload Your First Song
                 </Button>
-              </GlowCard>
+              </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {songs.map((song, index) => (
                   <div 
                     key={song.id}
@@ -490,7 +563,11 @@ const ArtistDashboard = () => {
       {/* Floating Upload Button (Mobile) */}
       <button
         onClick={() => navigate("/artist/upload")}
-        className="fixed bottom-24 right-4 md:hidden w-14 h-14 rounded-full bg-gradient-to-r from-primary to-purple-600 shadow-lg shadow-primary/30 flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-transform duration-200 z-30"
+        className="fixed bottom-24 right-4 md:hidden w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-105 active:scale-95 transition-transform duration-200 z-30"
+        style={{
+          background: 'linear-gradient(135deg, hsl(280, 80%, 50%), hsl(265, 90%, 60%))',
+          boxShadow: '0 0 20px hsla(280, 80%, 50%, 0.5)',
+        }}
         aria-label="Upload new track"
       >
         <Plus className="w-6 h-6" />
