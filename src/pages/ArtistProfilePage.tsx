@@ -144,13 +144,15 @@ const ArtistProfilePage = () => {
 
         setArtistProfile(profile);
 
+        // Try to get artist email from applications first, then fall back to user lookup
         const { data: userData } = await supabase
           .from("artist_applications")
           .select("contact_email")
           .eq("artist_name", profile.artist_name)
           .maybeSingle();
 
-        setArtistEmail(userData?.contact_email || "");
+        // If no application found, use artist profile id as fallback reference
+        setArtistEmail(userData?.contact_email || `artist_${profile.id}@musicexclusive.com`);
 
         const { data: trackData } = await supabase
           .from("tracks")
@@ -291,7 +293,7 @@ const ArtistProfilePage = () => {
 
   // Called when user clicks play on the player - shows confirmation modal
   const handlePlayRequest = useCallback(() => {
-    if (!selectedTrack || !artistEmail) return;
+    if (!selectedTrack) return;
     
     // If already charged in this session, just play (no modal)
     if (hasBeenCharged(selectedTrack.id)) {
@@ -301,7 +303,7 @@ const ArtistProfilePage = () => {
     // Show confirmation modal
     setPendingPlayTrack(selectedTrack);
     setShowStreamConfirm(true);
-  }, [selectedTrack, artistEmail, hasBeenCharged]);
+  }, [selectedTrack, hasBeenCharged]);
 
   // Called when user confirms the stream in the modal
   const handleStreamConfirm = useCallback(async () => {
