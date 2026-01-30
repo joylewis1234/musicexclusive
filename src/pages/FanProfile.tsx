@@ -282,7 +282,7 @@ const FanProfile = () => {
                 <div
                   key={`${artist.name}-${index}`}
                   className="flex-shrink-0 w-[100px] text-center group cursor-pointer"
-                  onClick={() => handlePlayTrack(artist.id)}
+                  onClick={() => navigate(`/artist/${artist.id}`)}
                 >
                   <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden mb-2 border-2 border-border group-hover:border-primary/50 transition-colors">
                     <img
@@ -291,7 +291,7 @@ const FanProfile = () => {
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-background/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Play className="w-8 h-8 text-primary" />
+                      <User className="w-8 h-8 text-primary" />
                     </div>
                   </div>
                   <p className="font-display text-xs font-semibold text-foreground truncate">
