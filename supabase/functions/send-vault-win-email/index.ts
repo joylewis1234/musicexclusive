@@ -10,6 +10,7 @@ interface VaultWinRequest {
   email: string;
   name: string;
   vaultCode: string;
+  appUrl?: string;
 }
 
 serve(async (req) => {
@@ -19,7 +20,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email, name, vaultCode }: VaultWinRequest = await req.json();
+    const { email, name, vaultCode, appUrl }: VaultWinRequest = await req.json();
 
     // Validate required fields
     if (!email || !name || !vaultCode) {
@@ -34,6 +35,10 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY not configured");
     }
 
+    // Build the direct link to agreements with pre-filled data
+    const baseUrl = appUrl || 'https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app';
+    const agreementsLink = `${baseUrl}/fan/agreements?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
+
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -43,7 +48,7 @@ serve(async (req) => {
       body: JSON.stringify({
         from: "Music Exclusive <onboarding@resend.dev>",
         to: [email],
-        subject: "🎉 You're In! Your Vault Access Code",
+        subject: "🎉 You're In! Welcome to the Music Exclusive Vault",
         html: `
           <!DOCTYPE html>
           <html>
@@ -59,6 +64,7 @@ serve(async (req) => {
                     <tr>
                       <td align="center" style="padding-bottom: 30px;">
                         <h1 style="margin: 0; color: #ffffff; font-size: 28px; letter-spacing: 2px;">🎉 CONGRATULATIONS</h1>
+                        <p style="margin: 10px 0 0 0; color: #00d4ff; font-size: 16px; letter-spacing: 1px;">The Vault is open for you 🔓🎶</p>
                       </td>
                     </tr>
                     <tr>
@@ -87,16 +93,38 @@ serve(async (req) => {
                     </tr>
                     <tr>
                       <td align="center" style="padding-bottom: 30px;">
-                        <p style="margin: 0; color: #a0a0a0; font-size: 14px; line-height: 1.6;">
-                          Keep this code safe — it's your key to the Vault.<br>
-                          Use it to complete your registration when you're ready.
-                        </p>
+                        <a href="${agreementsLink}" style="display: inline-block; background: linear-gradient(135deg, #00d4ff, #8b5cf6); color: #ffffff; font-size: 16px; font-weight: bold; text-decoration: none; padding: 16px 32px; border-radius: 8px; letter-spacing: 1px;">
+                          CONTINUE TO AGREEMENTS →
+                        </a>
                       </td>
                     </tr>
                     <tr>
-                      <td align="center">
-                        <p style="margin: 0; color: #606060; font-size: 12px;">
-                          This code expires 30 minutes after issue.
+                      <td align="center" style="padding-bottom: 20px;">
+                        <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Next Steps:</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding-bottom: 30px;">
+                        <table cellpadding="0" cellspacing="0" style="text-align: left;">
+                          <tr>
+                            <td style="padding: 8px 0; color: #00d4ff; font-size: 14px;">1.</td>
+                            <td style="padding: 8px 0 8px 12px; color: #a0a0a0; font-size: 14px;">Accept Agreements</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #00d4ff; font-size: 14px;">2.</td>
+                            <td style="padding: 8px 0 8px 12px; color: #a0a0a0; font-size: 14px;">Choose your access (Superfan or Pay-As-You-Go)</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #00d4ff; font-size: 14px;">3.</td>
+                            <td style="padding: 8px 0 8px 12px; color: #a0a0a0; font-size: 14px;">Start streaming exclusive music</td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td align="center" style="padding-top: 20px; border-top: 1px solid rgba(0, 212, 255, 0.2);">
+                        <p style="margin: 0; color: #606060; font-size: 12px; line-height: 1.6;">
+                          Welcome to Music Exclusive — where every stream counts and every fan matters.
                         </p>
                       </td>
                     </tr>
