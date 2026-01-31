@@ -47,6 +47,33 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_agreement_acceptances: {
+        Row: {
+          accepted_at: string
+          agreement_version: string
+          artist_id: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          accepted_at?: string
+          agreement_version: string
+          artist_id: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          accepted_at?: string
+          agreement_version?: string
+          artist_id?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       artist_applications: {
         Row: {
           agrees_terms: boolean
