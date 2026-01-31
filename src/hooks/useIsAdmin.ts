@@ -1,22 +1,16 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
-import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
 
-interface AdminProtectedRouteProps {
-  children: ReactNode;
-}
-
-export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
+export function useIsAdmin() {
   const { user, isLoading: authLoading } = useAuth();
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isChecking, setIsChecking] = useState(true);
 
   useEffect(() => {
     async function checkAdminRole() {
       if (!user) {
+        setIsAdmin(false);
         setIsChecking(false);
         return;
       }
@@ -48,21 +42,5 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
     }
   }, [user, authLoading]);
 
-  if (authLoading || isChecking) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!isAdmin) {
-    return <Navigate to="/access-restricted" state={{ requiredRole: "admin" }} replace />;
-  }
-
-  return <>{children}</>;
+  return { isAdmin, isLoading: authLoading || isChecking };
 }

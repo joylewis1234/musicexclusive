@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music, FlaskConical, Wrench, Receipt, Crown, FileText, Shield, Copyright, RotateCcw } from "lucide-react"
+import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music, FlaskConical, Wrench, Receipt, Crown, FileText, Shield, Copyright, RotateCcw, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
+import { useIsAdmin } from "@/hooks/useIsAdmin"
 
 const mainNavItems = [
   { title: "Home", href: "/", icon: Home },
@@ -23,9 +24,14 @@ const testingNavItems = [
   { title: "Test Payouts & Reports", href: "/testing/payouts", icon: Receipt },
 ]
 
+const adminNavItems = [
+  { title: "Admin Dashboard", href: "/admin", icon: ShieldCheck },
+]
+
 const Header = () => {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const { isAdmin } = useIsAdmin()
 
   const handleNavigation = (href: string) => {
     setOpen(false)
@@ -125,6 +131,30 @@ const Header = () => {
                   </li>
                 ))}
               </ul>
+
+              {/* Admin Section - Only visible to admins */}
+              {isAdmin && (
+                <>
+                  <div className="my-4 border-t border-border/30" />
+                  <p className="px-4 text-xs font-semibold text-primary uppercase tracking-wider mb-2 flex items-center gap-2">
+                    <ShieldCheck className="w-3 h-3" />
+                    Admin
+                  </p>
+                  <ul className="space-y-1 mb-4">
+                    {adminNavItems.map((item) => (
+                      <li key={item.title}>
+                        <button
+                          onClick={() => handleNavigation(item.href)}
+                          className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-primary hover:text-primary hover:bg-primary/10 transition-all duration-200 font-body text-sm text-left font-semibold"
+                        >
+                          <item.icon className="w-5 h-5" />
+                          <span>{item.title}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
 
               {/* Divider */}
               <div className="my-4 border-t border-border/30" />
