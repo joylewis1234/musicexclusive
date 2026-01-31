@@ -6,14 +6,12 @@ interface StreamChargeResult {
   success: boolean;
   error?: string;
   requiresCredits?: boolean;
-  requiresAgreement?: boolean;
 }
 
 interface ValidationResult {
   valid: boolean;
   error?: string;
   requiresCredits?: boolean;
-  requiresAgreement?: boolean;
 }
 
 export const useStreamCharge = (userEmail: string | null | undefined) => {
@@ -24,14 +22,14 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
   /**
    * Validate that the fan is allowed to stream:
    * 1. Must be in vault (vault_access_active = true)
-   * 2. Must have accepted fan agreements
-   * 3. Must have enough credits (>= 1)
+   * 2. Must have enough credits (>= 1)
+   * 
+   * Note: Fan agreements are accepted during vault entry, so we don't check again here.
    */
   const validateStreamEligibility = useCallback(async (
-    fanEmail: string,
-    userId: string
+    fanEmail: string
   ): Promise<ValidationResult> => {
-    // 1. Check vault membership and credits
+    // Check vault membership and credits
     const { data: vaultMember, error: vaultError } = await supabase
       .from("vault_members")
       .select("id, credits, vault_access_active")
@@ -51,27 +49,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
       return { valid: false, error: "Your vault access is not active" };
     }
 
-    // 2. Check agreements acceptance
-    const { data: agreement, error: agreementError } = await supabase
-      .from("fan_terms_acceptances")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (agreementError) {
-      console.error("Error checking agreements:", agreementError);
-      return { valid: false, error: "Could not verify agreements" };
-    }
-
-    if (!agreement) {
-      return { 
-        valid: false, 
-        error: "Please accept the fan agreement before streaming",
-        requiresAgreement: true
-      };
-    }
-
-    // 3. Check credits
+    // Check credits
     if (vaultMember.credits < 1) {
       return { 
         valid: false, 
@@ -108,7 +86,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
       }
 
       // Run full validation
-      const validation = await validateStreamEligibility(userEmail, fanUserId);
+      const validation = await validateStreamEligibility(userEmail);
       
       if (!validation.valid) {
         if (validation.requiresCredits) {
@@ -119,17 +97,6 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
             success: false, 
             error: validation.error,
             requiresCredits: true 
-          };
-        }
-        
-        if (validation.requiresAgreement) {
-          toast.error("Agreement required", {
-            description: validation.error
-          });
-          return { 
-            success: false, 
-            error: validation.error,
-            requiresAgreement: true 
           };
         }
         
