@@ -220,6 +220,54 @@ serve(async (req) => {
         logStep("Payment intent succeeded", { paymentIntentId: paymentIntent.id });
         break;
       }
+
+      // Stripe Connect events for artist payout accounts
+      case "account.updated": {
+        const account = event.data.object as Stripe.Account;
+        logStep("Connect account updated", { 
+          accountId: account.id, 
+          chargesEnabled: account.charges_enabled,
+          payoutsEnabled: account.payouts_enabled
+        });
+
+        // Find artist profile by stripe_account_id and update payout status
+        const { data: artistProfile, error: findError } = await supabaseAdmin
+          .from("artist_profiles")
+          .select("id, payout_status")
+          .eq("stripe_account_id", account.id)
+          .maybeSingle();
+
+        if (findError) {
+          logStep("Error finding artist profile", { error: findError.message });
+          break;
+        }
+
+        if (artistProfile) {
+          let newStatus = "pending";
+          if (account.charges_enabled && account.payouts_enabled) {
+            newStatus = "connected";
+          } else if (!account.charges_enabled && !account.payouts_enabled) {
+            newStatus = "not_connected";
+          }
+
+          if (newStatus !== artistProfile.payout_status) {
+            const { error: updateError } = await supabaseAdmin
+              .from("artist_profiles")
+              .update({ payout_status: newStatus })
+              .eq("id", artistProfile.id);
+
+            if (updateError) {
+              logStep("Error updating payout status", { error: updateError.message });
+            } else {
+              logStep("Payout status updated via webhook", { 
+                artistProfileId: artistProfile.id, 
+                newStatus 
+              });
+            }
+          }
+        }
+        break;
+      }
       
       default:
         logStep("Unhandled event type", { type: event.type });
