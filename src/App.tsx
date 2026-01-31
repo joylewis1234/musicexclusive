@@ -29,6 +29,7 @@ import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
 import ArtistAgreement from "./pages/ArtistAgreement";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="/subscribe" element={<Subscribe />} />
                 <Route path="/load-credits" element={<LoadCredits />} />
                 <Route path="/terms" element={<Terms />} />
+                <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/artist-agreement" element={<ArtistAgreement />} />
                 
                 {/* Login selector page */}
