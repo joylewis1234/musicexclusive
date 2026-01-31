@@ -8,6 +8,7 @@ import { useUnlockFeedback } from "@/hooks/useUnlockFeedback";
 import { SpinWheel } from "@/components/vault/SpinWheel";
 import { VaultLoseScreen } from "@/components/vault/VaultLoseScreen";
 import { VaultWinScreen } from "@/components/vault/VaultWinScreen";
+import { VaultPendingScreen } from "@/components/vault/VaultPendingScreen";
 import { supabase } from "@/integrations/supabase/client";
 
 type VaultState = "winner" | "not_selected";
@@ -18,6 +19,8 @@ interface LocationState {
   name?: string;
   vaultCode?: string;
   vaultState?: VaultState;
+  fromReturn?: boolean; // Flag for returning fans checking their status
+  nextDrawDate?: string | null;
 }
 
 // Check if we're in development mode
@@ -45,6 +48,8 @@ const VaultStatus = () => {
   const userName = state?.name || "Vault Member";
   const userEmail = state?.email || "";
   const vaultCode = state?.vaultCode || sessionStorage.getItem("vaultCode") || "";
+  const fromReturn = state?.fromReturn || false;
+  const nextDrawDate = state?.nextDrawDate || null;
 
   // Handle win state - update database and send email
   useEffect(() => {
@@ -183,16 +188,39 @@ const VaultStatus = () => {
     />
   );
 
-  const renderNotSelected = () => (
-    <VaultLoseScreen 
-      vaultCode={vaultCode}
-      email={userEmail}
-      name={userName}
-    />
-  );
+  const renderNotSelected = () => {
+    // If returning fan checking status (not first-time spin), show pending screen
+    if (fromReturn) {
+      return (
+        <VaultPendingScreen 
+          vaultCode={vaultCode}
+          email={userEmail}
+          name={userName}
+          nextDrawDate={nextDrawDate}
+        />
+      );
+    }
+    
+    // First-time lose screen
+    return (
+      <VaultLoseScreen 
+        vaultCode={vaultCode}
+        email={userEmail}
+        name={userName}
+      />
+    );
+  };
 
   const renderContent = () => {
-    // Show spin wheel first
+    // If returning fan, skip the spin wheel and show status directly
+    if (fromReturn) {
+      if (vaultState === "winner") {
+        return renderWinner();
+      }
+      return renderNotSelected();
+    }
+
+    // Show spin wheel first (for first-time reveals)
     if (revealPhase === "spinning") {
       return (
         <SpinWheel 
@@ -242,7 +270,7 @@ const VaultStatus = () => {
       </header>
 
       <div className="flex-1 flex items-center justify-center">
-        {revealPhase === "spinning" ? (
+        {!fromReturn && revealPhase === "spinning" ? (
           // Spin wheel takes full width, no card wrapper
           <div className="w-full max-w-md">
             {renderContent()}
@@ -253,10 +281,10 @@ const VaultStatus = () => {
             <GlowCard
               className={cn(
                 "group",
-                vaultState === "winner" && !hasAnimated && "animate-vault-unlock"
+                vaultState === "winner" && !hasAnimated && !fromReturn && "animate-vault-unlock"
               )}
               glowColor={vaultState === "winner" ? "primary" : "secondary"}
-              unlocking={vaultState === "winner" && isUnlocking}
+              unlocking={vaultState === "winner" && isUnlocking && !fromReturn}
             >
               <div className="p-8 md:p-10">{renderContent()}</div>
             </GlowCard>
