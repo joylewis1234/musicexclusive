@@ -466,8 +466,7 @@ const EnterVault = () => {
                             onClick={(e) => e.stopPropagation()}
                           >
                             Terms of Use
-                          </Link>{" "}
-                          and understand streaming costs 1 credit ($0.20) per stream.
+                          </Link>.
                         </span>
                       </label>
 
