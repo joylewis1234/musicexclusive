@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronUp, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,8 +26,20 @@ const LegalPageLayout = ({
   isAgreeDisabled = false,
 }: LegalPageLayoutProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [scrollProgress, setScrollProgress] = useState(0);
   const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Check if we have navigation history
+  const canGoBack = window.history.length > 1 && location.key !== "default";
+
+  const handleBack = () => {
+    if (canGoBack) {
+      navigate(-1);
+    } else {
+      navigate("/");
+    }
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -61,10 +73,10 @@ const LegalPageLayout = ({
       <div className="fixed inset-0 bg-gradient-to-b from-muted/30 via-background to-background pointer-events-none" />
       
       {/* Minimal Header */}
-      <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/30">
+      <header className="sticky top-0.5 z-20 bg-background/95 backdrop-blur-sm border-b border-border/30">
         <div className="max-w-[680px] mx-auto w-full px-5 md:px-7 py-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -142,7 +154,7 @@ const LegalPageLayout = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate(-1)}
+            onClick={handleBack}
             className="text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft className="w-4 h-4 mr-1" />
