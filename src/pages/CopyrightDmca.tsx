@@ -7,64 +7,43 @@ COPYRIGHT & DMCA POLICY
 
 Effective Date: January 31, 2026
 
-Music Exclusive ("Company," "we," "us," or "our") respects the intellectual property rights of others and expects users of our platform to do the same. This Copyright & DMCA Policy outlines how we handle claims of copyright infringement in accordance with the Digital Millennium Copyright Act ("DMCA").
+Music Exclusive respects the intellectual property rights of others and expects all users to do the same.
 
-1. REPORTING COPYRIGHT INFRINGEMENT
+If you believe that content available on Music Exclusive infringes your copyright, you may submit a Digital Millennium Copyright Act ("DMCA") takedown request.
 
-If you believe that content on Music Exclusive infringes your copyright, you may submit a DMCA takedown notice to our designated Copyright Agent.
+1. HOW TO SUBMIT A DMCA TAKEDOWN REQUEST
+To file a DMCA notice, email us with the subject line:
+"DMCA Takedown Request"
+
+Company's Copyright Agent:
+Delgado Entertainment Law PLLC
+Attn: Guyliana Plantain
+3295 North Drinkwater Blvd., Suite 9
+Scottsdale, Arizona 85251
+Gigi@delgadoentertainmentlaw.com
 
 Your notice must include:
-- A physical or electronic signature of the copyright owner or authorized representative
-- Identification of the copyrighted work claimed to have been infringed
-- Identification of the material that is claimed to be infringing, including sufficient information for us to locate it on the platform
-- Your contact information (name, address, telephone number, email address)
-- A statement that you have a good faith belief that use of the material is not authorized by the copyright owner, its agent, or the law
-- A statement, made under penalty of perjury, that the information in the notice is accurate and that you are authorized to act on behalf of the copyright owner
-
-2. DESIGNATED COPYRIGHT AGENT
-
-DMCA notices should be sent to:
-
-Email: dmca@musicexclusive.co
-Subject Line: DMCA Takedown Notice
-
-3. COUNTER-NOTIFICATION
-
-If you believe your content was removed by mistake or misidentification, you may submit a counter-notification to our Copyright Agent.
-
-Your counter-notification must include:
 - Your physical or electronic signature
-- Identification of the material that was removed and its location before removal
-- A statement under penalty of perjury that you have a good faith belief the material was removed due to mistake or misidentification
-- Your name, address, and telephone number
-- A statement that you consent to the jurisdiction of the federal court in your district and that you will accept service of process from the party who submitted the original DMCA notice
+- Identification of the copyrighted work claimed to be infringed
+- Identification of the infringing content and where it is located on the platform
+- Your name, address, phone number, and email address
+- A statement that you have a good faith belief the use is not authorized
+- A statement under penalty of perjury that the information is accurate and you are authorized to act
 
-Upon receipt of a valid counter-notification, we may restore the removed content within 10-14 business days unless the original complainant files a court action.
+2. COUNTER-NOTICE
+If you believe your content was removed by mistake, you may submit a counter-notice to the Copyright Agent that includes:
+- Your signature
+- Identification of the removed content and its prior location
+- A statement under penalty of perjury that removal was due to mistake or misidentification
+- Your name, address, phone number, and email address
+- A statement consenting to jurisdiction of the federal court in Arizona and accepting service of process
 
-4. REPEAT INFRINGER POLICY
+3. REPEAT INFRINGEMENT
+Music Exclusive may terminate accounts of repeat infringers or users who violate intellectual property rights.
 
-Music Exclusive maintains a policy of terminating, in appropriate circumstances, the accounts of users who are repeat infringers of copyright.
-
-We reserve the right to:
-- Remove or disable access to infringing content
-- Terminate accounts of users who repeatedly infringe copyrights
-- Take other appropriate action at our sole discretion
-
-5. ARTIST REPRESENTATIONS
-
-By uploading content to Music Exclusive, artists represent and warrant that:
-- They own or control all necessary rights to the content
-- The content does not infringe any third-party copyrights, trademarks, or other intellectual property rights
-- They have obtained all necessary licenses, permissions, and clearances
-
-6. FALSE CLAIMS
-
-Please note that under 17 U.S.C. § 512(f), any person who knowingly materially misrepresents that material is infringing may be subject to liability for damages.
-
-7. CONTACT US
-
-For questions about this Copyright & DMCA Policy, contact us at:
-dmca@musicexclusive.co`
+4. CONTACT
+For questions, contact:
+support@musicexclusive.co`
 
 const CopyrightDmca = () => {
   return (
