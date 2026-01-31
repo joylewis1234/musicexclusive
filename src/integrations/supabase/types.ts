@@ -379,6 +379,59 @@ export type Database = {
           },
         ]
       }
+      stream_ledger: {
+        Row: {
+          amount_artist: number
+          amount_platform: number
+          amount_total: number
+          artist_id: string
+          created_at: string
+          credits_spent: number
+          fan_email: string
+          fan_id: string
+          id: string
+          payout_batch_id: string | null
+          payout_status: string
+          track_id: string
+        }
+        Insert: {
+          amount_artist?: number
+          amount_platform?: number
+          amount_total?: number
+          artist_id: string
+          created_at?: string
+          credits_spent?: number
+          fan_email: string
+          fan_id: string
+          id?: string
+          payout_batch_id?: string | null
+          payout_status?: string
+          track_id: string
+        }
+        Update: {
+          amount_artist?: number
+          amount_platform?: number
+          amount_total?: number
+          artist_id?: string
+          created_at?: string
+          credits_spent?: number
+          fan_email?: string
+          fan_id?: string
+          id?: string
+          payout_batch_id?: string | null
+          payout_status?: string
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_ledger_payout_batch_id_fkey"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payout_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       stripe_events: {
         Row: {
           event_type: string
