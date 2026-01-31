@@ -33,6 +33,12 @@ interface ArtistData {
   genre: string;
   bio: string;
   imageUrl: string;
+  socialLinks: {
+    instagram?: string | null;
+    tiktok?: string | null;
+    twitter?: string | null;
+    youtube?: string | null;
+  };
 }
 
 interface PlayerTrack {
@@ -137,6 +143,12 @@ const ArtistProfile = () => {
             genre: profile.genre || "Music",
             bio: profile.bio || `Exclusive artist on Music Exclusive™. Experience premium, unreleased music only available inside the Vault.`,
             imageUrl: profile.avatar_url || artist1,
+            socialLinks: {
+              instagram: profile.instagram_url,
+              tiktok: profile.tiktok_url,
+              twitter: profile.twitter_url,
+              youtube: profile.youtube_url,
+            },
           });
         } else {
           // Fallback to demo artist
@@ -147,6 +159,7 @@ const ArtistProfile = () => {
             genre: "Music",
             bio: "Exclusive artist on Music Exclusive™.",
             imageUrl: artist1,
+            socialLinks: {},
           });
         }
 
@@ -346,7 +359,7 @@ const ArtistProfile = () => {
       />
 
       {/* About Section */}
-      <ArtistAboutSection bio={artist.bio} />
+      <ArtistAboutSection bio={artist.bio} socialLinks={artist.socialLinks} />
 
       {/* Vault Player */}
       <CompactVaultPlayer
