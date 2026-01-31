@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,9 @@ import {
   RefreshCw,
 } from "lucide-react";
 import WeeklyTransparencyReport from "@/components/artist/WeeklyTransparencyReport";
+import PayoutSettings from "@/components/artist/PayoutSettings";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
+import { toast } from "sonner";
 
 interface PayoutBatch {
   id: string;
@@ -57,10 +59,12 @@ interface LedgerEntry {
 
 const ArtistEarnings = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [artistId, setArtistId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [payoutStatus, setPayoutStatus] = useState<string>("not_connected");
   
   // Earnings data
   const [batches, setBatches] = useState<PayoutBatch[]>([]);
@@ -214,6 +218,18 @@ const ArtistEarnings = () => {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [fetchEarningsData]);
+
+  // Handle Stripe Connect return
+  useEffect(() => {
+    const connectStatus = searchParams.get("connect");
+    if (connectStatus === "success") {
+      toast.success("Stripe Connect setup completed! Verifying status...");
+      setSearchParams({}, { replace: true });
+    } else if (connectStatus === "refresh") {
+      toast.info("Stripe Connect session expired. Please try again.");
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleRefresh = () => {
     fetchEarningsData(true);
@@ -496,8 +512,13 @@ const ArtistEarnings = () => {
             </div>
           </div>
 
+          {/* Payout Settings */}
+          <section className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <PayoutSettings onStatusChange={setPayoutStatus} />
+          </section>
+
           {/* Weekly Transparency Report */}
-          <section data-tutorial="weekly-report" className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <section data-tutorial="weekly-report" className="animate-fade-in" style={{ animationDelay: '150ms' }}>
             <WeeklyTransparencyReport />
           </section>
 
