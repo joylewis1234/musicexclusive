@@ -1,14 +1,22 @@
-import { useNavigate } from "react-router-dom";
-import { GlowCard } from "@/components/ui/GlowCard";
-import { SectionHeader } from "@/components/ui/SectionHeader";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { LegalPageLayout, LegalSection } from "@/components/legal";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Home, Download } from "lucide-react";
+import { Download } from "lucide-react";
 
 const TERMS_VERSION = "1.0";
 const EFFECTIVE_DATE = "January 31, 2025";
 
-const ARTIST_PARTICIPATION_AGREEMENT = `MUSIC EXCLUSIVE
+const AGREEMENT_TEXT = `MUSIC EXCLUSIVE
+ARTIST PARTICIPATION AGREEMENT (MVP VERSION)
+
+Effective Date: ${EFFECTIVE_DATE}
+
+This Artist Participation Agreement ("Agreement") is entered into between Music Exclusive ("Company," "we," or "us") and you ("Artist," "you," or "your"). This Agreement governs your participation as an artist on the Music Exclusive platform ("Services").
+
+By accessing the Services, uploading Content, or clicking "I Agree," you confirm you have read, understood, and agree to be bound by this Agreement.`;
+
+const ArtistAgreement = () => {
+  const handleDownload = () => {
+    const fullText = `MUSIC EXCLUSIVE
 ARTIST PARTICIPATION AGREEMENT (MVP VERSION)
 
 Effective Date: ${EFFECTIVE_DATE}
@@ -83,12 +91,8 @@ To the maximum extent permitted by law, Company is not liable for indirect, inci
 Disputes shall be governed by applicable arbitration and dispute resolution terms consistent with the Company Terms of Use.
 
 END OF AGREEMENT`;
-
-const ArtistAgreement = () => {
-  const navigate = useNavigate();
-
-  const handleDownload = () => {
-    const blob = new Blob([ARTIST_PARTICIPATION_AGREEMENT], { type: "text/plain" });
+    
+    const blob = new Blob([fullText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -100,78 +104,185 @@ const ArtistAgreement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Navigation Header */}
-      <header className="p-4 flex items-center justify-between max-w-2xl mx-auto w-full">
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+    <LegalPageLayout
+      title="Artist Participation Agreement"
+      subtitle="Terms governing your participation as an artist on Music Exclusive."
+      version={TERMS_VERSION}
+      effectiveDate={EFFECTIVE_DATE}
+    >
+      {/* Download Button */}
+      <div className="mb-8">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={handleDownload}
+          className="gap-2"
         >
-          <ChevronLeft className="w-5 h-5" />
-          <span className="text-sm uppercase tracking-wider">Back</span>
-        </button>
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <Home className="w-5 h-5" />
-          <span className="text-sm uppercase tracking-wider">Home</span>
-        </button>
-      </header>
+          <Download className="w-4 h-4" />
+          Download Agreement
+        </Button>
+      </div>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-start px-4 py-8">
-        <div className="w-full max-w-2xl">
-          <GlowCard glowColor="gradient" className="p-6 md:p-8">
-            {/* Title */}
-            <div className="text-center mb-6">
-              <p className="text-primary text-xs uppercase tracking-widest mb-2 font-display">
-                Music Exclusive™
-              </p>
-              <SectionHeader 
-                title="Artist Participation Agreement" 
-                align="center" 
-                framed 
-              />
-            </div>
+      <LegalSection>
+        <p>
+          This Artist Participation Agreement ("Agreement") is entered into between Music 
+          Exclusive ("Company," "we," or "us") and you ("Artist," "you," or "your"). This 
+          Agreement governs your participation as an artist on the Music Exclusive platform 
+          ("Services").
+        </p>
+        <p className="font-medium text-foreground">
+          By accessing the Services, uploading Content, or clicking "I Agree," you confirm 
+          you have read, understood, and agree to be bound by this Agreement.
+        </p>
+      </LegalSection>
 
-            <p className="text-muted-foreground text-center mb-2 text-sm">
-              Version {TERMS_VERSION} • Effective {EFFECTIVE_DATE}
-            </p>
+      <LegalSection title="1. Platform Purpose">
+        <p>
+          Music Exclusive is an artist-first music streaming and fan engagement platform 
+          where artists release exclusive music to fans before releasing to other digital 
+          streaming platforms.
+        </p>
+      </LegalSection>
 
-            <p className="text-muted-foreground text-center mb-6 text-xs">
-              Please read this agreement carefully before uploading Content to Music Exclusive.
-            </p>
+      <LegalSection title="2. Definitions">
+        <ul className="list-disc list-outside ml-5 space-y-2">
+          <li>
+            <strong>"Content"</strong> means the sound recordings, compositions, cover art, 
+            images, metadata, and other materials you upload to Music Exclusive.
+          </li>
+          <li>
+            <strong>"Verified Stream"</strong> means a legitimate fan-initiated stream that 
+            meets platform validation requirements and is not fraudulent or manipulated.
+          </li>
+        </ul>
+      </LegalSection>
 
-            {/* Download Button */}
-            <div className="flex justify-center mb-6">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleDownload}
-                className="gap-2"
-              >
-                <Download className="w-4 h-4" />
-                Download Agreement
-              </Button>
-            </div>
+      <LegalSection title="3. Artist Eligibility">
+        <p>
+          Company may approve or deny Artist participation at its sole discretion. Company 
+          may remove Artist access for violations of this Agreement, fraud, or abuse.
+        </p>
+      </LegalSection>
 
-            {/* Terms Content */}
-            <div className="border border-border/50 rounded-lg bg-background/50">
-              <ScrollArea className="h-[55vh] p-4 md:p-6">
-                <pre className="whitespace-pre-wrap text-xs md:text-sm text-muted-foreground font-body leading-relaxed select-text">
-                  {ARTIST_PARTICIPATION_AGREEMENT}
-                </pre>
-              </ScrollArea>
-            </div>
+      <LegalSection title="4. Exclusivity Window">
+        <p>
+          Artist agrees that each uploaded release may be exclusive to Music Exclusive for 
+          a minimum of <strong>three (3) weeks</strong> (or longer if Artist chooses).
+        </p>
+        <p>
+          After the exclusivity period, Artist may distribute the release elsewhere. Music 
+          Exclusive retains the right to continue streaming the Content on the platform 
+          indefinitely unless otherwise agreed in writing.
+        </p>
+      </LegalSection>
 
-            <p className="text-xs text-muted-foreground text-center mt-6">
-              By using Music Exclusive as an Artist, you agree to this Agreement.
-            </p>
-          </GlowCard>
+      <LegalSection title="5. Rights Granted">
+        <p>
+          Artist grants Company a non-exclusive, worldwide right to host, store, stream, 
+          display, and promote the Content solely in connection with operating and marketing 
+          the Music Exclusive platform.
+        </p>
+        <p className="font-medium text-foreground">
+          Artist retains ownership of all intellectual property rights in the Content.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="6. Artist Representations & Warranties">
+        <p>Artist represents and warrants:</p>
+        <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
+          <li>Artist owns or controls all necessary rights to upload and monetize the Content</li>
+          <li>The Content does not infringe any third-party rights</li>
+          <li>Artist is responsible for any third-party royalty obligations (including publishers, writers, producers, or other rights holders)</li>
+          <li>Artist will not upload unlawful, infringing, or improper content</li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="7. Streaming Payments & Earnings (MVP)">
+        <p>Fans stream music using credits.</p>
+        <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
+          <li>1 credit = $0.20</li>
+          <li>Each stream costs 1 credit ($0.20)</li>
+        </ul>
+        
+        <div className="mt-4 p-4 rounded-lg bg-primary/5 border border-primary/20">
+          <p className="font-semibold text-foreground mb-2">Revenue Split:</p>
+          <ul className="list-disc list-outside ml-5 space-y-1.5">
+            <li><strong>50% to Artist</strong> ($0.10 per stream)</li>
+            <li><strong>50% to Music Exclusive</strong> ($0.10 per stream)</li>
+          </ul>
         </div>
-      </main>
-    </div>
+        
+        <p className="mt-3">
+          Artist earnings will be tracked inside the Artist Dashboard.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="8. Payout Schedule">
+        <p>
+          Artist payouts are issued <strong>weekly on Mondays</strong> for verified streams 
+          earned during the prior week.
+        </p>
+        <p>
+          Company may delay payouts if fraud, streaming manipulation, chargebacks, or 
+          disputes are suspected.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="9. Weekly Transparency Report">
+        <p>
+          Company will provide a weekly transparency report inside the Artist Earnings page showing:
+        </p>
+        <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
+          <li>Total verified streams</li>
+          <li>Total credits collected</li>
+          <li>Artist share</li>
+          <li>Platform share</li>
+          <li>Payout status (Pending/Paid)</li>
+          <li>Total payouts (lifetime)</li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="10. Fraud, Streaming Manipulation & Termination">
+        <p>
+          Artist may not engage in streaming manipulation or artificial inflation of streams.
+        </p>
+        <p>
+          If Company determines in its sole discretion that manipulation occurred, Company may:
+        </p>
+        <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
+          <li>Remove Content</li>
+          <li>Suspend or terminate Artist access</li>
+          <li>Withhold earnings tied to manipulation</li>
+        </ul>
+      </LegalSection>
+
+      <LegalSection title="11. Termination">
+        <p>
+          Company may terminate this Agreement and remove Artist access at any time for 
+          breach, fraud, abuse, or platform safety reasons.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="12. Limitation of Liability">
+        <p>
+          To the maximum extent permitted by law, Company is not liable for indirect, 
+          incidental, or consequential damages arising from the Services.
+        </p>
+      </LegalSection>
+
+      <LegalSection title="13. Dispute Resolution">
+        <p>
+          Disputes shall be governed by applicable arbitration and dispute resolution terms 
+          consistent with the Company Terms of Use.
+        </p>
+      </LegalSection>
+
+      <div className="mt-12 pt-6 border-t border-border/30">
+        <p className="text-sm text-muted-foreground text-center">
+          By using Music Exclusive as an Artist, you agree to this Agreement.
+        </p>
+      </div>
+    </LegalPageLayout>
   );
 };
 
