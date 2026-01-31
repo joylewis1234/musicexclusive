@@ -330,7 +330,7 @@ const ArtistProfilePage = () => {
   }, [pendingPlayTrack, artistEmail, chargeStream, refetchCredits, navigate]);
 
   const handleAddCredits = useCallback(() => {
-    navigate("/fan/payment");
+    navigate("/fan/add-credits");
   }, [navigate]);
 
   const handleBack = () => {
