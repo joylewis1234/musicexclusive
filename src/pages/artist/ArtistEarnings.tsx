@@ -4,12 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { format, startOfWeek } from "date-fns";
 import {
   DollarSign,
@@ -18,27 +12,15 @@ import {
   TrendingUp,
   Music,
   ChevronLeft,
-  Loader2,
-  XCircle,
   LogOut,
   Crown,
   RefreshCw,
 } from "lucide-react";
 import WeeklyTransparencyReport from "@/components/artist/WeeklyTransparencyReport";
 import PayoutSettings from "@/components/artist/PayoutSettings";
+import PayoutHistorySection from "@/components/artist/PayoutHistorySection";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { toast } from "sonner";
-
-interface PayoutBatch {
-  id: string;
-  week_start: string;
-  week_end: string;
-  total_credits: number;
-  total_usd: number;
-  status: string;
-  paid_at: string | null;
-  stripe_transfer_id: string | null;
-}
 
 interface TrackEarning {
   track_id: string;
@@ -46,15 +28,6 @@ interface TrackEarning {
   artwork_url: string | null;
   total_streams: number;
   total_earned: number;
-}
-
-interface LedgerEntry {
-  id: string;
-  created_at: string;
-  credits_delta: number;
-  usd_delta: number;
-  type: string;
-  reference: string | null;
 }
 
 const ArtistEarnings = () => {
@@ -67,7 +40,6 @@ const ArtistEarnings = () => {
   const [payoutStatus, setPayoutStatus] = useState<string>("not_connected");
   
   // Earnings data
-  const [batches, setBatches] = useState<PayoutBatch[]>([]);
   const [trackEarnings, setTrackEarnings] = useState<TrackEarning[]>([]);
   const [totals, setTotals] = useState({
     lifetime: 0,
@@ -76,11 +48,6 @@ const ArtistEarnings = () => {
     totalPayouts: 0,
   });
   const [lastPayoutDate, setLastPayoutDate] = useState<string | null>(null);
-  
-  // Modal state
-  const [selectedBatch, setSelectedBatch] = useState<PayoutBatch | null>(null);
-  const [batchLedgerEntries, setBatchLedgerEntries] = useState<LedgerEntry[]>([]);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   const fetchEarningsData = useCallback(async (isManualRefresh = false) => {
     if (isManualRefresh) {
@@ -138,12 +105,6 @@ const ArtistEarnings = () => {
         .select("*")
         .eq("artist_user_id", user.id)
         .order("week_start", { ascending: false });
-        
-      setBatches(batchData || []);
-      
-      const paidFromBatches = (batchData || [])
-        .filter((b) => b.status === "paid")
-        .reduce((sum, b) => sum + Number(b.total_usd), 0);
       
       const lastPaid = (batchData || []).find((b) => b.status === "paid" && b.paid_at);
       
@@ -235,63 +196,9 @@ const ArtistEarnings = () => {
     fetchEarningsData(true);
   };
 
-  const handleViewReport = async (batch: PayoutBatch) => {
-    setSelectedBatch(batch);
-    setIsLoadingDetails(true);
-    
-    try {
-      const { data } = await supabase
-        .from("credit_ledger")
-        .select("*")
-        .eq("payout_batch_id", batch.id)
-        .order("created_at", { ascending: false });
-        
-      setBatchLedgerEntries(data || []);
-    } catch (error) {
-      console.error("Error fetching batch details:", error);
-    } finally {
-      setIsLoadingDetails(false);
-    }
-  };
-
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     navigate("/");
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "paid":
-        return (
-          <Badge className="bg-green-500/20 text-green-400 border-green-500/40">
-            <CheckCircle2 className="w-3 h-3 mr-1" />
-            Paid
-          </Badge>
-        );
-      case "pending":
-        return (
-          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/40">
-            <Clock className="w-3 h-3 mr-1" />
-            Pending
-          </Badge>
-        );
-      case "processing":
-        return (
-          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/40">
-            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-            Processing
-          </Badge>
-        );
-      case "failed":
-        return (
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/40">
-            <XCircle className="w-3 h-3 mr-1" />
-            Failed
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
   };
 
   const getNextPayoutDate = () => {
@@ -579,173 +486,12 @@ const ArtistEarnings = () => {
             </div>
           </section>
 
-          {/* Payout History */}
-          <section className="space-y-4 animate-fade-in" style={{ animationDelay: '200ms' }}>
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-lg font-semibold text-foreground">
-                Payout History
-              </h2>
-            </div>
-            
-            <div 
-              className="p-4 rounded-2xl"
-              style={{
-                background: 'hsla(0, 0%, 100%, 0.02)',
-                border: '1px solid hsla(280, 80%, 50%, 0.15)',
-              }}
-            >
-              {batches.filter((b) => b.status === "paid").length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">
-                  No completed payouts yet.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {batches
-                    .filter((b) => b.status === "paid")
-                    .map((batch) => (
-                      <div
-                        key={batch.id}
-                        className="flex items-center justify-between p-3 rounded-xl bg-muted/20"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-foreground">
-                            {batch.paid_at ? format(new Date(batch.paid_at), "MMM d, yyyy") : "N/A"}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Connected payout method
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <p className="text-sm font-display font-bold" style={{ color: 'hsl(142, 70%, 50%)' }}>
-                            ${Number(batch.total_usd).toFixed(2)}
-                          </p>
-                          {getStatusBadge(batch.status)}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
+          {/* Payout History Section */}
+          <section className="animate-fade-in" style={{ animationDelay: '200ms' }}>
+            <PayoutHistorySection artistId={artistId} userId={userId} />
           </section>
         </div>
       </main>
-
-      {/* Weekly Report Detail Modal */}
-      <Dialog open={!!selectedBatch} onOpenChange={() => setSelectedBatch(null)}>
-        <DialogContent 
-          className="max-w-md rounded-2xl"
-          style={{
-            background: 'hsl(0, 0%, 5%)',
-            border: '1px solid hsla(280, 80%, 50%, 0.3)',
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="font-display">
-              Weekly Report
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedBatch && (
-            <div className="space-y-4">
-              {/* Week range */}
-              <div 
-                className="p-4 rounded-xl"
-                style={{
-                  background: 'hsla(0, 0%, 100%, 0.03)',
-                  border: '1px solid hsla(280, 80%, 50%, 0.15)',
-                }}
-              >
-                <p className="text-sm text-muted-foreground mb-1">Week</p>
-                <p className="font-medium text-foreground">
-                  {format(new Date(selectedBatch.week_start), "MMM d")} –{" "}
-                  {format(new Date(selectedBatch.week_end), "MMM d, yyyy")}
-                </p>
-              </div>
-
-              {/* Revenue breakdown */}
-              <div 
-                className="p-4 rounded-xl space-y-3"
-                style={{
-                  background: 'hsla(0, 0%, 100%, 0.03)',
-                  border: '1px solid hsla(280, 80%, 50%, 0.15)',
-                }}
-              >
-                <p className="text-sm font-display uppercase tracking-wider" style={{ color: 'hsl(280, 80%, 70%)' }}>
-                  Revenue Breakdown
-                </p>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Streams</span>
-                    <span className="font-medium text-foreground">{selectedBatch.total_credits}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Credits Spent (Fans)</span>
-                    <span className="font-medium text-foreground">{selectedBatch.total_credits} credits</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Value</span>
-                    <span className="font-medium text-foreground">${(selectedBatch.total_credits * 0.20).toFixed(2)}</span>
-                  </div>
-                  <hr className="border-border/30" />
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Platform (50%)</span>
-                    <span className="font-medium text-foreground">${(selectedBatch.total_credits * 0.10).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Artist (50%)</span>
-                    <span className="font-bold" style={{ color: 'hsl(280, 80%, 70%)' }}>
-                      ${Number(selectedBatch.total_usd).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Status */}
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Status</span>
-                {getStatusBadge(selectedBatch.status)}
-              </div>
-
-              {/* Ledger entries */}
-              {isLoadingDetails ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="w-5 h-5 animate-spin" style={{ color: 'hsl(280, 80%, 70%)' }} />
-                </div>
-              ) : batchLedgerEntries.length > 0 ? (
-                <div 
-                  className="p-4 rounded-xl max-h-48 overflow-y-auto"
-                  style={{
-                    background: 'hsla(0, 0%, 100%, 0.03)',
-                    border: '1px solid hsla(280, 80%, 50%, 0.15)',
-                  }}
-                >
-                  <p className="text-sm font-display uppercase tracking-wider mb-3" style={{ color: 'hsl(280, 80%, 70%)' }}>
-                    Ledger Entries
-                  </p>
-                  <div className="space-y-2">
-                    {batchLedgerEntries.slice(0, 10).map((entry) => (
-                      <div key={entry.id} className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          {format(new Date(entry.created_at), "MMM d, h:mm a")}
-                        </span>
-                        <span className="font-medium text-green-400">
-                          +${Math.abs(Number(entry.usd_delta)).toFixed(2)}
-                        </span>
-                      </div>
-                    ))}
-                    {batchLedgerEntries.length > 10 && (
-                      <p className="text-xs text-muted-foreground text-center pt-2">
-                        +{batchLedgerEntries.length - 10} more entries
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
