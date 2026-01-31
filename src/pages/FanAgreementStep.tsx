@@ -136,9 +136,8 @@ const FanAgreementStep = () => {
                   onClick={(e) => e.stopPropagation()}
                 >
                   Terms of Use
-                </Link>{" "}
-                and understand streaming costs{" "}
-                <span className="text-primary font-bold">1 credit ($0.20)</span> per stream.
+                </Link>
+                .
               </label>
             </div>
 
