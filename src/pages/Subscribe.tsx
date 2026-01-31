@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronLeft, Home, Crown, Loader2, Zap, Star, Users, Gift, Sparkles } from "lucide-react";
 import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +26,7 @@ const Subscribe = () => {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const superfanPerks = [
     { icon: Zap, text: "25 listening credits included each month" },
@@ -273,10 +275,31 @@ const Subscribe = () => {
           </div>
         </GlowCard>
 
+        {/* Terms Checkbox */}
+        <label className="flex items-start gap-3 cursor-pointer group">
+          <Checkbox
+            checked={termsAccepted}
+            onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+            className="mt-0.5 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+          />
+          <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">
+            I agree to the Music Exclusive{" "}
+            <Link 
+              to="/terms" 
+              target="_blank"
+              className="text-primary hover:underline"
+              onClick={(e) => e.stopPropagation()}
+            >
+              Terms of Use
+            </Link>{" "}
+            and understand streaming costs 1 credit ($0.20) per stream.
+          </span>
+        </label>
+
         {/* CTA Button */}
         <Button
           onClick={handleSubscribe}
-          disabled={isProcessing}
+          disabled={isProcessing || !termsAccepted}
           className="w-full"
           variant="primary"
           size="lg"
