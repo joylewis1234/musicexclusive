@@ -16,9 +16,10 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2 } from "lucide-react";
+import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { FanCommentBubble } from "@/components/vault/FanCommentBubble";
 import { ReturningFanLogin } from "@/components/vault/ReturningFanLogin";
 import vaultPortal from "@/assets/vault-portal.png";
@@ -31,6 +32,7 @@ const fanComments = [
   { name: "Isabella Davis", comment: "Pure fire 🔥", position: "bottom-left" as const, delay: 600 },
   { name: "Sophia Brown", comment: "Love every second.", position: "bottom-right" as const, delay: 800 },
 ];
+
 const formSchema = z.object({
   name: z
     .string()
@@ -42,6 +44,16 @@ const formSchema = z.object({
     .trim()
     .email({ message: "Please enter a valid email" })
     .max(255, { message: "Email must be less than 255 characters" }),
+  password: z
+    .string()
+    .min(6, { message: "Password must be at least 6 characters" })
+    .max(72, { message: "Password must be less than 72 characters" }),
+  confirmPassword: z
+    .string()
+    .min(1, { message: "Please confirm your password" }),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -57,17 +69,22 @@ const EnterVault = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingExisting, setIsCheckingExisting] = useState(false);
   const [hasExistingCode, setHasExistingCode] = useState(false);
-  const [submittedData, setSubmittedData] = useState<FormValues | null>(null);
+  const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
   const [vaultCode, setVaultCode] = useState<string>("");
   const [isCopied, setIsCopied] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+  const { signUp } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       email: "",
+      password: "",
+      confirmPassword: "",
     },
   });
 
@@ -117,14 +134,9 @@ const EnterVault = () => {
         .maybeSingle();
       
       if (existingCode) {
-        // Reuse existing valid code
-        setVaultCode(existingCode.code);
-        setSubmittedData(values);
-        setIsSubmitted(true);
-        sessionStorage.setItem("vaultCode", existingCode.code);
-        sessionStorage.setItem("vaultEmail", values.email);
-        sessionStorage.setItem("vaultName", values.name);
-        toast.info("Your existing vault code is still valid!");
+        // User already has an active vault code - prompt them to log in instead
+        toast.info("You already have a vault code! Please log in below to continue.");
+        setIsSubmitting(false);
         return;
       }
       
@@ -143,6 +155,20 @@ const EnterVault = () => {
         const waitTime = 60 - secondsSince;
         
         toast.error(`Please wait ${waitTime} seconds before requesting another code`);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Create user account first
+      const { error: signUpError } = await signUp(values.email, values.password, "fan", values.name);
+      
+      if (signUpError) {
+        // Check for specific error types
+        if (signUpError.message.includes("already registered")) {
+          toast.error("This email is already registered. Please log in below.");
+        } else {
+          toast.error(signUpError.message || "Failed to create account. Please try again.");
+        }
         setIsSubmitting(false);
         return;
       }
@@ -194,7 +220,7 @@ const EnterVault = () => {
       }
       
       setVaultCode(generatedCode);
-      setSubmittedData(values);
+      setSubmittedData({ name: values.name, email: values.email });
       setIsSubmitted(true);
       
       // Store in sessionStorage for persistence across navigation
@@ -202,7 +228,7 @@ const EnterVault = () => {
       sessionStorage.setItem("vaultEmail", values.email);
       sessionStorage.setItem("vaultName", values.name);
       
-      toast.success("Your vault code has been created!");
+      toast.success("Account created! Your vault code is ready.");
     } catch (err) {
       console.error("Unexpected error:", err);
       toast.error("Something went wrong. Please try again.");
@@ -444,6 +470,60 @@ const EnterVault = () => {
                                   checkExistingCode(e.target.value);
                                 }}
                               />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type={showPassword ? "text" : "password"}
+                                  placeholder="Create password"
+                                  className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base pr-12"
+                                  {...field}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowPassword(!showPassword)}
+                                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                              </div>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="confirmPassword"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <div className="relative">
+                                <Input
+                                  type={showConfirmPassword ? "text" : "password"}
+                                  placeholder="Confirm password"
+                                  className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base pr-12"
+                                  {...field}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                >
+                                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                </button>
+                              </div>
                             </FormControl>
                             <FormMessage />
                           </FormItem>
