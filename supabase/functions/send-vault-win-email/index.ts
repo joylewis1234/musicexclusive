@@ -6,6 +6,62 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+type ResendErrorPayload = {
+  message?: string;
+  error?: string;
+};
+
+const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const PRIMARY_FROM = "Music Exclusive <noreply@musicexclusive.co>";
+const FALLBACK_FROM = "Music Exclusive <onboarding@resend.dev>";
+
+async function sendResendEmail(args: {
+  resendKey: string;
+  from: string;
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<{ ok: true; data?: unknown } | { ok: false; status: number; message: string }> {
+  const emailResponse = await fetch(RESEND_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${args.resendKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: args.from,
+      to: [args.to],
+      subject: args.subject,
+      html: args.html,
+    }),
+  });
+
+  if (emailResponse.ok) {
+    try {
+      const data = await emailResponse.json();
+      return { ok: true, data };
+    } catch {
+      return { ok: true };
+    }
+  }
+
+  const contentType = emailResponse.headers.get("content-type") || "";
+  let message = `Resend API error: ${emailResponse.status}`;
+  try {
+    if (contentType.includes("application/json")) {
+      const data = (await emailResponse.json()) as ResendErrorPayload;
+      message = data.message || data.error || message;
+    } else {
+      const text = await emailResponse.text();
+      message = text || message;
+    }
+  } catch {
+    // ignore parsing error
+  }
+
+  return { ok: false, status: emailResponse.status, message };
+}
+
 interface VaultWinRequest {
   email: string;
   name: string;
@@ -39,17 +95,8 @@ serve(async (req) => {
     const baseUrl = appUrl || 'https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app';
     const agreementsLink = `${baseUrl}/fan/agreements?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
 
-    const emailResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "Music Exclusive <onboarding@resend.dev>",
-        to: [email],
-        subject: "🎉 You're In! Welcome to the Music Exclusive Vault",
-        html: `
+    const subject = "🎉 You're In! Welcome to the Music Exclusive Vault";
+    const html = `
           <!DOCTYPE html>
           <html>
           <head>
@@ -134,27 +181,74 @@ serve(async (req) => {
             </table>
           </body>
           </html>
-        `,
-      }),
+
+        `;
+
+    // Try custom domain sender first; if the domain isn't verified, fall back to Resend test sender.
+    // IMPORTANT: In Resend “testing mode”, you may still be restricted to sending only to your own
+    // email address—so we never hard-fail the app for email delivery.
+    const primaryAttempt = await sendResendEmail({
+      resendKey,
+      from: PRIMARY_FROM,
+      to: email,
+      subject,
+      html,
     });
 
-    if (!emailResponse.ok) {
-      const errorData = await emailResponse.json();
-      throw new Error(errorData.message || "Failed to send email");
+    let responseData: unknown = undefined;
+
+    if (!primaryAttempt.ok) {
+      const msg = primaryAttempt.message.toLowerCase();
+      const isDomainNotVerified = msg.includes("domain is not verified") || msg.includes("not verified");
+
+      if (isDomainNotVerified) {
+        console.warn(
+          `Vault win email: sender domain not verified; falling back to Resend test sender. Original error: ${primaryAttempt.message}`,
+        );
+
+        const fallbackAttempt = await sendResendEmail({
+          resendKey,
+          from: FALLBACK_FROM,
+          to: email,
+          subject,
+          html,
+        });
+
+        if (!fallbackAttempt.ok) {
+          console.error(`Vault win email failed (fallback sender): ${fallbackAttempt.message}`);
+          // Don't 500 the app for a non-critical email.
+          return new Response(
+            JSON.stringify({ success: false, warning: "Email failed to send", error: fallbackAttempt.message }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+
+        responseData = fallbackAttempt.data;
+      } else {
+        console.error(`Vault win email failed: ${primaryAttempt.message}`);
+        // Don't 500 the app for a non-critical email.
+        return new Response(
+          JSON.stringify({ success: false, warning: "Email failed to send", error: primaryAttempt.message }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    } else {
+      responseData = primaryAttempt.data;
     }
 
     console.log(`Vault win email sent to ${email}`);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Vault win email sent" }),
+      JSON.stringify({ success: true, message: "Vault win email sent", data: responseData }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Vault win email error:", message);
     return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      // Avoid blank-screening the app if email fails.
+      JSON.stringify({ success: false, error: message }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
