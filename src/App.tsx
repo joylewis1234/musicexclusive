@@ -27,6 +27,7 @@ import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
+import Terms from "./pages/Terms";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -83,6 +84,7 @@ const App = () => (
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
                 <Route path="/subscribe" element={<Subscribe />} />
                 <Route path="/load-credits" element={<LoadCredits />} />
+                <Route path="/terms" element={<Terms />} />
                 
                 {/* Login selector page */}
                 <Route path="/login" element={<Login />} />
