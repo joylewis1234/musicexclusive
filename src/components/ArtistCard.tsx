@@ -1,4 +1,4 @@
-import { ChevronRight, Crown, BadgeCheck } from "lucide-react"
+import { ChevronRight, BadgeCheck } from "lucide-react"
 
 interface ArtistCardProps {
   name: string
@@ -36,30 +36,21 @@ const ArtistCard = ({ name, genre, imageUrl }: ArtistCardProps) => {
 
         {/* Exclusive Artist Badge */}
         <div className="absolute top-3 right-3 z-10">
-          <div className="relative">
-            {/* Gold Crown - positioned on top-left corner of badge */}
-            <Crown 
-              className="absolute -top-[6px] -left-[6px] w-3.5 h-3.5 text-amber-400 drop-shadow-[0_0_4px_rgba(251,191,36,0.6)] z-10 -rotate-[15deg]"
-              fill="currentColor"
-            />
-            
-            {/* Badge */}
-            <div 
-              className="relative flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-md transition-all duration-300 group-hover:shadow-[0_0_12px_hsl(280_80%_70%/0.5)]"
-              style={{
-                background: "rgba(10, 10, 15, 0.7)",
-                border: "1px solid hsl(280 80% 70% / 0.6)",
-                boxShadow: "0 0 8px hsl(280 80% 70% / 0.25), inset 0 0 8px hsl(280 80% 70% / 0.05)",
-              }}
+          <div 
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-md transition-all duration-300 group-hover:shadow-[0_0_12px_hsl(280_80%_70%/0.5)]"
+            style={{
+              background: "rgba(10, 10, 15, 0.7)",
+              border: "1px solid hsl(280 80% 70% / 0.6)",
+              boxShadow: "0 0 8px hsl(280 80% 70% / 0.25), inset 0 0 8px hsl(280 80% 70% / 0.05)",
+            }}
+          >
+            <BadgeCheck className="w-3 h-3" style={{ color: "hsl(280 80% 70%)" }} />
+            <span 
+              className="text-[9px] font-display font-semibold uppercase tracking-wider"
+              style={{ color: "hsl(280 80% 70%)" }}
             >
-              <BadgeCheck className="w-3 h-3" style={{ color: "hsl(280 80% 70%)" }} />
-              <span 
-                className="text-[9px] font-display font-semibold uppercase tracking-wider"
-                style={{ color: "hsl(280 80% 70%)" }}
-              >
-                Exclusive
-              </span>
-            </div>
+              Exclusive
+            </span>
           </div>
         </div>
         
