@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -368,14 +368,16 @@ const ArtistSetupAccount = () => {
                 htmlFor="agreeTerms" 
                 className={`text-sm leading-relaxed cursor-pointer ${errors.agreeTerms ? "text-destructive" : "text-muted-foreground"}`}
               >
-                I agree to the{" "}
-                <button 
-                  type="button"
-                  className="text-accent hover:underline"
-                  onClick={() => {/* Open terms modal */}}
+                I agree to the Music Exclusive{" "}
+                <Link 
+                  to="/terms" 
+                  target="_blank"
+                  className="text-primary hover:underline"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  Artist Terms of Service
-                </button>
+                  Terms of Use
+                </Link>{" "}
+                and confirm I own or control all rights to the Content I upload.
               </label>
             </div>
 
@@ -392,7 +394,7 @@ const ArtistSetupAccount = () => {
                 htmlFor="confirmRights" 
                 className={`text-sm leading-relaxed cursor-pointer ${errors.confirmRights ? "text-destructive" : "text-muted-foreground"}`}
               >
-                I confirm I own or control rights to the music I upload
+                I confirm the music I upload has not been released publicly yet OR I have the right to release it early on Music Exclusive.
               </label>
             </div>
 
