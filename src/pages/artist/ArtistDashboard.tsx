@@ -567,6 +567,7 @@ const ArtistDashboard = () => {
                     <ExclusiveSongCard 
                       song={song}
                       artistId={artistProfileId || ""}
+                      artistName={artistName}
                       onDeleted={handleSongDeleted}
                     />
                   </div>

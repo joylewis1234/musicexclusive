@@ -23,7 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Eye, Trash2, Lock, Loader2, Music, Clock } from "lucide-react";
+import { Eye, Trash2, Lock, Loader2, Music, Clock, Share2 } from "lucide-react";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 
 export interface ExclusiveSong {
@@ -55,16 +55,50 @@ const getStorageInfoFromUrl = (url: string | null): { bucket: string; path: stri
 interface ExclusiveSongCardProps {
   song: ExclusiveSong;
   artistId: string;
+  artistName?: string;
   onDeleted: () => void;
 }
 
-export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCardProps) => {
+export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: ExclusiveSongCardProps) => {
   const navigate = useNavigate();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPreviewEditOpen, setIsPreviewEditOpen] = useState(false);
   const [previewStartSeconds, setPreviewStartSeconds] = useState(song.preview_start_seconds || 0);
   const [isSavingPreview, setIsSavingPreview] = useState(false);
+
+  const handleShare = async () => {
+    // Build the shareable URL to the artist profile with track highlighted
+    const shareUrl = `${window.location.origin}/artist/${encodeURIComponent(artistId)}?track=${song.id}`;
+    const shareTitle = `${song.title} by ${artistName || "Exclusive Artist"}`;
+    const shareText = `Check out this exclusive track on Music Exclusive™`;
+
+    // Try native share API first (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        toast.success("Shared successfully!");
+        return;
+      } catch (err) {
+        // User cancelled or share failed, fall back to clipboard
+        if ((err as Error).name !== "AbortError") {
+          console.log("Share API failed, falling back to clipboard");
+        }
+      }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success("Link copied to clipboard!");
+    } catch (err) {
+      toast.error("Failed to copy link");
+    }
+  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -181,6 +215,15 @@ export const ExclusiveSongCard = ({ song, artistId, onDeleted }: ExclusiveSongCa
               >
                 <Eye className="w-3 h-3 mr-1" />
                 View
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="h-7 px-2.5 text-[11px] rounded-lg bg-white/[0.04] hover:bg-accent/15 hover:text-accent border border-white/[0.06] transition-colors"
+              >
+                <Share2 className="w-3 h-3 mr-1" />
+                Share
               </Button>
               {song.full_audio_url && (song.duration ?? 0) > 0 && (
                 <Button
