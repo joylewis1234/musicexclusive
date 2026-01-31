@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useArtistProfile } from "@/hooks/useArtistProfile";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +77,7 @@ interface TrackEarningData {
 
 const WeeklyTransparencyReport = () => {
   const { user } = useAuth();
+  const { artistProfileId, isLoading: profileLoading } = useArtistProfile();
   const [streams, setStreams] = useState<StreamEntry[]>([]);
   const [tracks, setTracks] = useState<Map<string, TrackInfo>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
@@ -85,14 +87,16 @@ const WeeklyTransparencyReport = () => {
 
   useEffect(() => {
     const fetchStreams = async () => {
-      if (!user) return;
+      // Wait for artist profile to be loaded
+      if (!user || profileLoading || !artistProfileId) return;
 
       setIsLoading(true);
       try {
+        // Use artist_profiles.id for stream_ledger queries
         const { data, error } = await supabase
           .from("stream_ledger")
           .select("track_id, created_at, credits_spent, amount_total, amount_artist, amount_platform, payout_status")
-          .eq("artist_id", user.id)
+          .eq("artist_id", artistProfileId)
           .order("created_at", { ascending: false });
 
         if (error) {
@@ -123,7 +127,7 @@ const WeeklyTransparencyReport = () => {
     };
 
     fetchStreams();
-  }, [user]);
+  }, [user, artistProfileId, profileLoading]);
 
   const { dateRange, weeklyData, filteredStreams } = useMemo(() => {
     const now = new Date();
@@ -333,7 +337,7 @@ const WeeklyTransparencyReport = () => {
     );
   };
 
-  if (isLoading) {
+  if (isLoading || profileLoading) {
     return (
       <GlowCard className="p-8 text-center">
         <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
