@@ -120,14 +120,17 @@ serve(async (req) => {
         logStep("Payout account not connected", { artistId: payout.artist_id });
         await supabaseAdmin
           .from("artist_payouts")
-          .update({ status: "approved", failure_reason: "Payout account not connected - will retry when connected" })
+          .update({ 
+            status: "failed", 
+            failure_reason: "Stripe onboarding incomplete - artist must complete Stripe Connect setup" 
+          })
           .eq("id", payout.id);
         results.push({
           payoutId: payout.id,
           artistId: payout.artist_id,
           batchId: batch.id,
-          status: "skipped",
-          error: "Payout account not connected",
+          status: "failed",
+          error: "Stripe onboarding incomplete",
         });
         continue;
       }
@@ -138,11 +141,18 @@ serve(async (req) => {
       if (amountCents < 100) {
         // Stripe requires minimum $1 transfer
         logStep("Amount below minimum", { amountCents });
+        await supabaseAdmin
+          .from("artist_payouts")
+          .update({ 
+            status: "failed", 
+            failure_reason: "Amount below $1.00 minimum for Stripe transfers" 
+          })
+          .eq("id", payout.id);
         results.push({
           payoutId: payout.id,
           artistId: payout.artist_id,
           batchId: batch.id,
-          status: "skipped",
+          status: "failed",
           error: "Amount below $1 minimum",
         });
         continue;
@@ -248,6 +258,7 @@ serve(async (req) => {
 });
 
 // Helper to update batch status based on its payouts
+// Logic: all paid/held -> paid, any failed -> failed, otherwise stays approved/processing
 // deno-lint-ignore no-explicit-any
 async function updateBatchStatus(supabaseAdmin: any, batchId: string) {
   const { data: payouts } = await supabaseAdmin
@@ -262,12 +273,25 @@ async function updateBatchStatus(supabaseAdmin: any, batchId: string) {
   
   let newBatchStatus = "approved";
   
-  if (statuses.every((s: string) => s === "paid")) {
+  // Check if any failed
+  const hasFailed = statuses.some((s: string) => s === "failed");
+  // Check if all are either paid or held (terminal successful states)
+  const allPaidOrHeld = statuses.every((s: string) => s === "paid" || s === "held");
+  // Check if some are paid but not all complete
+  const hasPaid = statuses.some((s: string) => s === "paid");
+  const hasPending = statuses.some((s: string) => s === "pending" || s === "approved");
+  
+  if (allPaidOrHeld) {
     newBatchStatus = "paid";
-  } else if (statuses.some((s: string) => s === "failed") && !statuses.some((s: string) => s === "approved" || s === "pending")) {
+  } else if (hasFailed && !hasPending) {
+    // All processed but some failed
     newBatchStatus = "failed";
-  } else if (statuses.some((s: string) => s === "paid")) {
-    newBatchStatus = "processing"; // Partial completion
+  } else if (hasPaid && hasPending) {
+    // Partial completion, still processing
+    newBatchStatus = "processing";
+  } else if (hasPaid && hasFailed) {
+    // Mixed results, some paid some failed
+    newBatchStatus = "partial";
   }
 
   const updateData: Record<string, unknown> = { status: newBatchStatus };
