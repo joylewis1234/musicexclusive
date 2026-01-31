@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { 
   Table, 
   TableBody, 
@@ -30,10 +31,14 @@ import {
   CheckCircle,
   Users,
   DollarSign,
-  Music
+  Music,
+  Play,
+  Pause,
+  Search,
+  Eye
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, startOfWeek, endOfWeek, subWeeks } from "date-fns";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
 interface PayoutBatch {
@@ -43,6 +48,9 @@ interface PayoutBatch {
   week_end: string;
   total_credits: number;
   total_usd: number;
+  total_gross: number;
+  total_platform_fee: number;
+  total_artist_net: number;
   status: string;
   stripe_transfer_id: string | null;
   created_at: string;
@@ -50,13 +58,19 @@ interface PayoutBatch {
   artist_name?: string;
 }
 
-interface BatchArtistDetail {
+interface ArtistPayout {
+  id: string;
+  payout_batch_id: string;
   artist_id: string;
-  artist_name: string;
-  streams: number;
-  amount_owed: number;
-  amount_paid: number;
+  gross_amount: number;
+  platform_fee_amount: number;
+  artist_net_amount: number;
   status: string;
+  stripe_transfer_id: string | null;
+  stripe_payout_id: string | null;
+  failure_reason: string | null;
+  created_at: string;
+  artist_name?: string;
 }
 
 const AdminPayouts = () => {
@@ -65,13 +79,13 @@ const AdminPayouts = () => {
   
   const [batches, setBatches] = useState<PayoutBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRetrying, setIsRetrying] = useState<string | null>(null);
-  const [isMarkingPaid, setIsMarkingPaid] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState<string | null>(null);
   
   // Detail modal
   const [selectedBatch, setSelectedBatch] = useState<PayoutBatch | null>(null);
-  const [batchArtists, setBatchArtists] = useState<BatchArtistDetail[]>([]);
+  const [artistPayouts, setArtistPayouts] = useState<ArtistPayout[]>([]);
   const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchBatches();
@@ -107,6 +121,7 @@ const AdminPayouts = () => {
       setBatches(enrichedBatches);
     } catch (error) {
       console.error("Error fetching payout batches:", error);
+      toast.error("Failed to fetch batches");
     } finally {
       setIsLoading(false);
     }
@@ -115,83 +130,120 @@ const AdminPayouts = () => {
   const openBatchDetail = async (batch: PayoutBatch) => {
     setSelectedBatch(batch);
     setIsDetailLoading(true);
+    setSearchQuery("");
     
     try {
-      // Fetch all stream_ledger entries for this week
-      const { data: streams, error } = await supabase
-        .from("stream_ledger")
+      // Fetch artist_payouts for this batch
+      const { data: payouts, error } = await supabase
+        .from("artist_payouts")
         .select("*")
-        .gte("created_at", batch.week_start)
-        .lte("created_at", batch.week_end);
+        .eq("payout_batch_id", batch.id)
+        .order("artist_net_amount", { ascending: false });
 
       if (error) throw error;
 
-      // Fetch artist profiles
-      const artistIds = [...new Set((streams || []).map(s => s.artist_id))];
+      // Fetch artist names
+      const artistIds = [...new Set((payouts || []).map(p => p.artist_id))];
       const { data: artistProfiles } = await supabase
         .from("public_artist_profiles")
-        .select("id, artist_name, user_id")
+        .select("id, artist_name")
         .in("id", artistIds);
 
       const artistMap = new Map(
         (artistProfiles || []).map(p => [p.id, p.artist_name])
       );
 
-      // Aggregate by artist
-      const artistStats = new Map<string, BatchArtistDetail>();
-      (streams || []).forEach(stream => {
-        const existing = artistStats.get(stream.artist_id);
-        const amountArtist = Number(stream.amount_artist);
-        
-        if (existing) {
-          existing.streams += 1;
-          existing.amount_owed += amountArtist;
-        } else {
-          artistStats.set(stream.artist_id, {
-            artist_id: stream.artist_id,
-            artist_name: artistMap.get(stream.artist_id) || "Unknown Artist",
-            streams: 1,
-            amount_owed: amountArtist,
-            amount_paid: stream.payout_status === "paid" ? amountArtist : 0,
-            status: stream.payout_status,
-          });
-        }
-      });
+      const enrichedPayouts = (payouts || []).map(payout => ({
+        ...payout,
+        artist_name: artistMap.get(payout.artist_id) || "Unknown Artist",
+      }));
 
-      setBatchArtists(Array.from(artistStats.values()).sort((a, b) => b.amount_owed - a.amount_owed));
+      setArtistPayouts(enrichedPayouts);
     } catch (error) {
       console.error("Error fetching batch details:", error);
+      toast.error("Failed to load batch details");
     } finally {
       setIsDetailLoading(false);
     }
   };
 
-  const markAsPaid = async (batchId: string) => {
-    setIsMarkingPaid(batchId);
+  const approveBatch = async (batchId: string) => {
+    setIsProcessing(batchId);
     try {
       const { error } = await supabase
         .from("payout_batches")
-        .update({ 
-          status: "paid", 
-          paid_at: new Date().toISOString() 
-        })
+        .update({ status: "approved" })
         .eq("id", batchId);
 
       if (error) throw error;
 
-      toast.success("Batch marked as paid!");
+      // Also approve all pending artist_payouts in this batch
+      await supabase
+        .from("artist_payouts")
+        .update({ status: "approved" })
+        .eq("payout_batch_id", batchId)
+        .eq("status", "pending");
+
+      toast.success("Batch approved!");
       fetchBatches();
-      setSelectedBatch(null);
+      if (selectedBatch?.id === batchId) {
+        openBatchDetail({ ...selectedBatch, status: "approved" });
+      }
     } catch (error) {
-      console.error("Error marking batch as paid:", error);
-      toast.error("Failed to mark as paid");
+      console.error("Error approving batch:", error);
+      toast.error("Failed to approve batch");
     } finally {
-      setIsMarkingPaid(null);
+      setIsProcessing(null);
     }
   };
 
-  const retryPayout = async (batchId: string) => {
-    setIsRetrying(batchId);
+  const holdArtistPayout = async (payoutId: string) => {
+    setIsProcessing(payoutId);
+    try {
+      const { error } = await supabase
+        .from("artist_payouts")
+        .update({ status: "held" })
+        .eq("id", payoutId);
+
+      if (error) throw error;
+
+      toast.success("Artist payout held");
+      // Refresh the detail view
+      if (selectedBatch) {
+        openBatchDetail(selectedBatch);
+      }
+    } catch (error) {
+      console.error("Error holding payout:", error);
+      toast.error("Failed to hold payout");
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const approveArtistPayout = async (payoutId: string) => {
+    setIsProcessing(payoutId);
+    try {
+      const { error } = await supabase
+        .from("artist_payouts")
+        .update({ status: "approved" })
+        .eq("id", payoutId);
+
+      if (error) throw error;
+
+      toast.success("Artist payout approved");
+      if (selectedBatch) {
+        openBatchDetail(selectedBatch);
+      }
+    } catch (error) {
+      console.error("Error approving payout:", error);
+      toast.error("Failed to approve payout");
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
+  const runPayoutsNow = async (batchId: string) => {
+    setIsProcessing(batchId);
     try {
       const { data, error } = await supabase.functions.invoke("process-payouts", {
         body: { batchId },
@@ -199,30 +251,41 @@ const AdminPayouts = () => {
 
       if (error) throw error;
 
-      if (data?.results?.[0]?.status === "paid") {
-        toast.success("Payout processed successfully!");
-      } else if (data?.results?.[0]?.status === "skipped") {
-        toast.info(data.results[0].error || "Payout skipped");
-      } else {
-        toast.error(data?.results?.[0]?.error || "Payout failed");
+      const results = data?.results || [];
+      const paidCount = results.filter((r: { status: string }) => r.status === "paid").length;
+      const failedCount = results.filter((r: { status: string }) => r.status === "failed").length;
+      const skippedCount = results.filter((r: { status: string }) => r.status === "skipped").length;
+
+      if (paidCount > 0) {
+        toast.success(`${paidCount} payout(s) processed successfully!`);
+      }
+      if (failedCount > 0) {
+        toast.error(`${failedCount} payout(s) failed`);
+      }
+      if (skippedCount > 0) {
+        toast.info(`${skippedCount} payout(s) skipped`);
       }
 
       fetchBatches();
+      if (selectedBatch) {
+        openBatchDetail(selectedBatch);
+      }
     } catch (error) {
-      console.error("Error retrying payout:", error);
-      toast.error("Failed to retry payout");
+      console.error("Error running payouts:", error);
+      toast.error("Failed to run payouts");
     } finally {
-      setIsRetrying(null);
+      setIsProcessing(null);
     }
   };
 
   const exportCSV = () => {
-    const headers = ["Week", "Artist", "Streams", "USD", "Status", "Transfer ID", "Paid At"];
+    const headers = ["Week", "Artist", "Gross", "Platform Fee", "Artist Net", "Status", "Transfer ID", "Paid At"];
     const rows = batches.map(b => [
       `${format(new Date(b.week_start), "MMM d")} - ${format(new Date(b.week_end), "MMM d, yyyy")}`,
       b.artist_name || "",
-      b.total_credits.toString(),
-      b.total_usd.toString(),
+      Number(b.total_gross).toFixed(2),
+      Number(b.total_platform_fee).toFixed(2),
+      Number(b.total_artist_net).toFixed(2),
       b.status,
       b.stripe_transfer_id || "",
       b.paid_at ? format(new Date(b.paid_at), "yyyy-MM-dd HH:mm") : "",
@@ -246,18 +309,29 @@ const AdminPayouts = () => {
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       pending: "bg-yellow-500/20 text-yellow-400",
-      processing: "bg-blue-500/20 text-blue-400",
+      approved: "bg-blue-500/20 text-blue-400",
+      processing: "bg-purple-500/20 text-purple-400",
       paid: "bg-green-500/20 text-green-400",
       failed: "bg-red-500/20 text-red-400",
+      held: "bg-orange-500/20 text-orange-400",
     };
     return styles[status] || "bg-muted text-muted-foreground";
   };
 
+  // Filter artist payouts by search
+  const filteredPayouts = artistPayouts.filter(p => 
+    p.artist_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Summary stats
-  const totalPending = batches.filter(b => b.status === "pending").reduce((sum, b) => sum + Number(b.total_usd), 0);
-  const totalPaid = batches.filter(b => b.status === "paid").reduce((sum, b) => sum + Number(b.total_usd), 0);
+  const totalPending = batches.filter(b => b.status === "pending" || b.status === "approved").reduce((sum, b) => sum + Number(b.total_artist_net), 0);
+  const totalPaid = batches.filter(b => b.status === "paid").reduce((sum, b) => sum + Number(b.total_artist_net), 0);
   const totalStreams = batches.reduce((sum, b) => sum + b.total_credits, 0);
   const failedCount = batches.filter(b => b.status === "failed").length;
+
+  // Check if batch can run payouts (must be approved)
+  const canRunPayouts = selectedBatch?.status === "approved";
+  const hasApprovedPayouts = artistPayouts.some(p => p.status === "approved");
 
   return (
     <div className="min-h-screen bg-background">
@@ -307,7 +381,7 @@ const AdminPayouts = () => {
             <GlowCard className="p-4 text-center">
               <DollarSign className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
               <p className="text-2xl font-bold">${totalPending.toFixed(2)}</p>
-              <p className="text-xs text-muted-foreground">Pending Payouts</p>
+              <p className="text-xs text-muted-foreground">Pending/Approved</p>
             </GlowCard>
             <GlowCard className="p-4 text-center">
               <DollarSign className="w-6 h-6 mx-auto mb-2 text-green-500" />
@@ -336,7 +410,7 @@ const AdminPayouts = () => {
             <div className="p-4 border-b border-border">
               <SectionHeader title="Weekly Payout Batches" align="left" />
               <p className="text-sm text-muted-foreground mt-1">
-                Click a batch to view artist breakdown
+                Click "View Details" to see artist breakdown and manage approvals
               </p>
             </div>
             
@@ -352,10 +426,10 @@ const AdminPayouts = () => {
                       <TableHead>Week</TableHead>
                       <TableHead>Artist</TableHead>
                       <TableHead className="text-right">Streams</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Artist Payout</TableHead>
+                      <TableHead className="text-right">Gross</TableHead>
+                      <TableHead className="text-right">Platform Fee</TableHead>
+                      <TableHead className="text-right">Artist Net</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Transfer ID</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -368,82 +442,30 @@ const AdminPayouts = () => {
                       </TableRow>
                     ) : (
                       batches.map((batch) => (
-                        <TableRow 
-                          key={batch.id} 
-                          className="cursor-pointer hover:bg-muted/20"
-                          onClick={() => openBatchDetail(batch)}
-                        >
+                        <TableRow key={batch.id}>
                           <TableCell className="text-sm whitespace-nowrap">
                             {format(new Date(batch.week_start), "MMM d")} - {format(new Date(batch.week_end), "MMM d")}
                           </TableCell>
                           <TableCell className="font-medium">{batch.artist_name}</TableCell>
                           <TableCell className="text-right font-mono">{batch.total_credits}</TableCell>
-                          <TableCell className="text-right font-mono">${(batch.total_credits * 0.20).toFixed(2)}</TableCell>
-                          <TableCell className="text-right font-mono text-green-400">${Number(batch.total_usd).toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-mono">${Number(batch.total_gross).toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-mono text-muted-foreground">${Number(batch.total_platform_fee).toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-mono text-green-400">${Number(batch.total_artist_net).toFixed(2)}</TableCell>
                           <TableCell>
                             <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(batch.status)}`}>
                               {batch.status}
                             </span>
                           </TableCell>
-                          <TableCell className="text-xs font-mono">
-                            {batch.stripe_transfer_id ? (
-                              <a
-                                href={`https://dashboard.stripe.com/test/transfers/${batch.stripe_transfer_id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline flex items-center gap-1"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {batch.stripe_transfer_id.slice(0, 12)}...
-                                <ExternalLink className="w-3 h-3" />
-                              </a>
-                            ) : (
-                              "—"
-                            )}
-                          </TableCell>
-                          <TableCell onClick={(e) => e.stopPropagation()}>
-                            {batch.status === "pending" && (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => markAsPaid(batch.id)}
-                                  disabled={isMarkingPaid === batch.id}
-                                >
-                                  {isMarkingPaid === batch.id ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <CheckCircle className="w-3 h-3" />
-                                  )}
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => retryPayout(batch.id)}
-                                  disabled={isRetrying === batch.id}
-                                >
-                                  {isRetrying === batch.id ? (
-                                    <Loader2 className="w-3 h-3 animate-spin" />
-                                  ) : (
-                                    <RefreshCw className="w-3 h-3" />
-                                  )}
-                                </Button>
-                              </div>
-                            )}
-                            {batch.status === "failed" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => retryPayout(batch.id)}
-                                disabled={isRetrying === batch.id}
-                              >
-                                {isRetrying === batch.id ? (
-                                  <Loader2 className="w-3 h-3 animate-spin" />
-                                ) : (
-                                  <RefreshCw className="w-3 h-3" />
-                                )}
-                              </Button>
-                            )}
+                          <TableCell>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => openBatchDetail(batch)}
+                              className="gap-1"
+                            >
+                              <Eye className="w-3 h-3" />
+                              View Details
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
@@ -458,7 +480,7 @@ const AdminPayouts = () => {
 
       {/* Batch Detail Modal */}
       <Dialog open={!!selectedBatch} onOpenChange={() => setSelectedBatch(null)}>
-        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-primary" />
@@ -471,68 +493,181 @@ const AdminPayouts = () => {
               <Loader2 className="w-6 h-6 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Batch Summary */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <GlowCard className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Total Streams</p>
+                  <p className="text-xs text-muted-foreground">Streams</p>
                   <p className="text-xl font-bold">{selectedBatch?.total_credits}</p>
                 </GlowCard>
                 <GlowCard className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Total Revenue</p>
-                  <p className="text-xl font-bold">${((selectedBatch?.total_credits || 0) * 0.20).toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">Gross</p>
+                  <p className="text-xl font-bold">${Number(selectedBatch?.total_gross || 0).toFixed(2)}</p>
                 </GlowCard>
                 <GlowCard className="p-3 text-center">
-                  <p className="text-xs text-muted-foreground">Artist Payout</p>
-                  <p className="text-xl font-bold text-green-400">${Number(selectedBatch?.total_usd || 0).toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground">Platform Fee</p>
+                  <p className="text-xl font-bold text-muted-foreground">${Number(selectedBatch?.total_platform_fee || 0).toFixed(2)}</p>
+                </GlowCard>
+                <GlowCard className="p-3 text-center">
+                  <p className="text-xs text-muted-foreground">Artist Net</p>
+                  <p className="text-xl font-bold text-green-400">${Number(selectedBatch?.total_artist_net || 0).toFixed(2)}</p>
                 </GlowCard>
               </div>
 
-              {/* Artist Breakdown */}
+              {/* Status and Actions */}
+              <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-muted/20 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-muted-foreground">Batch Status:</span>
+                  <span className={`text-sm px-3 py-1 rounded-full ${getStatusBadge(selectedBatch?.status || "")}`}>
+                    {selectedBatch?.status}
+                  </span>
+                  {selectedBatch?.stripe_transfer_id && (
+                    <a
+                      href={`https://dashboard.stripe.com/test/transfers/${selectedBatch.stripe_transfer_id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      View in Stripe <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  {selectedBatch?.status === "pending" && (
+                    <Button
+                      onClick={() => approveBatch(selectedBatch.id)}
+                      disabled={isProcessing === selectedBatch.id}
+                      className="gap-2"
+                    >
+                      {isProcessing === selectedBatch.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4" />
+                      )}
+                      Approve Batch
+                    </Button>
+                  )}
+                  {canRunPayouts && hasApprovedPayouts && (
+                    <Button
+                      onClick={() => runPayoutsNow(selectedBatch!.id)}
+                      disabled={isProcessing === selectedBatch?.id}
+                      variant="default"
+                      className="gap-2 bg-green-600 hover:bg-green-700"
+                    >
+                      {isProcessing === selectedBatch?.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Play className="w-4 h-4" />
+                      )}
+                      Run Payouts Now
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search artists..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Artist Payouts Table */}
               <div className="rounded-lg border border-border overflow-hidden">
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Artist</TableHead>
-                      <TableHead className="text-right">Streams</TableHead>
-                      <TableHead className="text-right">Amount Owed</TableHead>
-                      <TableHead>Payment Method</TableHead>
+                      <TableHead className="text-right">Gross</TableHead>
+                      <TableHead className="text-right">Platform Fee</TableHead>
+                      <TableHead className="text-right">Net Payout</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Stripe</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {batchArtists.map((artist) => (
-                      <TableRow key={artist.artist_id}>
-                        <TableCell className="font-medium">{artist.artist_name}</TableCell>
-                        <TableCell className="text-right">{artist.streams}</TableCell>
-                        <TableCell className="text-right font-mono text-green-400">
-                          ${artist.amount_owed.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {selectedBatch?.stripe_transfer_id ? "Stripe" : "Manual"}
+                    {filteredPayouts.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                          No artist payouts found
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredPayouts.map((payout) => (
+                        <TableRow key={payout.id}>
+                          <TableCell className="font-medium">{payout.artist_name}</TableCell>
+                          <TableCell className="text-right font-mono">${Number(payout.gross_amount).toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-mono text-muted-foreground">${Number(payout.platform_fee_amount).toFixed(2)}</TableCell>
+                          <TableCell className="text-right font-mono text-green-400">${Number(payout.artist_net_amount).toFixed(2)}</TableCell>
+                          <TableCell>
+                            <span className={`text-xs px-2 py-1 rounded-full ${getStatusBadge(payout.status)}`}>
+                              {payout.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs font-mono">
+                            {payout.stripe_transfer_id ? (
+                              <a
+                                href={`https://dashboard.stripe.com/test/transfers/${payout.stripe_transfer_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline flex items-center gap-1"
+                              >
+                                {payout.stripe_transfer_id.slice(0, 10)}...
+                                <ExternalLink className="w-3 h-3" />
+                              </a>
+                            ) : payout.failure_reason ? (
+                              <span className="text-red-400" title={payout.failure_reason}>
+                                Failed
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {(payout.status === "pending" || payout.status === "held") && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => approveArtistPayout(payout.id)}
+                                  disabled={isProcessing === payout.id}
+                                  title="Approve payout"
+                                >
+                                  {isProcessing === payout.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="w-3 h-3 text-green-500" />
+                                  )}
+                                </Button>
+                              )}
+                              {(payout.status === "pending" || payout.status === "approved") && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => holdArtistPayout(payout.id)}
+                                  disabled={isProcessing === payout.id}
+                                  title="Hold payout"
+                                >
+                                  {isProcessing === payout.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <Pause className="w-3 h-3 text-orange-500" />
+                                  )}
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
-
-              {/* Mark as Paid Button */}
-              {selectedBatch?.status === "pending" && (
-                <div className="flex justify-end pt-4">
-                  <Button 
-                    onClick={() => markAsPaid(selectedBatch.id)}
-                    disabled={isMarkingPaid === selectedBatch.id}
-                    className="gap-2"
-                  >
-                    {isMarkingPaid === selectedBatch.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <CheckCircle className="w-4 h-4" />
-                    )}
-                    Mark as Paid
-                  </Button>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
