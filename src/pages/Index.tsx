@@ -314,6 +314,13 @@ const Index = () => {
             >
               Artist Participation Agreement
             </Link>
+            <span className="text-border">•</span>
+            <Link 
+              to="/dmca" 
+              className="text-primary text-xs hover:underline font-body"
+            >
+              Copyright & DMCA
+            </Link>
           </div>
         </div>
       </footer>

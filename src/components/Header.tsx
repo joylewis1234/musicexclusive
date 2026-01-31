@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music, FlaskConical, Wrench, Receipt, Crown, FileText, Shield } from "lucide-react"
+import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music, FlaskConical, Wrench, Receipt, Crown, FileText, Shield, Copyright } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
@@ -14,6 +14,7 @@ const mainNavItems = [
   { title: "Artist Application", href: "/artist/apply", icon: Music },
   { title: "Terms of Use", href: "/terms", icon: FileText },
   { title: "Privacy Policy", href: "/privacy", icon: Shield },
+  { title: "Copyright & DMCA", href: "/dmca", icon: Copyright },
 ]
 
 const testingNavItems = [
