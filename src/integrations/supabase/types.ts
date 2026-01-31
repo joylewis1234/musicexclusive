@@ -516,7 +516,51 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      public_artist_profiles: {
+        Row: {
+          artist_name: string | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string | null
+          genre: string | null
+          id: string | null
+          instagram_url: string | null
+          tiktok_url: string | null
+          twitter_url: string | null
+          updated_at: string | null
+          user_id: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          artist_name?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          genre?: string | null
+          id?: string | null
+          instagram_url?: string | null
+          tiktok_url?: string | null
+          twitter_url?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          artist_name?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string | null
+          genre?: string | null
+          id?: string | null
+          instagram_url?: string | null
+          tiktok_url?: string | null
+          twitter_url?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       get_user_role: {
