@@ -113,8 +113,9 @@ const Discovery = () => {
   const handleArtistClick = async (artistId: string) => {
     // artistId here is actually the artist's email from tracks.artist_id
     // We need to look up the artist profile ID
+    // Use public view to avoid exposing sensitive fields
     const { data: profile } = await supabase
-      .from("artist_profiles")
+      .from("public_artist_profiles")
       .select("id")
       .eq("artist_name", getArtistName(artistId))
       .maybeSingle();
@@ -131,7 +132,7 @@ const Discovery = () => {
 
       if (app) {
         const { data: profileByName } = await supabase
-          .from("artist_profiles")
+          .from("public_artist_profiles")
           .select("id")
           .eq("artist_name", app.artist_name)
           .maybeSingle();
