@@ -321,6 +321,13 @@ const Index = () => {
             >
               Copyright & DMCA
             </Link>
+            <span className="text-border">•</span>
+            <Link 
+              to="/refunds" 
+              className="text-primary text-xs hover:underline font-body"
+            >
+              Refund Policy
+            </Link>
           </div>
         </div>
       </footer>
