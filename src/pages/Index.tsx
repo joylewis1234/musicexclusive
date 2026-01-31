@@ -6,7 +6,7 @@ import { ArtistPreviewStrip } from "@/components/ArtistPreviewStrip"
 import { StepCard } from "@/components/StepCard"
 import { BenefitCard } from "@/components/BenefitCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
-import { KeyRound, Send, RotateCcw } from "lucide-react"
+import { KeyRound, Send, RotateCcw, FileText } from "lucide-react"
 import vaultPortal from "@/assets/vault-portal.png"
 import artist1 from "@/assets/artist-1.jpg"
 import artist2 from "@/assets/artist-2.jpg"
@@ -290,52 +290,68 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="px-4 py-8 border-t border-border/30">
-        <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
-          <p className="text-muted-foreground text-xs font-body mb-4">
-            © {new Date().getFullYear()} Music Exclusive™. All rights reserved.
-          </p>
-          
-          {/* Legal */}
-          <p className="text-muted-foreground text-[10px] font-display uppercase tracking-widest mb-2">
-            Legal
-          </p>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link 
-              to="/terms" 
-              className="text-primary text-xs hover:underline font-body"
-            >
-              Terms of Use
-            </Link>
-            <span className="text-border">•</span>
-            <Link 
-              to="/privacy" 
-              className="text-primary text-xs hover:underline font-body"
-            >
-              Privacy Policy
-            </Link>
-            <span className="text-border">•</span>
-            <Link 
-              to="/dmca" 
-              className="text-primary text-xs hover:underline font-body"
-            >
-              Copyright & DMCA
-            </Link>
-            <span className="text-border">•</span>
-            <Link 
-              to="/refunds" 
-              className="text-primary text-xs hover:underline font-body"
-            >
-              Refund Policy
-            </Link>
-            <span className="text-border">•</span>
+      <footer className="px-4 py-12 border-t border-border/30">
+        <div className="container max-w-lg md:max-w-xl mx-auto">
+          {/* Legal Section */}
+          <div className="text-center mb-8">
+            <p className="text-primary/80 text-[11px] font-display uppercase tracking-[0.2em] mb-6">
+              Legal
+            </p>
+            
+            {/* 2-Column Grid of Legal Links */}
+            <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto mb-6">
+              <Link 
+                to="/terms" 
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group"
+              >
+                <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
+                <span className="text-foreground/90 text-xs font-medium">Terms of Use</span>
+              </Link>
+              <Link 
+                to="/privacy" 
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group"
+              >
+                <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
+                <span className="text-foreground/90 text-xs font-medium">Privacy Policy</span>
+              </Link>
+              <Link 
+                to="/dmca" 
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group"
+              >
+                <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
+                <span className="text-foreground/90 text-xs font-medium">Copyright & DMCA</span>
+              </Link>
+              <Link 
+                to="/refunds" 
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group"
+              >
+                <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
+                <span className="text-foreground/90 text-xs font-medium">Refund Policy</span>
+              </Link>
+            </div>
+            
+            {/* Artist Agreement - Full Width */}
             <Link 
               to="/artist-agreement" 
-              className="text-primary text-xs hover:underline font-body"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group max-w-sm mx-auto"
             >
-              Artist Participation Agreement
+              <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
+              <span className="text-foreground/90 text-xs font-medium">Artist Participation Agreement</span>
             </Link>
           </div>
+          
+          {/* Divider */}
+          <div className="h-px bg-border/30 mb-6" />
+          
+          {/* Agreement Notice */}
+          <p className="text-muted-foreground text-[11px] text-center mb-4 leading-relaxed">
+            By using Music Exclusive, you agree to our Terms and Policies.
+          </p>
+          
+          {/* Copyright */}
+          <p className="text-muted-foreground/70 text-[10px] font-body text-center">
+            © {new Date().getFullYear()} Music Exclusive™. All rights reserved.
+          </p>
         </div>
       </footer>
 
