@@ -285,15 +285,24 @@ const Index = () => {
       {/* Footer */}
       <footer className="px-4 py-8 border-t border-border/30">
         <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
-          <p className="text-muted-foreground text-xs font-body mb-2">
+          <p className="text-muted-foreground text-xs font-body mb-3">
             © {new Date().getFullYear()} Music Exclusive™. All rights reserved.
           </p>
-          <Link 
-            to="/terms" 
-            className="text-primary text-xs hover:underline font-body"
-          >
-            Terms of Use
-          </Link>
+          <div className="flex items-center justify-center gap-4">
+            <Link 
+              to="/terms" 
+              className="text-primary text-xs hover:underline font-body"
+            >
+              Terms of Use
+            </Link>
+            <span className="text-border">•</span>
+            <Link 
+              to="/artist-agreement" 
+              className="text-primary text-xs hover:underline font-body"
+            >
+              Artist Agreement
+            </Link>
+          </div>
         </div>
       </footer>
 
