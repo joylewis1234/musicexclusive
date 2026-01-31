@@ -2,14 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
-import { Unlock, Sparkles, ChevronLeft, Home } from "lucide-react";
-import vaultPortal from "@/assets/vault-portal.png";
+import { ChevronLeft, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnlockFeedback } from "@/hooks/useUnlockFeedback";
 import { SpinWheel } from "@/components/vault/SpinWheel";
 import { VaultLoseScreen } from "@/components/vault/VaultLoseScreen";
+import { VaultWinScreen } from "@/components/vault/VaultWinScreen";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
 
 type VaultState = "winner" | "not_selected";
 type RevealPhase = "spinning" | "revealed";
@@ -46,6 +45,48 @@ const VaultStatus = () => {
   const userName = state?.name || "Vault Member";
   const userEmail = state?.email || "";
   const vaultCode = state?.vaultCode || sessionStorage.getItem("vaultCode") || "";
+
+  // Handle win state - update database and send email
+  useEffect(() => {
+    const handleWinFlow = async () => {
+      if (revealPhase === "revealed" && vaultState === "winner" && userEmail && vaultCode) {
+        try {
+          // Update vault_codes status to 'won'
+          const { error: updateError } = await supabase
+            .from("vault_codes")
+            .update({ 
+              status: "won",
+              used_at: new Date().toISOString()
+            })
+            .eq("email", userEmail)
+            .eq("code", vaultCode);
+
+          if (updateError) {
+            console.error("Error updating vault code status:", updateError);
+          }
+
+          // Send win email with vault code and app link
+          const appUrl = window.location.origin;
+          const { error: emailError } = await supabase.functions.invoke("send-vault-win-email", {
+            body: {
+              email: userEmail,
+              name: userName,
+              vaultCode: vaultCode,
+              appUrl: appUrl,
+            },
+          });
+
+          if (emailError) {
+            console.error("Failed to send vault win email:", emailError);
+          }
+        } catch (err) {
+          console.error("Error in win flow:", err);
+        }
+      }
+    };
+
+    handleWinFlow();
+  }, [revealPhase, vaultState, userEmail, vaultCode, userName]);
 
   // Handle lose state - update database and send email
   useEffect(() => {
@@ -135,59 +176,11 @@ const VaultStatus = () => {
   }, [demoState]);
 
   const renderWinner = () => (
-    <div className="flex flex-col items-center text-center animate-fade-in">
-      {/* Vault Portal with intense glow - "opening" effect */}
-      <div className="relative mb-8">
-        {/* Outer glow rings */}
-        <div className="absolute inset-[-20px] bg-primary/30 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute inset-[-10px] bg-gradient-to-r from-primary via-purple-500 to-primary rounded-full blur-xl opacity-60 animate-pulse" />
-
-        <div className="relative w-36 h-36 md:w-44 md:h-44 flex items-center justify-center">
-          <img
-            src={vaultPortal}
-            alt="Vault Portal Open"
-            className="w-full h-full object-contain drop-shadow-[0_0_30px_hsl(var(--primary))]"
-          />
-          <Unlock className="absolute w-12 h-12 text-primary drop-shadow-[0_0_15px_hsl(var(--primary))] animate-pulse" />
-        </div>
-
-        {/* Sparkle effects */}
-        <Sparkles className="absolute top-0 right-0 w-6 h-6 text-primary/80 animate-pulse" />
-        <Sparkles className="absolute bottom-4 left-0 w-5 h-5 text-purple-400/80 animate-pulse delay-150" />
-        <Sparkles className="absolute top-8 left-2 w-4 h-4 text-pink-400/70 animate-pulse delay-300" />
-      </div>
-
-      {/* Header with emoji and strong glow */}
-      <h1
-        className="font-display text-xl md:text-2xl lg:text-3xl uppercase tracking-[0.12em] text-foreground mb-3"
-        style={{
-          textShadow:
-            "0 0 30px rgba(0, 255, 255, 0.5), 0 0 60px rgba(0, 255, 255, 0.3), 0 0 90px rgba(128, 0, 255, 0.2)",
-        }}
-      >
-        🎉 Congratulations — You're In
-      </h1>
-
-      {/* Subheadline */}
-      <p className="font-display text-lg md:text-xl text-primary uppercase tracking-wider mb-6">
-        The Vault is open.
-      </p>
-
-      {/* Body Copy */}
-      <div className="text-muted-foreground font-body text-sm md:text-base max-w-sm mb-8 space-y-4">
-        <p>
-          You've unlocked access to Music Exclusive™ — a private space where fans hear music before it hits Spotify or Apple Music.
-        </p>
-        <p>
-          This is your chance to experience exclusive releases, support artists directly, and be part of something only a few get to access.
-        </p>
-      </div>
-
-      {/* CTA - Navigate to auth with vault flow state */}
-      <Button size="lg" onClick={() => navigate("/auth/fan", { state: { ...state, flow: "vault" } })}>
-        Enter The Vault
-      </Button>
-    </div>
+    <VaultWinScreen 
+      vaultCode={vaultCode}
+      email={userEmail}
+      name={userName}
+    />
   );
 
   const renderNotSelected = () => (
