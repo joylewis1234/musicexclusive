@@ -19,7 +19,7 @@ const PRIVACY_VERSION = "1.0";
 const FAN_TERMS_OF_SERVICE = `
 FAN TERMS OF SERVICE
 Version ${TERMS_VERSION}
-Last Updated: [DATE]
+Effective Date: January 31, 2025
 
 1. ACCEPTANCE OF TERMS
 
@@ -29,43 +29,72 @@ By accessing or using Music Exclusive ("the Platform"), you agree to be bound by
 
 You must be at least 18 years old or the age of majority in your jurisdiction to use this Platform. By using the Platform, you represent and warrant that you meet these requirements.
 
-3. ACCOUNT REGISTRATION
+3. VAULT ACCESS & LOTTERY SYSTEM
 
-To access certain features, you must register for an account. You agree to provide accurate information and keep your account credentials secure.
+Music Exclusive uses the Vault Lottery System to grant fan access to the Platform. Instead of open sign-ups, fans enter the Lottery for a chance to gain access.
 
-4. USER CONDUCT
+• If you win the Lottery, you may activate your Vault access by selecting a payment plan.
+• If you do not win, you remain entered for future draws and will receive a re-entry code.
+• Lottery mechanics may change over time and are not fully disclosed.
+• Winners can stay active inside the Vault as long as they maintain an active paid plan.
+
+4. PAYMENT PLANS
+
+Music Exclusive offers two payment options for fans:
+
+4.1 Superfan Membership ($5/month)
+• Includes 25 credits per month
+• Each stream costs 1 credit ($0.20 per stream)
+• Credits reset monthly and do not roll over
+• Subscription renews automatically until canceled
+
+4.2 Pay-As-You-Go Credits Plan
+• Fan must maintain a minimum $5 balance to remain active inside the Vault
+• Each stream costs 1 credit (1 credit = $0.20)
+• Fans can add more credits anytime
+• If balance falls below $5, Vault access may be paused until replenished
+
+5. NO REFUNDS POLICY
+
+All payments are final. No refunds are issued once:
+• Credits are purchased
+• A subscription is billed
+• A stream has been played
+
+Refunds may only be issued where required by applicable law.
+
+6. USER CONDUCT
 
 You agree not to:
-- Violate any applicable laws or regulations
-- Infringe on the rights of others
-- Share your account credentials
-- Attempt to circumvent security measures
+• Violate any applicable laws or regulations
+• Engage in streaming manipulation or fraudulent activity
+• Share your account credentials with others
+• Attempt to circumvent security measures or platform features
+• Use bots, scripts, or automation to abuse platform features
 
-5. INTELLECTUAL PROPERTY
+7. INTELLECTUAL PROPERTY
 
-All content on the Platform is protected by copyright and other intellectual property laws. You may not reproduce, distribute, or create derivative works without permission.
+All content on the Platform is protected by copyright and other intellectual property laws. You may not reproduce, distribute, or create derivative works without permission from the rights holder.
 
-6. LIMITATION OF LIABILITY
+8. LIMITATION OF LIABILITY
 
-The Platform is provided "as is" without warranties of any kind. We shall not be liable for any indirect, incidental, or consequential damages.
+The Platform is provided "as is" without warranties of any kind. To the maximum extent allowed by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of your use of the Services.
 
-7. TERMINATION
+9. TERMINATION
 
-We reserve the right to terminate or suspend your account at any time for violations of these terms.
+We reserve the right to suspend or terminate your account at any time for violations of these terms, including streaming manipulation, fraud, or abuse of platform features.
 
-8. CHANGES TO TERMS
+10. CHANGES TO TERMS
 
-We may modify these terms at any time. Continued use of the Platform constitutes acceptance of modified terms.
+We may modify these terms at any time. Continued use of the Platform after changes are posted constitutes acceptance of modified terms.
 
-9. GOVERNING LAW
+11. GOVERNING LAW
 
 These terms shall be governed by and construed in accordance with applicable laws.
 
-10. CONTACT
+12. CONTACT
 
 For questions about these terms, please contact us through the Platform.
-
-[ADDITIONAL TERMS TO BE ADDED]
 `;
 
 const PRIVACY_POLICY = `
