@@ -170,6 +170,21 @@ serve(async (req) => {
           })
           .eq("id", batch.id);
 
+        // Also update artist_payouts if exists
+        await supabaseAdmin
+          .from("artist_payouts")
+          .update({
+            status: "paid",
+            stripe_transfer_id: transfer.id,
+          })
+          .eq("payout_batch_id", batch.id);
+
+        // Update stream_ledger entries to mark as paid
+        await supabaseAdmin
+          .from("stream_ledger")
+          .update({ payout_status: "paid" })
+          .eq("payout_batch_id", batch.id);
+
         results.push({
           batchId: batch.id,
           artistUserId: batch.artist_user_id,
@@ -181,11 +196,19 @@ serve(async (req) => {
         const errorMessage = stripeError instanceof Error ? stripeError.message : "Unknown Stripe error";
         logStep("Stripe transfer failed", { batchId: batch.id, error: errorMessage });
 
-        // Mark as failed
+        // Mark batch and artist_payout as failed
         await supabaseAdmin
           .from("payout_batches")
           .update({ status: "failed" })
           .eq("id", batch.id);
+
+        await supabaseAdmin
+          .from("artist_payouts")
+          .update({ 
+            status: "failed",
+            failure_reason: errorMessage,
+          })
+          .eq("payout_batch_id", batch.id);
 
         results.push({
           batchId: batch.id,
