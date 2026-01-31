@@ -548,7 +548,7 @@ const AdminFanStreamDetail = () => {
                         <TableRow
                           key={fan.fan_id}
                           className="cursor-pointer hover:bg-muted/20 transition-colors"
-                          onClick={() => fetchFanDetails(fan)}
+                          onClick={() => navigate(`/admin/fans/${fan.fan_id}`)}
                         >
                           <TableCell className="font-medium">{fan.display_name}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
