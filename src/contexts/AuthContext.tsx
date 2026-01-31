@@ -54,6 +54,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
+          // Important: we may already be "not loading" from initial app boot.
+          // When a user signs in, we must re-enter a loading state while we fetch their role,
+          // otherwise route guards can evaluate with user!=null but role==null and incorrectly
+          // redirect to /access-restricted.
+          setIsLoading(true);
+          setRole(null);
+
           // Defer role fetch to avoid blocking
           setTimeout(async () => {
             const userRole = await fetchUserRole(currentSession.user.id);
