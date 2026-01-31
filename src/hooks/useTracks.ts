@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface DbTrack {
   id: string;
-  artist_id: string;
+  artist_id: string; // This is the artist_profile.id (UUID)
   title: string;
   album: string | null;
   duration: number;
@@ -13,6 +13,9 @@ export interface DbTrack {
   artwork_url: string | null;
   genre: string | null;
   created_at: string;
+  // Joined artist info
+  artist_name?: string;
+  artist_avatar_url?: string | null;
 }
 
 export const useTracks = (artistId?: string) => {
@@ -25,7 +28,13 @@ export const useTracks = (artistId?: string) => {
       setIsLoading(true);
       setError(null);
 
-      let query = supabase.from("tracks").select("*");
+      // Join with public_artist_profiles to get artist names
+      let query = supabase
+        .from("tracks")
+        .select(`
+          *,
+          public_artist_profiles!inner(artist_name, avatar_url)
+        `);
       
       if (artistId) {
         query = query.eq("artist_id", artistId);
@@ -35,14 +44,31 @@ export const useTracks = (artistId?: string) => {
 
       if (fetchError) {
         console.error("Error fetching tracks:", fetchError);
-        setError("Could not load tracks");
+        // Fallback: try without join
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("tracks")
+          .select("*")
+          .order("created_at", { ascending: false });
+        
+        if (fallbackError) {
+          setError("Could not load tracks");
+        } else {
+          const tracksWithDefaults = (fallbackData || []).map(track => ({
+            ...track,
+            preview_start_seconds: track.preview_start_seconds ?? 0,
+            artist_name: "Artist",
+          }));
+          setTracks(tracksWithDefaults);
+        }
       } else {
-        // Ensure preview_start_seconds has a default value
-        const tracksWithDefaults = (data || []).map(track => ({
+        // Map joined data to flat structure
+        const tracksWithArtists = (data || []).map(track => ({
           ...track,
           preview_start_seconds: track.preview_start_seconds ?? 0,
+          artist_name: (track.public_artist_profiles as any)?.artist_name || "Artist",
+          artist_avatar_url: (track.public_artist_profiles as any)?.avatar_url || null,
         }));
-        setTracks(tracksWithDefaults);
+        setTracks(tracksWithArtists);
       }
 
       setIsLoading(false);
@@ -54,41 +80,20 @@ export const useTracks = (artistId?: string) => {
   return { tracks, isLoading, error };
 };
 
-// Get artist name from artist_id (mock mapping for now)
-export const getArtistName = (artistId: string): string => {
-  const artistNames: Record<string, string> = {
-    nova: "NOVA",
-    aura: "AURA",
-    echo: "ECHO",
-    pulse: "PULSE",
-    drift: "DRIFT",
-    vega: "VEGA",
-    zenith: "ZENITH",
-    luna: "LUNA",
-  };
-  
-  // Check if in mapping first
-  if (artistNames[artistId]) {
-    return artistNames[artistId];
+// Get artist name from DbTrack (uses joined data or fallback)
+export const getArtistName = (track: DbTrack): string => {
+  if (track.artist_name) {
+    return track.artist_name;
   }
-  
-  // If it's an email, extract a clean name before @
-  if (artistId.includes("@")) {
-    const namePart = artistId.split("@")[0];
-    // Capitalize and clean up (replace dots/underscores with spaces)
-    return namePart
-      .replace(/[._-]/g, " ")
-      .split(" ")
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-  }
-  
-  // If it looks like a UUID (contains dashes and is long), return generic "Artist"
+  return "Artist";
+};
+
+// Legacy function for backwards compatibility - just returns "Artist" for UUIDs
+export const getArtistNameById = (artistId: string): string => {
+  // If it's a UUID (profile ID), we can't resolve without a DB call
   if (artistId.includes("-") && artistId.length > 20) {
     return "Artist";
   }
-  
-  // Fallback: just capitalize
   return artistId.charAt(0).toUpperCase() + artistId.slice(1);
 };
 

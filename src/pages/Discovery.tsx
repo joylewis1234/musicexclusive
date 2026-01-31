@@ -7,7 +7,6 @@ import { DiscoveryTrackCard } from "@/components/discovery/DiscoveryTrackCard";
 import { ShareTrackModal } from "@/components/ShareTrackModal";
 import { useAudioPreview } from "@/hooks/useAudioPreview";
 import { useTracks, DbTrack, getArtistName } from "@/hooks/useTracks";
-import { supabase } from "@/integrations/supabase/client";
 import { Genre } from "@/data/discoveryArtists";
 import { Track } from "@/contexts/PlayerContext";
 
@@ -15,7 +14,7 @@ import { Track } from "@/contexts/PlayerContext";
 const dbTrackToTrack = (dbTrack: DbTrack): Track => ({
   id: dbTrack.id,
   title: dbTrack.title,
-  artist: getArtistName(dbTrack.artist_id),
+  artist: getArtistName(dbTrack),
   album: dbTrack.album || "Single",
   artwork: dbTrack.artwork_url || "",
   duration: dbTrack.duration,
@@ -61,7 +60,7 @@ const Discovery = () => {
   // Filter tracks based on search and genre
   const filteredTracks = useMemo(() => {
     return tracks.filter((track) => {
-      const artistName = getArtistName(track.artist_id);
+      const artistName = getArtistName(track);
       const matchesSearch = 
         track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -79,7 +78,7 @@ const Discovery = () => {
   const displayedFeaturedTracks = useMemo(() => {
     if (searchQuery || selectedGenre !== "All Genres") {
       return featuredTracks.filter((track) => {
-        const artistName = getArtistName(track.artist_id);
+        const artistName = getArtistName(track);
         const matchesSearch = 
           track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -110,69 +109,18 @@ const Discovery = () => {
     }, 500);
   }, []);
 
-  const handleArtistClick = async (artistId: string) => {
-    // artistId here is actually the artist's email from tracks.artist_id
-    // We need to look up the artist profile ID
-    // Use public view to avoid exposing sensitive fields
-    const { data: profile } = await supabase
-      .from("public_artist_profiles")
-      .select("id")
-      .eq("artist_name", getArtistName(artistId))
-      .maybeSingle();
-
-    if (profile) {
-      navigate(`/artist/${profile.id}`);
-    } else {
-      // Fallback - try to find by email in applications
-      const { data: app } = await supabase
-        .from("artist_applications")
-        .select("artist_name")
-        .eq("contact_email", artistId)
-        .maybeSingle();
-
-      if (app) {
-        const { data: profileByName } = await supabase
-          .from("public_artist_profiles")
-          .select("id")
-          .eq("artist_name", app.artist_name)
-          .maybeSingle();
-
-        if (profileByName) {
-          navigate(`/artist/${profileByName.id}`);
-          return;
-        }
-      }
-      // If no profile found, navigate anyway (will show error on profile page)
-      navigate(`/artist/${artistId}`);
-    }
+  // artist_id IS the profile ID, so navigation is direct
+  const handleArtistClick = (artistId: string) => {
+    navigate(`/artist/${artistId}`);
   };
 
-  const handleStreamTrack = async (track: DbTrack) => {
-    // Look up artist profile ID from the track's artist_id (email)
-    const { data: app } = await supabase
-      .from("artist_applications")
-      .select("artist_name")
-      .eq("contact_email", track.artist_id)
-      .maybeSingle();
-
-    if (app) {
-      const { data: profile } = await supabase
-        .from("artist_profiles")
-        .select("id")
-        .eq("artist_name", app.artist_name)
-        .maybeSingle();
-
-      if (profile) {
-        navigate(`/artist/${profile.id}?track=${track.id}`);
-        return;
-      }
-    }
-    // Fallback
+  const handleStreamTrack = (track: DbTrack) => {
+    // Navigate to artist profile with track parameter
     navigate(`/artist/${track.artist_id}?track=${track.id}`);
   };
 
-  const handleTrackClick = async (track: DbTrack) => {
-    await handleStreamTrack(track);
+  const handleTrackClick = (track: DbTrack) => {
+    handleStreamTrack(track);
   };
 
   const handlePreview = (track: DbTrack) => {
