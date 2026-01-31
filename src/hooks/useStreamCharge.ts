@@ -28,10 +28,10 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
     setIsProcessing(true);
 
     try {
-      // 1. Get fan's current credits
+      // 1. Get fan's current credits and ID
       const { data: fanData, error: fanError } = await supabase
         .from("vault_members")
-        .select("credits")
+        .select("id, credits")
         .eq("email", userEmail)
         .maybeSingle();
 
@@ -44,6 +44,14 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
           description: "Add credits to continue streaming"
         });
         return { success: false, error: "Insufficient credits" };
+      }
+
+      // Get current user's auth ID for fan_id
+      const { data: { user } } = await supabase.auth.getUser();
+      const fanUserId = user?.id;
+
+      if (!fanUserId) {
+        return { success: false, error: "Not authenticated" };
       }
 
       // 2. Deduct 1 credit from fan
@@ -86,6 +94,24 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
         credits_delta: 0.5,
         usd_delta: 0.10,
         reference: streamReference,
+      });
+
+      // 4. Create stream_ledger entry for detailed tracking
+      // Extract artist_id from the artistEmail pattern or use the email
+      const artistId = artistEmail.startsWith("artist_") 
+        ? artistEmail.replace("@musicexclusive.com", "").replace("artist_", "")
+        : artistEmail;
+
+      await supabase.from("stream_ledger").insert({
+        fan_id: fanUserId,
+        fan_email: userEmail,
+        artist_id: artistId,
+        track_id: trackId,
+        credits_spent: 1,
+        amount_total: 0.20,
+        amount_artist: 0.10,
+        amount_platform: 0.10,
+        payout_status: "pending",
       });
 
       // Mark as charged for this session
