@@ -45,9 +45,10 @@ export const DiscoveryTrackCard = ({
 }: DiscoveryTrackCardProps) => {
   const artistName = getArtistName(track);
   const coverImage = track.artwork_url || track.artist_avatar_url || artist1;
-  const hasPreview = !!track.preview_audio_url;
+  // Preview is available if there's a dedicated preview_audio_url OR a full_audio_url (we can seek into it)
+  const hasPreviewAudio = !!track.preview_audio_url || !!track.full_audio_url;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
-  const isPreviewDisabled = !hasPreview && !isPreviewPlaying;
+  const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
   const likeCount = useLikeCount(track.id);
 
   return (
@@ -178,7 +179,7 @@ export const DiscoveryTrackCard = ({
         )}
 
         {/* Hook Preview Badge */}
-        {hasPreview && !showError && (
+        {hasPreviewAudio && !showError && (
           <div className="mb-3 flex items-center gap-2">
             <span 
               className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-display uppercase tracking-wider text-primary border border-primary/40 bg-primary/10"
