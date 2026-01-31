@@ -11,6 +11,39 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[AGGREGATE-WEEKLY-EARNINGS] ${step}${detailsStr}`);
 };
 
+// Send notification to company about batch creation
+async function sendBatchCreatedNotification(
+  supabaseUrl: string,
+  anonKey: string,
+  weekStart: string,
+  weekEnd: string,
+  artistCount: number,
+  totalGross: number,
+  totalArtistNet: number
+): Promise<void> {
+  try {
+    const response = await fetch(`${supabaseUrl}/functions/v1/send-payout-notification`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${anonKey}`,
+      },
+      body: JSON.stringify({
+        type: "batch_created",
+        weekStart: weekStart.split("T")[0],
+        weekEnd: weekEnd.split("T")[0],
+        artistCount,
+        totalGross: `$${totalGross.toFixed(2)}`,
+        totalArtistNet: `$${totalArtistNet.toFixed(2)}`,
+      }),
+    });
+    const result = await response.json();
+    logStep("Batch created notification sent", { success: result.success });
+  } catch (error) {
+    logStep("Failed to send batch created notification", { error: String(error) });
+  }
+}
+
 // Get the Monday 00:00 of the week containing the given date
 function getWeekStart(date: Date): Date {
   const d = new Date(date);
@@ -244,6 +277,21 @@ serve(async (req) => {
     }
 
     logStep("Aggregation complete", { batchesCreated: batchesCreated.length, artistPayoutsCreated: artistPayoutsCreated.length });
+
+    // Send notification to company about batch creation
+    if (batchesCreated.length > 0) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+      await sendBatchCreatedNotification(
+        supabaseUrl,
+        anonKey,
+        previousWeekStart.toISOString(),
+        previousWeekEnd.toISOString(),
+        batchesCreated.length,
+        batchTotalGross,
+        batchTotalArtistNet
+      );
+    }
 
     return new Response(
       JSON.stringify({
