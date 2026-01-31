@@ -31,6 +31,7 @@ import Terms from "./pages/Terms";
 import ArtistAgreement from "./pages/ArtistAgreement";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CopyrightDmca from "./pages/CopyrightDmca";
+import RefundPolicy from "./pages/RefundPolicy";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -91,6 +92,7 @@ const App = () => (
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/dmca" element={<CopyrightDmca />} />
+                <Route path="/refunds" element={<RefundPolicy />} />
                 <Route path="/artist-agreement" element={<ArtistAgreement />} />
                 
                 {/* Login selector page */}
