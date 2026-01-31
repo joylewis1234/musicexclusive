@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.send-daily-report]
 verify_jwt = false
+
+[functions.send-payout-notification]
+verify_jwt = false
