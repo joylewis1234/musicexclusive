@@ -1,21 +1,22 @@
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Sparkles } from "lucide-react";
+import { Music, Headphones } from "lucide-react";
 
 interface SpinWheelProps {
   onComplete: (result: "winner" | "not_selected") => void;
   result: "winner" | "not_selected";
 }
 
+// Music-themed segments with celebration and vault elements
 const SEGMENTS = [
-  { label: "✨", color: "from-primary to-purple-500" },
-  { label: "🔒", color: "from-muted to-muted-foreground/20" },
-  { label: "✨", color: "from-primary to-purple-500" },
-  { label: "🔒", color: "from-muted to-muted-foreground/20" },
-  { label: "✨", color: "from-primary to-purple-500" },
-  { label: "🔒", color: "from-muted to-muted-foreground/20" },
-  { label: "✨", color: "from-primary to-purple-500" },
-  { label: "🔒", color: "from-muted to-muted-foreground/20" },
+  { label: "🎉", isWin: true },
+  { label: "🎵", isWin: false },
+  { label: "🎤", isWin: true },
+  { label: "🎧", isWin: false },
+  { label: "🎸", isWin: true },
+  { label: "🎹", isWin: false },
+  { label: "🎶", isWin: true },
+  { label: "🔐", isWin: false },
 ];
 
 export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
@@ -30,9 +31,9 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
     setHasStarted(true);
 
     // Calculate final rotation based on result
-    // Winner lands on ✨ (index 0, 2, 4, 6), not_selected lands on 🔒 (index 1, 3, 5, 7)
+    // Winner lands on 🎉 (index 0), not_selected lands on 🔐 (index 7)
     const segmentAngle = 360 / SEGMENTS.length; // 45 degrees per segment
-    const winningIndex = result === "winner" ? 0 : 1;
+    const winningIndex = result === "winner" ? 0 : 7;
     const targetAngle = winningIndex * segmentAngle;
     
     // Add multiple full rotations for dramatic effect (5-7 spins)
@@ -63,10 +64,10 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
         <h2 
           className="font-display text-xl md:text-2xl uppercase tracking-[0.12em] text-foreground mb-2"
           style={{
-            textShadow: "0 0 20px rgba(0, 255, 255, 0.4), 0 0 40px rgba(0, 255, 255, 0.2)"
+            textShadow: "0 0 20px hsl(var(--primary) / 0.4), 0 0 40px hsl(var(--primary) / 0.2)"
           }}
         >
-          {isSpinning ? "Spinning..." : hasStarted ? "Revealing..." : "The Vault Awaits"}
+          {isSpinning ? "🎰 Spinning..." : hasStarted ? "✨ Revealing..." : "🎵 The Vault Awaits"}
         </h2>
         <p className="text-muted-foreground text-sm">
           {isSpinning ? "Will the vault open for you?" : "Your fate is being decided..."}
@@ -75,107 +76,138 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
 
       {/* Wheel Container */}
       <div className="relative">
-        {/* Outer glow ring */}
+        {/* Outer glow ring - pulsing neon effect */}
         <div 
           className={cn(
-            "absolute -inset-4 rounded-full blur-xl transition-opacity duration-500",
-            isSpinning ? "opacity-80 animate-pulse" : "opacity-40"
+            "absolute -inset-6 rounded-full blur-2xl transition-opacity duration-500",
+            isSpinning ? "opacity-90 animate-pulse" : "opacity-50"
           )}
           style={{
-            background: "radial-gradient(circle, hsl(var(--primary) / 0.4), transparent 70%)"
+            background: "conic-gradient(from 0deg, hsl(var(--primary) / 0.5), hsl(280 80% 60% / 0.4), hsl(var(--primary) / 0.5))"
           }}
         />
 
-        {/* Pointer/Indicator */}
-        <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20">
-          <div 
-            className="w-0 h-0 border-l-[12px] border-r-[12px] border-t-[20px] border-l-transparent border-r-transparent border-t-primary drop-shadow-[0_0_10px_hsl(var(--primary))]"
-          />
+        {/* Secondary glow */}
+        <div 
+          className={cn(
+            "absolute -inset-3 rounded-full blur-xl transition-opacity duration-500",
+            isSpinning ? "opacity-80" : "opacity-40"
+          )}
+          style={{
+            background: "radial-gradient(circle, hsl(var(--primary) / 0.6), transparent 70%)"
+          }}
+        />
+
+        {/* Pointer/Indicator - music note style */}
+        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-20">
+          <div className="relative">
+            <div 
+              className="w-0 h-0 border-l-[14px] border-r-[14px] border-t-[24px] border-l-transparent border-r-transparent"
+              style={{
+                borderTopColor: "hsl(var(--primary))",
+                filter: "drop-shadow(0 0 12px hsl(var(--primary)))"
+              }}
+            />
+            <Music className="absolute -top-7 left-1/2 -translate-x-1/2 w-5 h-5 text-primary" />
+          </div>
         </div>
 
         {/* Wheel */}
         <div 
           className={cn(
-            "relative w-56 h-56 md:w-72 md:h-72 rounded-full overflow-hidden",
-            "border-4 border-primary/50 shadow-[0_0_30px_hsl(var(--primary)/0.3)]"
+            "relative w-60 h-60 md:w-80 md:h-80 rounded-full overflow-hidden",
+            "border-[3px] shadow-[0_0_40px_hsl(var(--primary)/0.4),inset_0_0_30px_hsl(var(--primary)/0.1)]"
           )}
           style={{
+            borderColor: "hsl(var(--primary) / 0.7)",
             transform: `rotate(${rotation}deg)`,
             transition: isSpinning 
               ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" 
               : "none"
           }}
         >
-          {/* Segments */}
-          {SEGMENTS.map((segment, index) => {
-            const segmentAngle = 360 / SEGMENTS.length;
-            const startAngle = index * segmentAngle;
-            
-            return (
-              <div
-                key={index}
-                className="absolute inset-0 origin-center"
-                style={{
-                  transform: `rotate(${startAngle}deg)`,
-                  clipPath: `polygon(50% 50%, 50% 0%, ${50 + 50 * Math.tan((segmentAngle * Math.PI) / 360)}% 0%, 50% 50%)`
-                }}
-              >
-                <div 
-                  className={cn(
-                    "absolute inset-0 bg-gradient-to-br",
-                    segment.color
-                  )}
-                />
-                <span 
-                  className="absolute text-2xl"
-                  style={{
-                    top: "15%",
-                    left: "50%",
-                    transform: `translateX(-50%) rotate(${segmentAngle / 2}deg)`
-                  }}
-                >
-                  {segment.label}
-                </span>
-              </div>
-            );
-          })}
+          {/* SVG Wheel for perfect segments */}
+          <svg viewBox="0 0 100 100" className="w-full h-full">
+            {SEGMENTS.map((segment, index) => {
+              const segmentAngle = 360 / SEGMENTS.length;
+              const startAngle = index * segmentAngle - 90; // -90 to start from top
+              const endAngle = startAngle + segmentAngle;
+              
+              const startRad = (startAngle * Math.PI) / 180;
+              const endRad = (endAngle * Math.PI) / 180;
+              
+              const x1 = 50 + 50 * Math.cos(startRad);
+              const y1 = 50 + 50 * Math.sin(startRad);
+              const x2 = 50 + 50 * Math.cos(endRad);
+              const y2 = 50 + 50 * Math.sin(endRad);
+              
+              const largeArc = segmentAngle > 180 ? 1 : 0;
+              
+              const pathD = `M 50 50 L ${x1} ${y1} A 50 50 0 ${largeArc} 1 ${x2} ${y2} Z`;
+              
+              // Alternate colors - win segments get accent glow, others get muted
+              const fillColor = segment.isWin 
+                ? "hsl(280 70% 25%)" // Purple-ish for win
+                : "hsl(220 20% 12%)"; // Dark muted for non-win
+              
+              // Label position - center of segment
+              const midAngle = ((startAngle + endAngle) / 2) * Math.PI / 180;
+              const labelX = 50 + 32 * Math.cos(midAngle);
+              const labelY = 50 + 32 * Math.sin(midAngle);
+              
+              return (
+                <g key={index}>
+                  <path
+                    d={pathD}
+                    fill={fillColor}
+                    stroke="hsl(var(--primary) / 0.3)"
+                    strokeWidth="0.5"
+                  />
+                  <text
+                    x={labelX}
+                    y={labelY}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    className="text-[10px] md:text-[8px]"
+                    style={{ fontSize: "10px" }}
+                  >
+                    {segment.label}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
 
           {/* Center hub */}
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div 
               className={cn(
                 "w-16 h-16 md:w-20 md:h-20 rounded-full bg-background",
-                "border-2 border-primary/60 flex items-center justify-center",
-                "shadow-[0_0_20px_hsl(var(--primary)/0.4)]"
+                "border-2 flex items-center justify-center",
+                "shadow-[0_0_25px_hsl(var(--primary)/0.5)]"
               )}
+              style={{
+                borderColor: "hsl(var(--primary) / 0.8)",
+                background: "linear-gradient(135deg, hsl(var(--background)), hsl(var(--background-elevated)))"
+              }}
             >
-              <Sparkles 
+              <Headphones 
                 className={cn(
-                  "w-8 h-8 text-primary",
+                  "w-8 h-8 md:w-10 md:h-10 text-primary",
                   isSpinning && "animate-pulse"
                 )} 
               />
             </div>
           </div>
-
-          {/* Radial lines */}
-          {SEGMENTS.map((_, index) => (
-            <div
-              key={`line-${index}`}
-              className="absolute inset-0 origin-center"
-              style={{ transform: `rotate(${index * (360 / SEGMENTS.length)}deg)` }}
-            >
-              <div className="absolute top-0 left-1/2 w-px h-1/2 bg-primary/30" />
-            </div>
-          ))}
         </div>
 
-        {/* Sparkle effects during spin */}
+        {/* Floating music notes during spin */}
         {isSpinning && (
           <>
-            <Sparkles className="absolute -top-2 -right-2 w-6 h-6 text-primary/80 animate-pulse" />
-            <Sparkles className="absolute -bottom-2 -left-2 w-5 h-5 text-purple-400/80 animate-pulse delay-150" />
-            <Sparkles className="absolute top-1/2 -right-4 w-4 h-4 text-pink-400/70 animate-pulse delay-300" />
+            <span className="absolute -top-2 -right-3 text-2xl animate-bounce" style={{ animationDelay: "0s" }}>🎵</span>
+            <span className="absolute -bottom-2 -left-3 text-xl animate-bounce" style={{ animationDelay: "0.2s" }}>🎶</span>
+            <span className="absolute top-1/2 -right-5 text-lg animate-bounce" style={{ animationDelay: "0.4s" }}>✨</span>
+            <span className="absolute top-1/3 -left-4 text-lg animate-bounce" style={{ animationDelay: "0.3s" }}>🎤</span>
           </>
         )}
       </div>
@@ -183,11 +215,11 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
       {/* Suspense text */}
       <p 
         className={cn(
-          "mt-8 text-sm text-muted-foreground/60 italic transition-opacity duration-500",
+          "mt-8 text-sm text-muted-foreground/70 italic transition-opacity duration-500",
           isSpinning ? "opacity-100" : "opacity-0"
         )}
       >
-        Only a select few gain access...
+        🎧 Only a select few gain access to exclusive music...
       </p>
     </div>
   );
