@@ -1,6 +1,6 @@
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { ChevronLeft, Loader2, Music, Crown } from "lucide-react";
+import { ChevronLeft, Loader2, Music, Crown, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ArtistProfileHero } from "@/components/profile/ArtistProfileHero";
 import { ArtistAboutSection } from "@/components/profile/ArtistAboutSection";
@@ -439,6 +439,20 @@ const ArtistProfile = () => {
         artistName={artist.name}
         onShareToInbox={handleShareArtist}
       />
+
+      {/* Fan Dashboard Link - Only show for fans */}
+      {viewContext === "fan" && (
+        <section className="px-5 pb-4">
+          <Button
+            variant="outline"
+            className="w-full gap-2 rounded-xl border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-foreground/50"
+            onClick={() => navigate("/fan/profile")}
+          >
+            <User className="w-4 h-4" />
+            Go to My Fan Profile
+          </Button>
+        </section>
+      )}
 
       {/* Discover More CTA */}
       <section className="px-5 pb-8">
