@@ -278,10 +278,10 @@ const Index = () => {
             <Button 
               variant="outline" 
               size="lg" 
-              className="w-full border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/15 transition-all duration-300 hover:shadow-[0_0_20px_rgba(251,191,36,0.3)]"
+              className="w-full"
               onClick={() => navigate("/subscribe")}
             >
-              ✨ Want Access Now? Become a Superfan
+              Want Access Now? Become a Superfan
             </Button>
           </div>
         </div>
