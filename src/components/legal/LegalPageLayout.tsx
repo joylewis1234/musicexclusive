@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronUp, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -25,9 +26,37 @@ const LegalPageLayout = ({
   isAgreeDisabled = false,
 }: LegalPageLayoutProps) => {
   const navigate = useNavigate();
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      
+      setScrollProgress(progress);
+      setShowBackToTop(progress > 25);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Scroll Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 h-0.5 bg-border/20">
+        <div 
+          className="h-full bg-primary/70 transition-all duration-150 ease-out shadow-[0_0_8px_hsl(var(--primary)/0.5)]"
+          style={{ width: `${scrollProgress}%` }}
+        />
+      </div>
+
       {/* Subtle page background gradient */}
       <div className="fixed inset-0 bg-gradient-to-b from-muted/30 via-background to-background pointer-events-none" />
       
@@ -85,6 +114,24 @@ const LegalPageLayout = ({
           </article>
         </div>
       </main>
+
+      {/* Floating Back to Top Button */}
+      <button
+        onClick={scrollToTop}
+        className={cn(
+          "fixed bottom-24 right-4 md:right-8 z-30 p-3 rounded-full",
+          "bg-background/80 backdrop-blur-sm border border-primary/30",
+          "text-primary/70 hover:text-primary hover:border-primary/50",
+          "shadow-[0_0_15px_hsl(var(--primary)/0.2)] hover:shadow-[0_0_20px_hsl(var(--primary)/0.3)]",
+          "transition-all duration-300",
+          showBackToTop 
+            ? "opacity-100 translate-y-0" 
+            : "opacity-0 translate-y-4 pointer-events-none"
+        )}
+        aria-label="Back to top"
+      >
+        <ChevronUp className="w-5 h-5" />
+      </button>
 
       {/* Sticky Bottom Bar */}
       <div className={cn(
