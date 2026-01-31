@@ -1,40 +1,30 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Header } from "@/components/Header";
-import { useFanTermsAgreement } from "@/hooks/useFanTermsAgreement";
-import { useAuth } from "@/contexts/AuthContext";
-import { Sparkles, Music, ShieldCheck, Ban, Crown, Loader2 } from "lucide-react";
+import { Sparkles, Music, ShieldCheck, Ban, Crown } from "lucide-react";
 import { toast } from "sonner";
+
+interface LocationState {
+  email?: string;
+  name?: string;
+  vaultCode?: string;
+  flow?: string;
+}
 
 const FanAgreementStep = () => {
   const navigate = useNavigate();
-  const { user, isLoading: authLoading } = useAuth();
+  const location = useLocation();
+  const state = location.state as LocationState | null;
   const [agreed, setAgreed] = useState(false);
-  const { acceptTerms, isSubmitting } = useFanTermsAgreement();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!authLoading && !user) {
-      toast.error("Please log in to continue");
-      navigate("/auth/fan", { replace: true });
-    }
-  }, [authLoading, user, navigate]);
-
-  // Show loading while checking auth
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
+  // Get user info from navigation state or session storage
+  const email = state?.email || sessionStorage.getItem("vaultEmail") || "";
+  const name = state?.name || sessionStorage.getItem("vaultName") || "";
+  const vaultCode = state?.vaultCode || sessionStorage.getItem("vaultCode") || "";
 
   const handleContinue = async () => {
     if (!agreed) {
@@ -42,11 +32,28 @@ const FanAgreementStep = () => {
       return;
     }
 
-    const success = await acceptTerms();
-    if (success) {
-      navigate("/onboarding/listen");
-    } else {
-      toast.error("Failed to save agreement. Please try again.");
+    setIsSubmitting(true);
+
+    try {
+      // Store agreement acceptance in session for now
+      // It will be saved to database after account creation
+      sessionStorage.setItem("fanTermsAccepted", "true");
+      sessionStorage.setItem("fanTermsAcceptedAt", new Date().toISOString());
+      
+      // Navigate to choose access / payment page
+      navigate("/onboarding/listen", {
+        state: {
+          email,
+          name,
+          vaultCode,
+          agreedToTerms: true,
+        },
+      });
+    } catch (err) {
+      console.error("Error in handleContinue:", err);
+      toast.error("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
