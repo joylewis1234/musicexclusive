@@ -67,6 +67,7 @@ import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminFanStreamDetail from "./pages/admin/AdminFanStreamDetail";
 import AdminDailyReport from "./pages/admin/AdminDailyReport";
+import AdminPayouts from "./pages/admin/AdminPayouts";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 // Testing pages (temporary)
 import TestTools from "./pages/testing/TestTools";
@@ -201,6 +202,11 @@ const App = () => (
                 <Route path="/admin/reports/daily" element={
                   <AdminProtectedRoute>
                     <AdminDailyReport />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/admin/payouts" element={
+                  <AdminProtectedRoute>
+                    <AdminPayouts />
                   </AdminProtectedRoute>
                 } />
                 <Route path="/admin/test-tools" element={
