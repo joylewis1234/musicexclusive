@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
 import { ArtistCard } from "@/components/ArtistCard"
@@ -281,6 +281,21 @@ const Index = () => {
           </div>
         </div>
       </section>
+
+      {/* Footer */}
+      <footer className="px-4 py-8 border-t border-border/30">
+        <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
+          <p className="text-muted-foreground text-xs font-body mb-2">
+            © {new Date().getFullYear()} Music Exclusive™. All rights reserved.
+          </p>
+          <Link 
+            to="/terms" 
+            className="text-primary text-xs hover:underline font-body"
+          >
+            Terms of Use
+          </Link>
+        </div>
+      </footer>
 
       {/* Spacer for mini player */}
       <div className="h-24" />
