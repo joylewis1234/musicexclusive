@@ -1,17 +1,40 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Header } from "@/components/Header";
 import { useFanTermsAgreement } from "@/hooks/useFanTermsAgreement";
-import { Sparkles, Music, ShieldCheck, Ban, Crown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { Sparkles, Music, ShieldCheck, Ban, Crown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const FanAgreementStep = () => {
   const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
   const [agreed, setAgreed] = useState(false);
   const { acceptTerms, isSubmitting } = useFanTermsAgreement();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      toast.error("Please log in to continue");
+      navigate("/auth/fan", { replace: true });
+    }
+  }, [authLoading, user, navigate]);
+
+  // Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
 
   const handleContinue = async () => {
     if (!agreed) {
