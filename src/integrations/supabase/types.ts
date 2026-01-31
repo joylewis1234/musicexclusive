@@ -140,6 +140,56 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_payouts: {
+        Row: {
+          artist_id: string
+          artist_net_amount: number
+          created_at: string
+          failure_reason: string | null
+          gross_amount: number
+          id: string
+          payout_batch_id: string
+          platform_fee_amount: number
+          status: string
+          stripe_payout_id: string | null
+          stripe_transfer_id: string | null
+        }
+        Insert: {
+          artist_id: string
+          artist_net_amount?: number
+          created_at?: string
+          failure_reason?: string | null
+          gross_amount?: number
+          id?: string
+          payout_batch_id: string
+          platform_fee_amount?: number
+          status?: string
+          stripe_payout_id?: string | null
+          stripe_transfer_id?: string | null
+        }
+        Update: {
+          artist_id?: string
+          artist_net_amount?: number
+          created_at?: string
+          failure_reason?: string | null
+          gross_amount?: number
+          id?: string
+          payout_batch_id?: string
+          platform_fee_amount?: number
+          status?: string
+          stripe_payout_id?: string | null
+          stripe_transfer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "artist_payouts_payout_batch_id_fkey"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payout_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       artist_profiles: {
         Row: {
           artist_name: string
@@ -273,7 +323,10 @@ export type Database = {
           paid_at: string | null
           status: string
           stripe_transfer_id: string | null
+          total_artist_net: number
           total_credits: number
+          total_gross: number
+          total_platform_fee: number
           total_usd: number
           week_end: string
           week_start: string
@@ -285,7 +338,10 @@ export type Database = {
           paid_at?: string | null
           status?: string
           stripe_transfer_id?: string | null
+          total_artist_net?: number
           total_credits?: number
+          total_gross?: number
+          total_platform_fee?: number
           total_usd?: number
           week_end: string
           week_start: string
@@ -297,7 +353,10 @@ export type Database = {
           paid_at?: string | null
           status?: string
           stripe_transfer_id?: string | null
+          total_artist_net?: number
           total_credits?: number
+          total_gross?: number
+          total_platform_fee?: number
           total_usd?: number
           week_end?: string
           week_start?: string
