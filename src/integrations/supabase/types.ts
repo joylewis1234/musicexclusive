@@ -331,6 +331,39 @@ export type Database = {
         }
         Relationships: []
       }
+      report_email_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          report_date: string
+          report_type: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          report_date: string
+          report_type?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          report_date?: string
+          report_type?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       shared_tracks: {
         Row: {
           artist_id: string

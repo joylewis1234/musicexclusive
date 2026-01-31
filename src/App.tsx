@@ -63,6 +63,7 @@ import { ArtistProfilePreviewWrapper } from "./components/artist/ArtistProfilePr
 // Admin pages
 import AdminReports from "./pages/admin/AdminReports";
 import AdminFanStreamDetail from "./pages/admin/AdminFanStreamDetail";
+import AdminDailyReport from "./pages/admin/AdminDailyReport";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 // Testing pages (temporary)
 import TestTools from "./pages/testing/TestTools";
@@ -185,6 +186,11 @@ const App = () => (
                 <Route path="/admin/fans" element={
                   <AdminProtectedRoute>
                     <AdminFanStreamDetail />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/admin/reports/daily" element={
+                  <AdminProtectedRoute>
+                    <AdminDailyReport />
                   </AdminProtectedRoute>
                 } />
                 <Route path="/admin/test-tools" element={
