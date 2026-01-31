@@ -320,10 +320,6 @@ const ArtistProfilePage = () => {
     } else if (result.requiresCredits) {
       // Modal will handle this via the "Add Credits" button
       throw new Error("Insufficient credits");
-    } else if (result.requiresAgreement) {
-      // Redirect to fan agreements page
-      navigate("/fan/agreements");
-      throw new Error("Agreement required");
     } else {
       throw new Error(result.error || "Failed to process stream");
     }
