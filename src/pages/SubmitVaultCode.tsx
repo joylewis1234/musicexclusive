@@ -48,34 +48,24 @@ const SubmitVaultCode = () => {
   const [searchParams] = useSearchParams();
   const state = location.state as LocationState | null;
 
+  // Get initial values from state/session/URL before form initialization
+  const emailFromUrl = searchParams.get("email");
+  const codeFromUrl = searchParams.get("code");
+  const emailFromState = state?.email;
+  const codeFromState = state?.vaultCode;
+  const emailFromSession = sessionStorage.getItem("vaultEmail");
+  const codeFromSession = sessionStorage.getItem("vaultCode");
+  
+  const initialEmail = emailFromUrl || emailFromState || emailFromSession || "";
+  const initialCode = codeFromUrl || codeFromState || codeFromSession || "";
+
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
-      vaultCode: "",
+      email: initialEmail,
+      vaultCode: initialCode,
     },
   });
-
-  // Auto-fill email from URL params, navigation state, or session storage
-  useEffect(() => {
-    // Priority: URL params > navigation state > session storage
-    const emailFromUrl = searchParams.get("email");
-    const codeFromUrl = searchParams.get("code");
-    const emailFromState = state?.email;
-    const codeFromState = state?.vaultCode;
-    const emailFromSession = sessionStorage.getItem("vaultEmail");
-    const codeFromSession = sessionStorage.getItem("vaultCode");
-    
-    const email = emailFromUrl || emailFromState || emailFromSession;
-    const code = codeFromUrl || codeFromState || codeFromSession;
-    
-    if (email) {
-      form.setValue("email", email, { shouldValidate: true, shouldDirty: true });
-    }
-    if (code) {
-      form.setValue("vaultCode", code, { shouldValidate: true, shouldDirty: true });
-    }
-  }, [searchParams, state, form]);
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
