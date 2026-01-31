@@ -235,6 +235,36 @@ export type Database = {
           },
         ]
       }
+      fan_terms_acceptances: {
+        Row: {
+          accepted_at: string
+          agreement_type: string
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+          user_id: string
+          version: string
+        }
+        Insert: {
+          accepted_at?: string
+          agreement_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id: string
+          version?: string
+        }
+        Update: {
+          accepted_at?: string
+          agreement_type?: string
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          user_id?: string
+          version?: string
+        }
+        Relationships: []
+      }
       payout_batches: {
         Row: {
           artist_user_id: string
