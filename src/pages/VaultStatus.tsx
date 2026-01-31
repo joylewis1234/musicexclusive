@@ -7,6 +7,9 @@ import vaultPortal from "@/assets/vault-portal.png";
 import { cn } from "@/lib/utils";
 import { useUnlockFeedback } from "@/hooks/useUnlockFeedback";
 import { SpinWheel } from "@/components/vault/SpinWheel";
+import { VaultLoseScreen } from "@/components/vault/VaultLoseScreen";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 type VaultState = "winner" | "not_selected";
 type RevealPhase = "spinning" | "revealed";
@@ -14,6 +17,7 @@ type RevealPhase = "spinning" | "revealed";
 interface LocationState {
   email?: string;
   name?: string;
+  vaultCode?: string;
   vaultState?: VaultState;
 }
 
@@ -40,6 +44,50 @@ const VaultStatus = () => {
   // Use demo state if set, otherwise use location state, default to "winner"
   const vaultState: VaultState = demoState || state?.vaultState || "winner";
   const userName = state?.name || "Vault Member";
+  const userEmail = state?.email || "";
+  const vaultCode = state?.vaultCode || sessionStorage.getItem("vaultCode") || "";
+
+  // Handle lose state - update database and send email
+  useEffect(() => {
+    const handleLoseFlow = async () => {
+      if (revealPhase === "revealed" && vaultState === "not_selected" && userEmail && vaultCode) {
+        try {
+          // Update vault_codes status to 'lost'
+          const { error: updateError } = await supabase
+            .from("vault_codes")
+            .update({ 
+              status: "lost",
+              next_draw_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // Next draw in 7 days
+            })
+            .eq("email", userEmail)
+            .eq("code", vaultCode);
+
+          if (updateError) {
+            console.error("Error updating vault code status:", updateError);
+          }
+
+          // Send lose email with vault code
+          const appUrl = window.location.origin;
+          const { error: emailError } = await supabase.functions.invoke("send-vault-lose-email", {
+            body: {
+              email: userEmail,
+              name: userName,
+              vaultCode: vaultCode,
+              appUrl: appUrl,
+            },
+          });
+
+          if (emailError) {
+            console.error("Failed to send vault lose email:", emailError);
+          }
+        } catch (err) {
+          console.error("Error in lose flow:", err);
+        }
+      }
+    };
+
+    handleLoseFlow();
+  }, [revealPhase, vaultState, userEmail, vaultCode, userName]);
 
   // Handle spin wheel completion
   const handleSpinComplete = useCallback(() => {
@@ -143,50 +191,11 @@ const VaultStatus = () => {
   );
 
   const renderNotSelected = () => (
-    <div className="flex flex-col items-center text-center animate-fade-in">
-      {/* Vault Portal - soft glow, hopeful */}
-      <div className="relative mb-8">
-        <div className="absolute inset-0 bg-primary/15 rounded-full blur-2xl" />
-        <div className="relative w-32 h-32 md:w-40 md:h-40 flex items-center justify-center">
-          <img
-            src={vaultPortal}
-            alt="Vault Portal"
-            className="w-full h-full object-contain opacity-80 drop-shadow-[0_0_15px_hsl(var(--primary)/0.4)]"
-          />
-          <Sparkles className="absolute w-8 h-8 text-primary/60" />
-        </div>
-      </div>
-
-      {/* Header - calm, not failure */}
-      <h1
-        className="font-display text-xl md:text-2xl lg:text-3xl uppercase tracking-[0.12em] text-foreground mb-6"
-        style={{
-          textShadow: "0 0 20px rgba(255, 255, 255, 0.3)",
-        }}
-      >
-        ✨ Not This Time — But You're Still In
-      </h1>
-
-      {/* Body Copy */}
-      <div className="text-muted-foreground font-body text-sm md:text-base max-w-sm mb-6 space-y-4">
-        <p>
-          No worries — access is limited, and you didn't get selected in this draw.
-        </p>
-        <p>
-          The good news? You're already entered into the next draw, and your Vault code remains eligible.
-        </p>
-      </div>
-
-      {/* Secondary Copy */}
-      <p className="text-muted-foreground/80 font-body text-xs md:text-sm max-w-xs mb-8 italic">
-        Keep an eye on your email — we'll let you know as soon as the Vault opens for you.
-      </p>
-
-      {/* CTA */}
-      <Button size="lg" onClick={() => navigate("/")} className="w-full max-w-xs">
-        OK
-      </Button>
-    </div>
+    <VaultLoseScreen 
+      vaultCode={vaultCode}
+      email={userEmail}
+      name={userName}
+    />
   );
 
   const renderContent = () => {
