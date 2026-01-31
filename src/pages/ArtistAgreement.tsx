@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronLeft, Home } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, Home, Download } from "lucide-react";
 
 const TERMS_VERSION = "1.0";
 const EFFECTIVE_DATE = "January 31, 2025";
@@ -198,8 +199,20 @@ For questions about this Agreement, please contact us through the Platform.
 
 By using Music Exclusive as an Artist, you acknowledge that you have read, understood, and agree to be bound by this Artist Participation Agreement.`;
 
-const ArtistTerms = () => {
+const ArtistAgreement = () => {
   const navigate = useNavigate();
+
+  const handleDownload = () => {
+    const blob = new Blob([ARTIST_PARTICIPATION_AGREEMENT], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Music_Exclusive_Artist_Participation_Agreement_v${TERMS_VERSION}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -225,10 +238,13 @@ const ArtistTerms = () => {
       <main className="flex-1 flex flex-col items-center justify-start px-4 py-8">
         <div className="w-full max-w-2xl">
           <GlowCard glowColor="gradient" className="p-6 md:p-8">
-            {/* Framed Header */}
-            <div className="flex justify-center mb-8">
+            {/* Title */}
+            <div className="text-center mb-6">
+              <p className="text-primary text-xs uppercase tracking-widest mb-2 font-display">
+                Music Exclusive™
+              </p>
               <SectionHeader 
-                title="Artist Agreement" 
+                title="Artist Participation Agreement" 
                 align="center" 
                 framed 
               />
@@ -238,14 +254,27 @@ const ArtistTerms = () => {
               Version {TERMS_VERSION} • Effective {EFFECTIVE_DATE}
             </p>
 
-            <p className="text-muted-foreground text-center mb-8 text-xs">
+            <p className="text-muted-foreground text-center mb-6 text-xs">
               Please read this agreement carefully before uploading Content to Music Exclusive.
             </p>
 
+            {/* Download Button */}
+            <div className="flex justify-center mb-6">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownload}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download Agreement
+              </Button>
+            </div>
+
             {/* Terms Content */}
             <div className="border border-border/50 rounded-lg bg-background/50">
-              <ScrollArea className="h-[60vh] p-4 md:p-6">
-                <pre className="whitespace-pre-wrap text-xs md:text-sm text-muted-foreground font-body leading-relaxed">
+              <ScrollArea className="h-[55vh] p-4 md:p-6">
+                <pre className="whitespace-pre-wrap text-xs md:text-sm text-muted-foreground font-body leading-relaxed select-text">
                   {ARTIST_PARTICIPATION_AGREEMENT}
                 </pre>
               </ScrollArea>
@@ -261,4 +290,4 @@ const ArtistTerms = () => {
   );
 };
 
-export default ArtistTerms;
+export default ArtistAgreement;

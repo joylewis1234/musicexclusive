@@ -409,7 +409,7 @@ const ArtistApplicationForm = () => {
                   <Label htmlFor="agreesTerms" className="text-base font-normal leading-relaxed cursor-pointer">
                     I agree to the Music Exclusive{" "}
                     <Link 
-                      to="/artist-terms" 
+                      to="/artist-agreement" 
                       target="_blank"
                       className="text-primary hover:underline"
                       onClick={(e) => e.stopPropagation()}
