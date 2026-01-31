@@ -43,8 +43,8 @@ export const DiscoveryTrackCard = ({
   onShare,
   onArtistClick,
 }: DiscoveryTrackCardProps) => {
-  const artistName = getArtistName(track.artist_id);
-  const coverImage = track.artwork_url || artistImages[track.artist_id] || artist1;
+  const artistName = getArtistName(track);
+  const coverImage = track.artwork_url || track.artist_avatar_url || artist1;
   const hasPreview = !!track.preview_audio_url;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreview && !isPreviewPlaying;

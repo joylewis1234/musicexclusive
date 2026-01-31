@@ -61,8 +61,8 @@ export const HotNewTracks = ({
           className={`flex gap-4 transition-opacity duration-300 ${isRefreshing ? "opacity-50" : "opacity-100"}`}
         >
           {tracks.map((track) => {
-            const coverImage = track.artwork_url || artistImages[track.artist_id] || artist1;
-            const artistName = getArtistName(track.artist_id);
+            const coverImage = track.artwork_url || track.artist_avatar_url || artist1;
+            const artistName = getArtistName(track);
 
             return (
               <button
