@@ -98,57 +98,53 @@ export default function AdminTestTools() {
       const artist = artists.find((a) => a.user_id === selectedArtist);
       if (!artist) throw new Error("Artist not found");
 
-      // Calculate earnings
-      const artistCredits = streamCount * ARTIST_SHARE;
-      const platformCredits = streamCount * PLATFORM_SHARE;
-      const artistUsd = artistCredits * CREDIT_USD_RATE;
-      const platformUsd = platformCredits * CREDIT_USD_RATE;
-
-      // Get artist's email from auth (we'll use a placeholder format)
-      const { data: artistProfile } = await supabase
+      // Get artist profile ID (needed for stream_ledger.artist_id)
+      const { data: artistProfile, error: profileError } = await supabase
         .from("artist_profiles")
-        .select("user_id")
+        .select("id")
         .eq("user_id", selectedArtist)
         .single();
+
+      if (profileError || !artistProfile) {
+        throw new Error("Artist profile not found");
+      }
 
       // Create a timestamp within the date range (middle of the range)
       const midDate = new Date(
         (dateRange.from.getTime() + dateRange.to.getTime()) / 2
       );
 
-      // Create ledger entries
-      const entries = [
-        {
-          user_email: `artist-${selectedArtist}@test.internal`,
-          type: "ARTIST_EARNING",
-          credits_delta: artistCredits,
-          usd_delta: artistUsd,
-          reference: `artist:${selectedArtist}:test:${Date.now()}`,
+      // Create stream_ledger entries (this is what the payout system uses)
+      const streamEntries = [];
+      for (let i = 0; i < streamCount; i++) {
+        streamEntries.push({
+          artist_id: artistProfile.id,
+          fan_id: "00000000-0000-0000-0000-000000000000", // placeholder test fan
+          fan_email: `test-fan-${i}@test.internal`,
+          track_id: "00000000-0000-0000-0000-000000000000", // placeholder track
+          credits_spent: 1,
+          amount_artist: 0.10,
+          amount_platform: 0.10,
+          amount_total: 0.20,
+          payout_status: "pending",
           created_at: midDate.toISOString(),
-        },
-        {
-          user_email: "platform@soundvault.internal",
-          type: "PLATFORM_EARNING",
-          credits_delta: platformCredits,
-          usd_delta: platformUsd,
-          reference: `platform:test:${Date.now()}`,
-          created_at: midDate.toISOString(),
-        },
-      ];
+        });
+      }
 
-      const { error } = await supabase.from("credit_ledger").insert(entries);
+      const { error } = await supabase.from("stream_ledger").insert(streamEntries);
 
       if (error) throw error;
 
+      const artistUsd = streamCount * 0.10;
       toast.success(
-        `Generated ${streamCount} streams → ${artist.artist_name} earned ${artistCredits} credits ($${artistUsd.toFixed(2)})`
+        `Generated ${streamCount} test streams → ${artist.artist_name} will earn $${artistUsd.toFixed(2)}`
       );
 
       // Reset form
       setStreamCount(100);
     } catch (error) {
       console.error("Error generating test earnings:", error);
-      toast.error("Failed to generate test earnings");
+      toast.error(`Failed to generate test earnings: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsGenerating(false);
     }
@@ -176,8 +172,7 @@ export default function AdminTestTools() {
     );
   }
 
-  const artistCreditsPreview = streamCount * ARTIST_SHARE;
-  const artistUsdPreview = artistCreditsPreview * CREDIT_USD_RATE;
+  const artistUsdPreview = streamCount * 0.10; // $0.10 per stream for artist
 
   return (
     <div className="min-h-screen bg-background">
@@ -310,13 +305,9 @@ export default function AdminTestTools() {
                 <p className="text-lg">
                   <span className="font-mono text-primary">{streamCount}</span> streams →{" "}
                   <span className="font-mono text-green-400">
-                    {artistCreditsPreview} credits
-                  </span>{" "}
-                  (
-                  <span className="font-mono text-green-400">
                     ${artistUsdPreview.toFixed(2)}
-                  </span>
-                  ) for artist
+                  </span>{" "}
+                  for artist (will appear in stream_ledger for payout aggregation)
                 </p>
               </div>
             )}
