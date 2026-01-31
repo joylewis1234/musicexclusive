@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -45,6 +45,7 @@ const SubmitVaultCode = () => {
   const [isBlocked, setIsBlocked] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const state = location.state as LocationState | null;
 
   const form = useForm<FormValues>({
@@ -55,15 +56,18 @@ const SubmitVaultCode = () => {
     },
   });
 
-  // Auto-fill email from navigation state or session storage
+  // Auto-fill email from URL params, navigation state, or session storage
   useEffect(() => {
+    // Priority: URL params > navigation state > session storage
+    const emailFromUrl = searchParams.get("email");
+    const codeFromUrl = searchParams.get("code");
     const emailFromState = state?.email;
-    const emailFromSession = sessionStorage.getItem("vaultEmail");
-    const email = emailFromState || emailFromSession;
-    
     const codeFromState = state?.vaultCode;
+    const emailFromSession = sessionStorage.getItem("vaultEmail");
     const codeFromSession = sessionStorage.getItem("vaultCode");
-    const code = codeFromState || codeFromSession;
+    
+    const email = emailFromUrl || emailFromState || emailFromSession;
+    const code = codeFromUrl || codeFromState || codeFromSession;
     
     if (email) {
       form.setValue("email", email);
@@ -71,7 +75,7 @@ const SubmitVaultCode = () => {
     if (code) {
       form.setValue("vaultCode", code);
     }
-  }, [state?.email, state?.vaultCode, form]);
+  }, [searchParams, state?.email, state?.vaultCode, form]);
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
@@ -103,14 +107,12 @@ const SubmitVaultCode = () => {
         }
       }
       
-      // Find matching vault code record
+      // Find matching vault code record - check for valid codes (not expired OR codes with 'lost' status for re-entry)
       const { data: vaultRecord, error: fetchError } = await supabase
         .from("vault_codes")
         .select("*")
         .eq("email", values.email)
         .eq("code", values.vaultCode)
-        .is("used_at", null)
-        .gt("expires_at", now.toISOString())
         .maybeSingle();
       
       if (fetchError) {
@@ -119,7 +121,16 @@ const SubmitVaultCode = () => {
         return;
       }
       
-      if (!vaultRecord) {
+      // Check if code exists and is valid (not used, or is a re-entry with 'lost' status)
+      const isValidForReentry = vaultRecord && 
+        (vaultRecord.status === "lost" || vaultRecord.status === "pending") &&
+        !vaultRecord.used_at;
+      
+      const isValidFreshCode = vaultRecord && 
+        !vaultRecord.used_at && 
+        new Date(vaultRecord.expires_at) > now;
+      
+      if (!vaultRecord || (!isValidForReentry && !isValidFreshCode)) {
         // Invalid or expired code - increment attempts
         if (emailRecord) {
           const lastAttempt = emailRecord.last_attempt_at 
@@ -150,51 +161,78 @@ const SubmitVaultCode = () => {
         return;
       }
       
-      // Valid code - mark as used and reset attempts
-      const { error: updateError } = await supabase
-        .from("vault_codes")
-        .update({ 
-          used_at: now.toISOString(),
-          attempts_count: 0,
-          last_attempt_at: null
-        })
-        .eq("id", vaultRecord.id);
+      // Determine outcome - For testing, use random. In production, this would be a draw system.
+      // Re-entry users with 'lost' status get another chance
+      const isWinner = Math.random() > 0.5; // 50% chance for testing
       
-      if (updateError) {
-        console.error("Error updating vault code:", updateError);
-        toast.error("Something went wrong. Please try again.");
-        return;
-      }
-      
-      // Send vault win email with the code
-      try {
-        const { error: emailError } = await supabase.functions.invoke("send-vault-win-email", {
-          body: {
-            email: values.email,
+      if (isWinner) {
+        // Valid code - mark as used and update status to 'won'
+        const { error: updateError } = await supabase
+          .from("vault_codes")
+          .update({ 
+            used_at: now.toISOString(),
+            attempts_count: 0,
+            last_attempt_at: null,
+            status: "won"
+          })
+          .eq("id", vaultRecord.id);
+        
+        if (updateError) {
+          console.error("Error updating vault code:", updateError);
+          toast.error("Something went wrong. Please try again.");
+          return;
+        }
+        
+        // Send vault win email with the code
+        try {
+          const { error: emailError } = await supabase.functions.invoke("send-vault-win-email", {
+            body: {
+              email: values.email,
+              name: vaultRecord.name,
+              vaultCode: values.vaultCode,
+            },
+          });
+          
+          if (emailError) {
+            console.error("Failed to send vault win email:", emailError);
+          }
+        } catch (emailErr) {
+          console.error("Error sending vault win email:", emailErr);
+        }
+        
+        toast.success("Code verified! Welcome to the vault.");
+        
+        // Navigate to vault status as winner
+        navigate("/vault/status", { 
+          state: { 
+            email: values.email, 
             name: vaultRecord.name,
             vaultCode: values.vaultCode,
-          },
+            vaultState: "winner"
+          } 
         });
+      } else {
+        // Not selected - keep the code valid for next draw
+        await supabase
+          .from("vault_codes")
+          .update({ 
+            attempts_count: 0,
+            last_attempt_at: null,
+            status: "lost",
+            next_draw_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          })
+          .eq("id", vaultRecord.id);
         
-        if (emailError) {
-          console.error("Failed to send vault win email:", emailError);
-          // Don't block the flow, just log the error
-        }
-      } catch (emailErr) {
-        console.error("Error sending vault win email:", emailErr);
+        // Navigate to vault status as not selected
+        navigate("/vault/status", { 
+          state: { 
+            email: values.email, 
+            name: vaultRecord.name,
+            vaultCode: values.vaultCode,
+            vaultState: "not_selected"
+          } 
+        });
       }
-      
-      toast.success("Code verified! Welcome to the vault.");
-      
-      // Navigate to vault status
-      // TESTING: Always grant access (change to "in_draw" for real draw logic)
-      navigate("/vault/status", { 
-        state: { 
-          email: values.email, 
-          name: vaultRecord.name,
-          vaultState: "winner"
-        } 
-      });
     } catch (err) {
       console.error("Unexpected error:", err);
       toast.error("Something went wrong. Please try again.");
