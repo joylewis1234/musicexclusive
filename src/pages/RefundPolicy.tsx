@@ -7,73 +7,19 @@ REFUND POLICY
 
 Effective Date: January 31, 2026
 
-Music Exclusive ("Company," "we," "us," or "our") is committed to providing a quality experience for all users. Please read this Refund Policy carefully before making any purchases on our platform.
+All sales are final.
 
-1. GENERAL POLICY
-All purchases made on Music Exclusive are final and non-refundable.
-
-This includes:
+Music Exclusive does not provide refunds or credits for:
+- Subscription payments (including Superfan Membership)
 - Credit purchases (Pay-As-You-Go)
-- Superfan Membership subscriptions
-- Any other digital goods or services
+- Any streams completed through the platform
 
-2. CREDITS (PAY-AS-YOU-GO)
-Credits are purchased at a rate of $0.20 per credit (1 credit = 1 stream).
+Once a stream is played, credits are considered used and are non-refundable.
 
-Once credits are purchased:
-- They are immediately added to your account
-- They do not expire
-- They cannot be refunded, exchanged, or transferred
-- Unused credits remain in your account until used
+Exceptions:
+Refunds may only be issued if required by applicable law.
 
-A minimum balance of $5.00 (25 credits) is required to maintain active access to the platform.
-
-3. SUPERFAN MEMBERSHIP
-The Superfan Membership is a recurring monthly subscription at $5.00/month.
-
-Membership includes 25 credits per month that reset at each billing cycle.
-
-Regarding Superfan Membership refunds:
-- Subscription fees are non-refundable
-- Unused monthly credits do not roll over and cannot be refunded
-- You may cancel your subscription at any time to prevent future charges
-- Cancellation takes effect at the end of your current billing period
-
-4. EXCEPTIONS
-We may, at our sole discretion, consider refund requests in cases of:
-- Duplicate charges due to technical error
-- Unauthorized transactions (with proper verification)
-- Platform-wide service outages affecting purchased services
-
-To request a refund exception, contact us within 7 days of the transaction.
-
-5. HOW TO REQUEST A REFUND EXCEPTION
-Email us at:
-support@musicexclusive.co
-
-Include the following information:
-- Your account email address
-- Date of transaction
-- Transaction amount
-- Reason for refund request
-- Any supporting documentation
-
-6. PROCESSING TIME
-If a refund exception is approved:
-- Refunds will be processed within 5-10 business days
-- Refunds will be credited to the original payment method
-- You will receive email confirmation once processed
-
-7. CHARGEBACKS
-If you initiate a chargeback with your bank or credit card company without first contacting us, we reserve the right to:
-- Suspend or terminate your account
-- Pursue recovery of the disputed amount
-- Take appropriate legal action
-
-We encourage you to contact us first to resolve any billing issues.
-
-8. CONTACT US
-For questions about this Refund Policy or to request assistance:
+If you believe you were charged in error, contact:
 support@musicexclusive.co`
 
 const RefundPolicy = () => {
