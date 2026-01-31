@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Loader2, Music, Sparkles, Crown } from "lucide-react";
@@ -33,6 +34,7 @@ const FanAuth = () => {
   const [email, setEmail] = useState(state?.email || "");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState(state?.name || "");
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   // Determine destination based on flow
@@ -166,7 +168,30 @@ const FanAuth = () => {
               />
             </div>
 
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            {/* Terms Checkbox - only show for signup */}
+            {isSignUp && (
+              <label className="flex items-start gap-3 cursor-pointer group">
+                <Checkbox
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                  className="mt-0.5 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                />
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">
+                  I agree to the Music Exclusive{" "}
+                  <Link 
+                    to="/terms" 
+                    target="_blank"
+                    className="text-primary hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    Terms of Use
+                  </Link>{" "}
+                  and understand streaming costs 1 credit ($0.20) per stream.
+                </span>
+              </label>
+            )}
+
+            <Button type="submit" className="w-full" disabled={isLoading || (isSignUp && !termsAccepted)}>
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : (
