@@ -107,7 +107,7 @@ const EnterVault = () => {
       // Check if email already has an unexpired, unused code
       const { data: existingCode } = await supabase
         .from("vault_codes")
-        .select("code, expires_at, used_at")
+        .select("code, expires_at, used_at, issued_at")
         .eq("email", values.email)
         .is("used_at", null)
         .gt("expires_at", new Date().toISOString())
@@ -122,6 +122,25 @@ const EnterVault = () => {
         sessionStorage.setItem("vaultEmail", values.email);
         sessionStorage.setItem("vaultName", values.name);
         toast.info("Your existing vault code is still valid!");
+        return;
+      }
+      
+      // Rate limiting: Check if a code was issued recently (within 1 minute)
+      const { data: recentCodes } = await supabase
+        .from("vault_codes")
+        .select("issued_at")
+        .eq("email", values.email)
+        .gte("issued_at", new Date(Date.now() - 60 * 1000).toISOString())
+        .order("issued_at", { ascending: false })
+        .limit(1);
+      
+      if (recentCodes && recentCodes.length > 0) {
+        const lastIssued = new Date(recentCodes[0].issued_at);
+        const secondsSince = Math.floor((Date.now() - lastIssued.getTime()) / 1000);
+        const waitTime = 60 - secondsSince;
+        
+        toast.error(`Please wait ${waitTime} seconds before requesting another code`);
+        setIsSubmitting(false);
         return;
       }
       
@@ -145,11 +164,13 @@ const EnterVault = () => {
         attempts++;
       }
       
-      // Delete any old expired/used codes for this email first
+      // Only delete expired or used codes for this email (not valid ones)
+      const now = new Date().toISOString();
       await supabase
         .from("vault_codes")
         .delete()
-        .eq("email", values.email);
+        .eq("email", values.email)
+        .or(`used_at.not.is.null,expires_at.lt.${now}`);
       
       // Insert new vault code with expiration
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutes
