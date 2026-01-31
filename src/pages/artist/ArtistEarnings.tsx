@@ -21,11 +21,10 @@ import {
   Loader2,
   XCircle,
   LogOut,
-  Eye,
   Crown,
+  RefreshCw,
 } from "lucide-react";
 import WeeklyTransparencyReport from "@/components/artist/WeeklyTransparencyReport";
-import EarningsDebugPanel from "@/components/artist/EarningsDebugPanel";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 
 interface PayoutBatch {
@@ -59,6 +58,7 @@ interface LedgerEntry {
 const ArtistEarnings = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [artistId, setArtistId] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   
@@ -78,7 +78,12 @@ const ArtistEarnings = () => {
   const [batchLedgerEntries, setBatchLedgerEntries] = useState<LedgerEntry[]>([]);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
-  const fetchEarningsData = useCallback(async () => {
+  const fetchEarningsData = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
     setIsLoading(true);
     
     try {
@@ -192,12 +197,27 @@ const ArtistEarnings = () => {
       console.error("Error fetching earnings:", error);
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
   }, [navigate]);
 
+  // Fetch on mount and when page becomes visible (tab switch)
   useEffect(() => {
     fetchEarningsData();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchEarningsData(true);
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [fetchEarningsData]);
+
+  const handleRefresh = () => {
+    fetchEarningsData(true);
+  };
 
   const handleViewReport = async (batch: PayoutBatch) => {
     setSelectedBatch(batch);
@@ -315,6 +335,16 @@ const ArtistEarnings = () => {
           >
             <LogOut className="w-4 h-4" />
             <span className="hidden sm:inline">Logout</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-foreground w-9 h-9"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`} />
           </Button>
         </div>
       </header>
@@ -576,9 +606,6 @@ const ArtistEarnings = () => {
               )}
             </div>
           </section>
-
-          {/* Debug Panel */}
-          <EarningsDebugPanel />
         </div>
       </main>
 
