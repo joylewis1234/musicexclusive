@@ -1,10 +1,11 @@
 import * as React from "react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { Checkbox } from "@/components/ui/checkbox";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +59,7 @@ const EnterVault = () => {
   const [submittedData, setSubmittedData] = useState<FormValues | null>(null);
   const [vaultCode, setVaultCode] = useState<string>("");
   const [isCopied, setIsCopied] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
 
   const form = useForm<FormValues>({
@@ -447,11 +449,32 @@ const EnterVault = () => {
                         )}
                       />
 
+                      {/* Terms Checkbox */}
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <Checkbox
+                          checked={termsAccepted}
+                          onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                          className="mt-0.5 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                        />
+                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">
+                          I agree to the Music Exclusive{" "}
+                          <Link 
+                            to="/terms" 
+                            target="_blank"
+                            className="text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            Terms of Use
+                          </Link>{" "}
+                          and understand streaming costs 1 credit ($0.20) per stream.
+                        </span>
+                      </label>
+
                       <Button
                         type="submit"
                         size="lg"
                         className="w-full"
-                        disabled={isSubmitting || isCheckingExisting}
+                        disabled={isSubmitting || isCheckingExisting || !termsAccepted}
                       >
                         {isSubmitting ? (
                           <>
