@@ -278,10 +278,12 @@ const Index = () => {
             <Button 
               variant="outline" 
               size="lg" 
-              className="w-full"
+              className="w-full h-auto py-3 whitespace-normal text-amber-400 border-amber-500/50 hover:border-amber-400 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(251,191,36,0.3)] animate-pulse"
               onClick={() => navigate("/subscribe")}
             >
-              Want Access Now? Become a Superfan
+              <span className="block text-center leading-tight">
+                Want Access Now?<br />Become a Superfan
+              </span>
             </Button>
           </div>
         </div>
