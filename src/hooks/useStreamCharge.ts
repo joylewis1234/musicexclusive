@@ -62,8 +62,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
   }, []);
 
   const chargeStream = useCallback(async (
-    trackId: string,
-    artistEmail: string
+    trackId: string
   ): Promise<StreamChargeResult> => {
     // Prevent duplicate charges in the same session
     if (chargedTracksRef.current.has(trackId)) {
@@ -84,6 +83,20 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
       if (!fanUserId) {
         return { success: false, error: "Not authenticated" };
       }
+
+      // CRITICAL: Fetch the track to get the owner's artist_id
+      const { data: trackData, error: trackError } = await supabase
+        .from("tracks")
+        .select("artist_id")
+        .eq("id", trackId)
+        .maybeSingle();
+
+      if (trackError || !trackData) {
+        console.error("Error fetching track owner:", trackError);
+        return { success: false, error: "Could not verify track ownership" };
+      }
+
+      const trackOwnerArtistId = trackData.artist_id;
 
       // Run full validation
       const validation = await validateStreamEligibility(userEmail);
@@ -137,8 +150,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
         return { success: false, error: "Failed to process payment" };
       }
 
-      // 3. Create ledger entries
-      const now = new Date().toISOString();
+      // 3. Create ledger entries using the track owner's artist_id
       const streamReference = `stream_${trackId}_${Date.now()}`;
 
       // STREAM_DEBIT for fan
@@ -150,9 +162,9 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
         reference: streamReference,
       });
 
-      // ARTIST_EARNING
+      // ARTIST_EARNING - use track owner's artist_id
       await supabase.from("credit_ledger").insert({
-        user_email: artistEmail,
+        user_email: trackOwnerArtistId,
         type: "ARTIST_EARNING",
         credits_delta: 0.5,
         usd_delta: 0.10,
@@ -168,23 +180,11 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
         reference: streamReference,
       });
 
-      // 4. Create stream_ledger entry for detailed tracking
-      // Extract artist_id from the artistEmail pattern or use the email
-      const artistId = artistEmail.startsWith("artist_") 
-        ? artistEmail.replace("@musicexclusive.com", "").replace("artist_", "")
-        : artistEmail;
-
-      // Get fan display name for record keeping
-      const { data: fanProfile } = await supabase
-        .from("vault_members")
-        .select("display_name")
-        .eq("email", userEmail)
-        .maybeSingle();
-
+      // 4. Create stream_ledger entry - artist_id is the track owner
       await supabase.from("stream_ledger").insert({
         fan_id: fanUserId,
         fan_email: userEmail,
-        artist_id: artistId,
+        artist_id: trackOwnerArtistId,
         track_id: trackId,
         credits_spent: 1,
         amount_total: 0.20,
