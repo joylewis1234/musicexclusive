@@ -7,16 +7,16 @@ interface SpinWheelProps {
   result: "winner" | "not_selected";
 }
 
-// Space vault themed segments
+// Music themed segments with neon aesthetic
 const SEGMENTS = [
-  { label: "🌟", isWin: true },
-  { label: "🔮", isWin: false },
-  { label: "✨", isWin: true },
-  { label: "🌙", isWin: false },
-  { label: "💫", isWin: true },
+  { label: "🎉", isWin: true },
+  { label: "🎵", isWin: false },
+  { label: "🎤", isWin: true },
+  { label: "🎧", isWin: false },
+  { label: "🎸", isWin: true },
   { label: "🔒", isWin: false },
-  { label: "⭐", isWin: true },
-  { label: "🌌", isWin: false },
+  { label: "🎹", isWin: true },
+  { label: "🎶", isWin: false },
 ];
 
 export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
@@ -31,7 +31,7 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
     setHasStarted(true);
 
     const segmentAngle = 360 / SEGMENTS.length;
-    const winningIndex = result === "winner" ? 0 : 5; // 🌟 for win, 🔒 for not selected
+    const winningIndex = result === "winner" ? 0 : 5; // 🎉 for win, 🔒 for not selected
     const targetAngle = winningIndex * segmentAngle;
     
     const fullSpins = 5 + Math.random() * 2;
@@ -54,86 +54,69 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] animate-fade-in relative">
-      {/* Starfield background */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              opacity: 0.3 + Math.random() * 0.5,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
-            }}
-          />
-        ))}
-      </div>
-
       {/* Header */}
       <div className="text-center mb-8 relative z-10">
         <h2 
           className="font-display text-xl md:text-2xl uppercase tracking-[0.12em] text-foreground mb-2"
           style={{
-            textShadow: "0 0 30px hsl(280 80% 60% / 0.6), 0 0 60px hsl(var(--primary) / 0.3)"
+            textShadow: "0 0 30px hsl(280 80% 60% / 0.6), 0 0 60px hsl(320 80% 60% / 0.3)"
           }}
         >
-          {isSpinning ? "🌌 Unlocking..." : hasStarted ? "✨ Revealing..." : "🔮 The Vault Awaits"}
+          {isSpinning ? "🎵 Spinning..." : hasStarted ? "🎤 Revealing..." : "🎧 The Vault Awaits"}
         </h2>
         <p className="text-muted-foreground text-sm">
-          {isSpinning ? "The cosmos decides your fate..." : "Your destiny is being revealed..."}
+          {isSpinning ? "Your musical destiny awaits..." : "Get ready for the drop..."}
         </p>
       </div>
 
       {/* Wheel Container */}
       <div className="relative z-10">
-        {/* Outer cosmic ring glow */}
+        {/* Outer neon glow ring - purple/pink/blue */}
         <div 
           className={cn(
             "absolute -inset-8 rounded-full transition-opacity duration-500",
             isSpinning ? "opacity-100" : "opacity-60"
           )}
           style={{
-            background: "conic-gradient(from 0deg, hsl(280 80% 50% / 0.4), hsl(var(--primary) / 0.3), hsl(320 80% 50% / 0.3), hsl(280 80% 50% / 0.4))",
-            filter: "blur(30px)",
-            animation: isSpinning ? "spin 8s linear infinite reverse" : "none"
+            background: "conic-gradient(from 0deg, hsl(280 80% 50% / 0.5), hsl(320 80% 50% / 0.4), hsl(220 80% 50% / 0.4), hsl(280 80% 50% / 0.5))",
+            filter: "blur(25px)",
+            animation: isSpinning ? "spin 6s linear infinite reverse" : "none"
           }}
         />
 
-        {/* Inner nebula glow */}
+        {/* Inner neon glow - pink/purple */}
         <div 
           className={cn(
             "absolute -inset-4 rounded-full transition-opacity duration-500",
             isSpinning ? "opacity-90 animate-pulse" : "opacity-50"
           )}
           style={{
-            background: "radial-gradient(circle, hsl(280 70% 50% / 0.5), hsl(var(--primary) / 0.3), transparent 70%)"
+            background: "radial-gradient(circle, hsl(320 70% 50% / 0.4), hsl(280 70% 40% / 0.3), transparent 70%)"
           }}
         />
 
-        {/* Pointer - crystal/gem style */}
+        {/* Pointer - neon triangle */}
         <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-20">
           <div 
             className="w-0 h-0 border-l-[16px] border-r-[16px] border-t-[28px] border-l-transparent border-r-transparent"
             style={{
-              borderTopColor: "hsl(280 80% 60%)",
-              filter: "drop-shadow(0 0 15px hsl(280 80% 60%)) drop-shadow(0 0 30px hsl(var(--primary) / 0.5))"
+              borderTopColor: "hsl(320 80% 60%)",
+              filter: "drop-shadow(0 0 12px hsl(320 80% 60%)) drop-shadow(0 0 24px hsl(280 80% 50% / 0.5))"
             }}
           />
         </div>
 
-        {/* Wheel - space portal style */}
+        {/* Wheel */}
         <div 
           className={cn(
             "relative w-64 h-64 md:w-80 md:h-80 rounded-full overflow-hidden"
           )}
           style={{
             boxShadow: `
-              0 0 0 3px hsl(280 70% 50% / 0.6),
-              0 0 30px hsl(280 80% 50% / 0.4),
-              0 0 60px hsl(var(--primary) / 0.3),
-              inset 0 0 40px hsl(280 60% 30% / 0.3)
+              0 0 0 3px hsl(280 70% 50% / 0.7),
+              0 0 20px hsl(320 80% 50% / 0.4),
+              0 0 40px hsl(220 80% 50% / 0.3),
+              inset 0 0 30px hsl(280 60% 20% / 0.4)
             `,
             transform: `rotate(${rotation}deg)`,
             transition: isSpinning 
@@ -144,15 +127,15 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
           {/* SVG Wheel */}
           <svg viewBox="0 0 100 100" className="w-full h-full">
             <defs>
-              {/* Gradient for win segments */}
+              {/* Gradient for win segments - purple/pink */}
               <radialGradient id="winGradient" cx="50%" cy="50%" r="50%">
                 <stop offset="0%" stopColor="hsl(280 70% 35%)" />
-                <stop offset="100%" stopColor="hsl(280 60% 20%)" />
+                <stop offset="100%" stopColor="hsl(320 60% 20%)" />
               </radialGradient>
-              {/* Gradient for non-win segments */}
+              {/* Gradient for non-win segments - blue/black */}
               <radialGradient id="loseGradient" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="hsl(220 30% 15%)" />
-                <stop offset="100%" stopColor="hsl(220 20% 8%)" />
+                <stop offset="0%" stopColor="hsl(220 50% 20%)" />
+                <stop offset="100%" stopColor="hsl(240 30% 8%)" />
               </radialGradient>
             </defs>
             
@@ -180,7 +163,7 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
                   <path
                     d={pathD}
                     fill={segment.isWin ? "url(#winGradient)" : "url(#loseGradient)"}
-                    stroke="hsl(280 60% 50% / 0.4)"
+                    stroke="hsl(280 60% 40% / 0.5)"
                     strokeWidth="0.3"
                   />
                   <text
@@ -200,15 +183,13 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
           {/* Center hub - vault portal image */}
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div 
-              className={cn(
-                "w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center overflow-hidden"
-              )}
+              className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center overflow-hidden"
               style={{
-                background: "radial-gradient(circle, hsl(280 50% 15%), hsl(var(--background)))",
+                background: "radial-gradient(circle, hsl(280 40% 12%), hsl(0 0% 0%))",
                 boxShadow: `
-                  0 0 0 2px hsl(280 60% 50% / 0.7),
-                  0 0 20px hsl(280 80% 50% / 0.5),
-                  inset 0 0 20px hsl(280 60% 30% / 0.4)
+                  0 0 0 2px hsl(320 60% 50% / 0.7),
+                  0 0 15px hsl(280 80% 50% / 0.5),
+                  inset 0 0 15px hsl(320 60% 30% / 0.4)
                 `
               }}
             >
@@ -220,47 +201,54 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
                   isSpinning && "animate-pulse"
                 )}
                 style={{
-                  filter: "drop-shadow(0 0 10px hsl(var(--primary) / 0.6))"
+                  filter: "drop-shadow(0 0 8px hsl(280 80% 60% / 0.6))"
                 }}
               />
             </div>
           </div>
         </div>
 
-        {/* Orbiting particles during spin */}
+        {/* Floating music notes during spin */}
         {isSpinning && (
           <>
-            <div 
-              className="absolute w-2 h-2 rounded-full bg-purple-400"
+            <span 
+              className="absolute text-xl animate-bounce"
               style={{
-                top: "10%",
-                right: "5%",
-                boxShadow: "0 0 10px hsl(280 80% 60%)",
-                animation: "bounce 0.8s ease-in-out infinite"
+                top: "5%",
+                right: "0%",
+                color: "hsl(320 80% 70%)",
+                textShadow: "0 0 10px hsl(320 80% 60%)",
+                animationDuration: "0.6s"
               }}
-            />
-            <div 
-              className="absolute w-1.5 h-1.5 rounded-full bg-cyan-400"
+            >
+              🎵
+            </span>
+            <span 
+              className="absolute text-lg animate-bounce"
               style={{
-                bottom: "15%",
-                left: "5%",
-                boxShadow: "0 0 8px hsl(var(--primary))",
-                animation: "bounce 0.6s ease-in-out infinite",
+                bottom: "10%",
+                left: "0%",
+                color: "hsl(280 80% 70%)",
+                textShadow: "0 0 10px hsl(280 80% 60%)",
+                animationDuration: "0.8s",
                 animationDelay: "0.2s"
               }}
-            />
-            <div 
-              className="absolute w-1 h-1 rounded-full bg-pink-400"
+            >
+              🎶
+            </span>
+            <span 
+              className="absolute text-base animate-bounce"
               style={{
                 top: "50%",
-                right: "-5%",
-                boxShadow: "0 0 6px hsl(320 80% 60%)",
-                animation: "bounce 0.7s ease-in-out infinite",
+                right: "-8%",
+                color: "hsl(220 80% 70%)",
+                textShadow: "0 0 8px hsl(220 80% 60%)",
+                animationDuration: "0.7s",
                 animationDelay: "0.4s"
               }}
-            />
-            <span className="absolute -top-3 left-1/4 text-lg animate-pulse">✨</span>
-            <span className="absolute -bottom-3 right-1/4 text-lg animate-pulse" style={{ animationDelay: "0.3s" }}>💫</span>
+            >
+              🎤
+            </span>
           </>
         )}
       </div>
@@ -272,7 +260,7 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
           isSpinning ? "opacity-100" : "opacity-0"
         )}
       >
-        ✨ Only the chosen few unlock the vault...
+        🎧 Only the chosen few unlock the vault...
       </p>
     </div>
   );
