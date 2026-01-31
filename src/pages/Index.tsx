@@ -309,13 +309,6 @@ const Index = () => {
             </Link>
             <span className="text-border">•</span>
             <Link 
-              to="/artist-agreement" 
-              className="text-primary text-xs hover:underline font-body"
-            >
-              Artist Participation Agreement
-            </Link>
-            <span className="text-border">•</span>
-            <Link 
               to="/dmca" 
               className="text-primary text-xs hover:underline font-body"
             >
@@ -327,6 +320,13 @@ const Index = () => {
               className="text-primary text-xs hover:underline font-body"
             >
               Refund Policy
+            </Link>
+            <span className="text-border">•</span>
+            <Link 
+              to="/artist-agreement" 
+              className="text-primary text-xs hover:underline font-body"
+            >
+              Artist Participation Agreement
             </Link>
           </div>
         </div>
