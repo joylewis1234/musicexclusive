@@ -182,19 +182,10 @@ const VaultStatus = () => {
         Keep an eye on your email — we'll let you know as soon as the Vault opens for you.
       </p>
 
-      {/* CTAs */}
-      <div className="flex flex-col gap-3 w-full max-w-xs">
-        <Button size="lg" onClick={() => navigate("/")}>
-          OK
-        </Button>
-        
-        <button
-          onClick={() => navigate("/vault/enter")}
-          className="text-sm text-muted-foreground hover:text-primary transition-colors underline underline-offset-4"
-        >
-          Request a new code
-        </button>
-      </div>
+      {/* CTA */}
+      <Button size="lg" onClick={() => navigate("/")} className="w-full max-w-xs">
+        OK
+      </Button>
     </div>
   );
 

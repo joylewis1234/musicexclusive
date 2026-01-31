@@ -166,6 +166,24 @@ const SubmitVaultCode = () => {
         return;
       }
       
+      // Send vault win email with the code
+      try {
+        const { error: emailError } = await supabase.functions.invoke("send-vault-win-email", {
+          body: {
+            email: values.email,
+            name: vaultRecord.name,
+            vaultCode: values.vaultCode,
+          },
+        });
+        
+        if (emailError) {
+          console.error("Failed to send vault win email:", emailError);
+          // Don't block the flow, just log the error
+        }
+      } catch (emailErr) {
+        console.error("Error sending vault win email:", emailErr);
+      }
+      
       toast.success("Code verified! Welcome to the vault.");
       
       // Navigate to vault status
