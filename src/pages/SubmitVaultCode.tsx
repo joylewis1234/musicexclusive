@@ -70,12 +70,12 @@ const SubmitVaultCode = () => {
     const code = codeFromUrl || codeFromState || codeFromSession;
     
     if (email) {
-      form.setValue("email", email);
+      form.setValue("email", email, { shouldValidate: true, shouldDirty: true });
     }
     if (code) {
-      form.setValue("vaultCode", code);
+      form.setValue("vaultCode", code, { shouldValidate: true, shouldDirty: true });
     }
-  }, [searchParams, state?.email, state?.vaultCode, form]);
+  }, [searchParams, state, form]);
 
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
