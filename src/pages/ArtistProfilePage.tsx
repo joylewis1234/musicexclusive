@@ -308,9 +308,10 @@ const ArtistProfilePage = () => {
 
   // Called when user confirms the stream in the modal
   const handleStreamConfirm = useCallback(async () => {
-    if (!pendingPlayTrack || !artistEmail) return;
+    if (!pendingPlayTrack) return;
 
-    const result = await chargeStream(pendingPlayTrack.id, artistEmail);
+    // chargeStream now fetches artist_id from the track itself
+    const result = await chargeStream(pendingPlayTrack.id);
     
     if (result.success) {
       // Refresh credits to show updated balance
@@ -323,7 +324,7 @@ const ArtistProfilePage = () => {
     } else {
       throw new Error(result.error || "Failed to process stream");
     }
-  }, [pendingPlayTrack, artistEmail, chargeStream, refetchCredits, navigate]);
+  }, [pendingPlayTrack, chargeStream, refetchCredits]);
 
   const handleAddCredits = useCallback(() => {
     navigate("/fan/add-credits");
