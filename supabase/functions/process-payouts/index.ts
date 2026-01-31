@@ -41,67 +41,74 @@ serve(async (req) => {
       const body = await req.json();
       specificBatchId = body?.batchId || null;
     } catch {
-      // No body or invalid JSON, process all pending
+      // No body or invalid JSON, process all approved
     }
 
-    // Fetch pending payout batches
+    // Fetch approved artist_payouts (not the batch - we process at payout level)
     let query = supabaseAdmin
-      .from("payout_batches")
-      .select("*")
-      .in("status", ["pending", "failed"]);
+      .from("artist_payouts")
+      .select(`
+        *,
+        payout_batches!inner (
+          id,
+          artist_user_id,
+          week_start,
+          week_end,
+          total_usd,
+          status
+        )
+      `)
+      .eq("status", "approved");
 
     if (specificBatchId) {
-      query = query.eq("id", specificBatchId);
+      query = query.eq("payout_batch_id", specificBatchId);
     }
 
-    const { data: pendingBatches, error: fetchError } = await query;
+    const { data: approvedPayouts, error: fetchError } = await query;
 
     if (fetchError) {
-      throw new Error(`Failed to fetch pending batches: ${fetchError.message}`);
+      throw new Error(`Failed to fetch approved payouts: ${fetchError.message}`);
     }
 
-    logStep("Pending batches fetched", { count: pendingBatches?.length || 0 });
+    logStep("Approved payouts fetched", { count: approvedPayouts?.length || 0 });
 
-    if (!pendingBatches || pendingBatches.length === 0) {
+    if (!approvedPayouts || approvedPayouts.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No pending batches to process", processed: 0 }),
+        JSON.stringify({ message: "No approved payouts to process", processed: 0 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const results: {
+      payoutId: string;
+      artistId: string;
       batchId: string;
-      artistUserId: string;
       status: "paid" | "failed" | "skipped";
       error?: string;
       transferId?: string;
     }[] = [];
 
-    for (const batch of pendingBatches) {
-      logStep("Processing batch", { batchId: batch.id, artistUserId: batch.artist_user_id });
-
-      // Mark as processing
-      await supabaseAdmin
-        .from("payout_batches")
-        .update({ status: "processing" })
-        .eq("id", batch.id);
+    for (const payout of approvedPayouts) {
+      const batch = payout.payout_batches;
+      logStep("Processing payout", { payoutId: payout.id, artistId: payout.artist_id, batchId: batch.id });
 
       // Get artist profile with Stripe account
       const { data: artistProfile, error: profileError } = await supabaseAdmin
         .from("artist_profiles")
-        .select("stripe_account_id, payout_status, artist_name")
-        .eq("user_id", batch.artist_user_id)
+        .select("id, user_id, stripe_account_id, payout_status, artist_name")
+        .eq("id", payout.artist_id)
         .maybeSingle();
 
       if (profileError || !artistProfile) {
-        logStep("Artist profile not found", { artistUserId: batch.artist_user_id });
+        logStep("Artist profile not found", { artistId: payout.artist_id });
         await supabaseAdmin
-          .from("payout_batches")
-          .update({ status: "failed" })
-          .eq("id", batch.id);
+          .from("artist_payouts")
+          .update({ status: "failed", failure_reason: "Artist profile not found" })
+          .eq("id", payout.id);
         results.push({
+          payoutId: payout.id,
+          artistId: payout.artist_id,
           batchId: batch.id,
-          artistUserId: batch.artist_user_id,
           status: "failed",
           error: "Artist profile not found",
         });
@@ -110,14 +117,15 @@ serve(async (req) => {
 
       // Check if payout account is connected
       if (artistProfile.payout_status !== "connected" || !artistProfile.stripe_account_id) {
-        logStep("Payout account not connected", { artistUserId: batch.artist_user_id });
+        logStep("Payout account not connected", { artistId: payout.artist_id });
         await supabaseAdmin
-          .from("payout_batches")
-          .update({ status: "pending" }) // Keep pending until artist connects
-          .eq("id", batch.id);
+          .from("artist_payouts")
+          .update({ status: "approved", failure_reason: "Payout account not connected - will retry when connected" })
+          .eq("id", payout.id);
         results.push({
+          payoutId: payout.id,
+          artistId: payout.artist_id,
           batchId: batch.id,
-          artistUserId: batch.artist_user_id,
           status: "skipped",
           error: "Payout account not connected",
         });
@@ -125,18 +133,15 @@ serve(async (req) => {
       }
 
       // Convert USD to cents for Stripe
-      const amountCents = Math.round(batch.total_usd * 100);
+      const amountCents = Math.round(payout.artist_net_amount * 100);
 
       if (amountCents < 100) {
         // Stripe requires minimum $1 transfer
         logStep("Amount below minimum", { amountCents });
-        await supabaseAdmin
-          .from("payout_batches")
-          .update({ status: "pending" }) // Keep pending until more earnings accumulate
-          .eq("id", batch.id);
         results.push({
+          payoutId: payout.id,
+          artistId: payout.artist_id,
           batchId: batch.id,
-          artistUserId: batch.artist_user_id,
           status: "skipped",
           error: "Amount below $1 minimum",
         });
@@ -151,8 +156,9 @@ serve(async (req) => {
           destination: artistProfile.stripe_account_id,
           description: `Weekly payout for ${artistProfile.artist_name} (${batch.week_start.split("T")[0]} - ${batch.week_end.split("T")[0]})`,
           metadata: {
+            artist_payout_id: payout.id,
             payout_batch_id: batch.id,
-            artist_user_id: batch.artist_user_id,
+            artist_id: payout.artist_id,
             week_start: batch.week_start,
             week_end: batch.week_end,
           },
@@ -160,47 +166,33 @@ serve(async (req) => {
 
         logStep("Transfer created", { transferId: transfer.id, amount: amountCents });
 
-        // Update batch as paid
-        await supabaseAdmin
-          .from("payout_batches")
-          .update({
-            status: "paid",
-            stripe_transfer_id: transfer.id,
-            paid_at: new Date().toISOString(),
-          })
-          .eq("id", batch.id);
-
-        // Also update artist_payouts if exists
+        // Update artist_payout as paid
         await supabaseAdmin
           .from("artist_payouts")
           .update({
             status: "paid",
             stripe_transfer_id: transfer.id,
           })
-          .eq("payout_batch_id", batch.id);
+          .eq("id", payout.id);
 
-        // Update stream_ledger entries to mark as paid
+        // Update stream_ledger entries for this artist in this batch
         await supabaseAdmin
           .from("stream_ledger")
           .update({ payout_status: "paid" })
-          .eq("payout_batch_id", batch.id);
+          .eq("payout_batch_id", batch.id)
+          .eq("artist_id", payout.artist_id);
 
         results.push({
+          payoutId: payout.id,
+          artistId: payout.artist_id,
           batchId: batch.id,
-          artistUserId: batch.artist_user_id,
           status: "paid",
           transferId: transfer.id,
         });
 
       } catch (stripeError: unknown) {
         const errorMessage = stripeError instanceof Error ? stripeError.message : "Unknown Stripe error";
-        logStep("Stripe transfer failed", { batchId: batch.id, error: errorMessage });
-
-        // Mark batch and artist_payout as failed
-        await supabaseAdmin
-          .from("payout_batches")
-          .update({ status: "failed" })
-          .eq("id", batch.id);
+        logStep("Stripe transfer failed", { payoutId: payout.id, error: errorMessage });
 
         await supabaseAdmin
           .from("artist_payouts")
@@ -208,14 +200,26 @@ serve(async (req) => {
             status: "failed",
             failure_reason: errorMessage,
           })
-          .eq("payout_batch_id", batch.id);
+          .eq("id", payout.id);
 
         results.push({
+          payoutId: payout.id,
+          artistId: payout.artist_id,
           batchId: batch.id,
-          artistUserId: batch.artist_user_id,
           status: "failed",
           error: errorMessage,
         });
+      }
+    }
+
+    // Update batch statuses based on their payouts
+    if (specificBatchId) {
+      await updateBatchStatus(supabaseAdmin, specificBatchId);
+    } else {
+      // Update all affected batches
+      const affectedBatchIds = [...new Set(results.map(r => r.batchId))];
+      for (const batchId of affectedBatchIds) {
+        await updateBatchStatus(supabaseAdmin, batchId);
       }
     }
 
@@ -242,3 +246,37 @@ serve(async (req) => {
     );
   }
 });
+
+// Helper to update batch status based on its payouts
+// deno-lint-ignore no-explicit-any
+async function updateBatchStatus(supabaseAdmin: any, batchId: string) {
+  const { data: payouts } = await supabaseAdmin
+    .from("artist_payouts")
+    .select("status")
+    .eq("payout_batch_id", batchId);
+
+  if (!payouts || payouts.length === 0) return;
+
+  // deno-lint-ignore no-explicit-any
+  const statuses = payouts.map((p: any) => p.status);
+  
+  let newBatchStatus = "approved";
+  
+  if (statuses.every((s: string) => s === "paid")) {
+    newBatchStatus = "paid";
+  } else if (statuses.some((s: string) => s === "failed") && !statuses.some((s: string) => s === "approved" || s === "pending")) {
+    newBatchStatus = "failed";
+  } else if (statuses.some((s: string) => s === "paid")) {
+    newBatchStatus = "processing"; // Partial completion
+  }
+
+  const updateData: Record<string, unknown> = { status: newBatchStatus };
+  if (newBatchStatus === "paid") {
+    updateData.paid_at = new Date().toISOString();
+  }
+
+  await supabaseAdmin
+    .from("payout_batches")
+    .update(updateData)
+    .eq("id", batchId);
+}
