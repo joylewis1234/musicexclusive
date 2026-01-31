@@ -24,6 +24,7 @@ import {
   Eye,
   Crown,
 } from "lucide-react";
+import WeeklyTransparencyReport from "@/components/artist/WeeklyTransparencyReport";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 
 interface PayoutBatch {
@@ -446,77 +447,8 @@ const ArtistEarnings = () => {
           </div>
 
           {/* Weekly Transparency Report */}
-          <section data-tutorial="weekly-report" className="space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
-            <div className="flex items-center gap-2">
-              <h2 className="font-display text-lg font-semibold text-foreground">
-                Weekly Report
-              </h2>
-              <div 
-                className="relative px-2.5 py-1 rounded-full"
-                style={{ background: 'hsla(280, 80%, 50%, 0.12)' }}
-              >
-                <Crown 
-                  className="absolute -top-1.5 -left-0.5 w-3 h-3 rotate-[-12deg]"
-                  style={{
-                    color: 'hsl(45, 90%, 55%)',
-                    filter: 'drop-shadow(0 0 3px hsla(45, 90%, 55%, 0.8))'
-                  }}
-                  fill="hsl(45, 90%, 55%)"
-                />
-                <span 
-                  className="text-[10px] font-display uppercase tracking-wider pl-1"
-                  style={{ color: 'hsl(280, 80%, 70%)' }}
-                >
-                  Transparency
-                </span>
-              </div>
-            </div>
-            
-            <div 
-              className="p-4 rounded-2xl"
-              style={{
-                background: 'hsla(0, 0%, 100%, 0.02)',
-                border: '1px solid hsla(280, 80%, 50%, 0.15)',
-              }}
-            >
-              {batches.length === 0 ? (
-                <p className="text-muted-foreground text-sm text-center py-4">
-                  No earnings yet. Start uploading tracks to earn!
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {batches.map((batch) => (
-                    <div
-                      key={batch.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-muted/20 hover:bg-muted/30 transition-colors duration-200"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {format(new Date(batch.week_start), "MMM d")} –{" "}
-                          {format(new Date(batch.week_end), "MMM d, yyyy")}
-                        </p>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                          <span>{batch.total_credits} streams</span>
-                          <span>•</span>
-                          <span>${Number(batch.total_usd).toFixed(2)} earned</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        {getStatusBadge(batch.status)}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="rounded-full w-8 h-8 p-0"
-                          onClick={() => handleViewReport(batch)}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <section data-tutorial="weekly-report" className="animate-fade-in" style={{ animationDelay: '100ms' }}>
+            <WeeklyTransparencyReport />
           </section>
 
           {/* Track Earnings Breakdown */}
