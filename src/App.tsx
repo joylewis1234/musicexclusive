@@ -63,6 +63,7 @@ import EditArtistProfile from "./pages/artist/EditArtistProfile";
 import { ArtistProfilePreviewWrapper } from "./components/artist/ArtistProfilePreviewWrapper";
 
 // Admin pages
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminReports from "./pages/admin/AdminReports";
 import AdminFanStreamDetail from "./pages/admin/AdminFanStreamDetail";
 import AdminDailyReport from "./pages/admin/AdminDailyReport";
@@ -182,6 +183,11 @@ const App = () => (
                 } />
                 
 {/* Admin routes */}
+                <Route path="/admin" element={
+                  <AdminProtectedRoute>
+                    <AdminDashboard />
+                  </AdminProtectedRoute>
+                } />
                 <Route path="/admin/reports" element={
                   <AdminProtectedRoute>
                     <AdminReports />
