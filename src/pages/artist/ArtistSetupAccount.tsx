@@ -370,7 +370,7 @@ const ArtistSetupAccount = () => {
               >
                 I agree to the Music Exclusive{" "}
                 <Link 
-                  to="/artist-terms" 
+                  to="/artist-agreement" 
                   target="_blank"
                   className="text-primary hover:underline"
                   onClick={(e) => e.stopPropagation()}

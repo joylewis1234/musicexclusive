@@ -28,7 +28,7 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Terms from "./pages/Terms";
-import ArtistTerms from "./pages/ArtistTerms";
+import ArtistAgreement from "./pages/ArtistAgreement";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -86,7 +86,7 @@ const App = () => (
                 <Route path="/subscribe" element={<Subscribe />} />
                 <Route path="/load-credits" element={<LoadCredits />} />
                 <Route path="/terms" element={<Terms />} />
-                <Route path="/artist-terms" element={<ArtistTerms />} />
+                <Route path="/artist-agreement" element={<ArtistAgreement />} />
                 
                 {/* Login selector page */}
                 <Route path="/login" element={<Login />} />
