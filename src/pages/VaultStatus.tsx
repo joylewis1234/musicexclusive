@@ -138,6 +138,8 @@ const VaultStatus = () => {
   // Handle spin wheel completion
   const handleSpinComplete = useCallback(() => {
     setRevealPhase("revealed");
+    // Scroll to top to show the revealed code
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   // Reset animation state when switching to winner state (only after reveal)
