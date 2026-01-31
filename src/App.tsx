@@ -46,6 +46,7 @@ import FanProfile from "./pages/FanProfile";
 import FanInbox from "./pages/FanInbox";
 import Discovery from "./pages/Discovery";
 import MusicPlayer from "./pages/MusicPlayer";
+import AddCredits from "./pages/AddCredits";
 
 // Artist pages
 import ArtistApply from "./pages/ArtistApply";
@@ -118,6 +119,7 @@ const App = () => (
                   <Route path="/fan/profile" element={<FanProfile />} />
                   <Route path="/fan/inbox" element={<FanInbox />} />
                   <Route path="/fan/payment" element={<Payment />} />
+                  <Route path="/fan/add-credits" element={<AddCredits />} />
                   <Route path="/discovery" element={<Discovery />} />
                   {/* Fan access to artist profiles */}
                   <Route path="/artist/:artistId" element={<ArtistProfilePage />} />
