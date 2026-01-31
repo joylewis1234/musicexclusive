@@ -1,17 +1,15 @@
 import { LegalPageLayout, LegalSection } from "@/components/legal";
 
-const DMCA_VERSION = "1.0";
 const EFFECTIVE_DATE = "January 31, 2026";
 
 const CopyrightDmca = () => {
   return (
     <LegalPageLayout
       title="Copyright & DMCA Policy"
-      subtitle="Our procedures for reporting copyright infringement."
-      version={DMCA_VERSION}
       effectiveDate={EFFECTIVE_DATE}
+      summary="Music Exclusive respects intellectual property rights. This policy outlines our procedures for reporting and addressing copyright infringement under the Digital Millennium Copyright Act."
     >
-      <LegalSection>
+      <LegalSection number="01" title="Overview">
         <p>
           Music Exclusive respects the intellectual property rights of others and expects 
           all users to do the same.
@@ -22,7 +20,7 @@ const CopyrightDmca = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="1. How to Submit a DMCA Takedown Request">
+      <LegalSection number="02" title="How to Submit a DMCA Takedown Request">
         <p>
           To file a DMCA notice, email us with the subject line: <strong>"DMCA Takedown Request"</strong>
         </p>
@@ -51,7 +49,7 @@ const CopyrightDmca = () => {
         </ul>
       </LegalSection>
 
-      <LegalSection title="2. Counter-Notice">
+      <LegalSection number="03" title="Counter-Notice">
         <p>
           If you believe your content was removed by mistake, you may submit a counter-notice 
           to the Copyright Agent that includes:
@@ -65,14 +63,14 @@ const CopyrightDmca = () => {
         </ul>
       </LegalSection>
 
-      <LegalSection title="3. Repeat Infringement">
+      <LegalSection number="04" title="Repeat Infringement">
         <p>
           Music Exclusive may terminate accounts of repeat infringers or users who violate 
           intellectual property rights.
         </p>
       </LegalSection>
 
-      <LegalSection title="4. Contact">
+      <LegalSection number="05" title="Contact" showDivider={false}>
         <p>For questions, contact:</p>
         <div className="mt-3">
           <a 
@@ -84,7 +82,7 @@ const CopyrightDmca = () => {
         </div>
       </LegalSection>
 
-      <div className="mt-12 pt-6 border-t border-border/30">
+      <div className="mt-10 pt-6 border-t border-border/30">
         <p className="text-sm text-muted-foreground text-center">
           By using Music Exclusive, you agree to this Copyright & DMCA Policy.
         </p>
