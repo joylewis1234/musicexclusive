@@ -285,8 +285,13 @@ const Index = () => {
       {/* Footer */}
       <footer className="px-4 py-8 border-t border-border/30">
         <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
-          <p className="text-muted-foreground text-xs font-body mb-3">
+          <p className="text-muted-foreground text-xs font-body mb-4">
             © {new Date().getFullYear()} Music Exclusive™. All rights reserved.
+          </p>
+          
+          {/* Legal */}
+          <p className="text-muted-foreground text-[10px] font-display uppercase tracking-widest mb-2">
+            Legal
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link 
@@ -300,7 +305,7 @@ const Index = () => {
               to="/artist-agreement" 
               className="text-primary text-xs hover:underline font-body"
             >
-              Artist Agreement
+              Artist Participation Agreement
             </Link>
           </div>
         </div>
