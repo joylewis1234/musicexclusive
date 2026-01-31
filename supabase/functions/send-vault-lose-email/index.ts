@@ -45,7 +45,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Music Exclusive <onboarding@resend.dev>",
+        from: "Music Exclusive <noreply@musicexclusive.co>",
         to: [email],
         subject: "Your Music Exclusive Vault Code 🔐",
         html: `
