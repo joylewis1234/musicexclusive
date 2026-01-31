@@ -70,12 +70,8 @@ serve(async (req) => {
 
     logStep("Unbatched streams fetched", { count: unbatchedStreams?.length || 0 });
 
-    if (!unbatchedStreams || unbatchedStreams.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "No unbatched streams found for the previous week", batchesCreated: 0 }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    // Even if there are zero streams, we still create a batch record to track the week
+    const hasStreams = unbatchedStreams && unbatchedStreams.length > 0;
 
     // Group streams by artist
     const streamsByArtist: Record<string, { 
@@ -86,27 +82,29 @@ serve(async (req) => {
       artistNet: number;
     }> = {};
 
-    for (const stream of unbatchedStreams) {
-      const artistId = stream.artist_id;
-      if (!artistId) {
-        logStep("Skipping stream with no artist_id", { id: stream.id });
-        continue;
-      }
+    if (hasStreams) {
+      for (const stream of unbatchedStreams!) {
+        const artistId = stream.artist_id;
+        if (!artistId) {
+          logStep("Skipping stream with no artist_id", { id: stream.id });
+          continue;
+        }
 
-      if (!streamsByArtist[artistId]) {
-        streamsByArtist[artistId] = {
-          artistId,
-          entries: [],
-          grossAmount: 0,
-          platformFee: 0,
-          artistNet: 0,
-        };
-      }
+        if (!streamsByArtist[artistId]) {
+          streamsByArtist[artistId] = {
+            artistId,
+            entries: [],
+            grossAmount: 0,
+            platformFee: 0,
+            artistNet: 0,
+          };
+        }
 
-      streamsByArtist[artistId].entries.push(stream);
-      streamsByArtist[artistId].grossAmount += Number(stream.amount_total);
-      streamsByArtist[artistId].platformFee += Number(stream.amount_platform);
-      streamsByArtist[artistId].artistNet += Number(stream.amount_artist);
+        streamsByArtist[artistId].entries.push(stream);
+        streamsByArtist[artistId].grossAmount += Number(stream.amount_total);
+        streamsByArtist[artistId].platformFee += Number(stream.amount_platform);
+        streamsByArtist[artistId].artistNet += Number(stream.amount_artist);
+      }
     }
 
     logStep("Streams grouped by artist", { artistCount: Object.keys(streamsByArtist).length });
@@ -130,18 +128,41 @@ serve(async (req) => {
       .is("artist_user_id", null) // New batch format without artist_user_id at batch level
       .maybeSingle();
 
-    let batchId: string;
     
     if (existingBatch) {
-      logStep("Batch already exists for week, updating", { batchId: existingBatch.id });
-      batchId = existingBatch.id;
-    } else {
-      // For backward compatibility, we still create per-artist batches
-      // Create batches per artist (existing pattern)
-      const batchesCreated: string[] = [];
-      const artistPayoutsCreated: string[] = [];
+      logStep("Batch already exists for week", { batchId: existingBatch.id });
+      return new Response(
+        JSON.stringify({
+          message: "Batch already exists for this week",
+          batchId: existingBatch.id,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-      for (const [artistId, data] of Object.entries(streamsByArtist)) {
+    // If no streams, create a placeholder batch with $0 totals
+    if (!hasStreams || Object.keys(streamsByArtist).length === 0) {
+      logStep("No streams for this week, creating $0 batch");
+      
+      return new Response(
+        JSON.stringify({
+          message: "No streams found for the previous week - no batches created",
+          weekStart: previousWeekStart.toISOString(),
+          weekEnd: previousWeekEnd.toISOString(),
+          batchesCreated: 0,
+          artistPayoutsCreated: 0,
+          totals: { gross: 0, platformFee: 0, artistNet: 0 },
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Create batches per artist
+
+    const batchesCreated: string[] = [];
+    const artistPayoutsCreated: string[] = [];
+
+    for (const [artistId, data] of Object.entries(streamsByArtist)) {
         // Get artist user_id from artist_profiles
         const { data: artistProfile } = await supabaseAdmin
           .from("artist_profiles")
@@ -220,33 +241,23 @@ serve(async (req) => {
         }
 
         batchesCreated.push(newBatch.id);
-      }
-
-      logStep("Aggregation complete", { batchesCreated: batchesCreated.length, artistPayoutsCreated: artistPayoutsCreated.length });
-
-      return new Response(
-        JSON.stringify({
-          message: "Weekly earnings aggregation complete",
-          weekStart: previousWeekStart.toISOString(),
-          weekEnd: previousWeekEnd.toISOString(),
-          batchesCreated: batchesCreated.length,
-          artistPayoutsCreated: artistPayoutsCreated.length,
-          batchIds: batchesCreated,
-          totals: {
-            gross: batchTotalGross,
-            platformFee: batchTotalPlatformFee,
-            artistNet: batchTotalArtistNet,
-          },
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
-    // Handle case where batch already exists (shouldn't reach here with current logic)
+    logStep("Aggregation complete", { batchesCreated: batchesCreated.length, artistPayoutsCreated: artistPayoutsCreated.length });
+
     return new Response(
       JSON.stringify({
-        message: "Batch already exists for this week",
-        batchId,
+        message: "Weekly earnings aggregation complete",
+        weekStart: previousWeekStart.toISOString(),
+        weekEnd: previousWeekEnd.toISOString(),
+        batchesCreated: batchesCreated.length,
+        artistPayoutsCreated: artistPayoutsCreated.length,
+        batchIds: batchesCreated,
+        totals: {
+          gross: batchTotalGross,
+          platformFee: batchTotalPlatformFee,
+          artistNet: batchTotalArtistNet,
+        },
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
