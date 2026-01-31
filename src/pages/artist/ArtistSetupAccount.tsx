@@ -370,12 +370,12 @@ const ArtistSetupAccount = () => {
               >
                 I agree to the Music Exclusive{" "}
                 <Link 
-                  to="/terms" 
+                  to="/artist-terms" 
                   target="_blank"
                   className="text-primary hover:underline"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  Terms of Use
+                  Artist Participation Agreement
                 </Link>{" "}
                 and confirm I own or control all rights to the Content I upload.
               </label>
