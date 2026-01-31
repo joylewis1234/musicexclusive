@@ -7,83 +7,77 @@ PRIVACY POLICY
 
 Effective Date: January 31, 2026
 
-This Privacy Policy describes how Music Exclusive ("Company," "we," "us," or "our") collects, uses, and shares information about you when you use our website, mobile applications, and other online products and services (collectively, the "Services") or when you otherwise interact with us.
+Music Exclusive ("Company," "we," "us," or "our") respects your privacy. This Privacy Policy explains how we collect, use, store, and share information when you use the Music Exclusive platform, including our website and services (the "Services").
+
+By using the Services, you agree to this Privacy Policy.
 
 1. INFORMATION WE COLLECT
+We may collect the following types of information:
 
-Information You Provide to Us:
-- Account information (name, email address, password)
-- Profile information (display name, profile photo)
-- Payment information (processed securely through third-party payment processors)
-- Content you upload (music, cover art, metadata)
-- Communications with us (support requests, feedback)
+A) Information You Provide
+- Name, username, or artist name
+- Email address
+- Profile details (bio, genre, social links)
+- Uploaded content (artist songs, cover art, images, metadata)
+- Messages or shared content sent through the platform inbox
 
-Information We Collect Automatically:
-- Device information (browser type, operating system, device identifiers)
-- Usage information (pages viewed, features used, streaming activity)
-- Log information (IP address, access times, referring URLs)
-- Cookies and similar technologies
+B) Payment Information
+Payments may be processed through third-party providers such as Stripe.
+We do not store full payment card details. Payment providers may collect and store billing details according to their own policies.
+
+C) Usage and Device Information
+We may collect information about how you use the Services, including:
+- Pages visited and features used
+- Streaming activity and engagement
+- Device type, browser type, IP address (or general location), and basic analytics
 
 2. HOW WE USE YOUR INFORMATION
-
-We use the information we collect to:
-- Provide, maintain, and improve our Services
-- Process transactions and send related information
-- Send promotional communications (with your consent)
-- Monitor and analyze trends, usage, and activities
-- Detect, investigate, and prevent fraudulent transactions and abuse
-- Personalize and improve your experience
-- Comply with legal obligations
+We use information to:
+- Provide and operate the Services
+- Verify access through the Vault Lottery System
+- Process subscriptions and credit purchases
+- Track streams and calculate artist earnings
+- Improve platform performance, safety, and user experience
+- Prevent fraud, abuse, and streaming manipulation
+- Communicate important account updates and service messages
 
 3. SHARING OF INFORMATION
+We may share information:
+- With service providers that help us operate the platform (hosting, analytics, email delivery, payments)
+- If required by law, legal process, or government request
+- To enforce our Terms of Use and protect platform safety
 
-We may share information about you as follows:
-- With artists when you stream their music (anonymized streaming data)
-- With service providers who perform services on our behalf
-- In response to legal process or government requests
-- To protect our rights, privacy, safety, or property
-- In connection with a merger, acquisition, or sale of assets
-- With your consent or at your direction
+We do not sell your personal information.
 
-4. DATA RETENTION
+4. ARTIST CONTENT AND PUBLIC INFORMATION
+Artist profiles may display public information such as:
+- Artist name
+- Bio
+- Profile image
+- Uploaded music and cover art
 
-We retain your information for as long as your account is active or as needed to provide you Services. We may retain certain information for legitimate business purposes or as required by law.
+Fans may view artist pages only after they are granted access to the platform.
 
-5. SECURITY
+5. DATA RETENTION
+We retain information as long as necessary to:
+- Provide the Services
+- Maintain platform security and fraud prevention
+- Meet legal or accounting requirements
 
-We implement appropriate technical and organizational measures to protect your information against unauthorized access, alteration, disclosure, or destruction.
+6. SECURITY
+We take reasonable steps to protect user information. However, no online service can guarantee 100% security.
 
-6. YOUR RIGHTS AND CHOICES
+7. CHILDREN'S PRIVACY
+The Services are not intended for children under 13. If we learn that we collected information from a child under 13, we may delete it.
 
+8. YOUR CHOICES
 You may:
-- Access, update, or delete your account information
-- Opt out of promotional communications
-- Request a copy of your data
-- Request deletion of your data (subject to legal requirements)
+- Update your profile information within the app
+- Request deletion of your account by contacting support
 
-7. COOKIES
-
-We use cookies and similar tracking technologies to collect information and improve our Services. You can control cookies through your browser settings.
-
-8. CHILDREN'S PRIVACY
-
-Our Services are not directed to children under 13. We do not knowingly collect personal information from children under 13.
-
-9. INTERNATIONAL DATA TRANSFERS
-
-Your information may be transferred to and processed in countries other than your country of residence.
-
-10. CHANGES TO THIS POLICY
-
-We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new Privacy Policy on this page.
-
-11. CONTACT US
-
-If you have any questions about this Privacy Policy, please contact us at:
-
-Email: privacy@musicexclusive.com
-
-END OF PRIVACY POLICY`
+9. CONTACT US
+If you have questions about this Privacy Policy, contact us at:
+support@musicexclusive.co`
 
 const PrivacyPolicy = () => {
   return (
