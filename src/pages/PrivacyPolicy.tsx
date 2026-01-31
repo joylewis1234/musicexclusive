@@ -1,17 +1,15 @@
 import { LegalPageLayout, LegalSection } from "@/components/legal";
 
-const PRIVACY_VERSION = "1.0";
 const EFFECTIVE_DATE = "January 31, 2026";
 
 const PrivacyPolicy = () => {
   return (
     <LegalPageLayout
       title="Privacy Policy"
-      subtitle="How we collect, use, store, and share your information."
-      version={PRIVACY_VERSION}
       effectiveDate={EFFECTIVE_DATE}
+      summary="This Privacy Policy explains how Music Exclusive collects, uses, stores, and shares your information. We respect your privacy and are committed to protecting your personal data."
     >
-      <LegalSection>
+      <LegalSection number="01" title="Introduction">
         <p>
           Music Exclusive ("Company," "we," "us," or "our") respects your privacy. This 
           Privacy Policy explains how we collect, use, store, and share information when 
@@ -22,7 +20,7 @@ const PrivacyPolicy = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="1. Information We Collect">
+      <LegalSection number="02" title="Information We Collect">
         <p>We may collect the following types of information:</p>
         
         <p className="mt-4"><strong>A) Information You Provide</strong></p>
@@ -50,7 +48,7 @@ const PrivacyPolicy = () => {
         </ul>
       </LegalSection>
 
-      <LegalSection title="2. How We Use Your Information">
+      <LegalSection number="03" title="How We Use Your Information">
         <p>We use information to:</p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>Provide and operate the Services</li>
@@ -63,7 +61,7 @@ const PrivacyPolicy = () => {
         </ul>
       </LegalSection>
 
-      <LegalSection title="3. Sharing of Information">
+      <LegalSection number="04" title="Sharing of Information">
         <p>We may share information:</p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>With service providers that help us operate the platform (hosting, analytics, email delivery, payments)</li>
@@ -75,7 +73,7 @@ const PrivacyPolicy = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="4. Artist Content and Public Information">
+      <LegalSection number="05" title="Artist Content and Public Information">
         <p>Artist profiles may display public information such as:</p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>Artist name</li>
@@ -88,7 +86,7 @@ const PrivacyPolicy = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="5. Data Retention">
+      <LegalSection number="06" title="Data Retention">
         <p>We retain information as long as necessary to:</p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>Provide the Services</li>
@@ -97,21 +95,21 @@ const PrivacyPolicy = () => {
         </ul>
       </LegalSection>
 
-      <LegalSection title="6. Security">
+      <LegalSection number="07" title="Security">
         <p>
           We take reasonable steps to protect user information. However, no online service 
           can guarantee 100% security.
         </p>
       </LegalSection>
 
-      <LegalSection title="7. Children's Privacy">
+      <LegalSection number="08" title="Children's Privacy">
         <p>
           The Services are not intended for children under 13. If we learn that we collected 
           information from a child under 13, we may delete it.
         </p>
       </LegalSection>
 
-      <LegalSection title="8. Your Choices">
+      <LegalSection number="09" title="Your Choices">
         <p>You may:</p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>Update your profile information within the app</li>
@@ -119,7 +117,7 @@ const PrivacyPolicy = () => {
         </ul>
       </LegalSection>
 
-      <LegalSection title="9. Contact Us">
+      <LegalSection number="10" title="Contact Us" showDivider={false}>
         <p>If you have questions about this Privacy Policy, contact us at:</p>
         <div className="mt-3">
           <a 
@@ -131,7 +129,7 @@ const PrivacyPolicy = () => {
         </div>
       </LegalSection>
 
-      <div className="mt-12 pt-6 border-t border-border/30">
+      <div className="mt-10 pt-6 border-t border-border/30">
         <p className="text-sm text-muted-foreground text-center">
           By using Music Exclusive, you agree to this Privacy Policy.
         </p>

@@ -1,17 +1,15 @@
 import { LegalPageLayout, LegalSection } from "@/components/legal";
 
-const TERMS_VERSION = "1.0";
 const EFFECTIVE_DATE = "January 31, 2025";
 
 const Terms = () => {
   return (
     <LegalPageLayout
       title="Terms of Use"
-      subtitle="Please read these terms carefully before using Music Exclusive."
-      version={TERMS_VERSION}
       effectiveDate={EFFECTIVE_DATE}
+      summary="These Terms govern your use of Music Exclusive. By accessing our platform, you agree to be bound by these terms, including our payment policies, content rules, and dispute resolution procedures."
     >
-      <LegalSection>
+      <LegalSection number="01" title="Introduction">
         <p>
           These Terms of Use (the "Terms") apply to all users, including artists and fans, 
           who access or use the Music Exclusive website, web services, streaming services, 
@@ -28,7 +26,7 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="1. About Music Exclusive">
+      <LegalSection number="02" title="About Music Exclusive">
         <p>
           Music Exclusive is an artist-first music streaming and fan engagement platform 
           built on fairness, exclusivity, and transparency. Our goal is to ensure that 
@@ -42,9 +40,9 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="2. Our Services">
+      <LegalSection number="03" title="Our Services">
         <p>
-          <strong>2.1 Content</strong>
+          <strong>3.1 Content</strong>
         </p>
         <p>
           "Content" means any copyrightable material you provide, upload, or otherwise make 
@@ -57,7 +55,7 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="3. Grant of Rights to Content">
+      <LegalSection number="04" title="Grant of Rights to Content">
         <p>
           By uploading Content, you grant Company a non-exclusive right to host, store, 
           distribute, stream, and display your Content through the Services for the purpose 
@@ -65,14 +63,14 @@ const Terms = () => {
           name, and related metadata, and to promote Content within the platform.
         </p>
         <p>
-          <strong>3.1 Name and Likeness</strong>
+          <strong>4.1 Name and Likeness</strong>
         </p>
         <p>
           You grant Company the right to use your approved name, image, biography, and 
           likeness as necessary to display and promote your Content within Music Exclusive.
         </p>
         <p>
-          <strong>3.2 Rights You Retain</strong>
+          <strong>4.2 Rights You Retain</strong>
         </p>
         <p>
           You retain all rights, title, and interest in your Content, including all 
@@ -81,7 +79,7 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="4. Termination of Access">
+      <LegalSection number="05" title="Termination of Access">
         <p>
           We reserve the right to suspend or terminate your access to the Services at any 
           time if we believe you violated these Terms or engaged in misconduct, including 
@@ -93,12 +91,12 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="5. Payments, Credits, and Streaming Costs">
+      <LegalSection number="06" title="Payments, Credits, and Streaming Costs">
         <p>
           Music Exclusive currently offers two fan payment options:
         </p>
-        <p>
-          <strong>5.1 Pay-As-You-Go (Credits)</strong>
+        <p className="mt-4">
+          <strong>6.1 Pay-As-You-Go (Credits)</strong>
         </p>
         <p>
           Fans may purchase credits and use credits to stream Content.
@@ -113,7 +111,7 @@ const Terms = () => {
           </li>
         </ul>
         <p className="mt-4">
-          <strong>5.2 Superfan Membership</strong>
+          <strong>6.2 Superfan Membership</strong>
         </p>
         <p>
           Fans may subscribe to the Superfan Membership:
@@ -129,7 +127,7 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="6. No Refunds Policy">
+      <LegalSection number="07" title="No Refunds Policy">
         <p>
           All payments are final. No refunds are issued once credits are purchased, a 
           subscription is billed, or a stream has been completed, except where required 
@@ -137,7 +135,7 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="7. Vault Lottery System">
+      <LegalSection number="08" title="Vault Lottery System">
         <p>
           Music Exclusive uses the Vault Lottery System ("Lottery") to grant fan access 
           to the platform. Instead of open sign-ups, fans may enter the Lottery for a 
@@ -150,13 +148,13 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="8. User Responsibilities">
+      <LegalSection number="09" title="User Responsibilities">
         <p>
           You agree that you will provide accurate information, keep your login credentials 
           secure, not share your account access, and use the Services lawfully and respectfully.
         </p>
-        <p>
-          <strong>8.1 Content Upload Responsibilities (Artists)</strong>
+        <p className="mt-4">
+          <strong>9.1 Content Upload Responsibilities (Artists)</strong>
         </p>
         <p>
           Artists agree they own or control the rights to the Content they upload and that 
@@ -167,7 +165,7 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="9. Prohibited Activity">
+      <LegalSection number="10" title="Prohibited Activity">
         <p>
           You may not use the Services to commit fraud or streaming manipulation, harass 
           or impersonate others, upload illegal or infringing Content, attempt to reverse 
@@ -175,9 +173,9 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="10. Streaming Manipulation & Improper Content">
+      <LegalSection number="11" title="Streaming Manipulation & Improper Content">
         <p>
-          <strong>10.1 Streaming Manipulation</strong>
+          <strong>11.1 Streaming Manipulation</strong>
         </p>
         <p>
           "Streaming Manipulation" includes any activity that artificially inflates streams 
@@ -185,8 +183,8 @@ const Terms = () => {
           streaming manipulation, we may remove Content, suspend or terminate accounts, 
           and withhold or reverse earnings tied to manipulation.
         </p>
-        <p>
-          <strong>10.2 Improper Content</strong>
+        <p className="mt-4">
+          <strong>11.2 Improper Content</strong>
         </p>
         <p>
           "Improper Content" includes Content that violates laws, infringes intellectual 
@@ -195,7 +193,7 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="11. AI and Platform Improvement">
+      <LegalSection number="12" title="AI and Platform Improvement">
         <p>
           Music Exclusive may use analytics and engagement data to improve the user experience, 
           platform performance, and discovery tools. We do not use user-uploaded music Content 
@@ -203,7 +201,7 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="12. Copyright Complaints (DMCA)">
+      <LegalSection number="13" title="Copyright Complaints (DMCA)">
         <p>
           If you believe Content on Music Exclusive infringes your copyright, submit a 
           DMCA request to:
@@ -222,21 +220,21 @@ const Terms = () => {
         </div>
       </LegalSection>
 
-      <LegalSection title="13. Limitation of Liability">
+      <LegalSection number="14" title="Limitation of Liability">
         <p>
           To the maximum extent allowed by law, Company is not liable for indirect, incidental, 
           special, consequential, or punitive damages arising out of your use of the Services.
         </p>
       </LegalSection>
 
-      <LegalSection title="14. Dispute Resolution & Arbitration">
+      <LegalSection number="15" title="Dispute Resolution & Arbitration">
         <p>
           Any dispute arising out of or relating to these Terms will be resolved through 
           binding arbitration unless prohibited by law. You waive the right to a jury trial.
         </p>
       </LegalSection>
 
-      <LegalSection title="15. Miscellaneous">
+      <LegalSection number="16" title="Miscellaneous" showDivider={false}>
         <ul className="list-disc list-outside ml-5 space-y-2">
           <li><strong>Taxes:</strong> You are responsible for any taxes you owe.</li>
           <li><strong>Severability:</strong> If any part of these Terms is invalid, the rest remains enforceable.</li>
@@ -245,7 +243,7 @@ const Terms = () => {
         </ul>
       </LegalSection>
 
-      <div className="mt-12 pt-6 border-t border-border/30">
+      <div className="mt-10 pt-6 border-t border-border/30">
         <p className="text-sm text-muted-foreground text-center">
           By using Music Exclusive, you agree to these Terms of Use.
         </p>
