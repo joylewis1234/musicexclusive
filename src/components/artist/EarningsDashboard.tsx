@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useArtistProfile } from "@/hooks/useArtistProfile";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ interface EarningsSummary {
 
 const EarningsDashboard = () => {
   const { user } = useAuth();
+  const { artistProfileId, isLoading: profileLoading } = useArtistProfile();
   const [batches, setBatches] = useState<PayoutBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<EarningsSummary>({
@@ -38,7 +40,8 @@ const EarningsDashboard = () => {
 
   useEffect(() => {
     const fetchEarningsData = async () => {
-      if (!user) return;
+      // Wait for artist profile to be loaded
+      if (!user || profileLoading || !artistProfileId) return;
 
       try {
         // Get current week boundaries (Monday to Sunday)
@@ -46,11 +49,11 @@ const EarningsDashboard = () => {
         const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
         const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
 
-        // Fetch stream_ledger data for this artist
+        // Fetch stream_ledger data using artist_profiles.id
         const { data: streams, error: streamsError } = await supabase
           .from("stream_ledger")
           .select("amount_artist, payout_status, created_at")
-          .eq("artist_id", user.id);
+          .eq("artist_id", artistProfileId);
 
         if (streamsError) {
           console.error("Error fetching stream ledger:", streamsError);
@@ -80,7 +83,7 @@ const EarningsDashboard = () => {
           }
         }
 
-        // Fetch payout_batches for total payouts (lifetime)
+        // Fetch payout_batches for total payouts (uses user.id for artist_user_id)
         const { data: payouts, error: payoutsError } = await supabase
           .from("payout_batches")
           .select("*")
@@ -112,7 +115,7 @@ const EarningsDashboard = () => {
     };
 
     fetchEarningsData();
-  }, [user]);
+  }, [user, artistProfileId, profileLoading]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -149,7 +152,7 @@ const EarningsDashboard = () => {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || profileLoading) {
     return (
       <GlowCard className="p-8 text-center">
         <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
