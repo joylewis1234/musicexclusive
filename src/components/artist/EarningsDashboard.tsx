@@ -7,6 +7,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, DollarSign, Clock, CheckCircle2, XCircle, TrendingUp, Music } from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
+import EarningsDebugPanel from "./EarningsDebugPanel";
 
 interface PayoutBatch {
   id: string;
@@ -268,6 +269,9 @@ const EarningsDashboard = () => {
           </div>
         )}
       </GlowCard>
+
+      {/* Debug Panel */}
+      <EarningsDebugPanel />
     </div>
   );
 };
