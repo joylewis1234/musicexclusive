@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Upload, Music, ImageIcon, CheckCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { ArrowLeft, Upload, Music, ImageIcon, CheckCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { validateCoverImage } from "@/utils/imageProcessing";
 import { useTrackUpload } from "@/hooks/useTrackUpload";
+import { useArtistAgreement } from "@/hooks/useArtistAgreement";
 import { UploadDiagnosticsPanel } from "@/components/artist/UploadDiagnosticsPanel";
 import { UploadProgressBar } from "@/components/artist/UploadProgressBar";
 
@@ -62,6 +63,7 @@ const ArtistUpload = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const { state: uploadState, upload, retry, reset: resetUpload } = useTrackUpload();
+  const { hasAccepted, isLoading: isCheckingAgreement } = useArtistAgreement();
 
   // Form fields
   const [title, setTitle] = useState("");
@@ -118,8 +120,24 @@ const ArtistUpload = () => {
     }
   }, [uploadState.step, uploadState.errorMessage, toast]);
 
+  // Redirect if agreement not accepted
+  useEffect(() => {
+    if (!isCheckingAgreement && hasAccepted === false) {
+      navigate("/artist/agreement-accept", { replace: true });
+    }
+  }, [hasAccepted, isCheckingAgreement, navigate]);
+
   const isFormValid = title?.trim() && genre && coverFile && audioFile && agreesToTerms;
   const isUploading = ["session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(uploadState.step);
+
+  // Show loading while checking agreement
+  if (isCheckingAgreement) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -366,7 +384,11 @@ const ArtistUpload = () => {
             disabled={isUploading}
           />
           <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
-            I agree to the Artist Terms of Service and confirm I own all rights to this music.
+            I confirm I own all rights to this music and agree to the{" "}
+            <Link to="/artist-agreement" target="_blank" className="text-primary hover:underline">
+              Artist Participation Agreement
+            </Link>
+            .
           </Label>
         </div>
 

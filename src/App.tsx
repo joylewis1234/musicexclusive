@@ -52,6 +52,7 @@ import ArtistUpload from "./pages/ArtistUpload";
 import ArtistDashboard from "./pages/artist/ArtistDashboard";
 import ArtistEarnings from "./pages/artist/ArtistEarnings";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
+import ArtistAgreementAccept from "./pages/artist/ArtistAgreementAccept";
 import EditArtistProfile from "./pages/artist/EditArtistProfile";
 import { ArtistProfilePreviewWrapper } from "./components/artist/ArtistProfilePreviewWrapper";
 
@@ -159,6 +160,11 @@ const App = () => (
                 <Route path="/artist/setup-account" element={
                   <ArtistProtectedRoute>
                     <ArtistSetupAccount />
+                  </ArtistProtectedRoute>
+                } />
+                <Route path="/artist/agreement-accept" element={
+                  <ArtistProtectedRoute>
+                    <ArtistAgreementAccept />
                   </ArtistProtectedRoute>
                 } />
                 
