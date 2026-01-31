@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -7,13 +7,27 @@ import { TransactionLedger } from "@/components/admin/TransactionLedger";
 import { PayoutBatches } from "@/components/admin/PayoutBatches";
 import { ArtistEarningsStatements } from "@/components/admin/ArtistEarningsStatements";
 import { FanStreamReport } from "@/components/admin/FanStreamReport";
-import { Home, LogOut, Shield, Receipt, DollarSign, FileText, Users } from "lucide-react";
+import { Home, LogOut, Shield, Receipt, DollarSign, FileText, Users, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const AdminReports = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { signOut } = useAuth();
-  const [activeTab, setActiveTab] = useState("ledger");
+  
+  // Read tab from URL, default to "ledger"
+  const tabFromUrl = searchParams.get("tab") || "ledger";
+  const validTabs = ["ledger", "payouts", "statements", "fans", "weekly"];
+  const [activeTab, setActiveTab] = useState(validTabs.includes(tabFromUrl) ? tabFromUrl : "ledger");
+
+  useEffect(() => {
+    // Update URL when tab changes
+    if (activeTab !== "ledger") {
+      setSearchParams({ tab: activeTab });
+    } else {
+      setSearchParams({});
+    }
+  }, [activeTab, setSearchParams]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -33,6 +47,13 @@ const AdminReports = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate("/admin")}
+              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Back to Admin"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
             <button
               onClick={() => navigate("/")}
               className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
