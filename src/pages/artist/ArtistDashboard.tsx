@@ -173,13 +173,22 @@ const ArtistDashboard = () => {
     }
   }, []);
 
+  // Reset fetch ref on mount to ensure fresh data on each login
+  useEffect(() => {
+    hasFetchedRef.current = false;
+  }, []);
+
   useEffect(() => {
     if (hasFetchedRef.current) return;
     hasFetchedRef.current = true;
 
-    fetchArtistData();
+    // Small delay to let auth state settle after login redirect
+    const timer = setTimeout(() => {
+      fetchArtistData();
+    }, 50);
 
     return () => {
+      clearTimeout(timer);
       if (abortRef.current) {
         abortRef.current.abort();
       }
