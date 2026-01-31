@@ -80,15 +80,14 @@ export const ReturningFanLogin = () => {
 
       // Route based on status
       if (vaultEntry.status === "won") {
-        // Winner - agreements are already handled during vault entry; skip.
-        navigate("/onboarding/listen", {
+        // Winner - go to agreements
+        navigate("/fan/agreements", {
           state: {
             email: values.email,
             name: vaultEntry.name,
             vaultCode: values.vaultCode,
             flow: "vault",
           },
-          replace: true,
         });
       } else {
         // Lost or pending - show vault status

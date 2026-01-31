@@ -3,7 +3,7 @@ import AdminTestTools from "./pages/admin/AdminTestTools";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -32,6 +32,7 @@ import ArtistAgreement from "./pages/ArtistAgreement";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CopyrightDmca from "./pages/CopyrightDmca";
 import RefundPolicy from "./pages/RefundPolicy";
+import FanAgreementStep from "./pages/FanAgreementStep";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -88,8 +89,7 @@ const App = () => (
                 <Route path="/vault/submit" element={<SubmitVaultCode />} />
                 <Route path="/vault/status" element={<VaultStatus />} />
                 <Route path="/agreements/fan" element={<Agreements />} />
-                {/* Fan agreements are already handled during vault entry; keep route as a safe redirect */}
-                <Route path="/fan/agreements" element={<Navigate to="/onboarding/listen" replace />} />
+                <Route path="/fan/agreements" element={<FanAgreementStep />} />
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
                 <Route path="/subscribe" element={<Subscribe />} />
                 <Route path="/load-credits" element={<LoadCredits />} />

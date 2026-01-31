@@ -27,15 +27,14 @@ export const VaultWinScreen = ({ vaultCode, email, name }: VaultWinScreenProps) 
   };
 
   const handleContinue = () => {
-    // Fan agreements are already accepted during vault entry; skip this step.
-    navigate("/onboarding/listen", {
-      state: {
-        email,
-        name,
+    // Navigate to fan agreements with state preserved
+    navigate("/fan/agreements", { 
+      state: { 
+        email, 
+        name, 
         vaultCode,
-        flow: "vault",
-      },
-      replace: true,
+        flow: "vault" 
+      } 
     });
   };
 
@@ -147,7 +146,7 @@ export const VaultWinScreen = ({ vaultCode, email, name }: VaultWinScreenProps) 
         className="w-full max-w-xs"
         onClick={handleContinue}
       >
-        CONTINUE
+        CONTINUE TO AGREEMENTS
         <ArrowRight className="ml-2 h-5 w-5" />
       </Button>
     </div>
