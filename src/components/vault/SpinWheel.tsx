@@ -33,87 +33,118 @@ const useWheelSounds = () => {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
       audioContextRef.current = audioContext;
 
+      // Resume context for mobile browsers
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+
       const now = audioContext.currentTime;
-      
-      // Price Is Right style clicking pegs - starts fast, slows down
-      const totalDuration = 4;
+      const spinDuration = 4; // Match wheel animation duration
       const numSegments = 8;
       
-      // Calculate click times with deceleration curve
-      const clicks: number[] = [];
-      let time = 0;
-      let interval = 0.04; // Start very fast
-      const deceleration = 1.08; // Each click takes longer
+      // Calculate total rotation (5-7 full spins = ~40-56 segment passes)
+      const fullSpins = 6; // Average spins
+      const totalSegmentPasses = fullSpins * numSegments;
       
-      while (time < totalDuration - 0.3) {
-        clicks.push(time);
-        time += interval;
-        interval *= deceleration;
+      // Generate tick times using the same easing as the wheel: cubic-bezier(0.17, 0.67, 0.12, 0.99)
+      // This creates fast ticks at start, slowing down dramatically at the end
+      const ticks: number[] = [];
+      
+      // Approximate the cubic-bezier curve for progress over time
+      const easeOut = (t: number): number => {
+        // Approximation of cubic-bezier(0.17, 0.67, 0.12, 0.99)
+        return 1 - Math.pow(1 - t, 4);
+      };
+      
+      // Find tick times by inverting the easing
+      for (let i = 0; i <= totalSegmentPasses; i++) {
+        const targetProgress = i / totalSegmentPasses;
+        
+        // Binary search to find time for this progress
+        let low = 0, high = 1, mid = 0.5;
+        for (let j = 0; j < 20; j++) {
+          mid = (low + high) / 2;
+          const progress = easeOut(mid);
+          if (progress < targetProgress) low = mid;
+          else high = mid;
+        }
+        
+        const tickTime = mid * spinDuration;
+        if (tickTime < spinDuration - 0.1) { // Don't add ticks right at the end
+          ticks.push(tickTime);
+        }
       }
-      // Add final slow clicks
-      clicks.push(time);
-      clicks.push(time + 0.15);
-      clicks.push(time + 0.35);
       
-      // Schedule each click
-      clicks.forEach((clickTime, index) => {
+      // Add final slow ticks near the end
+      const lastTick = ticks[ticks.length - 1] || 3.5;
+      if (lastTick < 3.6) ticks.push(lastTick + 0.15);
+      if (lastTick < 3.4) ticks.push(lastTick + 0.35);
+      
+      // Schedule each tick - wooden/plastic peg sound
+      ticks.forEach((tickTime, index) => {
         const osc = audioContext.createOscillator();
         const gain = audioContext.createGain();
         const filter = audioContext.createBiquadFilter();
         
-        // Alternating pitch for musical feel (like hitting different pegs)
-        const basePitch = index % 2 === 0 ? 800 : 1000;
-        const pitchVariation = Math.sin(index * 0.7) * 100;
+        // Alternating pitch for that "different pegs" feel
+        const isHigh = index % 2 === 0;
+        const basePitch = isHigh ? 600 : 480;
+        // Add slight random variation for organic feel
+        const variation = (Math.sin(index * 1.7) * 40);
         
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(basePitch + pitchVariation, now + clickTime);
-        osc.frequency.exponentialRampToValueAtTime(400, now + clickTime + 0.03);
+        // Triangle wave for softer, more wooden sound
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(basePitch + variation, now + tickTime);
+        osc.frequency.exponentialRampToValueAtTime(200, now + tickTime + 0.04);
         
-        // Sharper filter for that plastic peg sound
+        // Bandpass filter for that plastic/wooden clack
         filter.type = 'bandpass';
-        filter.frequency.setValueAtTime(1200, now + clickTime);
-        filter.Q.setValueAtTime(2, now + clickTime);
+        filter.frequency.setValueAtTime(800, now + tickTime);
+        filter.Q.setValueAtTime(1.5, now + tickTime);
         
-        // Quick attack/decay for click sound
-        const volume = 0.08 + (clickTime / totalDuration) * 0.04; // Gets slightly louder as it slows
-        gain.gain.setValueAtTime(0, now + clickTime);
-        gain.gain.linearRampToValueAtTime(volume, now + clickTime + 0.005);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + clickTime + 0.05);
+        // Quick attack, fast decay - classic tick sound
+        // Volume increases slightly as it slows (more noticeable individual ticks)
+        const progressRatio = tickTime / spinDuration;
+        const volume = 0.06 + progressRatio * 0.03; // 0.06 to 0.09
+        
+        gain.gain.setValueAtTime(0, now + tickTime);
+        gain.gain.linearRampToValueAtTime(volume, now + tickTime + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + tickTime + 0.035);
         
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(audioContext.destination);
         
-        osc.start(now + clickTime);
-        osc.stop(now + clickTime + 0.06);
+        osc.start(now + tickTime);
+        osc.stop(now + tickTime + 0.04);
       });
       
-      // Add underlying whoosh/rumble for wheel momentum
-      const rumbleOsc = audioContext.createOscillator();
-      const rumbleGain = audioContext.createGain();
-      const rumbleFilter = audioContext.createBiquadFilter();
+      // Subtle underlying whoosh for momentum feel
+      const whoosh = audioContext.createOscillator();
+      const whooshGain = audioContext.createGain();
+      const whooshFilter = audioContext.createBiquadFilter();
       
-      rumbleOsc.type = 'sawtooth';
-      rumbleOsc.frequency.setValueAtTime(60, now);
-      rumbleOsc.frequency.exponentialRampToValueAtTime(120, now + 1);
-      rumbleOsc.frequency.exponentialRampToValueAtTime(40, now + 4);
+      whoosh.type = 'sawtooth';
+      whoosh.frequency.setValueAtTime(50, now);
+      whoosh.frequency.linearRampToValueAtTime(80, now + 0.5);
+      whoosh.frequency.exponentialRampToValueAtTime(30, now + 4);
       
-      rumbleFilter.type = 'lowpass';
-      rumbleFilter.frequency.setValueAtTime(150, now);
+      whooshFilter.type = 'lowpass';
+      whooshFilter.frequency.setValueAtTime(120, now);
       
-      rumbleGain.gain.setValueAtTime(0.001, now);
-      rumbleGain.gain.linearRampToValueAtTime(0.03, now + 0.5);
-      rumbleGain.gain.setValueAtTime(0.03, now + 2);
-      rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 4);
+      whooshGain.gain.setValueAtTime(0.001, now);
+      whooshGain.gain.linearRampToValueAtTime(0.015, now + 0.3);
+      whooshGain.gain.setValueAtTime(0.015, now + 1.5);
+      whooshGain.gain.exponentialRampToValueAtTime(0.001, now + 3.8);
       
-      rumbleOsc.connect(rumbleFilter);
-      rumbleFilter.connect(rumbleGain);
-      rumbleGain.connect(audioContext.destination);
+      whoosh.connect(whooshFilter);
+      whooshFilter.connect(whooshGain);
+      whooshGain.connect(audioContext.destination);
       
-      rumbleOsc.start(now);
-      rumbleOsc.stop(now + 4.1);
+      whoosh.start(now);
+      whoosh.stop(now + 4);
       
-      rumbleOsc.onended = cleanup;
+      whoosh.onended = cleanup;
     } catch (error) {
       console.warn('Web Audio API not supported:', error);
     }
