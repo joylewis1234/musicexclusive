@@ -106,8 +106,9 @@ const ArtistProfile = () => {
         let profile = null;
         let artistUserId = artistId;
         
+        // Use public view to avoid exposing sensitive fields (stripe_account_id, payout_status)
         const { data: profileByUserId } = await supabase
-          .from("artist_profiles")
+          .from("public_artist_profiles")
           .select("id, user_id, artist_name, genre, bio, avatar_url")
           .eq("user_id", artistId)
           .maybeSingle();
@@ -117,7 +118,7 @@ const ArtistProfile = () => {
           artistUserId = profileByUserId.user_id;
         } else {
           const { data: profileById } = await supabase
-            .from("artist_profiles")
+            .from("public_artist_profiles")
             .select("id, user_id, artist_name, genre, bio, avatar_url")
             .eq("id", artistId)
             .maybeSingle();
