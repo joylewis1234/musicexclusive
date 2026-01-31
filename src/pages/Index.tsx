@@ -293,12 +293,19 @@ const Index = () => {
           <p className="text-muted-foreground text-[10px] font-display uppercase tracking-widest mb-2">
             Legal
           </p>
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4 flex-wrap">
             <Link 
               to="/terms" 
               className="text-primary text-xs hover:underline font-body"
             >
               Terms of Use
+            </Link>
+            <span className="text-border">•</span>
+            <Link 
+              to="/privacy" 
+              className="text-primary text-xs hover:underline font-body"
+            >
+              Privacy Policy
             </Link>
             <span className="text-border">•</span>
             <Link 
