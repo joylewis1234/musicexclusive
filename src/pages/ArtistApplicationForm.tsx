@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, Link } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -54,8 +54,8 @@ const ArtistApplicationForm = () => {
   const [notReleasedPublicly, setNotReleasedPublicly] = useState(false)
   const [agreesTerms, setAgreesTerms] = useState(false)
 
-  // TESTING MODE: All validation disabled - allows submitting without any data
-  const isFormValid = true
+  // Form validation: require agreesTerms checkbox
+  const isFormValid = agreesTerms
 
   const uploadFile = async (file: File, folder: string): Promise<string> => {
     const fileExt = file.name.split(".").pop()
@@ -407,7 +407,16 @@ const ArtistApplicationForm = () => {
                     className="mt-0.5 h-5 w-5"
                   />
                   <Label htmlFor="agreesTerms" className="text-base font-normal leading-relaxed cursor-pointer">
-                    I agree to the Artist Terms of Service
+                    I agree to the Music Exclusive{" "}
+                    <Link 
+                      to="/terms" 
+                      target="_blank"
+                      className="text-primary hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Terms of Use
+                    </Link>{" "}
+                    and confirm I own or control all rights to the Content I upload.
                   </Label>
                 </div>
               </div>
