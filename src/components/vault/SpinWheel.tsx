@@ -35,42 +35,85 @@ const useWheelSounds = () => {
 
       const now = audioContext.currentTime;
       
-      // Create a building tension sound with rising frequency
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      const filter = audioContext.createBiquadFilter();
+      // Price Is Right style clicking pegs - starts fast, slows down
+      const totalDuration = 4;
+      const numSegments = 8;
       
-      spinOscillatorRef.current = oscillator;
+      // Calculate click times with deceleration curve
+      const clicks: number[] = [];
+      let time = 0;
+      let interval = 0.04; // Start very fast
+      const deceleration = 1.08; // Each click takes longer
       
-      // Sawtooth for richer harmonics
-      oscillator.type = 'sawtooth';
+      while (time < totalDuration - 0.3) {
+        clicks.push(time);
+        time += interval;
+        interval *= deceleration;
+      }
+      // Add final slow clicks
+      clicks.push(time);
+      clicks.push(time + 0.15);
+      clicks.push(time + 0.35);
       
-      // Rising pitch during spin (builds anticipation)
-      oscillator.frequency.setValueAtTime(80, now);
-      oscillator.frequency.exponentialRampToValueAtTime(200, now + 2);
-      oscillator.frequency.exponentialRampToValueAtTime(400, now + 3.5);
-      oscillator.frequency.exponentialRampToValueAtTime(150, now + 4);
+      // Schedule each click
+      clicks.forEach((clickTime, index) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const filter = audioContext.createBiquadFilter();
+        
+        // Alternating pitch for musical feel (like hitting different pegs)
+        const basePitch = index % 2 === 0 ? 800 : 1000;
+        const pitchVariation = Math.sin(index * 0.7) * 100;
+        
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(basePitch + pitchVariation, now + clickTime);
+        osc.frequency.exponentialRampToValueAtTime(400, now + clickTime + 0.03);
+        
+        // Sharper filter for that plastic peg sound
+        filter.type = 'bandpass';
+        filter.frequency.setValueAtTime(1200, now + clickTime);
+        filter.Q.setValueAtTime(2, now + clickTime);
+        
+        // Quick attack/decay for click sound
+        const volume = 0.08 + (clickTime / totalDuration) * 0.04; // Gets slightly louder as it slows
+        gain.gain.setValueAtTime(0, now + clickTime);
+        gain.gain.linearRampToValueAtTime(volume, now + clickTime + 0.005);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + clickTime + 0.05);
+        
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start(now + clickTime);
+        osc.stop(now + clickTime + 0.06);
+      });
       
-      // Low-pass filter for warmth
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(300, now);
-      filter.frequency.exponentialRampToValueAtTime(800, now + 3.5);
-      filter.frequency.exponentialRampToValueAtTime(200, now + 4);
+      // Add underlying whoosh/rumble for wheel momentum
+      const rumbleOsc = audioContext.createOscillator();
+      const rumbleGain = audioContext.createGain();
+      const rumbleFilter = audioContext.createBiquadFilter();
       
-      // Volume envelope
-      gainNode.gain.setValueAtTime(0.001, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.06, now + 0.1);
-      gainNode.gain.setValueAtTime(0.06, now + 3.5);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 4);
+      rumbleOsc.type = 'sawtooth';
+      rumbleOsc.frequency.setValueAtTime(60, now);
+      rumbleOsc.frequency.exponentialRampToValueAtTime(120, now + 1);
+      rumbleOsc.frequency.exponentialRampToValueAtTime(40, now + 4);
       
-      oscillator.connect(filter);
-      filter.connect(gainNode);
-      gainNode.connect(audioContext.destination);
+      rumbleFilter.type = 'lowpass';
+      rumbleFilter.frequency.setValueAtTime(150, now);
       
-      oscillator.start(now);
-      oscillator.stop(now + 4.1);
+      rumbleGain.gain.setValueAtTime(0.001, now);
+      rumbleGain.gain.linearRampToValueAtTime(0.03, now + 0.5);
+      rumbleGain.gain.setValueAtTime(0.03, now + 2);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 4);
       
-      oscillator.onended = cleanup;
+      rumbleOsc.connect(rumbleFilter);
+      rumbleFilter.connect(rumbleGain);
+      rumbleGain.connect(audioContext.destination);
+      
+      rumbleOsc.start(now);
+      rumbleOsc.stop(now + 4.1);
+      
+      rumbleOsc.onended = cleanup;
     } catch (error) {
       console.warn('Web Audio API not supported:', error);
     }
