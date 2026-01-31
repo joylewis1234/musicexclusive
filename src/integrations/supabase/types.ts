@@ -723,6 +723,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_email: { Args: { email: string }; Returns: boolean }
     }
     Enums: {
       app_role: "fan" | "artist" | "admin"
