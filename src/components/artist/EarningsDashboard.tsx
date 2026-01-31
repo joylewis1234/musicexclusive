@@ -4,8 +4,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, DollarSign, Clock, CheckCircle2, XCircle } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2, DollarSign, Clock, CheckCircle2, XCircle, TrendingUp, Music } from "lucide-react";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 
 interface PayoutBatch {
   id: string;
@@ -18,39 +18,92 @@ interface PayoutBatch {
   stripe_transfer_id: string | null;
 }
 
+interface EarningsSummary {
+  pendingThisWeek: number;
+  paidLifetime: number;
+  totalPayouts: number;
+  streamsThisWeek: number;
+}
+
 const EarningsDashboard = () => {
   const { user } = useAuth();
   const [batches, setBatches] = useState<PayoutBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [totals, setTotals] = useState({ pending: 0, paid: 0 });
+  const [summary, setSummary] = useState<EarningsSummary>({
+    pendingThisWeek: 0,
+    paidLifetime: 0,
+    totalPayouts: 0,
+    streamsThisWeek: 0,
+  });
 
   useEffect(() => {
-    const fetchBatches = async () => {
+    const fetchEarningsData = async () => {
       if (!user) return;
 
       try {
-        const { data, error } = await supabase
+        // Get current week boundaries (Monday to Sunday)
+        const now = new Date();
+        const weekStart = startOfWeek(now, { weekStartsOn: 1 }); // Monday
+        const weekEnd = endOfWeek(now, { weekStartsOn: 1 }); // Sunday
+
+        // Fetch stream_ledger data for this artist
+        const { data: streams, error: streamsError } = await supabase
+          .from("stream_ledger")
+          .select("amount_artist, payout_status, created_at")
+          .eq("artist_id", user.id);
+
+        if (streamsError) {
+          console.error("Error fetching stream ledger:", streamsError);
+        }
+
+        // Calculate summary from stream_ledger
+        let pendingThisWeek = 0;
+        let paidLifetime = 0;
+        let streamsThisWeek = 0;
+
+        if (streams) {
+          for (const stream of streams) {
+            const streamDate = new Date(stream.created_at);
+            const isThisWeek = streamDate >= weekStart && streamDate <= weekEnd;
+
+            if (stream.payout_status === "pending" && isThisWeek) {
+              pendingThisWeek += Number(stream.amount_artist);
+            }
+
+            if (stream.payout_status === "paid") {
+              paidLifetime += Number(stream.amount_artist);
+            }
+
+            if (isThisWeek) {
+              streamsThisWeek++;
+            }
+          }
+        }
+
+        // Fetch payout_batches for total payouts (lifetime)
+        const { data: payouts, error: payoutsError } = await supabase
           .from("payout_batches")
           .select("*")
           .eq("artist_user_id", user.id)
           .order("week_start", { ascending: false });
 
-        if (error) {
-          console.error("Error fetching payout batches:", error);
-          return;
+        if (payoutsError) {
+          console.error("Error fetching payout batches:", payoutsError);
         }
 
-        setBatches(data || []);
+        setBatches(payouts || []);
 
-        // Calculate totals
-        const pending = (data || [])
-          .filter((b) => b.status === "pending" || b.status === "processing")
-          .reduce((sum, b) => sum + Number(b.total_usd), 0);
-        const paid = (data || [])
+        // Calculate total payouts from paid batches
+        const totalPayouts = (payouts || [])
           .filter((b) => b.status === "paid")
           .reduce((sum, b) => sum + Number(b.total_usd), 0);
 
-        setTotals({ pending, paid });
+        setSummary({
+          pendingThisWeek,
+          paidLifetime,
+          totalPayouts,
+          streamsThisWeek,
+        });
       } catch (error) {
         console.error("Error:", error);
       } finally {
@@ -58,7 +111,7 @@ const EarningsDashboard = () => {
       }
     };
 
-    fetchBatches();
+    fetchEarningsData();
   }, [user]);
 
   const getStatusBadge = (status: string) => {
@@ -108,8 +161,9 @@ const EarningsDashboard = () => {
     <div className="space-y-4">
       <SectionHeader title="Your Earnings" align="left" />
 
-      {/* Summary Cards - 2 column grid */}
+      {/* Summary Cards - 2x2 grid */}
       <div className="grid grid-cols-2 gap-3">
+        {/* Pending Earnings (This Week) */}
         <GlowCard variant="flat" glowColor="subtle" className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center">
@@ -120,10 +174,12 @@ const EarningsDashboard = () => {
             </span>
           </div>
           <p className="text-xl font-display font-bold text-foreground">
-            ${totals.pending.toFixed(2)}
+            ${summary.pendingThisWeek.toFixed(2)}
           </p>
+          <p className="text-[10px] text-muted-foreground mt-1">This week</p>
         </GlowCard>
 
+        {/* Paid Earnings (Lifetime) */}
         <GlowCard variant="flat" glowColor="subtle" className="p-4">
           <div className="flex items-center gap-2 mb-2">
             <div className="w-8 h-8 rounded-xl bg-green-500/10 flex items-center justify-center">
@@ -134,8 +190,41 @@ const EarningsDashboard = () => {
             </span>
           </div>
           <p className="text-xl font-display font-bold text-foreground">
-            ${totals.paid.toFixed(2)}
+            ${summary.paidLifetime.toFixed(2)}
           </p>
+          <p className="text-[10px] text-muted-foreground mt-1">Lifetime</p>
+        </GlowCard>
+
+        {/* Total Payouts (Lifetime) */}
+        <GlowCard variant="flat" glowColor="subtle" className="p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4 text-primary" />
+            </div>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider">
+              Payouts
+            </span>
+          </div>
+          <p className="text-xl font-display font-bold text-foreground">
+            ${summary.totalPayouts.toFixed(2)}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">Total received</p>
+        </GlowCard>
+
+        {/* Streams This Week */}
+        <GlowCard variant="flat" glowColor="subtle" className="p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center">
+              <Music className="w-4 h-4 text-accent" />
+            </div>
+            <span className="text-xs text-muted-foreground uppercase tracking-wider">
+              Streams
+            </span>
+          </div>
+          <p className="text-xl font-display font-bold text-foreground">
+            {summary.streamsThisWeek}
+          </p>
+          <p className="text-[10px] text-muted-foreground mt-1">This week</p>
         </GlowCard>
       </div>
 
