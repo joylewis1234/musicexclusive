@@ -20,6 +20,7 @@ import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2 } from "lucide-reac
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { FanCommentBubble } from "@/components/vault/FanCommentBubble";
+import { ReturningFanLogin } from "@/components/vault/ReturningFanLogin";
 import vaultPortal from "@/assets/vault-portal.png";
 
 // Fan testimonials for floating comments around the vault
@@ -505,6 +506,23 @@ const EnterVault = () => {
           </GlowCard>
         </div>
       </div>
+
+      {/* ========================================
+          RETURNING FAN LOGIN SECTION
+          For fans who already have a vault code
+          ======================================== */}
+      <section className="mt-12 mb-8">
+        <div className="w-full max-w-md mx-auto mb-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent" />
+            <span className="text-xs uppercase tracking-widest text-muted-foreground font-display">
+              Already have a code?
+            </span>
+            <div className="flex-1 h-px bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent" />
+          </div>
+        </div>
+        <ReturningFanLogin />
+      </section>
     </div>
   );
 };
