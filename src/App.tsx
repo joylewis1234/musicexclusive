@@ -11,6 +11,7 @@ import { ArtistProtectedRoute } from "@/components/auth/ArtistProtectedRoute";
 import { FanLayout } from "@/layouts/FanLayout";
 import { ArtistLayout } from "@/layouts/ArtistLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 // Public pages
 import Index from "./pages/Index";
@@ -80,6 +81,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <ScrollToTop />
             <ErrorBoundary>
               <Routes>
                 {/* Public routes */}
