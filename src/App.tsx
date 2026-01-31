@@ -32,6 +32,7 @@ import ArtistAgreement from "./pages/ArtistAgreement";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import CopyrightDmca from "./pages/CopyrightDmca";
 import RefundPolicy from "./pages/RefundPolicy";
+import FanAgreementStep from "./pages/FanAgreementStep";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -86,6 +87,7 @@ const App = () => (
                 <Route path="/vault/submit" element={<SubmitVaultCode />} />
                 <Route path="/vault/status" element={<VaultStatus />} />
                 <Route path="/agreements/fan" element={<Agreements />} />
+                <Route path="/fan/agreements" element={<FanAgreementStep />} />
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
                 <Route path="/subscribe" element={<Subscribe />} />
                 <Route path="/load-credits" element={<LoadCredits />} />
