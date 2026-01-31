@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { cn } from "@/lib/utils";
 import vaultPortal from "@/assets/vault-portal.png";
 
@@ -6,6 +6,128 @@ interface SpinWheelProps {
   onComplete: (result: "winner" | "not_selected") => void;
   result: "winner" | "not_selected";
 }
+
+// Hook for wheel sound effects
+const useWheelSounds = () => {
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const spinOscillatorRef = useRef<OscillatorNode | null>(null);
+
+  const cleanup = useCallback(() => {
+    if (spinOscillatorRef.current) {
+      try {
+        spinOscillatorRef.current.stop();
+        spinOscillatorRef.current.disconnect();
+      } catch (e) { /* Already stopped */ }
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => cleanup, [cleanup]);
+
+  const playSpinSound = useCallback(() => {
+    try {
+      cleanup();
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      audioContextRef.current = audioContext;
+
+      const now = audioContext.currentTime;
+      
+      // Create a building tension sound with rising frequency
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      const filter = audioContext.createBiquadFilter();
+      
+      spinOscillatorRef.current = oscillator;
+      
+      // Sawtooth for richer harmonics
+      oscillator.type = 'sawtooth';
+      
+      // Rising pitch during spin (builds anticipation)
+      oscillator.frequency.setValueAtTime(80, now);
+      oscillator.frequency.exponentialRampToValueAtTime(200, now + 2);
+      oscillator.frequency.exponentialRampToValueAtTime(400, now + 3.5);
+      oscillator.frequency.exponentialRampToValueAtTime(150, now + 4);
+      
+      // Low-pass filter for warmth
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(300, now);
+      filter.frequency.exponentialRampToValueAtTime(800, now + 3.5);
+      filter.frequency.exponentialRampToValueAtTime(200, now + 4);
+      
+      // Volume envelope
+      gainNode.gain.setValueAtTime(0.001, now);
+      gainNode.gain.exponentialRampToValueAtTime(0.06, now + 0.1);
+      gainNode.gain.setValueAtTime(0.06, now + 3.5);
+      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 4);
+      
+      oscillator.connect(filter);
+      filter.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      oscillator.start(now);
+      oscillator.stop(now + 4.1);
+      
+      oscillator.onended = cleanup;
+    } catch (error) {
+      console.warn('Web Audio API not supported:', error);
+    }
+  }, [cleanup]);
+
+  const playLandSound = useCallback((isWinner: boolean) => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const now = audioContext.currentTime;
+      
+      if (isWinner) {
+        // Triumphant chord (major triad with shimmer)
+        const frequencies = [261.63, 329.63, 392.00, 523.25]; // C major + octave
+        
+        frequencies.forEach((freq, i) => {
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now);
+          
+          gain.gain.setValueAtTime(0.001, now);
+          gain.gain.exponentialRampToValueAtTime(0.08 / (i + 1), now + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+          
+          osc.connect(gain);
+          gain.connect(audioContext.destination);
+          
+          osc.start(now + i * 0.05);
+          osc.stop(now + 1);
+        });
+      } else {
+        // Soft descending tone (not harsh, just conclusive)
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(220, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.4);
+        
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(0.08, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start(now);
+        osc.stop(now + 0.6);
+      }
+    } catch (error) {
+      console.warn('Web Audio API not supported:', error);
+    }
+  }, []);
+
+  return { playSpinSound, playLandSound };
+};
 
 // Music themed segments with neon aesthetic
 const SEGMENTS = [
@@ -23,12 +145,16 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [hasStarted, setHasStarted] = useState(false);
+  const { playSpinSound, playLandSound } = useWheelSounds();
 
   const startSpin = useCallback(() => {
     if (isSpinning || hasStarted) return;
     
     setIsSpinning(true);
     setHasStarted(true);
+    
+    // Play spin sound
+    playSpinSound();
 
     const segmentAngle = 360 / SEGMENTS.length;
     const winningIndex = result === "winner" ? 0 : 5; // 🎉 for win, 🔒 for not selected
@@ -41,11 +167,13 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
 
     setTimeout(() => {
       setIsSpinning(false);
+      // Play land sound
+      playLandSound(result === "winner");
       setTimeout(() => {
         onComplete(result);
       }, 800);
     }, 4000);
-  }, [isSpinning, hasStarted, result, onComplete]);
+  }, [isSpinning, hasStarted, result, onComplete, playSpinSound, playLandSound]);
 
   useEffect(() => {
     const timer = setTimeout(startSpin, 500);
@@ -71,7 +199,7 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
 
       {/* Wheel Container */}
       <div className="relative z-10">
-        {/* Outer neon glow ring - purple/pink/blue */}
+        {/* Outer neon glow ring - purple/pink/blue with idle animation */}
         <div 
           className={cn(
             "absolute -inset-8 rounded-full transition-opacity duration-500",
@@ -80,18 +208,19 @@ export const SpinWheel = ({ onComplete, result }: SpinWheelProps) => {
           style={{
             background: "conic-gradient(from 0deg, hsl(280 80% 50% / 0.5), hsl(320 80% 50% / 0.4), hsl(220 80% 50% / 0.4), hsl(280 80% 50% / 0.5))",
             filter: "blur(25px)",
-            animation: isSpinning ? "spin 6s linear infinite reverse" : "none"
+            animation: isSpinning 
+              ? "spin 6s linear infinite reverse" 
+              : "spin 20s linear infinite, pulse 3s ease-in-out infinite"
           }}
         />
 
-        {/* Inner neon glow - pink/purple */}
+        {/* Inner neon glow - pink/purple with breathing effect */}
         <div 
-          className={cn(
-            "absolute -inset-4 rounded-full transition-opacity duration-500",
-            isSpinning ? "opacity-90 animate-pulse" : "opacity-50"
-          )}
+          className="absolute -inset-4 rounded-full transition-opacity duration-500"
           style={{
-            background: "radial-gradient(circle, hsl(320 70% 50% / 0.4), hsl(280 70% 40% / 0.3), transparent 70%)"
+            background: "radial-gradient(circle, hsl(320 70% 50% / 0.4), hsl(280 70% 40% / 0.3), transparent 70%)",
+            opacity: isSpinning ? 0.9 : 0.5,
+            animation: isSpinning ? "pulse 0.5s ease-in-out infinite" : "pulse 4s ease-in-out infinite"
           }}
         />
 
