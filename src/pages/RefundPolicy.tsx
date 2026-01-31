@@ -1,18 +1,16 @@
 import { LegalPageLayout, LegalSection } from "@/components/legal";
 
-const REFUND_VERSION = "1.0";
 const EFFECTIVE_DATE = "January 31, 2026";
 
 const RefundPolicy = () => {
   return (
     <LegalPageLayout
       title="Refund Policy"
-      subtitle="Our policy on payments, credits, and refunds."
-      version={REFUND_VERSION}
       effectiveDate={EFFECTIVE_DATE}
+      summary="All sales on Music Exclusive are final. Credits, subscriptions, and completed streams are non-refundable except where required by law."
     >
-      <LegalSection>
-        <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-6">
+      <LegalSection number="01" title="General Policy">
+        <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-4">
           <p className="font-semibold text-foreground text-base">
             All sales are final.
           </p>
@@ -31,13 +29,13 @@ const RefundPolicy = () => {
         </p>
       </LegalSection>
 
-      <LegalSection title="Exceptions">
+      <LegalSection number="02" title="Exceptions">
         <p>
           Refunds may only be issued if required by applicable law.
         </p>
       </LegalSection>
 
-      <LegalSection title="Billing Errors">
+      <LegalSection number="03" title="Billing Errors" showDivider={false}>
         <p>
           If you believe you were charged in error, contact us at:
         </p>
@@ -51,7 +49,7 @@ const RefundPolicy = () => {
         </div>
       </LegalSection>
 
-      <div className="mt-12 pt-6 border-t border-border/30">
+      <div className="mt-10 pt-6 border-t border-border/30">
         <p className="text-sm text-muted-foreground text-center">
           By using Music Exclusive, you agree to this Refund Policy.
         </p>

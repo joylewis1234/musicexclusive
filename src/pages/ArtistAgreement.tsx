@@ -2,21 +2,9 @@ import { LegalPageLayout, LegalSection } from "@/components/legal";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 
-const TERMS_VERSION = "1.0";
 const EFFECTIVE_DATE = "January 31, 2025";
 
-const AGREEMENT_TEXT = `MUSIC EXCLUSIVE
-ARTIST PARTICIPATION AGREEMENT (MVP VERSION)
-
-Effective Date: ${EFFECTIVE_DATE}
-
-This Artist Participation Agreement ("Agreement") is entered into between Music Exclusive ("Company," "we," or "us") and you ("Artist," "you," or "your"). This Agreement governs your participation as an artist on the Music Exclusive platform ("Services").
-
-By accessing the Services, uploading Content, or clicking "I Agree," you confirm you have read, understood, and agree to be bound by this Agreement.`;
-
-const ArtistAgreement = () => {
-  const handleDownload = () => {
-    const fullText = `MUSIC EXCLUSIVE
+const FULL_AGREEMENT_TEXT = `MUSIC EXCLUSIVE
 ARTIST PARTICIPATION AGREEMENT (MVP VERSION)
 
 Effective Date: ${EFFECTIVE_DATE}
@@ -91,12 +79,14 @@ To the maximum extent permitted by law, Company is not liable for indirect, inci
 Disputes shall be governed by applicable arbitration and dispute resolution terms consistent with the Company Terms of Use.
 
 END OF AGREEMENT`;
-    
-    const blob = new Blob([fullText], { type: "text/plain" });
+
+const ArtistAgreement = () => {
+  const handleDownload = () => {
+    const blob = new Blob([FULL_AGREEMENT_TEXT], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Music_Exclusive_Artist_Participation_Agreement_v${TERMS_VERSION}.txt`;
+    a.download = `Music_Exclusive_Artist_Participation_Agreement.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -106,12 +96,11 @@ END OF AGREEMENT`;
   return (
     <LegalPageLayout
       title="Artist Participation Agreement"
-      subtitle="Terms governing your participation as an artist on Music Exclusive."
-      version={TERMS_VERSION}
       effectiveDate={EFFECTIVE_DATE}
+      summary="This Agreement governs your participation as an artist on Music Exclusive. It covers content uploads, revenue sharing (50/50 split), exclusivity windows, and payout schedules."
     >
       {/* Download Button */}
-      <div className="mb-8">
+      <div className="mb-6 flex justify-end">
         <Button 
           variant="outline" 
           size="sm" 
@@ -119,11 +108,11 @@ END OF AGREEMENT`;
           className="gap-2"
         >
           <Download className="w-4 h-4" />
-          Download Agreement
+          Download
         </Button>
       </div>
 
-      <LegalSection>
+      <LegalSection number="01" title="Introduction">
         <p>
           This Artist Participation Agreement ("Agreement") is entered into between Music 
           Exclusive ("Company," "we," or "us") and you ("Artist," "you," or "your"). This 
@@ -136,7 +125,7 @@ END OF AGREEMENT`;
         </p>
       </LegalSection>
 
-      <LegalSection title="1. Platform Purpose">
+      <LegalSection number="02" title="Platform Purpose">
         <p>
           Music Exclusive is an artist-first music streaming and fan engagement platform 
           where artists release exclusive music to fans before releasing to other digital 
@@ -144,7 +133,7 @@ END OF AGREEMENT`;
         </p>
       </LegalSection>
 
-      <LegalSection title="2. Definitions">
+      <LegalSection number="03" title="Definitions">
         <ul className="list-disc list-outside ml-5 space-y-2">
           <li>
             <strong>"Content"</strong> means the sound recordings, compositions, cover art, 
@@ -157,14 +146,14 @@ END OF AGREEMENT`;
         </ul>
       </LegalSection>
 
-      <LegalSection title="3. Artist Eligibility">
+      <LegalSection number="04" title="Artist Eligibility">
         <p>
           Company may approve or deny Artist participation at its sole discretion. Company 
           may remove Artist access for violations of this Agreement, fraud, or abuse.
         </p>
       </LegalSection>
 
-      <LegalSection title="4. Exclusivity Window">
+      <LegalSection number="05" title="Exclusivity Window">
         <p>
           Artist agrees that each uploaded release may be exclusive to Music Exclusive for 
           a minimum of <strong>three (3) weeks</strong> (or longer if Artist chooses).
@@ -176,7 +165,7 @@ END OF AGREEMENT`;
         </p>
       </LegalSection>
 
-      <LegalSection title="5. Rights Granted">
+      <LegalSection number="06" title="Rights Granted">
         <p>
           Artist grants Company a non-exclusive, worldwide right to host, store, stream, 
           display, and promote the Content solely in connection with operating and marketing 
@@ -187,7 +176,7 @@ END OF AGREEMENT`;
         </p>
       </LegalSection>
 
-      <LegalSection title="6. Artist Representations & Warranties">
+      <LegalSection number="07" title="Artist Representations & Warranties">
         <p>Artist represents and warrants:</p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>Artist owns or controls all necessary rights to upload and monetize the Content</li>
@@ -197,7 +186,7 @@ END OF AGREEMENT`;
         </ul>
       </LegalSection>
 
-      <LegalSection title="7. Streaming Payments & Earnings (MVP)">
+      <LegalSection number="08" title="Streaming Payments & Earnings">
         <p>Fans stream music using credits.</p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>1 credit = $0.20</li>
@@ -217,7 +206,7 @@ END OF AGREEMENT`;
         </p>
       </LegalSection>
 
-      <LegalSection title="8. Payout Schedule">
+      <LegalSection number="09" title="Payout Schedule">
         <p>
           Artist payouts are issued <strong>weekly on Mondays</strong> for verified streams 
           earned during the prior week.
@@ -228,7 +217,7 @@ END OF AGREEMENT`;
         </p>
       </LegalSection>
 
-      <LegalSection title="9. Weekly Transparency Report">
+      <LegalSection number="10" title="Weekly Transparency Report">
         <p>
           Company will provide a weekly transparency report inside the Artist Earnings page showing:
         </p>
@@ -242,7 +231,7 @@ END OF AGREEMENT`;
         </ul>
       </LegalSection>
 
-      <LegalSection title="10. Fraud, Streaming Manipulation & Termination">
+      <LegalSection number="11" title="Fraud, Streaming Manipulation & Termination">
         <p>
           Artist may not engage in streaming manipulation or artificial inflation of streams.
         </p>
@@ -256,28 +245,28 @@ END OF AGREEMENT`;
         </ul>
       </LegalSection>
 
-      <LegalSection title="11. Termination">
+      <LegalSection number="12" title="Termination">
         <p>
           Company may terminate this Agreement and remove Artist access at any time for 
           breach, fraud, abuse, or platform safety reasons.
         </p>
       </LegalSection>
 
-      <LegalSection title="12. Limitation of Liability">
+      <LegalSection number="13" title="Limitation of Liability">
         <p>
           To the maximum extent permitted by law, Company is not liable for indirect, 
           incidental, or consequential damages arising from the Services.
         </p>
       </LegalSection>
 
-      <LegalSection title="13. Dispute Resolution">
+      <LegalSection number="14" title="Dispute Resolution" showDivider={false}>
         <p>
           Disputes shall be governed by applicable arbitration and dispute resolution terms 
           consistent with the Company Terms of Use.
         </p>
       </LegalSection>
 
-      <div className="mt-12 pt-6 border-t border-border/30">
+      <div className="mt-10 pt-6 border-t border-border/30">
         <p className="text-sm text-muted-foreground text-center">
           By using Music Exclusive as an Artist, you agree to this Agreement.
         </p>
