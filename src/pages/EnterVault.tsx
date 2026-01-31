@@ -111,7 +111,7 @@ const EnterVault = () => {
         sessionStorage.setItem("vaultEmail", email);
         sessionStorage.setItem("vaultName", existingCode.name);
         // Scroll to top to show the vault code
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.scrollTo({ top: 0, behavior: "instant" });
       } else {
         setHasExistingCode(false);
       }
@@ -226,7 +226,7 @@ const EnterVault = () => {
       setIsSubmitted(true);
       
       // Scroll to top to show the vault code
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      window.scrollTo({ top: 0, behavior: "instant" });
       
       // Store in sessionStorage for persistence across navigation
       sessionStorage.setItem("vaultCode", generatedCode);
