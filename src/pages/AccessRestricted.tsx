@@ -9,7 +9,7 @@ const AccessRestricted = () => {
   const location = useLocation();
   const { role, signOut } = useAuth();
   
-  const state = location.state as { userRole?: AppRole; requiredRole?: AppRole } | null;
+  const state = location.state as { userRole?: AppRole; requiredRole?: AppRole | "admin" } | null;
   const requiredRole = state?.requiredRole;
 
   const handleGoBack = () => {
@@ -39,7 +39,9 @@ const AccessRestricted = () => {
         </h1>
         
         <p className="text-muted-foreground mb-6">
-          {requiredRole === "artist" 
+          {requiredRole === "admin"
+            ? "This area is only accessible to platform administrators."
+            : requiredRole === "artist" 
             ? "This area is only accessible to approved artists."
             : "This area is only accessible to fans with Vault access."}
         </p>
