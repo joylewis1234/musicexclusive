@@ -130,22 +130,41 @@ export const VaultLoseScreen = ({ vaultCode, email, name }: VaultLoseScreenProps
       {/* Glowing Divider */}
       <div className="w-full max-w-[200px] h-px mb-6 bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
-      {/* Superfan Upsell */}
-      <div className="w-full max-w-xs p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-yellow-500/5 border border-amber-500/20">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <Crown className="w-5 h-5 text-amber-400" />
-          <p className="text-sm font-display uppercase tracking-wider text-amber-400">
-            Want access now?
-          </p>
+      {/* Superfan Upsell - Enhanced with glow and animation */}
+      <div className="relative w-full max-w-xs group">
+        {/* Animated outer glow */}
+        <div 
+          className="absolute -inset-1 rounded-xl bg-gradient-to-r from-amber-500/40 via-yellow-400/30 to-amber-500/40 blur-lg opacity-60 group-hover:opacity-100 transition-opacity duration-500 animate-pulse"
+          aria-hidden="true"
+        />
+        {/* Gradient border */}
+        <div 
+          className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-amber-500/50 via-yellow-400/40 to-amber-500/50"
+          aria-hidden="true"
+        />
+        {/* Content container */}
+        <div className="relative p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-yellow-500/5 backdrop-blur-sm">
+          <div className="flex items-center justify-center gap-2 mb-3">
+            <Crown className="w-5 h-5 text-amber-400 animate-pulse drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+            <p 
+              className="text-sm font-display uppercase tracking-wider text-amber-400"
+              style={{
+                textShadow: "0 0 10px rgba(251, 191, 36, 0.5)",
+              }}
+            >
+              Want access now?
+            </p>
+            <Crown className="w-5 h-5 text-amber-400 animate-pulse drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]" />
+          </div>
+          <Button
+            variant="outline"
+            size="lg"
+            className="w-full border-amber-500/40 hover:border-amber-400 hover:bg-amber-500/15 transition-all duration-300 hover:shadow-[0_0_20px_rgba(251,191,36,0.3)]"
+            onClick={() => navigate("/subscribe")}
+          >
+            BECOME A SUPERFAN
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="lg"
-          className="w-full border-amber-500/30 hover:border-amber-500/50 hover:bg-amber-500/10"
-          onClick={() => navigate("/subscribe")}
-        >
-          BECOME A SUPERFAN
-        </Button>
       </div>
     </div>
   );
