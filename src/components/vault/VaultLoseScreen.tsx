@@ -135,7 +135,7 @@ export const VaultLoseScreen = ({ vaultCode, email, name }: VaultLoseScreenProps
         <div className="flex items-center justify-center gap-2 mb-2">
           <Crown className="w-5 h-5 text-amber-400" />
           <p className="text-sm font-display uppercase tracking-wider text-amber-400">
-            Want guaranteed access?
+            Want access now?
           </p>
         </div>
         <Button
