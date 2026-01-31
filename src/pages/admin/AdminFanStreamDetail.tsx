@@ -43,7 +43,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { format, subDays, isAfter } from "date-fns";
+import { format, subDays, isAfter, startOfWeek, isWithinInterval } from "date-fns";
 
 interface FanSummary {
   fan_id: string;
@@ -53,7 +53,9 @@ interface FanSummary {
   membership_type: "superfan" | "payg" | "unknown";
   credits_balance: number;
   total_streams: number;
+  streams_this_week: number;
   total_spent: number;
+  spent_this_week: number;
   last_stream_date: string | null;
   joined_at: string;
 }
@@ -146,6 +148,17 @@ const AdminFanStreamDetail = () => {
         const memberStreams = streams?.filter((s) => s.fan_email === member.email) || [];
         const totalStreams = memberStreams.length;
         const totalSpent = memberStreams.reduce((sum, s) => sum + Number(s.amount_total), 0);
+        
+        // Calculate this week stats
+        const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 }); // Monday
+        const weekEnd = new Date();
+        const thisWeekStreams = memberStreams.filter(s => {
+          const streamDate = new Date(s.created_at);
+          return isWithinInterval(streamDate, { start: weekStart, end: weekEnd });
+        });
+        const streamsThisWeek = thisWeekStreams.length;
+        const spentThisWeek = thisWeekStreams.reduce((sum, s) => sum + Number(s.amount_total), 0);
+        
         const lastStream = memberStreams.length > 0
           ? memberStreams.sort((a, b) => 
               new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -160,7 +173,9 @@ const AdminFanStreamDetail = () => {
           membership_type: membershipType,
           credits_balance: member.credits,
           total_streams: totalStreams,
+          streams_this_week: streamsThisWeek,
           total_spent: totalSpent,
+          spent_this_week: spentThisWeek,
           last_stream_date: lastStream,
           joined_at: member.joined_at,
         });
@@ -515,15 +530,16 @@ const AdminFanStreamDetail = () => {
                       <TableHead>Email</TableHead>
                       <TableHead>Membership</TableHead>
                       <TableHead className="text-right">Credits</TableHead>
-                      <TableHead className="text-right">Streams</TableHead>
-                      <TableHead className="text-right">Spent</TableHead>
+                      <TableHead className="text-right">Lifetime Streams</TableHead>
+                      <TableHead className="text-right">This Week</TableHead>
+                      <TableHead className="text-right">Total Spent</TableHead>
                       <TableHead>Last Stream</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredFans.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No fans found matching filters
                         </TableCell>
                       </TableRow>
@@ -546,6 +562,11 @@ const AdminFanStreamDetail = () => {
                             </span>
                           </TableCell>
                           <TableCell className="text-right">{fan.total_streams}</TableCell>
+                          <TableCell className="text-right">
+                            <span className={fan.streams_this_week > 0 ? "text-green-400" : "text-muted-foreground"}>
+                              {fan.streams_this_week}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-right">${fan.total_spent.toFixed(2)}</TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {fan.last_stream_date
@@ -585,7 +606,7 @@ const AdminFanStreamDetail = () => {
           ) : selectedFan ? (
             <div className="space-y-6">
               {/* Fan Summary Card */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-xl bg-muted/20 border border-border/50">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 p-4 rounded-xl bg-muted/20 border border-border/50">
                 <div>
                   <p className="text-xs text-muted-foreground">Fan Name</p>
                   <p className="font-semibold">{selectedFan.display_name}</p>
@@ -607,14 +628,20 @@ const AdminFanStreamDetail = () => {
                   <p className="font-semibold text-primary">{selectedFan.credits_balance}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Streams</p>
+                  <p className="text-xs text-muted-foreground">Lifetime Streams</p>
                   <p className="font-semibold">{selectedFan.total_streams}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Spent</p>
-                  <p className="font-semibold text-green-400">
-                    ${selectedFan.total_spent.toFixed(2)}
-                  </p>
+                  <p className="text-xs text-muted-foreground">Streams This Week</p>
+                  <p className="font-semibold text-green-400">{selectedFan.streams_this_week}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Lifetime Spent</p>
+                  <p className="font-semibold">${selectedFan.total_spent.toFixed(2)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Spent This Week</p>
+                  <p className="font-semibold text-green-400">${selectedFan.spent_this_week.toFixed(2)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Joined</p>

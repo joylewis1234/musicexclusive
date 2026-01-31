@@ -40,9 +40,9 @@ const AdminDashboard = () => {
     },
     {
       title: "Artist Payouts",
-      description: "Weekly payout batches and Stripe transfer tracking",
+      description: "Weekly payout batches, Mark as Paid, and Stripe tracking",
       icon: DollarSign,
-      path: "/admin/reports?tab=payouts",
+      path: "/admin/payouts",
       color: "text-yellow-400",
     },
     {
