@@ -90,13 +90,14 @@ export const CompactVaultPlayer = ({
       pause();
     } else {
       // If not already charged this session, call onPlay to show confirmation modal
-      if (!hasCalledOnPlay && !skipPlayConfirm && onPlay) {
+      // IMPORTANT: Do NOT play audio here - wait for parent to confirm via autoPlay prop
+      if (!skipPlayConfirm && onPlay) {
         onPlay(); // This opens the confirmation modal
-        // Don't play yet - wait for modal confirmation
+        // Don't play yet - playback only starts via autoPlay prop after successful transaction
         return;
       }
       
-      // Either already charged, or no confirmation needed - play directly
+      // Only reach here if skipPlayConfirm is true (already charged for this track)
       await play();
       setHasCalledOnPlay(true);
     }
