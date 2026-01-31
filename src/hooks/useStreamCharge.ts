@@ -5,12 +5,83 @@ import { toast } from "sonner";
 interface StreamChargeResult {
   success: boolean;
   error?: string;
+  requiresCredits?: boolean;
+  requiresAgreement?: boolean;
+}
+
+interface ValidationResult {
+  valid: boolean;
+  error?: string;
+  requiresCredits?: boolean;
+  requiresAgreement?: boolean;
 }
 
 export const useStreamCharge = (userEmail: string | null | undefined) => {
   // Track which tracks have been charged in this session
   const chargedTracksRef = useRef<Set<string>>(new Set());
   const [isProcessing, setIsProcessing] = useState(false);
+
+  /**
+   * Validate that the fan is allowed to stream:
+   * 1. Must be in vault (vault_access_active = true)
+   * 2. Must have accepted fan agreements
+   * 3. Must have enough credits (>= 1)
+   */
+  const validateStreamEligibility = useCallback(async (
+    fanEmail: string,
+    userId: string
+  ): Promise<ValidationResult> => {
+    // 1. Check vault membership and credits
+    const { data: vaultMember, error: vaultError } = await supabase
+      .from("vault_members")
+      .select("id, credits, vault_access_active")
+      .eq("email", fanEmail)
+      .maybeSingle();
+
+    if (vaultError) {
+      console.error("Error checking vault membership:", vaultError);
+      return { valid: false, error: "Could not verify vault access" };
+    }
+
+    if (!vaultMember) {
+      return { valid: false, error: "You need vault access to stream" };
+    }
+
+    if (!vaultMember.vault_access_active) {
+      return { valid: false, error: "Your vault access is not active" };
+    }
+
+    // 2. Check agreements acceptance
+    const { data: agreement, error: agreementError } = await supabase
+      .from("fan_terms_acceptances")
+      .select("id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (agreementError) {
+      console.error("Error checking agreements:", agreementError);
+      return { valid: false, error: "Could not verify agreements" };
+    }
+
+    if (!agreement) {
+      return { 
+        valid: false, 
+        error: "Please accept the fan agreement before streaming",
+        requiresAgreement: true
+      };
+    }
+
+    // 3. Check credits
+    if (vaultMember.credits < 1) {
+      return { 
+        valid: false, 
+        error: "Insufficient credits",
+        requiresCredits: true
+      };
+    }
+
+    return { valid: true };
+  }, []);
 
   const chargeStream = useCallback(async (
     trackId: string,
@@ -28,7 +99,47 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
     setIsProcessing(true);
 
     try {
-      // 1. Get fan's current credits and ID
+      // Get current user's auth ID
+      const { data: { user } } = await supabase.auth.getUser();
+      const fanUserId = user?.id;
+
+      if (!fanUserId) {
+        return { success: false, error: "Not authenticated" };
+      }
+
+      // Run full validation
+      const validation = await validateStreamEligibility(userEmail, fanUserId);
+      
+      if (!validation.valid) {
+        if (validation.requiresCredits) {
+          toast.error("Insufficient credits", {
+            description: "You need 1 credit to stream. Add credits to continue."
+          });
+          return { 
+            success: false, 
+            error: validation.error,
+            requiresCredits: true 
+          };
+        }
+        
+        if (validation.requiresAgreement) {
+          toast.error("Agreement required", {
+            description: validation.error
+          });
+          return { 
+            success: false, 
+            error: validation.error,
+            requiresAgreement: true 
+          };
+        }
+        
+        toast.error("Stream failed", {
+          description: validation.error
+        });
+        return { success: false, error: validation.error };
+      }
+
+      // 1. Get fan's current credits (re-fetch for atomicity)
       const { data: fanData, error: fanError } = await supabase
         .from("vault_members")
         .select("id, credits")
@@ -39,26 +150,20 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
         return { success: false, error: "Could not verify wallet balance" };
       }
 
+      // Double-check credits again for race condition protection
       if (fanData.credits < 1) {
         toast.error("Insufficient credits", {
-          description: "Add credits to continue streaming"
+          description: "You need 1 credit to stream. Add credits to continue."
         });
-        return { success: false, error: "Insufficient credits" };
+        return { success: false, error: "Insufficient credits", requiresCredits: true };
       }
 
-      // Get current user's auth ID for fan_id
-      const { data: { user } } = await supabase.auth.getUser();
-      const fanUserId = user?.id;
-
-      if (!fanUserId) {
-        return { success: false, error: "Not authenticated" };
-      }
-
-      // 2. Deduct 1 credit from fan
+      // 2. Deduct 1 credit from fan (atomic operation)
       const { error: deductError } = await supabase
         .from("vault_members")
         .update({ credits: fanData.credits - 1 })
-        .eq("email", userEmail);
+        .eq("email", userEmail)
+        .eq("credits", fanData.credits); // Optimistic lock
 
       if (deductError) {
         console.error("Error deducting credit:", deductError);
@@ -102,6 +207,13 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
         ? artistEmail.replace("@musicexclusive.com", "").replace("artist_", "")
         : artistEmail;
 
+      // Get fan display name for record keeping
+      const { data: fanProfile } = await supabase
+        .from("vault_members")
+        .select("display_name")
+        .eq("email", userEmail)
+        .maybeSingle();
+
       await supabase.from("stream_ledger").insert({
         fan_id: fanUserId,
         fan_email: userEmail,
@@ -123,11 +235,14 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
       return { success: true };
     } catch (error) {
       console.error("Stream charge error:", error);
+      toast.error("Something went wrong", {
+        description: "Please try again."
+      });
       return { success: false, error: "Something went wrong" };
     } finally {
       setIsProcessing(false);
     }
-  }, [userEmail]);
+  }, [userEmail, validateStreamEligibility]);
 
   const resetSessionCharges = useCallback(() => {
     chargedTracksRef.current.clear();
