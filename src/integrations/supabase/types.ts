@@ -515,6 +515,8 @@ export type Database = {
           issued_at: string
           last_attempt_at: string | null
           name: string
+          next_draw_date: string | null
+          status: string
           used_at: string | null
         }
         Insert: {
@@ -526,6 +528,8 @@ export type Database = {
           issued_at?: string
           last_attempt_at?: string | null
           name: string
+          next_draw_date?: string | null
+          status?: string
           used_at?: string | null
         }
         Update: {
@@ -537,6 +541,8 @@ export type Database = {
           issued_at?: string
           last_attempt_at?: string | null
           name?: string
+          next_draw_date?: string | null
+          status?: string
           used_at?: string | null
         }
         Relationships: []
