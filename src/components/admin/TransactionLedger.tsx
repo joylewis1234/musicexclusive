@@ -45,8 +45,8 @@ export function TransactionLedger() {
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
-    artistId: "",
-    trackId: "",
+    artistId: "all",
+    trackId: "all",
     fanEmail: "",
   });
 
@@ -86,10 +86,10 @@ export function TransactionLedger() {
       if (filters.dateTo) {
         query = query.lte("created_at", filters.dateTo + "T23:59:59");
       }
-      if (filters.artistId) {
+      if (filters.artistId && filters.artistId !== "all") {
         query = query.eq("artist_id", filters.artistId);
       }
-      if (filters.trackId) {
+      if (filters.trackId && filters.trackId !== "all") {
         query = query.eq("track_id", filters.trackId);
       }
       if (filters.fanEmail) {
@@ -143,7 +143,7 @@ export function TransactionLedger() {
   };
 
   const clearFilters = () => {
-    setFilters({ dateFrom: "", dateTo: "", artistId: "", trackId: "", fanEmail: "" });
+    setFilters({ dateFrom: "", dateTo: "", artistId: "all", trackId: "all", fanEmail: "" });
   };
 
   const exportCSV = () => {
@@ -233,8 +233,8 @@ export function TransactionLedger() {
             <SelectTrigger className="bg-background/50">
               <SelectValue placeholder="All Artists" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Artists</SelectItem>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all">All Artists</SelectItem>
               {artists.map((artist) => (
                 <SelectItem key={artist.id} value={artist.id}>{artist.artist_name}</SelectItem>
               ))}
@@ -244,8 +244,8 @@ export function TransactionLedger() {
             <SelectTrigger className="bg-background/50">
               <SelectValue placeholder="All Tracks" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="">All Tracks</SelectItem>
+            <SelectContent className="bg-card border-border">
+              <SelectItem value="all">All Tracks</SelectItem>
               {tracks.map((track) => (
                 <SelectItem key={track.id} value={track.id}>{track.title}</SelectItem>
               ))}
