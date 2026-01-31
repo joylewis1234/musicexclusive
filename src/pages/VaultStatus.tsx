@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
@@ -6,8 +6,10 @@ import { Unlock, Sparkles, ChevronLeft, Home } from "lucide-react";
 import vaultPortal from "@/assets/vault-portal.png";
 import { cn } from "@/lib/utils";
 import { useUnlockFeedback } from "@/hooks/useUnlockFeedback";
+import { SpinWheel } from "@/components/vault/SpinWheel";
 
 type VaultState = "winner" | "not_selected";
+type RevealPhase = "spinning" | "revealed";
 
 interface LocationState {
   email?: string;
@@ -26,6 +28,8 @@ const VaultStatus = () => {
 
   // Use local state for demo controls
   const [demoState, setDemoState] = useState<VaultState | null>(null);
+  // Track reveal phase: spinning wheel first, then show result
+  const [revealPhase, setRevealPhase] = useState<RevealPhase>("spinning");
   // Track if unlock animation has played
   const [hasAnimated, setHasAnimated] = useState(false);
   // Track if currently unlocking (for frame glow)
@@ -37,9 +41,14 @@ const VaultStatus = () => {
   const vaultState: VaultState = demoState || state?.vaultState || "winner";
   const userName = state?.name || "Vault Member";
 
-  // Reset animation state when switching to winner state
+  // Handle spin wheel completion
+  const handleSpinComplete = useCallback(() => {
+    setRevealPhase("revealed");
+  }, []);
+
+  // Reset animation state when switching to winner state (only after reveal)
   useEffect(() => {
-    if (vaultState === "winner") {
+    if (revealPhase === "revealed" && vaultState === "winner") {
       setHasAnimated(false);
       setIsUnlocking(true);
       setShowFlash(false);
@@ -68,7 +77,14 @@ const VaultStatus = () => {
         clearTimeout(unlockTimer);
       };
     }
-  }, [vaultState, demoState, triggerUnlockFeedback]);
+  }, [revealPhase, vaultState, triggerUnlockFeedback]);
+
+  // Reset to spinning phase when demo state changes
+  useEffect(() => {
+    if (demoState !== null) {
+      setRevealPhase("spinning");
+    }
+  }, [demoState]);
 
   const renderWinner = () => (
     <div className="flex flex-col items-center text-center animate-fade-in">
@@ -183,6 +199,17 @@ const VaultStatus = () => {
   );
 
   const renderContent = () => {
+    // Show spin wheel first
+    if (revealPhase === "spinning") {
+      return (
+        <SpinWheel 
+          result={vaultState} 
+          onComplete={handleSpinComplete} 
+        />
+      );
+    }
+
+    // Show result after spin
     switch (vaultState) {
       case "winner":
         return renderWinner();
@@ -222,18 +249,26 @@ const VaultStatus = () => {
       </header>
 
       <div className="flex-1 flex items-center justify-center">
-        <div className="w-full max-w-md">
-          <GlowCard
-            className={cn(
-              "group",
-              vaultState === "winner" && !hasAnimated && "animate-vault-unlock"
-            )}
-            glowColor={vaultState === "winner" ? "primary" : "secondary"}
-            unlocking={vaultState === "winner" && isUnlocking}
-          >
-            <div className="p-8 md:p-10">{renderContent()}</div>
-          </GlowCard>
-        </div>
+        {revealPhase === "spinning" ? (
+          // Spin wheel takes full width, no card wrapper
+          <div className="w-full max-w-md">
+            {renderContent()}
+          </div>
+        ) : (
+          // Result card with glow effects
+          <div className="w-full max-w-md">
+            <GlowCard
+              className={cn(
+                "group",
+                vaultState === "winner" && !hasAnimated && "animate-vault-unlock"
+              )}
+              glowColor={vaultState === "winner" ? "primary" : "secondary"}
+              unlocking={vaultState === "winner" && isUnlocking}
+            >
+              <div className="p-8 md:p-10">{renderContent()}</div>
+            </GlowCard>
+          </div>
+        )}
       </div>
 
       {/* Demo Controls - Only visible in development */}
