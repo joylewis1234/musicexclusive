@@ -25,6 +25,7 @@ import {
   Crown,
 } from "lucide-react";
 import WeeklyTransparencyReport from "@/components/artist/WeeklyTransparencyReport";
+import EarningsDebugPanel from "@/components/artist/EarningsDebugPanel";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 
 interface PayoutBatch {
@@ -103,6 +104,26 @@ const ArtistEarnings = () => {
       
       setArtistId(profile.id);
       
+      // Fetch stream_ledger entries for this artist (using artist_profiles.id)
+      const { data: streamData } = await supabase
+        .from("stream_ledger")
+        .select("amount_artist, payout_status, created_at")
+        .eq("artist_id", profile.id);
+      
+      // Calculate pending and paid from stream_ledger
+      let pendingFromStreams = 0;
+      let paidFromStreams = 0;
+      
+      (streamData || []).forEach((stream) => {
+        const amount = Number(stream.amount_artist);
+        if (stream.payout_status === "pending") {
+          pendingFromStreams += amount;
+        } else if (stream.payout_status === "paid") {
+          paidFromStreams += amount;
+        }
+      });
+      
+      // Fetch payout_batches for history display
       const { data: batchData } = await supabase
         .from("payout_batches")
         .select("*")
@@ -111,20 +132,19 @@ const ArtistEarnings = () => {
         
       setBatches(batchData || []);
       
-      const pending = (batchData || [])
-        .filter((b) => b.status === "pending" || b.status === "processing")
-        .reduce((sum, b) => sum + Number(b.total_usd), 0);
-      const paid = (batchData || [])
+      const paidFromBatches = (batchData || [])
         .filter((b) => b.status === "paid")
         .reduce((sum, b) => sum + Number(b.total_usd), 0);
-      const lifetime = pending + paid;
       
       const lastPaid = (batchData || []).find((b) => b.status === "paid" && b.paid_at);
       
+      // Use stream_ledger as source of truth for current totals
+      const lifetime = pendingFromStreams + paidFromStreams;
+      
       setTotals({
         lifetime,
-        pending,
-        paid,
+        pending: pendingFromStreams,
+        paid: paidFromStreams,
         totalPayouts: (batchData || []).filter((b) => b.status === "paid").length,
       });
       setLastPayoutDate(lastPaid?.paid_at || null);
@@ -556,6 +576,9 @@ const ArtistEarnings = () => {
               )}
             </div>
           </section>
+
+          {/* Debug Panel */}
+          <EarningsDebugPanel />
         </div>
       </main>
 
