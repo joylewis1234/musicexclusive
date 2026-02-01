@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -239,19 +239,24 @@ export const FanStreamReport = () => {
     URL.revokeObjectURL(url);
   };
 
-  // Filter summary data
-  const filteredSummary = summaryData.filter(row => {
-    const matchesSearch = 
-      row.fan_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      row.fan_display_name.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesMembership = 
-      membershipFilter === "all_memberships" ||
-      (membershipFilter === "active" && row.membership_type === "Active Member") ||
-      (membershipFilter === "inactive" && row.membership_type === "Inactive");
-    
-    return matchesSearch && matchesMembership;
-  });
+  // Filter summary data based on search and membership filter
+  const filteredSummary = useMemo(() => {
+    return summaryData.filter(row => {
+      const matchesSearch = 
+        row.fan_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        row.fan_display_name.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      let matchesMembership = true;
+      if (membershipFilter === "active") {
+        matchesMembership = row.membership_type === "Active Member";
+      } else if (membershipFilter === "inactive") {
+        matchesMembership = row.membership_type === "Inactive";
+      }
+      // For "all_memberships", matchesMembership remains true
+      
+      return matchesSearch && matchesMembership;
+    });
+  }, [summaryData, searchTerm, membershipFilter]);
 
   // Calculate totals
   const totals = {
@@ -325,7 +330,13 @@ export const FanStreamReport = () => {
                 className="pl-10"
               />
             </div>
-            <Select value={membershipFilter} onValueChange={setMembershipFilter}>
+          <Select 
+            value={membershipFilter} 
+            onValueChange={(value) => {
+              console.log("Membership filter changed to:", value);
+              setMembershipFilter(value);
+            }}
+          >
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by membership" />
               </SelectTrigger>
