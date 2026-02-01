@@ -1,28 +1,16 @@
 import { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { GlowCard } from "@/components/ui/GlowCard";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, Home, User, Camera, Pencil, Check, X, Loader2, LogOut, Star } from "lucide-react";
+import { ChevronLeft, Home, User, Camera, Pencil, Check, X, Loader2, LogOut, Star, Heart } from "lucide-react";
 import { useFanProfile } from "@/hooks/useFanProfile";
+import { useFanTopArtists } from "@/hooks/useFanTopArtists";
 import { useAuth } from "@/contexts/AuthContext";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-
-import artist1 from "@/assets/artist-1.jpg";
-import artist2 from "@/assets/artist-2.jpg";
-import artist3 from "@/assets/artist-3.jpg";
-
-const topArtists = [
-  { id: "1", name: "NOVA", streams: 47, imageUrl: artist1 },
-  { id: "2", name: "AURA", streams: 32, imageUrl: artist2 },
-  { id: "3", name: "ECHO", streams: 28, imageUrl: artist3 },
-  { id: "1", name: "PULSE", streams: 19, imageUrl: artist1 },
-  { id: "2", name: "DRIFT", streams: 12, imageUrl: artist2 },
-];
 
 
 const FanProfile = () => {
@@ -47,6 +35,28 @@ const FanProfile = () => {
   const [editedName, setEditedName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSuperfan, setIsSuperfan] = useState(false);
+  const [fanVaultId, setFanVaultId] = useState<string | null>(null);
+
+  // Fetch vault member id for top artists query
+  useEffect(() => {
+    const fetchFanVaultId = async () => {
+      if (!user?.email) return;
+      
+      const { data } = await supabase
+        .from("vault_members")
+        .select("id")
+        .eq("email", user.email)
+        .maybeSingle();
+      
+      if (data) {
+        setFanVaultId(data.id);
+      }
+    };
+    
+    fetchFanVaultId();
+  }, [user?.email]);
+
+  const { topArtists, isLoading: isLoadingArtists } = useFanTopArtists(fanVaultId);
 
   // Fetch superfan status from vault_members
   useEffect(() => {
@@ -292,34 +302,53 @@ const FanProfile = () => {
             Your Top Artists
           </h2>
           
-          <div className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
-            <div className="flex gap-3">
-              {topArtists.map((artist, index) => (
-                <div
-                  key={`${artist.name}-${index}`}
-                  className="flex-shrink-0 w-[100px] text-center group cursor-pointer"
-                  onClick={() => navigate(`/artist/${artist.id}`)}
-                >
-                  <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden mb-2 border-2 border-border group-hover:border-primary/50 transition-colors">
-                    <img
-                      src={artist.imageUrl}
-                      alt={artist.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-background/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <User className="w-8 h-8 text-primary" />
-                    </div>
-                  </div>
-                  <p className="font-display text-xs font-semibold text-foreground truncate">
-                    {artist.name}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    {artist.streams} streams
-                  </p>
-                </div>
-              ))}
+          {isLoadingArtists ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
             </div>
-          </div>
+          ) : topArtists.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Heart className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">No liked artists yet</p>
+              <p className="text-xs mt-1">Heart tracks to see your favorites here</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide">
+              <div className="flex gap-3">
+                {topArtists.map((artist) => (
+                  <div
+                    key={artist.id}
+                    className="flex-shrink-0 w-[100px] text-center group cursor-pointer"
+                    onClick={() => navigate(`/artist/${artist.id}`)}
+                  >
+                    <div className="relative w-[100px] h-[100px] rounded-full overflow-hidden mb-2 border-2 border-border group-hover:border-primary/50 transition-colors">
+                      {artist.imageUrl ? (
+                        <img
+                          src={artist.imageUrl}
+                          alt={artist.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted/30 flex items-center justify-center">
+                          <User className="w-10 h-10 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-background/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <User className="w-8 h-8 text-primary" />
+                      </div>
+                    </div>
+                    <p className="font-display text-xs font-semibold text-foreground truncate">
+                      {artist.name}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground flex items-center justify-center gap-1">
+                      <Heart className="w-3 h-3 fill-current" />
+                      {artist.likeCount} {artist.likeCount === 1 ? "like" : "likes"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
 
