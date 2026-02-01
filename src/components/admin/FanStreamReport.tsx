@@ -29,14 +29,20 @@ interface FanStreamSummary {
 }
 
 interface FanStreamDetail {
-  id: string;
+  stream_id: string;
+  fan_id: string;
   fan_email: string;
+  fan_display_name: string;
   artist_id: string;
+  artist_name: string;
   track_id: string;
+  track_title: string;
   credits_spent: number;
   amount_total: number;
-  created_at: string;
+  amount_artist: number;
+  amount_platform: number;
   payout_status: string;
+  created_at: string;
 }
 
 export const FanStreamReport = () => {
@@ -54,9 +60,9 @@ export const FanStreamReport = () => {
   const fetchSummaryData = async () => {
     setIsLoading(true);
     try {
-      // Fetch all stream ledger entries
+      // Use the unified admin_stream_report_view
       const { data: streams, error } = await supabase
-        .from("stream_ledger")
+        .from("admin_stream_report_view")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -65,7 +71,7 @@ export const FanStreamReport = () => {
       // Aggregate by fan
       const fanMap = new Map<string, FanStreamSummary>();
 
-      streams?.forEach((stream: FanStreamDetail) => {
+      streams?.forEach((stream) => {
         const existing = fanMap.get(stream.fan_email);
         if (existing) {
           existing.total_streams += 1;
@@ -79,12 +85,12 @@ export const FanStreamReport = () => {
           }
         } else {
           fanMap.set(stream.fan_email, {
-            fan_id: (stream as any).fan_id,
+            fan_id: stream.fan_id,
             fan_email: stream.fan_email,
             total_streams: 1,
             total_credits: stream.credits_spent,
             total_spent: Number(stream.amount_total),
-            unique_artists: 0, // Will calculate separately
+            unique_artists: 0,
             unique_tracks: 0,
             first_stream: stream.created_at,
             last_stream: stream.created_at,
@@ -94,9 +100,9 @@ export const FanStreamReport = () => {
 
       // Calculate unique artists/tracks per fan
       fanMap.forEach((summary, email) => {
-        const fanStreams = streams?.filter((s: FanStreamDetail) => s.fan_email === email) || [];
-        summary.unique_artists = new Set(fanStreams.map((s: FanStreamDetail) => s.artist_id)).size;
-        summary.unique_tracks = new Set(fanStreams.map((s: FanStreamDetail) => s.track_id)).size;
+        const fanStreams = streams?.filter((s) => s.fan_email === email) || [];
+        summary.unique_artists = new Set(fanStreams.map((s) => s.artist_id)).size;
+        summary.unique_tracks = new Set(fanStreams.map((s) => s.track_id)).size;
       });
 
       setSummaryData(Array.from(fanMap.values()));
@@ -113,8 +119,9 @@ export const FanStreamReport = () => {
     setIsLoading(true);
 
     try {
+      // Use the unified view for details too
       const { data, error } = await supabase
-        .from("stream_ledger")
+        .from("admin_stream_report_view")
         .select("*")
         .eq("fan_email", fanEmail)
         .order("created_at", { ascending: false });
@@ -132,7 +139,7 @@ export const FanStreamReport = () => {
     const data = viewMode === "summary" ? summaryData : detailData;
     const headers = viewMode === "summary"
       ? ["Fan Email", "Total Streams", "Credits Spent", "Amount Spent ($)", "Unique Artists", "Unique Tracks", "First Stream", "Last Stream"]
-      : ["Fan Email", "Artist ID", "Track ID", "Credits", "Amount ($)", "Date", "Payout Status"];
+      : ["Fan Email", "Artist", "Track", "Credits", "Amount ($)", "Date", "Payout Status"];
 
     const rows = viewMode === "summary"
       ? summaryData.map(row => [
@@ -147,8 +154,8 @@ export const FanStreamReport = () => {
         ])
       : detailData.map(row => [
           row.fan_email,
-          row.artist_id,
-          row.track_id,
+          row.artist_name,
+          row.track_title,
           row.credits_spent,
           Number(row.amount_total).toFixed(2),
           format(new Date(row.created_at), "yyyy-MM-dd HH:mm"),
@@ -292,8 +299,8 @@ export const FanStreamReport = () => {
               <TableHeader>
                 <TableRow className="bg-muted/30">
                   <TableHead>Date</TableHead>
-                  <TableHead>Artist ID</TableHead>
-                  <TableHead>Track ID</TableHead>
+                  <TableHead>Artist</TableHead>
+                  <TableHead>Track</TableHead>
                   <TableHead className="text-right">Credits</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -301,12 +308,12 @@ export const FanStreamReport = () => {
               </TableHeader>
               <TableBody>
                 {detailData.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.stream_id}>
                     <TableCell className="text-sm">
                       {format(new Date(row.created_at), "MMM d, yyyy HH:mm")}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">{row.artist_id.slice(0, 8)}...</TableCell>
-                    <TableCell className="font-mono text-xs">{row.track_id.slice(0, 8)}...</TableCell>
+                    <TableCell className="text-sm">{row.artist_name}</TableCell>
+                    <TableCell className="text-sm max-w-[150px] truncate">{row.track_title}</TableCell>
                     <TableCell className="text-right">{row.credits_spent}</TableCell>
                     <TableCell className="text-right">${Number(row.amount_total).toFixed(2)}</TableCell>
                     <TableCell>
