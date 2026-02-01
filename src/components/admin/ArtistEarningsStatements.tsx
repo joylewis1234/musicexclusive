@@ -15,11 +15,16 @@ interface ArtistProfile {
 
 interface EarningEntry {
   id: string;
-  credits_delta: number;
-  usd_delta: number;
-  reference: string | null;
+  credits_spent: number;
+  amount_artist: number;
+  amount_platform: number;
+  amount_total: number;
+  track_id: string;
+  track_title?: string;
+  fan_email: string;
   created_at: string;
   payout_batch_id: string | null;
+  payout_status: string;
 }
 
 interface PayoutBatch {
@@ -27,6 +32,10 @@ interface PayoutBatch {
   status: string;
   paid_at: string | null;
   total_usd: number;
+  total_credits: number;
+  total_gross: number;
+  total_artist_net: number;
+  total_platform_fee: number;
   week_start: string;
   week_end: string;
 }
@@ -57,12 +66,26 @@ export function ArtistEarningsStatements() {
     
     setIsLoading(true);
     try {
-      // Fetch earnings from ledger
+      // Get the artist profile to find the profile ID (used in stream_ledger.artist_id)
+      const { data: artistProfile } = await supabase
+        .from("artist_profiles")
+        .select("id, user_id")
+        .eq("user_id", selectedArtist)
+        .maybeSingle();
+
+      if (!artistProfile) {
+        console.error("Artist profile not found for user_id:", selectedArtist);
+        setEarnings([]);
+        setPayouts([]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch earnings from stream_ledger using the admin view for track titles
       let earningsQuery = supabase
-        .from("credit_ledger")
-        .select("*")
-        .eq("type", "ARTIST_EARNING")
-        .ilike("reference", `artist:${selectedArtist}%`)
+        .from("admin_stream_report_view")
+        .select("stream_id, credits_spent, amount_artist, amount_platform, amount_total, track_id, track_title, fan_email, created_at, payout_batch_id, payout_status")
+        .eq("artist_id", artistProfile.id)
         .order("created_at", { ascending: false });
 
       if (dateFrom) {
@@ -72,10 +95,30 @@ export function ArtistEarningsStatements() {
         earningsQuery = earningsQuery.lte("created_at", dateTo + "T23:59:59");
       }
 
-      const { data: earningsData } = await earningsQuery;
-      setEarnings(earningsData || []);
+      const { data: earningsData, error: earningsError } = await earningsQuery;
+      
+      if (earningsError) {
+        console.error("Error fetching earnings:", earningsError);
+      }
+      
+      // Map the view data to our expected format
+      const mappedEarnings: EarningEntry[] = (earningsData || []).map((e: any) => ({
+        id: e.stream_id,
+        credits_spent: e.credits_spent,
+        amount_artist: e.amount_artist,
+        amount_platform: e.amount_platform,
+        amount_total: e.amount_total,
+        track_id: e.track_id,
+        track_title: e.track_title,
+        fan_email: e.fan_email,
+        created_at: e.created_at,
+        payout_batch_id: e.payout_batch_id,
+        payout_status: e.payout_status,
+      }));
+      
+      setEarnings(mappedEarnings);
 
-      // Fetch payout batches
+      // Fetch payout batches using the artist's user_id
       let payoutsQuery = supabase
         .from("payout_batches")
         .select("*")
@@ -101,27 +144,30 @@ export function ArtistEarningsStatements() {
   const exportCSV = () => {
     const artistName = artists.find(a => a.user_id === selectedArtist)?.artist_name || "Unknown";
     
-    const headers = ["Date", "Type", "Credits", "USD", "Reference", "Status"];
+    const headers = ["Date", "Track", "Fan Email", "Credits", "Artist Share", "Platform Share", "Total", "Status"];
     const rows = earnings.map(e => {
-      const batch = payouts.find(p => p.id === e.payout_batch_id);
       return [
         format(new Date(e.created_at), "yyyy-MM-dd HH:mm"),
-        "EARNING",
-        Math.abs(e.credits_delta).toString(),
-        Math.abs(Number(e.usd_delta)).toFixed(2),
-        e.reference || "",
-        batch?.status || "unbatched",
+        e.track_title || e.track_id,
+        e.fan_email,
+        e.credits_spent.toString(),
+        Number(e.amount_artist).toFixed(2),
+        Number(e.amount_platform).toFixed(2),
+        Number(e.amount_total).toFixed(2),
+        e.payout_status,
       ];
     });
 
-    // Add payout rows
+    // Add payout summary rows
     for (const payout of payouts) {
       rows.push([
-        payout.paid_at ? format(new Date(payout.paid_at), "yyyy-MM-dd HH:mm") : "",
-        "PAYOUT",
+        payout.paid_at ? format(new Date(payout.paid_at), "yyyy-MM-dd HH:mm") : format(new Date(payout.week_end), "yyyy-MM-dd"),
+        "--- PAYOUT BATCH ---",
         "",
-        Number(payout.total_usd).toFixed(2),
-        "",
+        payout.total_credits.toString(),
+        Number(payout.total_artist_net).toFixed(2),
+        Number(payout.total_platform_fee).toFixed(2),
+        Number(payout.total_gross).toFixed(2),
         payout.status,
       ]);
     }
@@ -136,10 +182,10 @@ export function ArtistEarningsStatements() {
     URL.revokeObjectURL(url);
   };
 
-  // Calculate totals
-  const totalEarned = earnings.reduce((sum, e) => sum + Math.abs(Number(e.usd_delta)), 0);
-  const totalPaid = payouts.filter(p => p.status === "paid").reduce((sum, p) => sum + Number(p.total_usd), 0);
-  const totalPending = payouts.filter(p => p.status === "pending").reduce((sum, p) => sum + Number(p.total_usd), 0);
+  // Calculate totals from stream earnings (artist share)
+  const totalEarned = earnings.reduce((sum, e) => sum + Number(e.amount_artist), 0);
+  const totalPaid = payouts.filter(p => p.status === "paid").reduce((sum, p) => sum + Number(p.total_artist_net), 0);
+  const totalPending = payouts.filter(p => p.status === "pending").reduce((sum, p) => sum + Number(p.total_artist_net), 0);
 
   return (
     <div className="space-y-4">
@@ -218,41 +264,34 @@ export function ArtistEarningsStatements() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Credits</TableHead>
-                      <TableHead className="text-right">USD</TableHead>
-                      <TableHead>Batch Status</TableHead>
+                      <TableHead>Track</TableHead>
+                      <TableHead className="text-right">Artist Share</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {earnings.map((entry) => {
-                      const batch = payouts.find(p => p.id === entry.payout_batch_id);
-                      return (
-                        <TableRow key={entry.id}>
-                          <TableCell className="text-sm">
-                            {format(new Date(entry.created_at), "MMM d, yyyy HH:mm")}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-green-400">
-                            +{Math.abs(entry.credits_delta)}
-                          </TableCell>
-                          <TableCell className="text-right font-mono text-green-400">
-                            +${Math.abs(Number(entry.usd_delta)).toFixed(2)}
-                          </TableCell>
-                          <TableCell>
-                            {batch ? (
-                              <span className={`text-xs px-2 py-1 rounded-full ${
-                                batch.status === "paid" ? "bg-green-500/20 text-green-400" :
-                                batch.status === "pending" ? "bg-yellow-500/20 text-yellow-400" :
-                                "bg-muted text-muted-foreground"
-                              }`}>
-                                {batch.status}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Unbatched</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
+                    {earnings.map((entry) => (
+                      <TableRow key={entry.id}>
+                        <TableCell className="text-sm whitespace-nowrap">
+                          {format(new Date(entry.created_at), "MMM d, HH:mm")}
+                        </TableCell>
+                        <TableCell className="text-sm max-w-[150px] truncate">
+                          {entry.track_title || "Unknown Track"}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-green-400">
+                          +${Number(entry.amount_artist).toFixed(2)}
+                        </TableCell>
+                        <TableCell>
+                          <span className={`text-xs px-2 py-1 rounded-full ${
+                            entry.payout_status === "paid" ? "bg-green-500/20 text-green-400" :
+                            entry.payout_status === "pending" ? "bg-yellow-500/20 text-yellow-400" :
+                            "bg-muted text-muted-foreground"
+                          }`}>
+                            {entry.payout_status}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>
