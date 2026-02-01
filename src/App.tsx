@@ -39,6 +39,7 @@ import FanAgreementStep from "./pages/FanAgreementStep";
 import FanAuth from "./pages/auth/FanAuth";
 import ArtistAuth from "./pages/auth/ArtistAuth";
 import ArtistLogin from "./pages/auth/ArtistLogin";
+import AdminLogin from "./pages/auth/AdminLogin";
 import AccessRestricted from "./pages/AccessRestricted";
 
 // Fan pages (protected)
@@ -110,6 +111,7 @@ const App = () => (
                 <Route path="/auth/fan" element={<FanAuth />} />
                 <Route path="/auth/artist" element={<ArtistAuth />} />
                 <Route path="/artist/login" element={<ArtistLogin />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/access-restricted" element={<AccessRestricted />} />
