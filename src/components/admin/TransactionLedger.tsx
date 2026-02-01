@@ -21,7 +21,6 @@ interface StreamEntry {
   amount_total: number;
   amount_artist: number;
   amount_platform: number;
-  payout_status: string;
   created_at: string;
 }
 
@@ -44,8 +43,8 @@ export function TransactionLedger() {
   const [filters, setFilters] = useState({
     dateFrom: "",
     dateTo: "",
-    artistId: "all",
-    trackId: "all",
+    artistId: "all_artists",
+    trackId: "all_tracks",
     fanEmail: "",
   });
 
@@ -73,10 +72,10 @@ export function TransactionLedger() {
   const fetchEntries = async () => {
     setIsLoading(true);
     try {
-      // Use the new unified admin_stream_report_view
+      // Use admin_stream_report_view as the ONLY data source
       let query = supabase
         .from("admin_stream_report_view")
-        .select("*")
+        .select("stream_id, fan_id, fan_email, fan_display_name, artist_id, artist_name, track_id, track_title, credits_spent, amount_total, amount_artist, amount_platform, created_at")
         .order("created_at", { ascending: false })
         .limit(500);
 
@@ -86,10 +85,10 @@ export function TransactionLedger() {
       if (filters.dateTo) {
         query = query.lte("created_at", filters.dateTo + "T23:59:59");
       }
-      if (filters.artistId && filters.artistId !== "all") {
+      if (filters.artistId && filters.artistId !== "all_artists") {
         query = query.eq("artist_id", filters.artistId);
       }
-      if (filters.trackId && filters.trackId !== "all") {
+      if (filters.trackId && filters.trackId !== "all_tracks") {
         query = query.eq("track_id", filters.trackId);
       }
       if (filters.fanEmail) {
@@ -101,20 +100,19 @@ export function TransactionLedger() {
 
       // Map the view columns to our interface
       const mappedEntries: StreamEntry[] = (data || []).map(e => ({
-        stream_id: e.stream_id,
-        fan_id: e.fan_id,
-        fan_email: e.fan_email,
+        stream_id: e.stream_id || "",
+        fan_id: e.fan_id || "",
+        fan_email: e.fan_email || "",
         fan_display_name: e.fan_display_name || e.fan_email?.split("@")[0] || "Unknown",
-        artist_id: e.artist_id,
+        artist_id: e.artist_id || "",
         artist_name: e.artist_name || "Unknown",
-        track_id: e.track_id,
+        track_id: e.track_id || "",
         track_title: e.track_title || "Unknown",
-        credits_spent: e.credits_spent,
-        amount_total: e.amount_total,
-        amount_artist: e.amount_artist,
-        amount_platform: e.amount_platform,
-        payout_status: e.payout_status,
-        created_at: e.created_at,
+        credits_spent: e.credits_spent || 0,
+        amount_total: Number(e.amount_total) || 0,
+        amount_artist: Number(e.amount_artist) || 0,
+        amount_platform: Number(e.amount_platform) || 0,
+        created_at: e.created_at || "",
       }));
 
       setEntries(mappedEntries);
@@ -130,21 +128,21 @@ export function TransactionLedger() {
   };
 
   const clearFilters = () => {
-    setFilters({ dateFrom: "", dateTo: "", artistId: "all", trackId: "all", fanEmail: "" });
+    setFilters({ dateFrom: "", dateTo: "", artistId: "all_artists", trackId: "all_tracks", fanEmail: "" });
   };
 
+  // Export the SAME filtered dataset shown on screen
   const exportCSV = () => {
     const headers = [
       "Timestamp", 
       "Fan Name", 
       "Fan Email", 
-      "Artist", 
-      "Track", 
+      "Artist Name",
+      "Track Title", 
       "Credits", 
-      "Dollar Value", 
-      "Platform Cut", 
-      "Artist Payout",
-      "Status"
+      "Total $", 
+      "$ to Artist",
+      "$ to Platform"
     ];
     const rows = entries.map(e => [
       format(new Date(e.created_at), "yyyy-MM-dd HH:mm:ss"),
@@ -153,10 +151,9 @@ export function TransactionLedger() {
       e.artist_name || "",
       e.track_title || "",
       e.credits_spent.toString(),
-      Number(e.amount_total).toFixed(2),
-      Number(e.amount_platform).toFixed(2),
-      Number(e.amount_artist).toFixed(2),
-      e.payout_status,
+      e.amount_total.toFixed(2),
+      e.amount_artist.toFixed(2),
+      e.amount_platform.toFixed(2),
     ]);
 
     const csvContent = [headers.join(","), ...rows.map(r => r.map(c => `"${c}"`).join(","))].join("\n");
@@ -169,17 +166,17 @@ export function TransactionLedger() {
     URL.revokeObjectURL(url);
   };
 
-  // Calculate totals
+  // Calculate totals from filtered entries
   const totals = {
     totalStreams: entries.length,
-    totalRevenue: entries.reduce((sum, e) => sum + Number(e.amount_total), 0),
-    platformCut: entries.reduce((sum, e) => sum + Number(e.amount_platform), 0),
-    artistPayouts: entries.reduce((sum, e) => sum + Number(e.amount_artist), 0),
+    totalRevenue: entries.reduce((sum, e) => sum + e.amount_total, 0),
+    totalToArtists: entries.reduce((sum, e) => sum + e.amount_artist, 0),
+    totalPlatform: entries.reduce((sum, e) => sum + e.amount_platform, 0),
   };
 
   return (
     <div className="space-y-4">
-      {/* Summary Cards */}
+      {/* Summary Cards - Totals for selected date range */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <GlowCard className="p-4 text-center">
           <p className="text-2xl font-bold">{totals.totalStreams}</p>
@@ -190,12 +187,12 @@ export function TransactionLedger() {
           <p className="text-xs text-muted-foreground">Total Revenue</p>
         </GlowCard>
         <GlowCard className="p-4 text-center">
-          <p className="text-2xl font-bold text-primary">${totals.platformCut.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">Platform Cut</p>
+          <p className="text-2xl font-bold text-green-400">${totals.totalToArtists.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground">Total to Artists</p>
         </GlowCard>
         <GlowCard className="p-4 text-center">
-          <p className="text-2xl font-bold text-green-400">${totals.artistPayouts.toFixed(2)}</p>
-          <p className="text-xs text-muted-foreground">Artist Payouts</p>
+          <p className="text-2xl font-bold text-primary">${totals.totalPlatform.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground">Platform Share</p>
         </GlowCard>
       </div>
 
@@ -221,7 +218,7 @@ export function TransactionLedger() {
               <SelectValue placeholder="All Artists" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
-              <SelectItem value="all">All Artists</SelectItem>
+              <SelectItem value="all_artists">All Artists</SelectItem>
               {artists.map((artist) => (
                 <SelectItem key={artist.id} value={artist.id}>{artist.artist_name}</SelectItem>
               ))}
@@ -232,7 +229,7 @@ export function TransactionLedger() {
               <SelectValue placeholder="All Tracks" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
-              <SelectItem value="all">All Tracks</SelectItem>
+              <SelectItem value="all_tracks">All Tracks</SelectItem>
               {tracks.map((track) => (
                 <SelectItem key={track.id} value={track.id}>{track.title}</SelectItem>
               ))}
@@ -282,14 +279,14 @@ export function TransactionLedger() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
-                  <TableHead>Fan</TableHead>
-                  <TableHead>Artist</TableHead>
-                  <TableHead>Track</TableHead>
+                  <TableHead>Fan Name</TableHead>
+                  <TableHead>Fan Email</TableHead>
+                  <TableHead>Artist Name</TableHead>
+                  <TableHead>Track Title</TableHead>
                   <TableHead className="text-right">Credits</TableHead>
-                  <TableHead className="text-right">Dollar Value</TableHead>
-                  <TableHead className="text-right">Platform Cut</TableHead>
-                  <TableHead className="text-right">Artist Payout</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Total $</TableHead>
+                  <TableHead className="text-right">$ to Artist</TableHead>
+                  <TableHead className="text-right">$ to Platform</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -300,30 +297,19 @@ export function TransactionLedger() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                    entries.map((entry) => (
+                  entries.map((entry) => (
                     <TableRow key={entry.stream_id}>
                       <TableCell className="text-sm whitespace-nowrap">
                         {format(new Date(entry.created_at), "MMM d, yyyy HH:mm")}
                       </TableCell>
-                      <TableCell>
-                        <div className="text-sm font-medium">{entry.fan_display_name}</div>
-                        <div className="text-xs text-muted-foreground">{entry.fan_email}</div>
-                      </TableCell>
+                      <TableCell className="text-sm font-medium">{entry.fan_display_name}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{entry.fan_email}</TableCell>
                       <TableCell className="text-sm">{entry.artist_name}</TableCell>
                       <TableCell className="text-sm max-w-[150px] truncate">{entry.track_title}</TableCell>
                       <TableCell className="text-right font-mono">{entry.credits_spent}</TableCell>
-                      <TableCell className="text-right font-mono">${Number(entry.amount_total).toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono text-primary">${Number(entry.amount_platform).toFixed(2)}</TableCell>
-                      <TableCell className="text-right font-mono text-green-400">${Number(entry.amount_artist).toFixed(2)}</TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          entry.payout_status === "paid" ? "bg-green-500/20 text-green-400" :
-                          entry.payout_status === "pending" ? "bg-yellow-500/20 text-yellow-400" :
-                          "bg-muted text-muted-foreground"
-                        }`}>
-                          {entry.payout_status}
-                        </span>
-                      </TableCell>
+                      <TableCell className="text-right font-mono">${entry.amount_total.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-green-400">${entry.amount_artist.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-mono text-primary">${entry.amount_platform.toFixed(2)}</TableCell>
                     </TableRow>
                   ))
                 )}
