@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { 
   Shield, 
   Users, 
@@ -13,6 +14,14 @@ import {
   Wrench
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+
+const TOOLTIP_MESSAGES = {
+  fanActivity: "See each fan's stream history, membership status, and spending. Tap a fan to view detailed streams.",
+  streamLedger: "Source-of-truth log of every stream and the money split. All payouts and reports should match this ledger.",
+  artistPayouts: "Weekly payout batches grouped by artist and week. Mark payouts as Paid after sending funds.",
+  weeklyTransparency: "Artist-facing weekly statements showing streams, totals, and top tracks. Must match payout batches.",
+  dailyCompanyReport: "Daily business snapshot: revenue, streams, platform share, artist share, and top performers.",
+};
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -30,6 +39,7 @@ const AdminDashboard = () => {
       icon: Users,
       path: "/admin/fans",
       color: "text-blue-400",
+      tooltip: TOOLTIP_MESSAGES.fanActivity,
     },
     {
       title: "Stream Ledger / Transactions",
@@ -37,6 +47,7 @@ const AdminDashboard = () => {
       icon: Receipt,
       path: "/admin/reports",
       color: "text-green-400",
+      tooltip: TOOLTIP_MESSAGES.streamLedger,
     },
     {
       title: "Artist Payouts",
@@ -44,6 +55,7 @@ const AdminDashboard = () => {
       icon: DollarSign,
       path: "/admin/payouts",
       color: "text-yellow-400",
+      tooltip: TOOLTIP_MESSAGES.artistPayouts,
     },
     {
       title: "Weekly Transparency Reports",
@@ -51,6 +63,7 @@ const AdminDashboard = () => {
       icon: FileText,
       path: "/admin/reports?tab=statements",
       color: "text-purple-400",
+      tooltip: TOOLTIP_MESSAGES.weeklyTransparency,
     },
     {
       title: "Daily Company Report",
@@ -58,6 +71,7 @@ const AdminDashboard = () => {
       icon: BarChart3,
       path: "/admin/reports/daily",
       color: "text-pink-400",
+      tooltip: TOOLTIP_MESSAGES.dailyCompanyReport,
     },
     {
       title: "Test Tools",
@@ -127,9 +141,14 @@ const AdminDashboard = () => {
                       <link.icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                        {link.title}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {link.title}
+                        </h3>
+                        {link.tooltip && (
+                          <InfoTooltip message={link.tooltip} />
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                         {link.description}
                       </p>
