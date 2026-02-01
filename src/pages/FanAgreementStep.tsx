@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, FileText, Music, ShieldCheck, Ban, Check } from "lucide-react";
+import { ChevronLeft, Music, ShieldCheck, Ban, Check, Crown, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +81,7 @@ const FanAgreementStep = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Subtle page background gradient */}
-      <div className="fixed inset-0 bg-gradient-to-b from-muted/30 via-background to-background pointer-events-none" />
+      <div className="fixed inset-0 bg-gradient-to-b from-primary/5 via-background to-background pointer-events-none" />
       
       {/* Minimal Header */}
       <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/30">
@@ -99,53 +99,59 @@ const FanAgreementStep = () => {
       {/* Main Content */}
       <main className="relative z-10 px-5 md:px-7 py-8 md:py-12 pb-32">
         <div className="max-w-[680px] mx-auto w-full">
-          {/* Document Header */}
-          <div className="mb-8">
-            {/* Document Icon + Title */}
-            <div className="flex items-start gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary mt-0.5">
-                <FileText className="w-5 h-5" />
-              </div>
-              <div>
-                <h1 className="text-[26px] md:text-[30px] font-display font-bold tracking-tight text-foreground leading-tight">
-                  Vault Access Agreement
-                </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Music Exclusive™ Fan Terms
-                </p>
+          
+          {/* Celebration Header */}
+          <div className="text-center mb-8">
+            {/* Sparkle Icon */}
+            <div className="relative inline-flex items-center justify-center mb-4">
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
+              <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/30 flex items-center justify-center">
+                <Sparkles className="w-8 h-8 text-primary" />
               </div>
             </div>
             
-            {/* Summary Strip */}
-            <div className="mt-5 p-4 rounded-lg bg-muted/50 border border-border/40">
-              <p className="text-sm text-foreground/90 leading-relaxed">
-                Before you enter the Vault, please confirm the terms below. By agreeing, you acknowledge and accept the streaming terms, credit policies, and fair use guidelines.
-              </p>
-            </div>
+            {/* Title */}
+            <h1 className="text-2xl md:text-3xl font-display font-bold text-foreground mb-2">
+              YOU'RE IN <span className="inline-block">🎉</span>
+            </h1>
+            <p className="text-muted-foreground text-base">
+              One Last Step...
+            </p>
           </div>
 
-          {/* Divider */}
-          <div className="h-px bg-border/50 mb-8" />
+          {/* Agreement Card */}
+          <div className="rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
+            {/* Card Header */}
+            <div className="px-6 py-5 border-b border-border/30">
+              <div className="flex items-center gap-3 mb-3">
+                <Crown className="w-5 h-5 text-primary" />
+                <span className="text-primary font-semibold">Music Exclusive</span>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                Welcome to Music Exclusive — where fans get early access to music before the world hears it.
+              </p>
+              <p className="text-sm text-muted-foreground leading-relaxed mt-2">
+                Before you stream, we just need your agreement to keep the Vault fair, safe, and exclusive.
+              </p>
+            </div>
 
-          {/* Agreement Content Card */}
-          <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-[2px] overflow-hidden">
             {/* Agreement Items */}
             <div className="divide-y divide-border/30">
               {agreementItems.map((item, index) => (
-                <div key={index} className="p-5 md:p-6">
+                <div key={index} className="px-6 py-4">
                   <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                       <item.icon className="w-5 h-5 text-primary" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-semibold text-foreground mb-1">
+                    <div className="flex-1 min-w-0 pt-1">
+                      <h3 className="text-sm font-semibold text-foreground mb-0.5">
                         {item.title}
                       </h3>
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         {item.description}
                       </p>
                     </div>
-                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-1">
                       <Check className="w-3 h-3 text-primary" />
                     </div>
                   </div>
@@ -154,10 +160,10 @@ const FanAgreementStep = () => {
             </div>
 
             {/* Checkbox Agreement Section */}
-            <div className="border-t border-border/50 bg-muted/20 p-5 md:p-6">
+            <div className="border-t border-border/50 bg-muted/10 px-6 py-5">
               <div 
                 className={cn(
-                  "rounded-lg border p-4 cursor-pointer transition-all",
+                  "rounded-xl border p-4 cursor-pointer transition-all",
                   agreed 
                     ? "border-primary/50 bg-primary/5" 
                     : "border-border/50 bg-background/50 hover:border-primary/30"
@@ -169,14 +175,14 @@ const FanAgreementStep = () => {
                     id="agree-terms"
                     checked={agreed}
                     onCheckedChange={(checked) => setAgreed(checked === true)}
-                    className="mt-0.5 w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    className="mt-0.5 w-5 h-5 rounded-full border-2 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
                   <div className="flex-1 min-w-0">
                     <label
                       htmlFor="agree-terms"
                       className="text-sm text-foreground leading-relaxed cursor-pointer block"
                     >
-                      I have read and agree to the Music Exclusive{" "}
+                      I agree to the Music Exclusive{" "}
                       <Link
                         to="/terms"
                         className="text-primary hover:underline font-medium"
@@ -184,12 +190,11 @@ const FanAgreementStep = () => {
                         onClick={(e) => e.stopPropagation()}
                       >
                         Terms of Use
-                      </Link>
-                      , including the streaming credit policy and fair use guidelines.
+                      </Link>.
                     </label>
                     
                     {/* Additional Policy Links */}
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-3">
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
                       <Link 
                         to="/privacy" 
                         className="hover:text-primary transition-colors" 
@@ -218,22 +223,12 @@ const FanAgreementStep = () => {
 
       {/* Sticky Bottom Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-20 bg-background/95 backdrop-blur-sm border-t border-border/30 px-5 md:px-7 py-4">
-        <div className="max-w-[680px] mx-auto w-full flex items-center justify-between gap-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-            disabled={isSubmitting}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
-          
+        <div className="max-w-[680px] mx-auto w-full">
           <Button
             onClick={handleContinue}
             disabled={!agreed || isSubmitting}
-            className="min-w-[160px]"
+            className="w-full"
+            size="lg"
           >
             {isSubmitting ? "Saving..." : "Agree & Continue"}
           </Button>
