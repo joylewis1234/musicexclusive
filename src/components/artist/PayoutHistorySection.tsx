@@ -198,7 +198,8 @@ const PayoutHistorySection = ({ artistId, userId }: PayoutHistorySectionProps) =
       nextMonday = addDays(nextMonday, 7);
     }
     // Payouts run at 8:00 AM UTC on Mondays
-    return format(nextMonday, "MMM d, yyyy 'at' 8:00 AM 'UTC'");
+    // In date-fns v3, literal text must be wrapped in single quotes
+    return format(nextMonday, "MMM d, yyyy") + " at 8:00 AM UTC";
   };
 
   const getStatusBadge = (status: string) => {
