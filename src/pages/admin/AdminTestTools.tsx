@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowLeft, CalendarIcon, FlaskConical, Loader2, Zap } from "lucide-react";
+import { ArrowLeft, CalendarIcon, FlaskConical, Loader2, Zap, Play } from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,7 @@ export default function AdminTestTools() {
   });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingArtists, setIsLoadingArtists] = useState(true);
+  const [isRunningBatch, setIsRunningBatch] = useState(false);
 
   useEffect(() => {
     checkAdminRole();
@@ -147,6 +148,32 @@ export default function AdminTestTools() {
       toast.error(`Failed to generate test earnings: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const runBatchCreation = async () => {
+    setIsRunningBatch(true);
+    try {
+      const response = await supabase.functions.invoke("aggregate-weekly-earnings");
+      
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const data = response.data;
+      
+      if (data.batchesCreated > 0) {
+        toast.success(
+          `Created ${data.batchesCreated} payout batch(es) for week ${format(new Date(data.weekStart), "MMM d")} - ${format(new Date(data.weekEnd), "MMM d")}. Total artist net: $${data.totals?.artistNet?.toFixed(2) || "0.00"}`
+        );
+      } else {
+        toast.info(data.message || "No batches created - may already exist or no streams found");
+      }
+    } catch (error) {
+      console.error("Error running batch creation:", error);
+      toast.error(`Failed to run batch creation: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setIsRunningBatch(false);
     }
   };
 
@@ -334,10 +361,44 @@ export default function AdminTestTools() {
           </div>
         </GlowCard>
 
+        {/* Run Batch Creation */}
+        <GlowCard className="p-6 mt-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Play className="w-6 h-6 text-green-400" />
+            <h2 className="text-xl font-semibold">Run Payout Batch Creation</h2>
+          </div>
+          <p className="text-muted-foreground text-sm mb-4">
+            Manually trigger the weekly earnings aggregation. This normally runs automatically every Monday at 8AM UTC. 
+            It aggregates all unbatched streams from the <strong>previous completed week</strong> and creates payout batches for each artist.
+          </p>
+          <Button
+            onClick={runBatchCreation}
+            disabled={isRunningBatch}
+            className="w-full"
+            size="lg"
+            variant="secondary"
+          >
+            {isRunningBatch ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Running Batch Creation...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 mr-2" />
+                RUN BATCH CREATION NOW
+              </>
+            )}
+          </Button>
+        </GlowCard>
+
         {/* Quick Links */}
         <div className="mt-6 flex gap-4 flex-wrap">
           <Button variant="outline" onClick={() => navigate("/admin/reports")}>
             View Admin Reports
+          </Button>
+          <Button variant="outline" onClick={() => navigate("/admin/payouts")}>
+            View Payouts
           </Button>
         </div>
       </div>
