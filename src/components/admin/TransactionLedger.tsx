@@ -104,10 +104,17 @@ export function TransactionLedger() {
       const trackIds = [...new Set((data || []).map(s => s.track_id))];
       const fanEmails = [...new Set((data || []).map(s => s.fan_email))];
 
-      const { data: artistProfiles } = await supabase
-        .from("public_artist_profiles")
-        .select("id, artist_name")
-        .in("id", artistIds);
+      // Separate UUID-based artist IDs from legacy email-based ones
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const uuidArtistIds = artistIds.filter(id => uuidPattern.test(id));
+      
+      // Fetch artist profiles by ID (UUID-based)
+      const { data: artistProfiles } = uuidArtistIds.length > 0 
+        ? await supabase
+            .from("public_artist_profiles")
+            .select("id, artist_name")
+            .in("id", uuidArtistIds)
+        : { data: [] };
 
       const { data: tracksData } = await supabase
         .from("tracks")
@@ -119,7 +126,18 @@ export function TransactionLedger() {
         .select("email, display_name")
         .in("email", fanEmails);
 
+      // Build artist map from UUID-based profiles
       const artistMap = new Map((artistProfiles || []).map(a => [a.id, a.artist_name]));
+      
+      // For legacy email-based artist_ids, use the email as the display name
+      artistIds.forEach(id => {
+        if (!uuidPattern.test(id) && !artistMap.has(id)) {
+          // It's an email-based ID, extract artist name from email
+          const emailName = id.includes("@") ? id.split("@")[0].replace(/-/g, " ") : id;
+          artistMap.set(id, emailName);
+        }
+      });
+      
       const trackMap = new Map((tracksData || []).map(t => [t.id, t.title]));
       const fanMap = new Map((fanProfiles || []).map(f => [f.email, f.display_name]));
 
