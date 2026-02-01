@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Download, Loader2, Search, X, RefreshCw } from "lucide-react";
-import { format } from "date-fns";
+import { endOfDay, format, parseISO, startOfDay } from "date-fns";
 
 interface StreamEntry {
   stream_id: string;
@@ -79,11 +79,16 @@ export function TransactionLedger() {
         .order("created_at", { ascending: false })
         .limit(500);
 
-      if (filters.dateFrom) {
-        query = query.gte("created_at", filters.dateFrom);
+      // IMPORTANT: <input type="date"> returns a date-only string (YYYY-MM-DD) in the *user's local time*.
+      // We convert that to an explicit ISO timestamp range (start/end of day) so filtering is deterministic.
+      const dateFromIso = filters.dateFrom ? startOfDay(parseISO(filters.dateFrom)).toISOString() : null;
+      const dateToIso = filters.dateTo ? endOfDay(parseISO(filters.dateTo)).toISOString() : null;
+
+      if (dateFromIso) {
+        query = query.gte("created_at", dateFromIso);
       }
-      if (filters.dateTo) {
-        query = query.lte("created_at", filters.dateTo + "T23:59:59");
+      if (dateToIso) {
+        query = query.lte("created_at", dateToIso);
       }
       if (filters.artistId && filters.artistId !== "all_artists") {
         query = query.eq("artist_id", filters.artistId);
