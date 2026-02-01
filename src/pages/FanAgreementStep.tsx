@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { GlowCard } from "@/components/ui/GlowCard";
-import { Header } from "@/components/Header";
-import { Sparkles, Music, ShieldCheck, Ban, Crown } from "lucide-react";
+import { ChevronLeft, FileText, Music, ShieldCheck, Ban, Check } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface LocationState {
   email?: string;
@@ -61,161 +60,185 @@ const FanAgreementStep = () => {
     navigate(-1);
   };
 
+  const agreementItems = [
+    {
+      icon: Music,
+      title: "Stream Pricing",
+      description: "Each stream costs 1 credit ($0.20). Credits are non-transferable.",
+    },
+    {
+      icon: ShieldCheck,
+      title: "No Refunds on Used Credits",
+      description: "Once credits are used to stream, they cannot be refunded.",
+    },
+    {
+      icon: Ban,
+      title: "Fair Use Policy",
+      description: "No fraudulent activity, stream manipulation, or abuse of the platform.",
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-background to-background pointer-events-none" />
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
+    <div className="min-h-screen bg-background">
+      {/* Subtle page background gradient */}
+      <div className="fixed inset-0 bg-gradient-to-b from-muted/30 via-background to-background pointer-events-none" />
       
-      <Header />
-
-      <main className="relative container max-w-lg mx-auto px-4 pt-24 pb-8">
-        {/* Celebration Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary/30 to-purple-600/20 mb-4 animate-pulse shadow-lg shadow-primary/20">
-            <Sparkles className="w-10 h-10 text-primary" />
-          </div>
-          <h1 className="text-3xl md:text-4xl font-display font-bold tracking-wide mb-2">
-            <span className="text-foreground">You're In</span>{" "}
-            <span className="text-primary">🎉</span>
-          </h1>
-          <p className="text-lg font-display text-muted-foreground">
-            One Last Step…
-          </p>
-        </div>
-
-        <GlowCard glowColor="gradient" className="p-6 md:p-8 backdrop-blur-xl bg-card/80">
-          {/* Welcome Text */}
-          <p className="text-sm md:text-base font-body text-muted-foreground mb-6 leading-relaxed">
-            Welcome to{" "}
-            <span className="text-primary font-semibold inline-flex items-center gap-1.5">
-              Music Exclusive
-              <Crown className="w-4 h-4 text-amber-400" />
-            </span>{" "}
-            — where fans get early access to music before the world hears it.
-          </p>
-          <p className="text-sm md:text-base font-body text-muted-foreground mb-6 leading-relaxed">
-            Before you stream, we just need your agreement to keep the Vault fair, safe, and exclusive.
-          </p>
-
-          {/* Glowing Divider */}
-          <div className="relative h-px w-full mb-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent blur-sm" />
-          </div>
-
-          {/* Quick Bullet Points */}
-          <div className="space-y-5 mb-8">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-purple-600/20 flex items-center justify-center shrink-0 shadow-lg shadow-primary/10">
-                <Music className="w-5 h-5 text-primary" />
-              </div>
-              <p className="text-sm md:text-base font-body text-foreground pt-2">
-                Streaming costs{" "}
-                <span className="text-primary font-bold">1 credit</span>{" "}
-                <span className="text-primary font-bold">($0.20)</span> per stream
-              </p>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-purple-600/20 flex items-center justify-center shrink-0 shadow-lg shadow-primary/10">
-                <ShieldCheck className="w-5 h-5 text-primary" />
-              </div>
-              <p className="text-sm md:text-base font-body text-foreground pt-2">
-                No refunds once credits are used
-              </p>
-            </div>
-
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-purple-600/20 flex items-center justify-center shrink-0 shadow-lg shadow-primary/10">
-                <Ban className="w-5 h-5 text-primary" />
-              </div>
-              <p className="text-sm md:text-base font-body text-foreground pt-2">
-                Respect the Vault — no fraud or stream manipulation
-              </p>
-            </div>
-          </div>
-
-          {/* Glowing Divider */}
-          <div className="relative h-px w-full mb-6">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent blur-sm" />
-          </div>
-
-          {/* Checkbox Agreement - Enhanced for mobile */}
-          <div 
-            className="rounded-xl bg-background/60 border border-primary/20 p-4 md:p-5 cursor-pointer transition-all hover:border-primary/40 hover:bg-background/80 active:scale-[0.99]"
-            onClick={() => setAgreed(!agreed)}
-          >
-            <div className="flex items-start gap-4">
-              <Checkbox
-                id="agree-terms"
-                checked={agreed}
-                onCheckedChange={(checked) => setAgreed(checked === true)}
-                className="mt-1 w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-              />
-              <label
-                htmlFor="agree-terms"
-                className="text-sm md:text-base font-body text-foreground leading-relaxed cursor-pointer"
-              >
-                I agree to the Music Exclusive{" "}
-                <Link
-                  to="/terms"
-                  className="text-primary hover:underline font-semibold"
-                  target="_blank"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Terms of Use
-                </Link>
-                .
-              </label>
-            </div>
-
-            {/* Additional Policy Links */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-4 ml-9">
-              <Link 
-                to="/privacy" 
-                className="hover:text-primary hover:underline transition-colors" 
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Privacy Policy
-              </Link>
-              <span className="text-primary/30">•</span>
-              <Link 
-                to="/refunds" 
-                className="hover:text-primary hover:underline transition-colors" 
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Refund Policy
-              </Link>
-            </div>
-          </div>
-        </GlowCard>
-
-        {/* Action Buttons - Large and mobile-friendly */}
-        <div className="space-y-3 mt-6">
-          <Button
-            size="lg"
-            className="w-full h-14 text-base font-display uppercase tracking-wider bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 shadow-lg shadow-primary/20 transition-all active:scale-[0.98]"
-            onClick={handleContinue}
-            disabled={!agreed || isSubmitting}
-          >
-            {isSubmitting ? "Saving..." : "Continue to Choose Access"}
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="lg"
-            className="w-full h-12 text-muted-foreground hover:text-foreground"
+      {/* Minimal Header */}
+      <header className="sticky top-0 z-20 bg-background/95 backdrop-blur-sm border-b border-border/30">
+        <div className="max-w-[680px] mx-auto w-full px-5 md:px-7 py-3">
+          <button
             onClick={handleBack}
-            disabled={isSubmitting}
+            className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
           >
-            Back
-          </Button>
+            <ChevronLeft className="w-4 h-4" />
+            <span className="text-sm font-medium">Back</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="relative z-10 px-5 md:px-7 py-8 md:py-12 pb-32">
+        <div className="max-w-[680px] mx-auto w-full">
+          {/* Document Header */}
+          <div className="mb-8">
+            {/* Document Icon + Title */}
+            <div className="flex items-start gap-3 mb-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary mt-0.5">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div>
+                <h1 className="text-[26px] md:text-[30px] font-display font-bold tracking-tight text-foreground leading-tight">
+                  Vault Access Agreement
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Music Exclusive™ Fan Terms
+                </p>
+              </div>
+            </div>
+            
+            {/* Summary Strip */}
+            <div className="mt-5 p-4 rounded-lg bg-muted/50 border border-border/40">
+              <p className="text-sm text-foreground/90 leading-relaxed">
+                Before you enter the Vault, please confirm the terms below. By agreeing, you acknowledge and accept the streaming terms, credit policies, and fair use guidelines.
+              </p>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="h-px bg-border/50 mb-8" />
+
+          {/* Agreement Content Card */}
+          <div className="rounded-xl border border-border/50 bg-card/30 backdrop-blur-[2px] overflow-hidden">
+            {/* Agreement Items */}
+            <div className="divide-y divide-border/30">
+              {agreementItems.map((item, index) => (
+                <div key={index} className="p-5 md:p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <item.icon className="w-5 h-5 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-foreground mb-1">
+                        {item.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {item.description}
+                      </p>
+                    </div>
+                    <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <Check className="w-3 h-3 text-primary" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Checkbox Agreement Section */}
+            <div className="border-t border-border/50 bg-muted/20 p-5 md:p-6">
+              <div 
+                className={cn(
+                  "rounded-lg border p-4 cursor-pointer transition-all",
+                  agreed 
+                    ? "border-primary/50 bg-primary/5" 
+                    : "border-border/50 bg-background/50 hover:border-primary/30"
+                )}
+                onClick={() => setAgreed(!agreed)}
+              >
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    id="agree-terms"
+                    checked={agreed}
+                    onCheckedChange={(checked) => setAgreed(checked === true)}
+                    className="mt-0.5 w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <label
+                      htmlFor="agree-terms"
+                      className="text-sm text-foreground leading-relaxed cursor-pointer block"
+                    >
+                      I have read and agree to the Music Exclusive{" "}
+                      <Link
+                        to="/terms"
+                        className="text-primary hover:underline font-medium"
+                        target="_blank"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Terms of Use
+                      </Link>
+                      , including the streaming credit policy and fair use guidelines.
+                    </label>
+                    
+                    {/* Additional Policy Links */}
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground mt-3">
+                      <Link 
+                        to="/privacy" 
+                        className="hover:text-primary transition-colors" 
+                        target="_blank"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Privacy Policy
+                      </Link>
+                      <span className="text-border">•</span>
+                      <Link 
+                        to="/refunds" 
+                        className="hover:text-primary transition-colors" 
+                        target="_blank"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Refund Policy
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
+
+      {/* Sticky Bottom Bar */}
+      <div className="fixed bottom-0 left-0 right-0 z-20 bg-background/95 backdrop-blur-sm border-t border-border/30 px-5 md:px-7 py-4">
+        <div className="max-w-[680px] mx-auto w-full flex items-center justify-between gap-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleBack}
+            disabled={isSubmitting}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+          
+          <Button
+            onClick={handleContinue}
+            disabled={!agreed || isSubmitting}
+            className="min-w-[160px]"
+          >
+            {isSubmitting ? "Saving..." : "Agree & Continue"}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
