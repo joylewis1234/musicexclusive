@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TransactionLedger } from "@/components/admin/TransactionLedger";
 import { PayoutBatches } from "@/components/admin/PayoutBatches";
@@ -9,6 +10,13 @@ import { ArtistEarningsStatements } from "@/components/admin/ArtistEarningsState
 import { FanStreamReport } from "@/components/admin/FanStreamReport";
 import { Home, LogOut, Shield, Receipt, DollarSign, FileText, Users, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+
+const TOOLTIP_MESSAGES = {
+  ledger: "Source-of-truth log of every stream and the money split. All payouts and reports should match this ledger.",
+  payouts: "Weekly payout batches grouped by artist and week. Mark payouts as Paid after sending funds.",
+  statements: "Artist-facing weekly statements showing streams, totals, and top tracks. Must match payout batches.",
+  fans: "See each fan's stream history, membership status, and spending. Tap a fan to view detailed streams.",
+};
 
 const AdminReports = () => {
   const navigate = useNavigate();
@@ -87,18 +95,22 @@ const AdminReports = () => {
               <TabsTrigger value="ledger" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <Receipt className="w-4 h-4" />
                 <span className="hidden sm:inline">Ledger</span>
+                <InfoTooltip message={TOOLTIP_MESSAGES.ledger} className="hidden sm:inline-flex" />
               </TabsTrigger>
               <TabsTrigger value="payouts" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <DollarSign className="w-4 h-4" />
                 <span className="hidden sm:inline">Payouts</span>
+                <InfoTooltip message={TOOLTIP_MESSAGES.payouts} className="hidden sm:inline-flex" />
               </TabsTrigger>
               <TabsTrigger value="statements" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <FileText className="w-4 h-4" />
                 <span className="hidden sm:inline">Statements</span>
+                <InfoTooltip message={TOOLTIP_MESSAGES.statements} className="hidden sm:inline-flex" />
               </TabsTrigger>
               <TabsTrigger value="fans" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Fan Activity</span>
+                <InfoTooltip message={TOOLTIP_MESSAGES.fans} className="hidden sm:inline-flex" />
               </TabsTrigger>
             </TabsList>
 

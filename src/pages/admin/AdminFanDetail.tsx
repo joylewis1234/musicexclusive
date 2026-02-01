@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,6 +42,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format, subDays, startOfWeek, isWithinInterval, parseISO } from "date-fns";
+
+const FAN_ACTIVITY_TOOLTIP = "See each fan's stream history, membership status, and spending. Tap a fan to view detailed streams.";
 
 interface FanProfile {
   fan_id: string;
@@ -390,8 +393,9 @@ const AdminFanDetail = () => {
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
             <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
-              Fan Detail (Admin)
+              Fan Detail
             </span>
+            <InfoTooltip message={FAN_ACTIVITY_TOOLTIP} />
           </div>
 
           <div className="flex items-center gap-2">
