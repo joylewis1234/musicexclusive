@@ -65,6 +65,7 @@ interface VaultMemberInfo {
 export const FanStreamReport = () => {
   const [summaryData, setSummaryData] = useState<FanStreamSummary[]>([]);
   const [detailData, setDetailData] = useState<FanStreamDetail[]>([]);
+  // Keep for potential future UI use; we store by id for reliable lookups.
   const [vaultMembers, setVaultMembers] = useState<Map<string, VaultMemberInfo>>(new Map());
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -86,11 +87,15 @@ export const FanStreamReport = () => {
 
       if (membersError) throw membersError;
 
-      const memberMap = new Map<string, VaultMemberInfo>();
+      // IMPORTANT: Use fan_id (vault_members.id) as primary key for membership lookups.
+      // Email matching can fail due to casing/formatting changes over time.
+      const memberById = new Map<string, VaultMemberInfo>();
+      const memberByEmail = new Map<string, VaultMemberInfo>();
       members?.forEach((m) => {
-        memberMap.set(m.email.toLowerCase(), m);
+        memberById.set(m.id, m);
+        memberByEmail.set(m.email.toLowerCase(), m);
       });
-      setVaultMembers(memberMap);
+      setVaultMembers(memberById);
 
       // Fetch all streams from admin view
       const { data: streams, error: streamsError } = await supabase
@@ -100,16 +105,21 @@ export const FanStreamReport = () => {
 
       if (streamsError) throw streamsError;
 
-      // Aggregate by fan
+      // Aggregate by fan (keyed by fan_id when possible to avoid collisions)
       const fanMap = new Map<string, FanStreamSummary>();
       const fanArtists = new Map<string, Set<string>>();
       const fanTracks = new Map<string, Set<string>>();
 
       streams?.forEach((stream) => {
-        const fanEmail = stream.fan_email?.toLowerCase() || "";
-        const memberInfo = memberMap.get(fanEmail);
-        
-        const existing = fanMap.get(fanEmail);
+        const fanEmail = (stream.fan_email || "").toLowerCase().trim();
+        const fanId = (stream.fan_id || "").trim();
+
+        // Prefer a stable id-based key; fallback to email; final fallback to stream_id.
+        const fanKey = fanId || fanEmail || `unknown:${stream.stream_id || stream.created_at || ""}`;
+
+        const memberInfo = (fanId ? memberById.get(fanId) : null) || (fanEmail ? memberByEmail.get(fanEmail) : null);
+
+        const existing = fanMap.get(fanKey);
         if (existing) {
           existing.total_streams += 1;
           existing.total_credits += stream.credits_spent || 0;
@@ -121,10 +131,10 @@ export const FanStreamReport = () => {
             existing.last_stream = stream.created_at;
           }
           // Track unique artists/tracks
-          if (stream.artist_id) fanArtists.get(fanEmail)?.add(stream.artist_id);
-          if (stream.track_id) fanTracks.get(fanEmail)?.add(stream.track_id);
+          if (stream.artist_id) fanArtists.get(fanKey)?.add(stream.artist_id);
+          if (stream.track_id) fanTracks.get(fanKey)?.add(stream.track_id);
         } else {
-          fanMap.set(fanEmail, {
+          fanMap.set(fanKey, {
             fan_id: stream.fan_id || "",
             fan_email: stream.fan_email || "",
             fan_display_name: stream.fan_display_name || memberInfo?.display_name || stream.fan_email || "Unknown",
@@ -137,15 +147,15 @@ export const FanStreamReport = () => {
             first_stream: stream.created_at,
             last_stream: stream.created_at,
           });
-          fanArtists.set(fanEmail, new Set(stream.artist_id ? [stream.artist_id] : []));
-          fanTracks.set(fanEmail, new Set(stream.track_id ? [stream.track_id] : []));
+          fanArtists.set(fanKey, new Set(stream.artist_id ? [stream.artist_id] : []));
+          fanTracks.set(fanKey, new Set(stream.track_id ? [stream.track_id] : []));
         }
       });
 
       // Calculate unique counts
-      fanMap.forEach((summary, email) => {
-        summary.unique_artists = fanArtists.get(email)?.size || 0;
-        summary.unique_tracks = fanTracks.get(email)?.size || 0;
+      fanMap.forEach((summary, key) => {
+        summary.unique_artists = fanArtists.get(key)?.size || 0;
+        summary.unique_tracks = fanTracks.get(key)?.size || 0;
       });
 
       setSummaryData(Array.from(fanMap.values()));
@@ -330,13 +340,7 @@ export const FanStreamReport = () => {
                 className="pl-10"
               />
             </div>
-          <Select 
-            value={membershipFilter} 
-            onValueChange={(value) => {
-              console.log("Membership filter changed to:", value);
-              setMembershipFilter(value);
-            }}
-          >
+            <Select value={membershipFilter} onValueChange={setMembershipFilter}>
               <SelectTrigger className="w-full sm:w-[180px]">
                 <SelectValue placeholder="Filter by membership" />
               </SelectTrigger>
