@@ -278,6 +278,61 @@ const AdminPayouts = () => {
     }
   };
 
+  const retryFailedPayout = async (payoutId: string) => {
+    setIsProcessing(payoutId);
+    try {
+      // Reset the failed payout to approved status
+      const { error: resetError } = await supabase
+        .from("artist_payouts")
+        .update({ 
+          status: "approved", 
+          failure_reason: null,
+          stripe_transfer_id: null 
+        })
+        .eq("id", payoutId);
+
+      if (resetError) throw resetError;
+
+      // Get the batch ID for this payout
+      const payout = artistPayouts.find(p => p.id === payoutId);
+      if (!payout) throw new Error("Payout not found");
+
+      // Ensure batch is approved
+      await supabase
+        .from("payout_batches")
+        .update({ status: "approved" })
+        .eq("id", payout.payout_batch_id);
+
+      // Run the payout
+      const { data, error } = await supabase.functions.invoke("process-payouts", {
+        body: { batchId: payout.payout_batch_id },
+      });
+
+      if (error) throw error;
+
+      const results = data?.results || [];
+      const result = results.find((r: { payoutId: string }) => r.payoutId === payoutId);
+      
+      if (result?.status === "paid") {
+        toast.success("Payout processed successfully!");
+      } else if (result?.status === "failed") {
+        toast.error(result.error || "Payout failed again");
+      } else {
+        toast.info("Payout status updated");
+      }
+
+      fetchBatches();
+      if (selectedBatch) {
+        openBatchDetail(selectedBatch);
+      }
+    } catch (error) {
+      console.error("Error retrying payout:", error);
+      toast.error("Failed to retry payout");
+    } finally {
+      setIsProcessing(null);
+    }
+  };
+
   const exportCSV = () => {
     const headers = ["Week", "Artist", "Gross", "Platform Fee", "Artist Net", "Status", "Transfer ID", "Paid At"];
     const rows = batches.map(b => [
@@ -630,6 +685,23 @@ const AdminPayouts = () => {
                           </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
+                              {payout.status === "failed" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => retryFailedPayout(payout.id)}
+                                  disabled={isProcessing === payout.id}
+                                  title="Retry failed payout"
+                                  className="gap-1"
+                                >
+                                  {isProcessing === payout.id ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <RefreshCw className="w-3 h-3 text-blue-500" />
+                                  )}
+                                  Retry
+                                </Button>
+                              )}
                               {(payout.status === "pending" || payout.status === "held") && (
                                 <Button
                                   size="sm"
