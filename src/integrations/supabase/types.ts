@@ -724,6 +724,37 @@ export type Database = {
       }
     }
     Views: {
+      admin_stream_report_view: {
+        Row: {
+          amount_artist: number | null
+          amount_platform: number | null
+          amount_total: number | null
+          artist_id: string | null
+          artist_name: string | null
+          artist_profile_id: string | null
+          artist_user_id: string | null
+          created_at: string | null
+          credits_spent: number | null
+          fan_display_name: string | null
+          fan_email: string | null
+          fan_id: string | null
+          payout_batch_id: string | null
+          payout_status: string | null
+          stream_id: string | null
+          track_album: string | null
+          track_id: string | null
+          track_title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stream_ledger_payout_batch_id_fkey"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payout_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       public_artist_profiles: {
         Row: {
           artist_name: string | null
