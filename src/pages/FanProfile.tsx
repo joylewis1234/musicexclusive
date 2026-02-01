@@ -5,8 +5,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, Home, Play, User, Camera, Pencil, Check, X, Loader2, LogOut, Star } from "lucide-react";
-import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
+import { ChevronLeft, Home, User, Camera, Pencil, Check, X, Loader2, LogOut, Star } from "lucide-react";
 import { useFanProfile } from "@/hooks/useFanProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
@@ -25,15 +24,9 @@ const topArtists = [
   { id: "2", name: "DRIFT", streams: 12, imageUrl: artist2 },
 ];
 
-const sharedTracks = [
-  { id: "1", artistId: "1", artist: "NOVA", track: "Midnight Protocol", sharedBy: "Alex" },
-  { id: "2", artistId: "2", artist: "AURA", track: "Velvet Skies", sharedBy: "Jordan" },
-  { id: "3", artistId: "3", artist: "ECHO", track: "Lost Frequency", sharedBy: "Sam" },
-];
 
 const FanProfile = () => {
   const navigate = useNavigate();
-  const { playTrack } = usePlayer();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const {
@@ -89,12 +82,6 @@ const FanProfile = () => {
     }
   };
 
-  const handlePlayTrack = (trackId: string) => {
-    const track = tracksLibrary[trackId];
-    if (track) {
-      playTrack(track);
-    }
-  };
 
   // Handle file selection
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -335,49 +322,6 @@ const FanProfile = () => {
           </div>
         </section>
 
-        {/* Inbox - Shared With You */}
-        <section className="animate-fade-in" style={{ animationDelay: "300ms" }}>
-          <h2 
-            className="font-display text-sm uppercase tracking-wider text-foreground mb-4"
-            style={{
-              textShadow: "0 0 15px rgba(255, 255, 255, 0.2)"
-            }}
-          >
-            Shared With You
-          </h2>
-          
-          <div className="space-y-3">
-            {sharedTracks.map((item) => (
-              <GlowCard key={item.id} glowColor="accent" hover>
-                <div className="p-4 flex items-center justify-between">
-                  <button
-                    className="flex-1 min-w-0 text-left"
-                    onClick={() => navigate(`/artist/${item.artistId}`)}
-                  >
-                    <p className="font-display text-sm font-semibold text-foreground truncate">
-                      {item.track}
-                    </p>
-                    <p className="text-xs text-primary truncate hover:underline">
-                      {item.artist}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
-                      From {item.sharedBy}
-                    </p>
-                  </button>
-                  <Button
-                    variant="accent"
-                    size="sm"
-                    className="ml-3 flex-shrink-0"
-                    onClick={() => handlePlayTrack(item.id)}
-                  >
-                    <Play className="w-4 h-4 mr-1" />
-                    Listen
-                  </Button>
-                </div>
-              </GlowCard>
-            ))}
-          </div>
-        </section>
 
         {/* Logout Section */}
         <section className="animate-fade-in pt-4 pb-8" style={{ animationDelay: "400ms" }}>
