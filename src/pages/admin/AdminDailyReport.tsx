@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Calendar } from "@/components/ui/calendar";
@@ -40,6 +41,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const DAILY_REPORT_TOOLTIP = "Daily business snapshot: revenue, streams, platform share, artist share, and top performers.";
 
 interface ReportData {
   reportDate: string;
@@ -221,6 +224,7 @@ const AdminDailyReport = () => {
             <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
               Daily Company Report
             </span>
+            <InfoTooltip message={DAILY_REPORT_TOOLTIP} />
           </div>
 
           <div className="flex items-center gap-2">
