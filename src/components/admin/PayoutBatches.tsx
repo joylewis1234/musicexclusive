@@ -69,18 +69,47 @@ export function PayoutBatches() {
   const retryPayout = async (batchId: string) => {
     setIsRetrying(batchId);
     try {
+      // First, reset failed artist_payouts to approved so they can be reprocessed
+      const { error: resetError } = await supabase
+        .from("artist_payouts")
+        .update({ 
+          status: "approved", 
+          failure_reason: null,
+          stripe_transfer_id: null 
+        })
+        .eq("payout_batch_id", batchId)
+        .eq("status", "failed");
+
+      if (resetError) {
+        console.error("Error resetting failed payouts:", resetError);
+        throw new Error("Failed to reset payouts for retry");
+      }
+
+      // Also reset the batch status to approved
+      await supabase
+        .from("payout_batches")
+        .update({ status: "approved" })
+        .eq("id", batchId);
+
+      // Now process the payouts
       const { data, error } = await supabase.functions.invoke("process-payouts", {
         body: { batchId },
       });
 
       if (error) throw error;
 
-      if (data?.results?.[0]?.status === "paid") {
-        toast.success("Payout processed successfully!");
-      } else if (data?.results?.[0]?.status === "skipped") {
-        toast.info(data.results[0].error || "Payout skipped");
-      } else {
-        toast.error(data?.results?.[0]?.error || "Payout failed");
+      const results = data?.results || [];
+      const paidCount = results.filter((r: { status: string }) => r.status === "paid").length;
+      const failedCount = results.filter((r: { status: string }) => r.status === "failed").length;
+
+      if (paidCount > 0 && failedCount === 0) {
+        toast.success(`All ${paidCount} payout(s) processed successfully!`);
+      } else if (paidCount > 0 && failedCount > 0) {
+        toast.warning(`${paidCount} paid, ${failedCount} still failed`);
+      } else if (failedCount > 0) {
+        toast.error(`${failedCount} payout(s) failed: ${results[0]?.error || "Unknown error"}`);
+      } else if (results.length === 0) {
+        toast.info("No payouts to process in this batch");
       }
 
       fetchBatches();
