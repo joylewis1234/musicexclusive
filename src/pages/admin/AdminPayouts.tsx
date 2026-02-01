@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -40,6 +41,8 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
+
+const PAYOUTS_TOOLTIP = "Weekly payout batches grouped by artist and week. Mark payouts as Paid after sending funds.";
 
 interface PayoutBatch {
   id: string;
@@ -398,6 +401,7 @@ const AdminPayouts = () => {
             <span className="font-display text-sm font-semibold uppercase tracking-widest text-foreground">
               Artist Payouts
             </span>
+            <InfoTooltip message={PAYOUTS_TOOLTIP} />
           </div>
 
           <div className="flex items-center gap-2">
