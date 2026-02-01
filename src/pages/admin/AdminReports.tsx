@@ -92,25 +92,25 @@ const AdminReports = () => {
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="grid w-full grid-cols-4 bg-background/50 border border-border/50 p-1">
-              <TabsTrigger value="ledger" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
+              <TabsTrigger value="ledger" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20">
                 <Receipt className="w-4 h-4" />
                 <span className="hidden sm:inline">Ledger</span>
-                <InfoTooltip message={TOOLTIP_MESSAGES.ledger} className="hidden sm:inline-flex" />
+                <InfoTooltip message={TOOLTIP_MESSAGES.ledger} />
               </TabsTrigger>
-              <TabsTrigger value="payouts" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
+              <TabsTrigger value="payouts" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20">
                 <DollarSign className="w-4 h-4" />
                 <span className="hidden sm:inline">Payouts</span>
-                <InfoTooltip message={TOOLTIP_MESSAGES.payouts} className="hidden sm:inline-flex" />
+                <InfoTooltip message={TOOLTIP_MESSAGES.payouts} />
               </TabsTrigger>
-              <TabsTrigger value="statements" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
+              <TabsTrigger value="statements" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20">
                 <FileText className="w-4 h-4" />
                 <span className="hidden sm:inline">Statements</span>
-                <InfoTooltip message={TOOLTIP_MESSAGES.statements} className="hidden sm:inline-flex" />
+                <InfoTooltip message={TOOLTIP_MESSAGES.statements} />
               </TabsTrigger>
-              <TabsTrigger value="fans" className="flex items-center gap-2 data-[state=active]:bg-primary/20">
+              <TabsTrigger value="fans" className="flex items-center gap-1 sm:gap-2 data-[state=active]:bg-primary/20">
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Fan Activity</span>
-                <InfoTooltip message={TOOLTIP_MESSAGES.fans} className="hidden sm:inline-flex" />
+                <InfoTooltip message={TOOLTIP_MESSAGES.fans} />
               </TabsTrigger>
             </TabsList>
 
