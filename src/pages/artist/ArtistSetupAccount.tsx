@@ -100,7 +100,7 @@ const ArtistSetupAccount = () => {
     setIsSubmitting(true);
 
     try {
-      // Create the auth account
+      // First try to create the auth account
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
@@ -112,24 +112,48 @@ const ArtistSetupAccount = () => {
         },
       });
 
+      let userId: string | null = null;
+
       if (signUpError) {
-        toast.error(signUpError.message);
+        // If user already exists, try to sign them in instead
+        if (signUpError.message.includes("already registered") || 
+            signUpError.message.includes("already been registered")) {
+          console.log("User already exists, attempting sign in...");
+          
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          });
+
+          if (signInError) {
+            // If sign in fails, the password might be different from before
+            toast.error("This email is already registered. Please try logging in at /artist/login or use 'Forgot Password' if needed.");
+            setIsSubmitting(false);
+            return;
+          }
+
+          userId = signInData.user?.id ?? null;
+        } else {
+          toast.error(signUpError.message);
+          setIsSubmitting(false);
+          return;
+        }
+      } else {
+        userId = signUpData.user?.id ?? null;
+      }
+
+      if (!userId) {
+        toast.error("Failed to create or authenticate account");
         setIsSubmitting(false);
         return;
       }
 
-      if (!signUpData.user) {
-        toast.error("Failed to create account");
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Insert artist role
+      // Insert artist role (ignore if already exists)
       const { error: roleError } = await supabase
         .from("user_roles")
-        .insert({ user_id: signUpData.user.id, role: "artist" });
+        .insert({ user_id: userId, role: "artist" });
 
-      if (roleError) {
+      if (roleError && !roleError.message.includes("duplicate")) {
         console.error("Error inserting role:", roleError);
         // Continue anyway - role can be fixed later
       }
@@ -144,9 +168,10 @@ const ArtistSetupAccount = () => {
         console.error("Error updating application status:", updateError);
       }
 
-      toast.success("Account created successfully!");
+      toast.success("Account setup complete!");
       navigate("/artist/dashboard", { replace: true });
     } catch (error) {
+      console.error("Setup error:", error);
       toast.error("An error occurred. Please try again.");
     } finally {
       setIsSubmitting(false);
