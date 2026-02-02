@@ -344,25 +344,13 @@ serve(async (req) => {
 
         // Try primary domain first
         let emailResult = await resend.emails.send({
-          from: "Music Exclusive <noreply@musicexclusive.co>",
+          from: "Music Exclusive <noreply@themusicisexclusive.com>",
+          reply_to: "support@musicexclusive.co",
           to: [recipientEmail],
           subject: `Music Exclusive — Daily Report (${reportDate})`,
           html: emailHtml,
         });
 
-        // Check if primary domain failed - try fallback
-        if (emailResult.error) {
-          logStep("Primary domain failed, trying fallback", { 
-            error: emailResult.error.message 
-          });
-          
-          emailResult = await resend.emails.send({
-            from: "Music Exclusive <onboarding@resend.dev>",
-            to: [recipientEmail],
-            subject: `Music Exclusive — Daily Report (${reportDate})`,
-            html: emailHtml,
-          });
-        }
 
         // Check if email actually succeeded
         if (emailResult.error) {
