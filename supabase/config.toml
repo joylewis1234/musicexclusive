@@ -47,3 +47,9 @@ verify_jwt = false
 
 [functions.handle-application-action]
 verify_jwt = false
+
+[functions.send-vault-win-email]
+verify_jwt = false
+
+[functions.send-vault-lose-email]
+verify_jwt = false
