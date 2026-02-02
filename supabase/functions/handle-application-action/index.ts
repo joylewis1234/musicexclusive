@@ -42,15 +42,43 @@ const handler = async (req: Request): Promise<Response> => {
       .maybeSingle();
 
     if (tokenError || !tokenRecord) {
-      throw new Error("Invalid or expired token");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid or expired token. Please request a new action link.",
+        }),
+        {
+          status: 200,  // Return 200 so frontend can read the error
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
     if (tokenRecord.used_at) {
-      throw new Error("This action has already been completed");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "This action has already been completed. The artist has already been notified.",
+          alreadyCompleted: true,
+        }),
+        {
+          status: 200,  // Return 200 so frontend can read the error
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
     if (new Date(tokenRecord.expires_at) < new Date()) {
-      throw new Error("This token has expired");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "This token has expired. Please request a new action link.",
+        }),
+        {
+          status: 200,  // Return 200 so frontend can read the error
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
     const application = tokenRecord.artist_applications;

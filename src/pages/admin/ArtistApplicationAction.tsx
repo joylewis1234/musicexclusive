@@ -114,15 +114,20 @@ const ArtistApplicationAction = () => {
 
         {status === "error" && (
           <>
-            <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
-              <AlertCircle className="w-10 h-10 text-red-500" />
+            <div className="w-20 h-20 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-10 h-10 text-amber-500" />
             </div>
             <h1 className="text-2xl font-display font-bold text-foreground mb-2">
-              Action Failed
+              {result.error?.includes("already been completed") ? "Already Processed" : "Action Failed"}
             </h1>
             <p className="text-muted-foreground mb-6">
               {result.error || "This action could not be completed."}
             </p>
+            {result.error?.includes("already been completed") && (
+              <p className="text-sm text-muted-foreground mb-4">
+                This approval link was already clicked. No further action is needed.
+              </p>
+            )}
             <div className="space-y-3">
               <Button onClick={() => navigate("/admin/artist-applications")} className="w-full">
                 Go to Admin Dashboard
