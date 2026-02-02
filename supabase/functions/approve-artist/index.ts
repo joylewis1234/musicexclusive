@@ -60,12 +60,74 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate secure setup link
     const setupLink = `${baseUrl}/artist/setup-account?email=${encodeURIComponent(application.contact_email)}`;
 
-    // Email sending is paused - using on-screen approval confirmation instead
-    // TODO: Re-enable Resend email sending when domain verification is complete
-    const emailSent = false;
-    const emailError = "Email sending paused - using on-screen confirmation";
+    // Send approval email to artist
+    let emailSent = false;
+    let emailError: string | null = null;
     
-    console.log("Artist approved. Email sending paused. Setup link:", setupLink);
+    try {
+      const approvalEmailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3); overflow: hidden;">
+          <tr>
+            <td style="padding: 50px 30px; text-align: center; background: linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(124, 58, 237, 0.1) 100%);">
+              <div style="font-size: 60px; margin-bottom: 20px;">🎉</div>
+              <h1 style="margin: 0; font-size: 32px; font-weight: 800; color: #f8fafc; letter-spacing: 1px;">
+                You're Approved!
+              </h1>
+              <p style="margin: 15px 0 0; color: #a78bfa; font-size: 16px; font-weight: 500;">
+                Welcome to Music Exclusive, ${application.artist_name}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 40px 30px;">
+              <p style="margin: 0 0 25px; color: #e2e8f0; font-size: 16px; line-height: 1.7;">
+                Congratulations! Your application to join <strong style="color: #a78bfa;">Music Exclusive</strong> has been approved.
+              </p>
+              <div style="text-align: center; margin: 35px 0;">
+                <a href="${setupLink}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-size: 16px; font-weight: 700; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);">
+                  SET UP MY ARTIST ACCOUNT
+                </a>
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 25px 30px; background: rgba(0, 0, 0, 0.3); border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center;">
+              <p style="margin: 0; color: #64748b; font-size: 12px;">MUSIC EXCLUSIVE</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `;
+
+      await resend.emails.send({
+        from: "Music Exclusive <onboarding@resend.dev>",
+        to: [application.contact_email],
+        subject: "Your Music Exclusive Artist Application Was Approved 🎉",
+        html: approvalEmailHtml,
+      });
+      
+      emailSent = true;
+      console.log("Approval email sent to:", application.contact_email);
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : "Email send failed";
+      console.error("Failed to send approval email:", emailError);
+    }
+    
+    console.log("Artist approved. Setup link:", setupLink);
 
     return new Response(
       JSON.stringify({

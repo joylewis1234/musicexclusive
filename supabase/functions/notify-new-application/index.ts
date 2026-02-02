@@ -242,9 +242,9 @@ const handler = async (req: Request): Promise<Response> => {
 </html>
     `;
 
-    // Send email to support
+    // Send email to support - use resend.dev for reliable delivery
     const emailResult = await resend.emails.send({
-      from: "Music Exclusive <noreply@musicexclusive.co>",
+      from: "Music Exclusive <onboarding@resend.dev>",
       to: ["support@musicexclusive.co"],
       subject: `🎵 New Artist Application: ${application.artist_name}`,
       html: emailHtml,
