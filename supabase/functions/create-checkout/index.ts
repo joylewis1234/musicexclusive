@@ -12,6 +12,8 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
+const CHECKOUT_SESSION_PLACEHOLDER = "{CHECKOUT_SESSION_ID}";
+
 const ensureCheckoutSessionIdInSuccessUrl = (
   url: string,
   credits: number
@@ -26,11 +28,14 @@ const ensureCheckoutSessionIdInSuccessUrl = (
   }
 
   // Stripe will replace this placeholder during redirect.
+  // IMPORTANT: We must keep the placeholder *unencoded*.
+  // Using URLSearchParams will encode `{` and `}` into `%7B` / `%7D`, and Stripe will NOT replace it.
   if (!u.searchParams.get("session_id")) {
-    u.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
+    u.searchParams.set("session_id", CHECKOUT_SESSION_PLACEHOLDER);
   }
 
-  return u.toString();
+  const encodedPlaceholder = encodeURIComponent(CHECKOUT_SESSION_PLACEHOLDER);
+  return u.toString().replace(encodedPlaceholder, CHECKOUT_SESSION_PLACEHOLDER);
 };
 
 serve(async (req) => {

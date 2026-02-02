@@ -38,6 +38,19 @@ serve(async (req) => {
       );
     }
 
+    // If Stripe didn't replace the placeholder (or it got URL-decoded), we'll receive "{CHECKOUT_SESSION_ID}".
+    // Fail fast with a clear message.
+    if (typeof sessionId === "string" && sessionId.includes("CHECKOUT_SESSION_ID")) {
+      logStep("Invalid session id placeholder received", { sessionId });
+      return new Response(
+        JSON.stringify({
+          error:
+            "Invalid session id. Stripe did not return a real Checkout Session ID (cs_...). Please retry the purchase from inside the app.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Initialize Stripe
     const stripe = new Stripe(stripeKey, {
       apiVersion: "2025-08-27.basil",
