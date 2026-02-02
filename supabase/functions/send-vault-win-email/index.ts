@@ -93,9 +93,9 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY not configured");
     }
 
-    // Build the direct link to agreements with pre-filled data
     const baseUrl = appUrl || 'https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app';
-    const agreementsLink = `${baseUrl}/fan/agreements?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
+    const loginLink = `${baseUrl}/fan/agreements?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
+    const resetPasswordLink = `${baseUrl}/forgot-password?email=${encodeURIComponent(email)}`;
 
     const subject = "🎉 You're In! Welcome to the Music Exclusive Vault";
     const html = `
@@ -105,78 +105,95 @@ serve(async (req) => {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
+<body style="margin: 0; padding: 0; background-color: #050508; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #050508; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(128, 0, 255, 0.1)); border-radius: 16px; border: 1px solid rgba(0, 212, 255, 0.3); padding: 40px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background: linear-gradient(145deg, rgba(0, 212, 255, 0.08), rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.05)); border-radius: 20px; border: 1px solid rgba(0, 212, 255, 0.25); padding: 48px 40px;">
+          
+          <!-- Header -->
           <tr>
-            <td align="center" style="padding-bottom: 30px;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; letter-spacing: 2px;">🎉 CONGRATULATIONS</h1>
-              <p style="margin: 10px 0 0 0; color: #00d4ff; font-size: 16px; letter-spacing: 1px;">The Vault is open for you 🔓🎶</p>
+            <td align="center" style="padding-bottom: 32px;">
+              <p style="margin: 0 0 8px 0; font-size: 14px; letter-spacing: 3px; color: #00d4ff; text-transform: uppercase;">You've Been Selected</p>
+              <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: 1px;">🎉 Congratulations!</h1>
+              <p style="margin: 12px 0 0 0; color: #00d4ff; font-size: 18px; font-weight: 500;">You officially have Vault Access</p>
             </td>
           </tr>
+
+          <!-- Greeting -->
           <tr>
-            <td align="center" style="padding-bottom: 20px;">
-              <p style="margin: 0; color: #00d4ff; font-size: 18px; letter-spacing: 1px;">Hey ${name}!</p>
+            <td style="padding-bottom: 24px;">
+              <p style="margin: 0; color: #ffffff; font-size: 18px;">Hi ${name},</p>
             </td>
           </tr>
+
+          <!-- Body Copy -->
           <tr>
-            <td align="center" style="padding-bottom: 30px;">
-              <p style="margin: 0; color: #a0a0a0; font-size: 16px; line-height: 1.6;">
-                You've been selected for exclusive access to <strong style="color: #ffffff;">Music Exclusive™</strong> — a private space where fans hear music before it hits Spotify or Apple Music.
+            <td style="padding-bottom: 28px;">
+              <p style="margin: 0 0 16px 0; color: #b8b8c0; font-size: 16px; line-height: 1.7;">
+                You're now getting <strong style="color: #ffffff;">early access to exclusive music</strong> that the rest of the world isn't hearing yet.
+              </p>
+              <p style="margin: 0; color: #b8b8c0; font-size: 16px; line-height: 1.7;">
+                This is where artists drop music <strong style="color: #00d4ff;">FIRST</strong> — and you're one of the few who gets to experience it before it hits Spotify, Apple Music, and everywhere else.
               </p>
             </td>
           </tr>
+
+          <!-- Vault Login Details -->
           <tr>
-            <td align="center" style="padding-bottom: 10px;">
-              <p style="margin: 0; color: #a0a0a0; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">Your Vault Code</p>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding-bottom: 30px;">
-              <div style="background: rgba(0, 212, 255, 0.15); border: 2px solid rgba(0, 212, 255, 0.5); border-radius: 12px; padding: 20px 40px; display: inline-block;">
-                <span style="font-size: 36px; font-weight: bold; color: #00d4ff; letter-spacing: 12px; font-family: monospace;">${vaultCode}</span>
+            <td style="padding-bottom: 32px;">
+              <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 212, 255, 0.2); border-radius: 16px; padding: 24px;">
+                <p style="margin: 0 0 16px 0; color: #00d4ff; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">🔐 Your Vault Login Details</p>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 8px 0;">
+                      <span style="color: #888; font-size: 14px;">Email:</span>
+                      <span style="color: #ffffff; font-size: 14px; margin-left: 8px;">${email}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0;">
+                      <span style="color: #888; font-size: 14px;">Vault Code:</span>
+                      <span style="color: #00d4ff; font-size: 20px; font-weight: 700; letter-spacing: 6px; margin-left: 8px; font-family: monospace;">${vaultCode}</span>
+                    </td>
+                  </tr>
+                </table>
               </div>
             </td>
           </tr>
+
+          <!-- Next Step -->
           <tr>
-            <td align="center" style="padding-bottom: 30px;">
-              <a href="${agreementsLink}" style="display: inline-block; background: linear-gradient(135deg, #00d4ff, #8b5cf6); color: #ffffff; font-size: 16px; font-weight: bold; text-decoration: none; padding: 16px 32px; border-radius: 8px; letter-spacing: 1px;">
-                CONTINUE TO AGREEMENTS →
+            <td align="center" style="padding-bottom: 24px;">
+              <p style="margin: 0 0 16px 0; color: #ffffff; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">✅ Next Step: Enter the Vault</p>
+              <a href="${loginLink}" style="display: inline-block; background: linear-gradient(135deg, #00d4ff 0%, #8b5cf6 50%, #ec4899 100%); color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none; padding: 18px 48px; border-radius: 12px; letter-spacing: 1px; text-transform: uppercase;">
+                ENTER MUSIC EXCLUSIVE
               </a>
             </td>
           </tr>
+
+          <!-- Reset Password Section -->
           <tr>
-            <td align="center" style="padding-bottom: 20px;">
-              <p style="margin: 0; color: #ffffff; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px;">Next Steps:</p>
+            <td style="padding-bottom: 32px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px;">
+              <p style="margin: 0 0 12px 0; color: #888; font-size: 14px;">🔁 Want to create a new password?</p>
+              <p style="margin: 0 0 16px 0; color: #666; font-size: 13px;">If you'd like, you can set a new password after logging in for the first time.</p>
+              <a href="${resetPasswordLink}" style="color: #8b5cf6; font-size: 14px; text-decoration: underline;">Create / Reset Password →</a>
             </td>
           </tr>
+
+          <!-- Closing -->
           <tr>
-            <td align="center" style="padding-bottom: 30px;">
-              <table cellpadding="0" cellspacing="0" style="text-align: left;">
-                <tr>
-                  <td style="padding: 8px 0; color: #00d4ff; font-size: 14px;">1.</td>
-                  <td style="padding: 8px 0 8px 12px; color: #a0a0a0; font-size: 14px;">Accept Agreements</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #00d4ff; font-size: 14px;">2.</td>
-                  <td style="padding: 8px 0 8px 12px; color: #a0a0a0; font-size: 14px;">Choose your access (Superfan or Pay-As-You-Go)</td>
-                </tr>
-                <tr>
-                  <td style="padding: 8px 0; color: #00d4ff; font-size: 14px;">3.</td>
-                  <td style="padding: 8px 0 8px 12px; color: #a0a0a0; font-size: 14px;">Start streaming exclusive music</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-          <tr>
-            <td align="center" style="padding-top: 20px; border-top: 1px solid rgba(0, 212, 255, 0.2);">
-              <p style="margin: 0; color: #606060; font-size: 12px; line-height: 1.6;">
-                Welcome to Music Exclusive — where every stream counts and every fan matters.
+            <td style="padding-top: 16px; border-top: 1px solid rgba(0, 212, 255, 0.15);">
+              <p style="margin: 0 0 8px 0; color: #b8b8c0; font-size: 15px; line-height: 1.7;">
+                Thank you for being part of something special.<br>
+                You're early… and you're exactly who this Vault was built for 💎🎶
               </p>
+              <p style="margin: 24px 0 4px 0; color: #888; font-size: 14px;">With love,</p>
+              <p style="margin: 0 0 4px 0; color: #ffffff; font-size: 15px; font-weight: 600;">Music Exclusive Team</p>
+              <p style="margin: 0; color: #00d4ff; font-size: 12px; font-style: italic;">Where Every Stream Counts and Every Fan Matters.</p>
             </td>
           </tr>
+
         </table>
       </td>
     </tr>
@@ -184,7 +201,6 @@ serve(async (req) => {
 </body>
 </html>
     `;
-
     // Send email using verified domain
     const emailResult = await sendResendEmail({
       resendKey,
