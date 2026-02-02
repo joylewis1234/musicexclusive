@@ -53,3 +53,6 @@ verify_jwt = false
 
 [functions.send-vault-lose-email]
 verify_jwt = false
+
+[functions.send-vault-retry-win-email]
+verify_jwt = false
