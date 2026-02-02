@@ -73,7 +73,8 @@ const Payment = () => {
         body: {
           credits,
           email: user.email,
-          successUrl: `${window.location.origin}/fan/dashboard?payment=success&credits=${credits}`,
+          // Always return via a public route so verification can run even if the user session is lost.
+          successUrl: `${window.location.origin}/checkout/return?payment=success&credits=${credits}`,
           cancelUrl: `${window.location.origin}/fan/payment?payment=cancelled`,
         },
       });
