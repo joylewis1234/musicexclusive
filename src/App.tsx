@@ -24,6 +24,7 @@ import ChooseAccess from "./pages/ChooseAccess";
 import Subscribe from "./pages/Subscribe";
 import LoadCredits from "./pages/LoadCredits";
 import Payment from "./pages/Payment";
+import CheckoutReturn from "./pages/CheckoutReturn";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
                 <Route path="/subscribe" element={<Subscribe />} />
                 <Route path="/load-credits" element={<LoadCredits />} />
+                <Route path="/checkout/return" element={<CheckoutReturn />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
                 <Route path="/dmca" element={<CopyrightDmca />} />

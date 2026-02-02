@@ -12,6 +12,27 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
+const ensureCheckoutSessionIdInSuccessUrl = (
+  url: string,
+  credits: number
+): string => {
+  // Make sure we always get the Checkout Session ID back after Stripe redirects,
+  // even when the frontend provides a custom successUrl.
+  const u = new URL(url);
+
+  // Preserve any existing credits param if caller set it; otherwise set it.
+  if (!u.searchParams.get("credits")) {
+    u.searchParams.set("credits", String(credits));
+  }
+
+  // Stripe will replace this placeholder during redirect.
+  if (!u.searchParams.get("session_id")) {
+    u.searchParams.set("session_id", "{CHECKOUT_SESSION_ID}");
+  }
+
+  return u.toString();
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -59,6 +80,14 @@ serve(async (req) => {
     }
 
     // Create Stripe checkout session
+    const defaultSuccessUrl = `${req.headers.get("origin")}/checkout/return?payment=success&credits=${credits}`;
+    const defaultCancelUrl = `${req.headers.get("origin")}/fan/payment?payment=cancelled`;
+
+    const successUrlWithSession = ensureCheckoutSessionIdInSuccessUrl(
+      successUrl || defaultSuccessUrl,
+      credits
+    );
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : email,
@@ -82,8 +111,8 @@ serve(async (req) => {
         email: email,
         type: "CREDITS_PURCHASE",
       },
-      success_url: successUrl || `${req.headers.get("origin")}/fan/dashboard?payment=success&credits=${credits}&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${req.headers.get("origin")}/fan/payment?payment=cancelled`,
+      success_url: successUrlWithSession,
+      cancel_url: cancelUrl || defaultCancelUrl,
     });
 
     logStep("Checkout session created", { sessionId: session.id, url: session.url });
