@@ -61,7 +61,7 @@ serve(async (req) => {
     logStep("Session retrieved", { 
       status: session.status, 
       paymentStatus: session.payment_status,
-      email: session.customer_email || session.metadata?.email
+      email: session.metadata?.email || session.customer_email
     });
 
     // Verify payment was successful
@@ -74,7 +74,9 @@ serve(async (req) => {
     }
 
     // Get customer email and credits from session
-    const customerEmail = session.customer_email || session.metadata?.email;
+    // Prefer metadata.email (set by our app) so credits always go to the intended account
+    // even if the user edits the email field inside Stripe Checkout.
+    const customerEmail = session.metadata?.email || session.customer_email;
     const credits = parseInt(session.metadata?.credits || "0", 10);
 
     if (!customerEmail || credits <= 0) {
