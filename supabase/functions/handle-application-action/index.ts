@@ -28,7 +28,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { token, adminEmail, ipAddress, userAgent, baseUrl = "https://musicexclusive.lovable.app" }: ActionRequest = await req.json();
+    const { token, adminEmail, ipAddress, userAgent, baseUrl = "https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app" }: ActionRequest = await req.json();
 
     if (!token) {
       throw new Error("Token is required");
