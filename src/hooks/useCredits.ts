@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -6,6 +6,7 @@ export const useCredits = () => {
   const { user } = useAuth();
   const [credits, setCredits] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const prevCreditsRef = useRef<number>(0);
 
   const fetchCredits = useCallback(async () => {
     if (!user?.email) {
@@ -23,6 +24,7 @@ export const useCredits = () => {
       if (error) {
         console.error("Error fetching credits:", error);
       } else if (data) {
+        prevCreditsRef.current = credits;
         setCredits(data.credits);
       } else {
         // No vault_members record exists - create one
@@ -46,7 +48,47 @@ export const useCredits = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.email, user?.user_metadata?.display_name]);
+  }, [user?.email, user?.user_metadata?.display_name, credits]);
+
+  // Refetch with retry - useful after Stripe webhook processing
+  const refetchWithRetry = useCallback(async (expectedIncrease?: number, maxRetries = 5, delayMs = 1500) => {
+    const startCredits = credits;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      await fetchCredits();
+      
+      // If we have an expected increase, check if credits updated
+      if (expectedIncrease !== undefined) {
+        // Small delay to allow state to settle
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Re-fetch to get latest value
+        const { data } = await supabase
+          .from("vault_members")
+          .select("credits")
+          .eq("email", user?.email || "")
+          .maybeSingle();
+        
+        if (data && data.credits >= startCredits + expectedIncrease) {
+          setCredits(data.credits);
+          console.log(`[useCredits] Credits updated after ${attempt + 1} attempts: ${data.credits}`);
+          return true;
+        }
+      } else {
+        // No expected increase, just return after first fetch
+        return true;
+      }
+      
+      // Wait before retrying (webhook may still be processing)
+      if (attempt < maxRetries - 1) {
+        console.log(`[useCredits] Retry ${attempt + 1}/${maxRetries}, waiting ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+    
+    console.log("[useCredits] Max retries reached, credits may not have updated yet");
+    return false;
+  }, [credits, fetchCredits, user?.email]);
 
   const addCredits = async (amount: number): Promise<boolean> => {
     if (!user?.email) return false;
@@ -113,5 +155,5 @@ export const useCredits = () => {
     fetchCredits();
   }, [fetchCredits]);
 
-  return { credits, loading, addCredits, refetch: fetchCredits };
+  return { credits, loading, addCredits, refetch: fetchCredits, refetchWithRetry };
 };
