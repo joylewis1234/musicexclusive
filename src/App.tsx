@@ -71,6 +71,8 @@ import AdminFanStreamDetail from "./pages/admin/AdminFanStreamDetail";
 import AdminFanDetail from "./pages/admin/AdminFanDetail";
 import AdminDailyReport from "./pages/admin/AdminDailyReport";
 import AdminPayouts from "./pages/admin/AdminPayouts";
+import AdminArtistApplications from "./pages/admin/AdminArtistApplications";
+import ArtistApplicationAction from "./pages/admin/ArtistApplicationAction";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 // Testing pages (temporary)
 import TestTools from "./pages/testing/TestTools";
@@ -224,6 +226,14 @@ const App = () => (
                     <AdminTestTools />
                   </AdminProtectedRoute>
                 } />
+                <Route path="/admin/artist-applications" element={
+                  <AdminProtectedRoute>
+                    <AdminArtistApplications />
+                  </AdminProtectedRoute>
+                } />
+                {/* Token-based actions from email links */}
+                <Route path="/admin/artist-applications/approve" element={<ArtistApplicationAction />} />
+                <Route path="/admin/artist-applications/deny" element={<ArtistApplicationAction />} />
                 
                 {/* Testing routes (temporary - no auth required) */}
                 <Route path="/testing/tools" element={<TestTools />} />
