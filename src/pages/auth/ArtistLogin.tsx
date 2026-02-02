@@ -44,6 +44,22 @@ const ArtistLogin = () => {
     setIsLoading(true);
 
     try {
+      // First check if this email has an approved application pending setup
+      // (these users don't have auth accounts yet)
+      const { data: applicationCheck } = await supabase
+        .from("artist_applications")
+        .select("status")
+        .eq("contact_email", email)
+        .maybeSingle();
+
+      if (applicationCheck?.status === "approved_pending_setup") {
+        // Redirect to setup page with email
+        toast.success("Your application is approved! Complete your account setup.");
+        navigate(`/artist/setup-account?email=${encodeURIComponent(email)}`, { replace: true });
+        setIsLoading(false);
+        return;
+      }
+
       // Sign in
       const { error: signInError } = await signIn(email, password);
       if (signInError) {
@@ -80,7 +96,7 @@ const ArtistLogin = () => {
           break;
         case "approved_pending_setup":
           toast.success("Complete your account setup to get started.");
-          navigate("/artist/setup-account", { replace: true });
+          navigate(`/artist/setup-account?email=${encodeURIComponent(email)}`, { replace: true });
           break;
         case "pending":
           setApplicationStatus("pending");
