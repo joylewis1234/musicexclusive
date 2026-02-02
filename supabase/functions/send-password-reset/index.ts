@@ -73,7 +73,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Music Exclusive <onboarding@resend.dev>",
+        from: "Music Exclusive <noreply@themusicisexclusive.com>",
+        reply_to: "support@musicexclusive.co",
         to: [email],
         subject: "Reset Your Music Exclusive Password",
         html: `

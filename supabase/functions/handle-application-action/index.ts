@@ -191,7 +191,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Attempting to send approval email to:", application.contact_email);
       
       const emailResult = await resend.emails.send({
-        from: "Music Exclusive <onboarding@resend.dev>",
+        from: "Music Exclusive <noreply@themusicisexclusive.com>",
+        reply_to: "support@musicexclusive.co",
         to: [application.contact_email],
         subject: "Your Music Exclusive Artist Application Was Approved 🎉",
         html: approvalEmailHtml,
@@ -300,7 +301,8 @@ const handler = async (req: Request): Promise<Response> => {
       `;
 
       await resend.emails.send({
-        from: "Music Exclusive <onboarding@resend.dev>",
+        from: "Music Exclusive <noreply@themusicisexclusive.com>",
+        reply_to: "support@musicexclusive.co",
         to: [application.contact_email],
         subject: "Music Exclusive Artist Application Update",
         html: denialEmailHtml,
