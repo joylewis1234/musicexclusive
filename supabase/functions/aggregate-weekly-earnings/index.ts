@@ -19,7 +19,9 @@ async function sendBatchCreatedNotification(
   weekEnd: string,
   artistCount: number,
   totalGross: number,
-  totalArtistNet: number
+  totalArtistNet: number,
+  applicationsApproved: number,
+  applicationsDenied: number
 ): Promise<void> {
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/send-payout-notification`, {
@@ -35,10 +37,12 @@ async function sendBatchCreatedNotification(
         artistCount,
         totalGross: `$${totalGross.toFixed(2)}`,
         totalArtistNet: `$${totalArtistNet.toFixed(2)}`,
+        applicationsApproved,
+        applicationsDenied,
       }),
     });
     const result = await response.json();
-    logStep("Batch created notification sent", { success: result.success });
+    logStep("Batch created notification sent", { success: result.success, applicationsApproved, applicationsDenied });
   } catch (error) {
     logStep("Failed to send batch created notification", { error: String(error) });
   }
@@ -278,6 +282,29 @@ serve(async (req) => {
 
     logStep("Aggregation complete", { batchesCreated: batchesCreated.length, artistPayoutsCreated: artistPayoutsCreated.length });
 
+    // Fetch artist application stats for this week
+    let applicationsApproved = 0;
+    let applicationsDenied = 0;
+
+    const { data: approvedApps } = await supabaseAdmin
+      .from("artist_applications")
+      .select("id")
+      .in("status", ["approved_pending_setup", "active"])
+      .gte("updated_at", previousWeekStart.toISOString())
+      .lte("updated_at", previousWeekEnd.toISOString());
+
+    const { data: deniedApps } = await supabaseAdmin
+      .from("artist_applications")
+      .select("id")
+      .eq("status", "rejected")
+      .gte("updated_at", previousWeekStart.toISOString())
+      .lte("updated_at", previousWeekEnd.toISOString());
+
+    applicationsApproved = approvedApps?.length || 0;
+    applicationsDenied = deniedApps?.length || 0;
+
+    logStep("Application stats fetched", { applicationsApproved, applicationsDenied });
+
     // Send notification to company about batch creation
     if (batchesCreated.length > 0) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -289,7 +316,9 @@ serve(async (req) => {
         previousWeekEnd.toISOString(),
         batchesCreated.length,
         batchTotalGross,
-        batchTotalArtistNet
+        batchTotalArtistNet,
+        applicationsApproved,
+        applicationsDenied
       );
     }
 
