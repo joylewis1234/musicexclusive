@@ -1,42 +1,67 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Home, Sparkles } from "lucide-react";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { useCredits } from "@/hooks/useCredits";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const FanDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { refetchWithRetry } = useCredits();
+  const { refetch } = useCredits();
+  const [isVerifying, setIsVerifying] = useState(false);
 
-  // Handle payment success redirect - refresh credits with retry
+  // Handle payment success redirect - verify with Stripe and update credits
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
     const creditsAdded = searchParams.get("credits");
+    const sessionId = searchParams.get("session_id");
     
-    if (paymentStatus === "success") {
+    if (paymentStatus === "success" && sessionId && !isVerifying) {
+      setIsVerifying(true);
+      
       // Clear URL params first to prevent re-triggering
       setSearchParams({}, { replace: true });
       
-      // Refetch credits with retry to wait for Stripe webhook processing
-      const expectedCredits = creditsAdded ? parseInt(creditsAdded, 10) : undefined;
-      
-      refetchWithRetry(expectedCredits).then((success) => {
-        if (success) {
-          toast.success(
-            creditsAdded 
-              ? `Payment successful! ${creditsAdded} credits added.`
-              : "Payment successful! Credits added to your wallet."
-          );
-        } else {
+      // Call verify-checkout to update credits immediately
+      const verifyCheckout = async () => {
+        try {
+          console.log("[FanDashboard] Verifying checkout session:", sessionId);
+          
+          const { data, error } = await supabase.functions.invoke("verify-checkout", {
+            body: { sessionId },
+          });
+          
+          if (error) {
+            console.error("[FanDashboard] Verify error:", error);
+            toast.error("Failed to verify payment. Credits may appear shortly.");
+          } else if (data?.success) {
+            console.log("[FanDashboard] Verification successful:", data);
+            // Refetch credits to update UI
+            await refetch();
+            toast.success(
+              creditsAdded 
+                ? `Payment successful! ${creditsAdded} credits added.`
+                : "Payment successful! Credits added to your wallet."
+            );
+          } else {
+            console.error("[FanDashboard] Verification failed:", data);
+            toast.error(data?.error || "Payment verification failed.");
+          }
+        } catch (err) {
+          console.error("[FanDashboard] Verification exception:", err);
           toast.info("Payment successful! Credits should appear shortly.");
+        } finally {
+          setIsVerifying(false);
         }
-      });
+      };
+      
+      verifyCheckout();
     }
-  }, [searchParams, setSearchParams, refetchWithRetry]);
+  }, [searchParams, setSearchParams, refetch, isVerifying]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">

@@ -82,7 +82,7 @@ serve(async (req) => {
         email: email,
         type: "CREDITS_PURCHASE",
       },
-      success_url: successUrl || `${req.headers.get("origin")}/fan/dashboard?payment=success&credits=${credits}`,
+      success_url: successUrl || `${req.headers.get("origin")}/fan/dashboard?payment=success&credits=${credits}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: cancelUrl || `${req.headers.get("origin")}/fan/payment?payment=cancelled`,
     });
 
