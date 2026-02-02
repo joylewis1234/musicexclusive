@@ -25,7 +25,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { applicationId, baseUrl = "https://musicexclusive.lovable.app" }: NotifyApplicationRequest = await req.json();
+    const { applicationId, baseUrl = "https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app" }: NotifyApplicationRequest = await req.json();
 
     if (!applicationId) {
       throw new Error("Application ID is required");
