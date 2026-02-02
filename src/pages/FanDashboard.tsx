@@ -10,25 +10,33 @@ import { toast } from "sonner";
 const FanDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { refetch } = useCredits();
+  const { refetchWithRetry } = useCredits();
 
-  // Handle payment success redirect - refresh credits
+  // Handle payment success redirect - refresh credits with retry
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
     const creditsAdded = searchParams.get("credits");
     
     if (paymentStatus === "success") {
-      // Refetch credits to get updated balance from Stripe webhook
-      refetch();
-      toast.success(
-        creditsAdded 
-          ? `Payment successful! ${creditsAdded} credits added.`
-          : "Payment successful! Credits added to your wallet."
-      );
-      // Clear URL params
+      // Clear URL params first to prevent re-triggering
       setSearchParams({}, { replace: true });
+      
+      // Refetch credits with retry to wait for Stripe webhook processing
+      const expectedCredits = creditsAdded ? parseInt(creditsAdded, 10) : undefined;
+      
+      refetchWithRetry(expectedCredits).then((success) => {
+        if (success) {
+          toast.success(
+            creditsAdded 
+              ? `Payment successful! ${creditsAdded} credits added.`
+              : "Payment successful! Credits added to your wallet."
+          );
+        } else {
+          toast.info("Payment successful! Credits should appear shortly.");
+        }
+      });
     }
-  }, [searchParams, setSearchParams, refetch]);
+  }, [searchParams, setSearchParams, refetchWithRetry]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">
