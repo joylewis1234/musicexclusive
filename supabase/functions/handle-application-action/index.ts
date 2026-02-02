@@ -189,7 +189,7 @@ const handler = async (req: Request): Promise<Response> => {
       `;
 
       await resend.emails.send({
-        from: "Music Exclusive <noreply@musicexclusive.co>",
+        from: "Music Exclusive <onboarding@resend.dev>",
         to: [application.contact_email],
         subject: "Your Music Exclusive Artist Application Was Approved 🎉",
         html: approvalEmailHtml,
@@ -296,7 +296,7 @@ const handler = async (req: Request): Promise<Response> => {
       `;
 
       await resend.emails.send({
-        from: "Music Exclusive <noreply@musicexclusive.co>",
+        from: "Music Exclusive <onboarding@resend.dev>",
         to: [application.contact_email],
         subject: "Music Exclusive Artist Application Update",
         html: denialEmailHtml,
