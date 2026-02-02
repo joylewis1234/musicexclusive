@@ -30,6 +30,16 @@ const CheckoutReturn = () => {
         return;
       }
 
+      // If Stripe didn't replace the placeholder, the URL param will decode to "{CHECKOUT_SESSION_ID}".
+      // That will always fail verification.
+      if (sessionId.includes("CHECKOUT_SESSION_ID")) {
+        setStatus("error");
+        setErrorMessage(
+          "Stripe did not return a valid session id. Please retry the purchase from inside the app (Fan → Add Credits)."
+        );
+        return;
+      }
+
       try {
         const { data, error } = await supabase.functions.invoke("verify-checkout", {
           body: { sessionId },
@@ -37,7 +47,17 @@ const CheckoutReturn = () => {
 
         if (error) {
           setStatus("error");
-          setErrorMessage(error.message || "Failed to verify checkout.");
+          // supabase-js sometimes gives a generic message for non-2xx responses.
+          // Try to extract the server error body if present.
+          const maybeAny = error as unknown as { message?: string; context?: unknown };
+          const ctx = maybeAny?.context as
+            | { status?: number; body?: unknown; response?: { status?: number } }
+            | undefined;
+          const bodyError =
+            typeof ctx?.body === "object" && ctx?.body && "error" in (ctx.body as Record<string, unknown>)
+              ? String((ctx.body as Record<string, unknown>).error)
+              : null;
+          setErrorMessage(bodyError || maybeAny?.message || "Failed to verify checkout.");
           return;
         }
 
