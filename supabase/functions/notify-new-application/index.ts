@@ -242,9 +242,10 @@ const handler = async (req: Request): Promise<Response> => {
 </html>
     `;
 
-    // Send email to support - use resend.dev for reliable delivery
+    // Send email to support - use verified domain
     const emailResult = await resend.emails.send({
-      from: "Music Exclusive <onboarding@resend.dev>",
+      from: "Music Exclusive <noreply@themusicisexclusive.com>",
+      reply_to: "support@musicexclusive.co",
       to: ["support@musicexclusive.co"],
       subject: `🎵 New Artist Application: ${application.artist_name}`,
       html: emailHtml,

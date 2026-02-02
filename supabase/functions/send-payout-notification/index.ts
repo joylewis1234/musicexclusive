@@ -7,8 +7,8 @@ const corsHeaders = {
 };
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const PRIMARY_FROM = "Music Exclusive <noreply@musicexclusive.co>";
-const FALLBACK_FROM = "Music Exclusive <onboarding@resend.dev>";
+const PRIMARY_FROM = "Music Exclusive <noreply@themusicisexclusive.com>";
+const REPLY_TO = "support@musicexclusive.co";
 const COMPANY_EMAIL = "support@musicexclusive.co";
 
 const logStep = (step: string, details?: Record<string, unknown>) => {
@@ -24,6 +24,7 @@ type ResendErrorPayload = {
 async function sendResendEmail(args: {
   resendKey: string;
   from: string;
+  replyTo: string;
   to: string;
   subject: string;
   html: string;
@@ -36,6 +37,7 @@ async function sendResendEmail(args: {
     },
     body: JSON.stringify({
       from: args.from,
+      reply_to: args.replyTo,
       to: [args.to],
       subject: args.subject,
       html: args.html,
@@ -68,42 +70,26 @@ async function sendResendEmail(args: {
   return { ok: false, status: emailResponse.status, message };
 }
 
-async function sendWithFallback(
+async function sendEmail(
   resendKey: string,
   to: string,
   subject: string,
   html: string
 ): Promise<{ success: boolean; error?: string }> {
-  const primaryAttempt = await sendResendEmail({
+  const result = await sendResendEmail({
     resendKey,
     from: PRIMARY_FROM,
+    replyTo: REPLY_TO,
     to,
     subject,
     html,
   });
 
-  if (primaryAttempt.ok) {
+  if (result.ok) {
     return { success: true };
   }
 
-  const msg = primaryAttempt.message.toLowerCase();
-  if (msg.includes("domain is not verified") || msg.includes("not verified")) {
-    logStep("Primary domain not verified, trying fallback");
-    const fallbackAttempt = await sendResendEmail({
-      resendKey,
-      from: FALLBACK_FROM,
-      to,
-      subject,
-      html,
-    });
-
-    if (fallbackAttempt.ok) {
-      return { success: true };
-    }
-    return { success: false, error: fallbackAttempt.message };
-  }
-
-  return { success: false, error: primaryAttempt.message };
+  return { success: false, error: result.message };
 }
 
 // Email Templates
@@ -405,7 +391,7 @@ serve(async (req) => {
           throw new Error("Missing required fields for artist_paid notification");
         }
         const html = artistPayoutPaidEmail(request.artistName, request.amount, request.weekStart, request.weekEnd);
-        result = await sendWithFallback(resendKey, request.artistEmail, "💰 Your Weekly Payout is On the Way!", html);
+        result = await sendEmail(resendKey, request.artistEmail, "💰 Your Weekly Payout is On the Way!", html);
         logStep("Artist paid email sent", { email: request.artistEmail, success: result.success });
         break;
       }
@@ -415,7 +401,7 @@ serve(async (req) => {
           throw new Error("Missing required fields for artist_failed notification");
         }
         const html = artistPayoutFailedEmail(request.artistName, request.failureReason);
-        result = await sendWithFallback(resendKey, request.artistEmail, "⚠️ Action Needed: Complete Your Payout Setup", html);
+        result = await sendEmail(resendKey, request.artistEmail, "⚠️ Action Needed: Complete Your Payout Setup", html);
         logStep("Artist failed email sent", { email: request.artistEmail, success: result.success });
         break;
       }
@@ -425,7 +411,7 @@ serve(async (req) => {
           throw new Error("Missing required fields for batch_created notification");
         }
         const html = companyBatchCreatedEmail(request.weekStart, request.weekEnd, request.artistCount, request.totalGross, request.totalArtistNet);
-        result = await sendWithFallback(resendKey, COMPANY_EMAIL, "📊 Weekly Payout Batch Created - Awaiting Approval", html);
+        result = await sendEmail(resendKey, COMPANY_EMAIL, "📊 Weekly Payout Batch Created - Awaiting Approval", html);
         logStep("Batch created email sent", { success: result.success });
         break;
       }
@@ -435,7 +421,7 @@ serve(async (req) => {
           throw new Error("Missing required fields for payouts_completed notification");
         }
         const html = companyPayoutsCompletedEmail(request.batchCount, request.paidCount, request.totalPaid, request.failedCount);
-        result = await sendWithFallback(resendKey, COMPANY_EMAIL, `${request.failedCount > 0 ? '⚠️' : '✅'} Payout Processing Complete`, html);
+        result = await sendEmail(resendKey, COMPANY_EMAIL, `${request.failedCount > 0 ? '⚠️' : '✅'} Payout Processing Complete`, html);
         logStep("Payouts completed email sent", { success: result.success });
         break;
       }
@@ -445,7 +431,7 @@ serve(async (req) => {
           throw new Error("Missing failures array for payouts_failed notification");
         }
         const html = companyPayoutsFailedEmail(request.failures);
-        result = await sendWithFallback(resendKey, COMPANY_EMAIL, "🚨 Payout Failures Report", html);
+        result = await sendEmail(resendKey, COMPANY_EMAIL, "🚨 Payout Failures Report", html);
         logStep("Payouts failed email sent", { success: result.success });
         break;
       }
