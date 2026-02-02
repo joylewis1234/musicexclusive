@@ -188,12 +188,16 @@ const handler = async (req: Request): Promise<Response> => {
 </html>
       `;
 
-      await resend.emails.send({
+      console.log("Attempting to send approval email to:", application.contact_email);
+      
+      const emailResult = await resend.emails.send({
         from: "Music Exclusive <onboarding@resend.dev>",
         to: [application.contact_email],
         subject: "Your Music Exclusive Artist Application Was Approved 🎉",
         html: approvalEmailHtml,
       });
+      
+      console.log("Approval email result:", JSON.stringify(emailResult));
 
       return new Response(
         JSON.stringify({
