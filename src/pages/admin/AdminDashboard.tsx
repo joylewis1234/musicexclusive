@@ -11,7 +11,8 @@ import {
   Home, 
   LogOut,
   BarChart3,
-  Wrench
+  Wrench,
+  UserPlus
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -33,6 +34,14 @@ const AdminDashboard = () => {
   };
 
   const adminLinks = [
+    {
+      title: "Artist Applications",
+      description: "Review, approve, or deny new artist applications",
+      icon: UserPlus,
+      path: "/admin/artist-applications",
+      color: "text-cyan-400",
+      tooltip: "Review pending artist applications. Approve to send setup email, or deny to notify rejection.",
+    },
     {
       title: "Fan Activity Reports",
       description: "View fan stream history, membership status, and engagement",
