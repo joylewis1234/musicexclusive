@@ -308,7 +308,8 @@ serve(async (req) => {
     
     // Default to yesterday if no date provided (for scheduled runs)
     const reportDate = body.date || new Date(Date.now() - 86400000).toISOString().split("T")[0];
-    const recipientEmail = body.email || "support@musicexclusive.co";
+    // Always send to company support email
+    const recipientEmail = "support@musicexclusive.co";
     const sendEmail = body.sendEmail !== false;
 
     logStep("Processing request", { reportDate, recipientEmail, sendEmail });
