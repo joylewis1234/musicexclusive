@@ -90,7 +90,7 @@ const ArtistApplicationForm = () => {
       }
 
       // Insert application with defaults for missing fields (TESTING MODE)
-      const { error } = await supabase.from("artist_applications").insert({
+      const { data: insertedApp, error } = await supabase.from("artist_applications").insert({
         artist_name: artistName || "Test Artist",
         contact_email: contactEmail || "test@example.com",
         country_city: countryCity || null,
@@ -107,12 +107,25 @@ const ArtistApplicationForm = () => {
         not_released_publicly: true,
         agrees_terms: true,
         status: "pending",
-      })
+      }).select().single()
 
       if (error) throw error
 
+      // Send notification email to support@musicexclusive.co
+      try {
+        await supabase.functions.invoke("notify-new-application", {
+          body: {
+            applicationId: insertedApp.id,
+            baseUrl: window.location.origin,
+          },
+        })
+      } catch (notifyError) {
+        // Log but don't fail the submission if notification fails
+        console.error("Failed to send notification email:", notifyError)
+      }
+
       navigate("/artist/application-status", {
-        state: { artistName, contactEmail },
+        state: { artistName: artistName || "Test Artist", contactEmail: contactEmail || "test@example.com" },
       })
     } catch (error) {
       console.error("Application error:", error)

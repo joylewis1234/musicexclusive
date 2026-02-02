@@ -41,3 +41,9 @@ verify_jwt = false
 
 [functions.send-payout-notification]
 verify_jwt = false
+
+[functions.notify-new-application]
+verify_jwt = false
+
+[functions.handle-application-action]
+verify_jwt = false
