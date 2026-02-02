@@ -225,7 +225,19 @@ function artistPayoutFailedEmail(artistName: string, reason: string): string {
 `;
 }
 
-function companyBatchCreatedEmail(weekStart: string, weekEnd: string, artistCount: number, totalGross: string, totalArtistNet: string): string {
+function companyBatchCreatedEmail(
+  weekStart: string, 
+  weekEnd: string, 
+  artistCount: number, 
+  totalGross: string, 
+  totalArtistNet: string,
+  applicationsApproved?: number,
+  applicationsDenied?: number
+): string {
+  const hasApplicationStats = applicationsApproved !== undefined || applicationsDenied !== undefined;
+  const approvedCount = applicationsApproved ?? 0;
+  const deniedCount = applicationsDenied ?? 0;
+  
   return `
 <!DOCTYPE html>
 <html>
@@ -243,7 +255,7 @@ function companyBatchCreatedEmail(weekStart: string, weekEnd: string, artistCoun
         <td style="padding: 12px; border: 1px solid #e0e0e0;">${weekStart} - ${weekEnd}</td>
       </tr>
       <tr>
-        <td style="padding: 12px; background: #f9f9f9; border: 1px solid #e0e0e0; font-weight: bold;">Artists</td>
+        <td style="padding: 12px; background: #f9f9f9; border: 1px solid #e0e0e0; font-weight: bold;">Artists with Earnings</td>
         <td style="padding: 12px; border: 1px solid #e0e0e0;">${artistCount}</td>
       </tr>
       <tr>
@@ -255,6 +267,20 @@ function companyBatchCreatedEmail(weekStart: string, weekEnd: string, artistCoun
         <td style="padding: 12px; border: 1px solid #e0e0e0;">${totalArtistNet}</td>
       </tr>
     </table>
+    
+    ${hasApplicationStats ? `
+    <h2 style="margin: 20px 0 15px 0; color: #1a1a1a; font-size: 18px;">🎤 Artist Applications This Week</h2>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <tr>
+        <td style="padding: 12px; background: #d4edda; border: 1px solid #c3e6cb; font-weight: bold; width: 40%;">✅ Approved</td>
+        <td style="padding: 12px; border: 1px solid #c3e6cb; color: #155724; font-weight: bold;">${approvedCount}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; background: #f8d7da; border: 1px solid #f5c6cb; font-weight: bold;">❌ Denied</td>
+        <td style="padding: 12px; border: 1px solid #f5c6cb; color: #721c24; font-weight: bold;">${deniedCount}</td>
+      </tr>
+    </table>
+    ` : ''}
     
     <p style="color: #666; font-size: 14px;">
       <strong>Next Step:</strong> Review and approve the batch in the Admin Dashboard → Payouts.
@@ -367,6 +393,9 @@ interface NotificationRequest {
   totalPaid?: string;
   failedCount?: number;
   failures?: Array<{ artistName: string; reason: string }>;
+  // Artist application stats for weekly batch email
+  applicationsApproved?: number;
+  applicationsDenied?: number;
 }
 
 serve(async (req) => {
@@ -410,9 +439,17 @@ serve(async (req) => {
         if (!request.weekStart || !request.weekEnd || request.artistCount === undefined || !request.totalGross || !request.totalArtistNet) {
           throw new Error("Missing required fields for batch_created notification");
         }
-        const html = companyBatchCreatedEmail(request.weekStart, request.weekEnd, request.artistCount, request.totalGross, request.totalArtistNet);
+        const html = companyBatchCreatedEmail(
+          request.weekStart, 
+          request.weekEnd, 
+          request.artistCount, 
+          request.totalGross, 
+          request.totalArtistNet,
+          request.applicationsApproved,
+          request.applicationsDenied
+        );
         result = await sendEmail(resendKey, COMPANY_EMAIL, "📊 Weekly Payout Batch Created - Awaiting Approval", html);
-        logStep("Batch created email sent", { success: result.success });
+        logStep("Batch created email sent", { success: result.success, applicationsApproved: request.applicationsApproved, applicationsDenied: request.applicationsDenied });
         break;
       }
 
