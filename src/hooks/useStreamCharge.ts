@@ -163,19 +163,21 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
       });
 
       // ARTIST_EARNING - use track owner's artist_id
+      // credits_delta is 0 because earnings are tracked in usd_delta, not as fan credits
       await supabase.from("credit_ledger").insert({
         user_email: trackOwnerArtistId,
         type: "ARTIST_EARNING",
-        credits_delta: 0.5,
+        credits_delta: 0,
         usd_delta: 0.10,
         reference: streamReference,
       });
 
       // PLATFORM_EARNING
+      // credits_delta is 0 because earnings are tracked in usd_delta, not as fan credits
       await supabase.from("credit_ledger").insert({
         user_email: "platform@musicexclusive.com",
         type: "PLATFORM_EARNING",
-        credits_delta: 0.5,
+        credits_delta: 0,
         usd_delta: 0.10,
         reference: streamReference,
       });
