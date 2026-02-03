@@ -58,10 +58,15 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Generate 4-digit numeric code with leading zeros
+// Generate 4-character alphanumeric code (uppercase letters + digits, excluding confusing chars)
 const generateVaultCode = (): string => {
-  const num = Math.floor(Math.random() * 10000);
-  return num.toString().padStart(4, "0");
+  // Exclude confusing characters: 0/O, 1/I/L
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let i = 0; i < 4; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
 };
 
 const EnterVault = () => {
