@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
 // TEMPORARY DEV BYPASS - Set to true to skip auth checks for testing
-const DEV_BYPASS = true;
+const DEV_BYPASS = false;
 
 interface ArtistProtectedRouteProps {
   children: ReactNode;
@@ -33,26 +33,38 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
         return;
       }
 
-      // Get user's email to find their application
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("display_name")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      try {
+        // Check artist_applications by email
+        const { data: application, error } = await supabase
+          .from("artist_applications")
+          .select("status")
+          .eq("contact_email", user.email)
+          .maybeSingle();
 
-      // Check artist_applications by email
-      const { data: application } = await supabase
-        .from("artist_applications")
-        .select("status, contact_email")
-        .eq("contact_email", user.email)
-        .maybeSingle();
+        if (error) {
+          console.error("[ArtistProtectedRoute] Status fetch error:", error);
+          setArtistStatus(null);
+          return;
+        }
 
-      if (application) {
-        setArtistStatus(application.status as ArtistStatus);
-      } else {
+        setArtistStatus(application ? (application.status as ArtistStatus) : null);
+      } catch (err) {
+        const anyErr = err as any;
+        const name = String(anyErr?.name ?? "");
+        const message = String(anyErr?.message ?? anyErr ?? "").toLowerCase();
+        const benign =
+          name === "AbortError" ||
+          message.includes("signal is aborted") ||
+          message.includes("cancelled") ||
+          message.includes("canceled");
+
+        if (!benign) {
+          console.error("[ArtistProtectedRoute] Unexpected status error:", err);
+        }
         setArtistStatus(null);
+      } finally {
+        setStatusLoading(false);
       }
-      setStatusLoading(false);
     };
 
     if (role === "artist") {
@@ -68,7 +80,8 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
   }
 
   // Show loading while checking auth and status
-  if (authLoading || statusLoading) {
+  // Note: role can be temporarily null right after sign-in while we fetch it.
+  if (authLoading || statusLoading || (user && !role)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

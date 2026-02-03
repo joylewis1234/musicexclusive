@@ -32,8 +32,14 @@ export class ErrorBoundary extends React.Component<
   };
 
   private onUnhandledRejection = (event: PromiseRejectionEvent) => {
-    if (this.isBenignAbortRejection(event.reason)) return;
+    if (this.isBenignAbortRejection(event.reason)) {
+      // Prevent default browser handling/console noise for benign aborts.
+      // These happen frequently during navigation/unmounts and should not crash the app.
+      event.preventDefault();
+      return;
+    }
     // Don’t crash the page; surface the error.
+    event.preventDefault();
     this.setState({ lastRejection: event.reason });
   };
 
