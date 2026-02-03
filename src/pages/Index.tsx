@@ -279,7 +279,7 @@ const Index = () => {
               variant="outline" 
               size="lg" 
               className="w-full h-auto py-3 whitespace-normal text-amber-400 border-amber-500/50 hover:border-amber-400 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(251,191,36,0.3)] animate-glow-pulse"
-              onClick={() => navigate("/subscribe")}
+              onClick={() => navigate("/auth/fan", { state: { flow: "superfan" } })}
             >
               <span className="block text-center leading-tight">
                 Want Access Now?<br />Become a Superfan
