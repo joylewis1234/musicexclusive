@@ -1,8 +1,11 @@
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Crown, Zap, Star, Users, Gift, Sparkles, CreditCard, Check, Home, Trophy } from "lucide-react";
+import { ChevronLeft, Crown, Zap, Star, Users, Gift, Sparkles, CreditCard, Check, Home, Trophy, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LocationState {
   email?: string;
@@ -13,7 +16,39 @@ interface LocationState {
 const ChooseAccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const state = location.state as LocationState | null;
+  const [hasCredits, setHasCredits] = useState<boolean | null>(null);
+  const [isCheckingCredits, setIsCheckingCredits] = useState(false);
+
+  // Check if user already has credits
+  useEffect(() => {
+    const checkCredits = async () => {
+      if (!user?.email) return;
+      
+      setIsCheckingCredits(true);
+      try {
+        const { data, error } = await supabase
+          .from("vault_members")
+          .select("credits, vault_access_active")
+          .eq("email", user.email)
+          .maybeSingle();
+        
+        if (!error && data && data.credits > 0 && data.vault_access_active) {
+          setHasCredits(true);
+        } else {
+          setHasCredits(false);
+        }
+      } catch (err) {
+        console.error("Error checking credits:", err);
+        setHasCredits(false);
+      } finally {
+        setIsCheckingCredits(false);
+      }
+    };
+
+    checkCredits();
+  }, [user?.email]);
 
   const handleSuperfan = () => {
     navigate("/subscribe", { state: { ...state, flow: "vault" } });
@@ -219,6 +254,33 @@ const ChooseAccess = () => {
           <p className="text-xs text-muted-foreground text-center mt-8 max-w-md mx-auto">
             Both options support artists directly. You can switch between plans anytime.
           </p>
+
+          {/* Already purchased link */}
+          <div className="text-center mt-6 pt-6 border-t border-border/30">
+            {isCheckingCredits ? (
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Checking account...</span>
+              </div>
+            ) : hasCredits ? (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Already purchased credits?
+                </p>
+                <Button
+                  variant="link"
+                  onClick={() => navigate("/fan/dashboard")}
+                  className="text-primary hover:text-primary/80"
+                >
+                  Go to Dashboard →
+                </Button>
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                You need to purchase credits to access the Vault.
+              </p>
+            )}
+          </div>
         </div>
       </main>
     </div>
