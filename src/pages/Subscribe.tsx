@@ -80,10 +80,11 @@ const Subscribe = () => {
     setIsProcessing(true);
     
     try {
+      // Don't pass successUrl - let the edge function use the correct /checkout/return URL
       const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
         body: {
           email,
-          successUrl: `${window.location.origin}/subscribe?payment=success`,
+          // successUrl is intentionally omitted - the edge function will use /checkout/return
           cancelUrl: `${window.location.origin}/subscribe?payment=cancelled`,
         },
       });
