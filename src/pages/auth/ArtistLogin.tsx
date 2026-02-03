@@ -46,11 +46,18 @@ const ArtistLogin = () => {
     try {
       // First check if this email has an approved application pending setup
       // (these users don't have auth accounts yet)
-      const { data: applicationCheck } = await supabase
+      const { data: applicationCheck, error: applicationCheckError } = await supabase
         .from("artist_applications")
         .select("status")
         .eq("contact_email", email)
         .maybeSingle();
+
+      if (applicationCheckError) {
+        console.error("[ArtistLogin] application pre-check error:", applicationCheckError);
+        toast.error("Could not verify application status. Please try again.");
+        setIsLoading(false);
+        return;
+      }
 
       if (applicationCheck?.status === "approved_pending_setup") {
         // Redirect to setup page with email
@@ -76,14 +83,20 @@ const ArtistLogin = () => {
         .maybeSingle();
 
       if (appError) {
-        console.error("Error fetching application:", appError);
+        console.error("[ArtistLogin] Error fetching application:", appError);
+        toast.error("Could not verify your artist status. Please try again.");
+        return;
       }
 
       // Route based on status
       if (!application) {
         // No application found - they need to apply first
         setApplicationStatus("no_application");
-        await supabase.auth.signOut();
+        try {
+          await supabase.auth.signOut();
+        } catch (err) {
+          console.error("[ArtistLogin] signOut failed:", err);
+        }
         setIsLoading(false);
         return;
       }
@@ -100,19 +113,45 @@ const ArtistLogin = () => {
           break;
         case "pending":
           setApplicationStatus("pending");
-          await supabase.auth.signOut();
+          try {
+            await supabase.auth.signOut();
+          } catch (err) {
+            console.error("[ArtistLogin] signOut failed:", err);
+          }
           break;
         case "rejected":
         case "not_approved":
           setApplicationStatus("not_approved");
-          await supabase.auth.signOut();
+          try {
+            await supabase.auth.signOut();
+          } catch (err) {
+            console.error("[ArtistLogin] signOut failed:", err);
+          }
           break;
         default:
           setApplicationStatus("pending");
-          await supabase.auth.signOut();
+          try {
+            await supabase.auth.signOut();
+          } catch (err) {
+            console.error("[ArtistLogin] signOut failed:", err);
+          }
       }
     } catch (error) {
-      toast.error("An error occurred. Please try again.");
+      const anyErr = error as any;
+      const name = String(anyErr?.name ?? "");
+      const message = String(anyErr?.message ?? anyErr ?? "").toLowerCase();
+      const benign =
+        name === "AbortError" ||
+        message.includes("signal is aborted") ||
+        message.includes("request cancelled") ||
+        message.includes("request canceled") ||
+        message.includes("cancelled") ||
+        message.includes("canceled");
+
+      if (!benign) {
+        console.error("[ArtistLogin] Unexpected login error:", error);
+        toast.error("An error occurred. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
