@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { ChevronLeft, Home, User, Camera, Pencil, Check, X, Loader2, LogOut, Sta
 import { useFanProfile } from "@/hooks/useFanProfile";
 import { useFanTopArtists } from "@/hooks/useFanTopArtists";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCredits } from "@/hooks/useCredits";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 const FanProfile = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const {
@@ -31,11 +33,53 @@ const FanProfile = () => {
   } = useFanProfile();
 
   const { user } = useAuth();
+  const { refetchWithRetry } = useCredits();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isSuperfan, setIsSuperfan] = useState(false);
   const [fanVaultId, setFanVaultId] = useState<string | null>(null);
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+
+  // Handle payment success redirect - verify with Stripe and update credits
+  useEffect(() => {
+    const paymentStatus = searchParams.get("payment");
+    const creditsAdded = searchParams.get("credits");
+    
+    if (paymentStatus === "success" && !isVerifyingPayment) {
+      setIsVerifyingPayment(true);
+      
+      // Clear URL params to prevent re-triggering
+      setSearchParams({}, { replace: true });
+      
+      // Use refetchWithRetry to poll for credit updates
+      const verifyCredits = async () => {
+        try {
+          const expectedCredits = creditsAdded ? parseInt(creditsAdded, 10) : undefined;
+          console.log("[FanProfile] Polling for credit update, expected:", expectedCredits);
+          
+          const success = await refetchWithRetry(expectedCredits, 5, 1500);
+          
+          if (success) {
+            toast.success(
+              creditsAdded 
+                ? `Payment successful! ${creditsAdded} credits added.`
+                : "Payment successful! Credits added to your wallet."
+            );
+          } else {
+            toast.info("Payment successful! Credits should appear shortly.");
+          }
+        } catch (err) {
+          console.error("[FanProfile] Credit verification error:", err);
+          toast.info("Payment processed! Credits should appear shortly.");
+        } finally {
+          setIsVerifyingPayment(false);
+        }
+      };
+      
+      verifyCredits();
+    }
+  }, [searchParams, setSearchParams, refetchWithRetry, isVerifyingPayment]);
 
   // Fetch vault member id for top artists query
   useEffect(() => {
