@@ -38,6 +38,11 @@ Deno.serve(async (req) => {
       console.log(`Found existing customer: ${customerId}`);
     }
 
+    // Use /checkout/return for consistent verification flow
+    const origin = req.headers.get("origin") || "";
+    const defaultSuccessUrl = `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25`;
+    const defaultCancelUrl = `${origin}/subscribe?payment=cancelled`;
+
     // Create Stripe checkout session for subscription
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -55,8 +60,8 @@ Deno.serve(async (req) => {
         subscription_type: "superfan",
         credits: "25", // Initial credits for superfan
       },
-      success_url: successUrl || `${req.headers.get("origin")}/fan/dashboard?payment=success&type=subscription`,
-      cancel_url: cancelUrl || `${req.headers.get("origin")}/subscribe?payment=cancelled`,
+      success_url: successUrl || defaultSuccessUrl,
+      cancel_url: cancelUrl || defaultCancelUrl,
     });
 
     console.log("Subscription checkout session created:", session.id);
