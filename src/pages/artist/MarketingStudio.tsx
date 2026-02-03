@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import {
@@ -20,7 +19,6 @@ import {
   Share2,
   Loader2,
   Image as ImageIcon,
-  Megaphone,
   Sparkles,
   AlertCircle,
 } from "lucide-react";
@@ -278,43 +276,40 @@ const MarketingStudio = () => {
           </button>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">
+            <div className="px-2 py-1 rounded-lg bg-muted/30 text-xs text-muted-foreground">
               {dailyCount}/{dailyLimit} today
-            </span>
+            </div>
             <MarketingHelpModal />
           </div>
         </div>
       </header>
 
       <main className="pt-20 px-4">
-        <div className="w-full max-w-lg mx-auto space-y-6">
-          {/* Title */}
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 mb-2">
-              <Megaphone className="w-5 h-5 text-primary" />
-              <h1 className="font-display text-xl font-bold">Marketing Studio</h1>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Create promo assets for Instagram Stories & Reels
-            </p>
-          </div>
+        <div className="w-full max-w-lg mx-auto space-y-4">
+          <SectionHeader title="Marketing Studio" align="left" />
 
           {/* Rate limit warning */}
           {!canCreate && (
-            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30 flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0" />
-              <p className="text-sm text-destructive">
-                You've hit today's promo limit ({dailyLimit}). Try again tomorrow!
-              </p>
-            </div>
+            <GlowCard variant="flat" glowColor="subtle" className="p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-destructive/10 flex items-center justify-center">
+                  <AlertCircle className="w-4 h-4 text-destructive" />
+                </div>
+                <p className="text-sm text-destructive">
+                  You've hit today's promo limit ({dailyLimit}). Try again tomorrow!
+                </p>
+              </div>
+            </GlowCard>
           )}
 
           {/* Track Selection */}
-          <GlowCard className="p-4 space-y-4">
-            <SectionHeader title="Select Track" align="left" />
+          <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <h3 className="text-sm font-display font-semibold text-foreground mb-4 uppercase tracking-wider">
+              Select Track
+            </h3>
             
             <Select value={selectedTrackId} onValueChange={handleTrackSelect}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-muted/30 border-border/50">
                 <SelectValue placeholder="Choose a song to promote" />
               </SelectTrigger>
               <SelectContent>
@@ -336,33 +331,33 @@ const MarketingStudio = () => {
             </Select>
 
             {selectedTrackId && (
-              <div className="grid gap-3 pt-2">
+              <div className="grid gap-3 pt-4 mt-4 border-t border-border/30">
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Song Title</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Song Title</Label>
                   <Input
                     value={trackTitle}
                     onChange={(e) => setTrackTitle(e.target.value)}
-                    className="h-9"
+                    className="h-9 bg-muted/30 border-border/50"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Artist Name</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Artist Name</Label>
                   <Input
                     value={artistName}
                     onChange={(e) => setArtistName(e.target.value)}
-                    className="h-9"
+                    className="h-9 bg-muted/30 border-border/50"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Genre</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Genre</Label>
                   <Input
                     value={genre}
                     onChange={(e) => setGenre(e.target.value)}
-                    className="h-9"
+                    className="h-9 bg-muted/30 border-border/50"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs">Cover Art</Label>
+                  <Label className="text-xs text-muted-foreground uppercase tracking-wider">Cover Art</Label>
                   <div className="flex items-center gap-3">
                     {coverArtUrl && (
                       <img
@@ -397,28 +392,32 @@ const MarketingStudio = () => {
           </GlowCard>
 
           {/* Format Toggle */}
-          <GlowCard className="p-4 space-y-4">
-            <SectionHeader title="Format" align="left" />
+          <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <h3 className="text-sm font-display font-semibold text-foreground mb-4 uppercase tracking-wider">
+              Format
+            </h3>
             
             <div className="flex gap-2">
               <Button
-                variant={format === "story" ? "default" : "outline"}
+                variant={format === "story" ? "accent" : "outline"}
                 onClick={() => setFormat("story")}
-                className="flex-1 rounded-full"
+                className="flex-1"
+                size="sm"
               >
                 Instagram Story
               </Button>
               <Button
-                variant={format === "reel" ? "default" : "outline"}
+                variant={format === "reel" ? "accent" : "outline"}
                 onClick={() => setFormat("reel")}
-                className="flex-1 rounded-full"
+                className="flex-1"
+                size="sm"
               >
                 Instagram Reel
               </Button>
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label className="text-sm">Show Safe Zones</Label>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border/30">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wider">Show Safe Zones</Label>
               <Switch
                 checked={showSafeZones}
                 onCheckedChange={setShowSafeZones}
@@ -427,8 +426,10 @@ const MarketingStudio = () => {
           </GlowCard>
 
           {/* Template Selector */}
-          <GlowCard className="p-4 space-y-4">
-            <SectionHeader title="Template" align="left" />
+          <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <h3 className="text-sm font-display font-semibold text-foreground mb-4 uppercase tracking-wider">
+              Template
+            </h3>
             <TemplateSelector
               selectedTemplate={templateId}
               onSelect={setTemplateId}
@@ -436,8 +437,10 @@ const MarketingStudio = () => {
           </GlowCard>
 
           {/* Badges */}
-          <GlowCard className="p-4 space-y-4">
-            <SectionHeader title="Badges (max 3)" align="left" />
+          <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <h3 className="text-sm font-display font-semibold text-foreground mb-4 uppercase tracking-wider">
+              Badges (max 3)
+            </h3>
             <BadgeSelector
               selectedBadges={selectedBadges}
               onToggle={toggleBadge}
@@ -446,9 +449,11 @@ const MarketingStudio = () => {
           </GlowCard>
 
           {/* CTA Strip */}
-          <GlowCard className="p-4 space-y-4">
-            <div className="flex items-center justify-between">
-              <SectionHeader title="Call-to-Action" align="left" />
+          <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-display font-semibold text-foreground uppercase tracking-wider">
+                Call-to-Action
+              </h3>
               <Switch checked={showCta} onCheckedChange={setShowCta} />
             </div>
             {showCta && (
@@ -456,15 +461,17 @@ const MarketingStudio = () => {
                 value={ctaText}
                 onChange={(e) => setCtaText(e.target.value)}
                 placeholder="Stream on Music Exclusive"
-                className="h-9"
+                className="h-9 bg-muted/30 border-border/50"
               />
             )}
           </GlowCard>
 
           {/* Preview */}
           {selectedTrackId && (
-            <GlowCard className="p-4 space-y-4">
-              <SectionHeader title="Preview" align="left" />
+            <GlowCard variant="flat" glowColor="subtle" className="p-5">
+              <h3 className="text-sm font-display font-semibold text-foreground mb-4 uppercase tracking-wider">
+                Preview
+              </h3>
               <PromoCanvas
                 format={format}
                 templateId={templateId}
@@ -480,14 +487,12 @@ const MarketingStudio = () => {
               />
 
               {/* Action Buttons */}
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-4 mt-4 border-t border-border/30">
                 <Button
                   onClick={handleShare}
                   disabled={isProcessing || !canCreate}
-                  className="flex-1 rounded-full md:hidden"
-                  style={{
-                    background: "linear-gradient(135deg, hsl(280, 80%, 50%), hsl(280, 80%, 40%))",
-                  }}
+                  className="flex-1 md:hidden"
+                  variant="accent"
                 >
                   {isProcessing ? (
                     <>
@@ -504,8 +509,8 @@ const MarketingStudio = () => {
                 <Button
                   onClick={handleDownload}
                   disabled={isProcessing || !canCreate}
-                  variant="outline"
-                  className="flex-1 rounded-full"
+                  variant="secondary"
+                  className="flex-1"
                 >
                   {isProcessing ? (
                     <>
@@ -525,10 +530,14 @@ const MarketingStudio = () => {
 
           {/* AI Caption Builder */}
           {selectedTrackId && (
-            <GlowCard className="p-4 space-y-4">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                <SectionHeader title="AI Caption Builder" align="left" />
+            <GlowCard variant="flat" glowColor="subtle" className="p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                </div>
+                <h3 className="text-sm font-display font-semibold text-foreground uppercase tracking-wider">
+                  AI Caption Builder
+                </h3>
               </div>
               <CaptionBuilder
                 trackTitle={trackTitle}
@@ -540,8 +549,10 @@ const MarketingStudio = () => {
           )}
 
           {/* Recent Assets */}
-          <GlowCard className="p-4 space-y-4">
-            <SectionHeader title="Recent Promos" align="left" />
+          <GlowCard variant="flat" glowColor="subtle" className="p-5">
+            <h3 className="text-sm font-display font-semibold text-foreground mb-4 uppercase tracking-wider">
+              Recent Promos
+            </h3>
             <RecentAssetsList assets={recentAssets} onDelete={deleteAsset} />
           </GlowCard>
         </div>
