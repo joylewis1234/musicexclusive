@@ -18,7 +18,6 @@ import {
   Plus,
   Crown,
   ChevronLeft,
-  Megaphone,
 } from "lucide-react";
 
 type PayoutStatus = "not_connected" | "pending" | "connected";
@@ -490,31 +489,6 @@ const ArtistDashboard = () => {
             </div>
           </div>
 
-          {/* Create Promo CTA */}
-          <button
-            onClick={() => navigate("/artist/marketing")}
-            className="w-full p-4 rounded-2xl border animate-fade-in transition-all hover:scale-[1.01] active:scale-[0.99]"
-            style={{
-              background: 'linear-gradient(135deg, hsla(280, 80%, 50%, 0.15), hsla(265, 90%, 60%, 0.1))',
-              borderColor: 'hsla(280, 80%, 50%, 0.3)',
-            }}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div 
-                  className="w-10 h-10 rounded-xl flex items-center justify-center"
-                  style={{ background: 'hsla(280, 80%, 50%, 0.2)' }}
-                >
-                  <Megaphone className="w-5 h-5" style={{ color: 'hsl(280, 80%, 70%)' }} />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium text-foreground">Create Promo</p>
-                  <p className="text-xs text-muted-foreground">Make Story/Reel assets</p>
-                </div>
-              </div>
-              <ChevronLeft className="w-5 h-5 rotate-180 text-muted-foreground" />
-            </div>
-          </button>
 
           {/* Your Exclusive Songs Section */}
           <section className="space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>
