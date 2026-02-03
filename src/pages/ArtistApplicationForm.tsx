@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArrowLeft, Home, Upload, Loader2, CheckCircle } from "lucide-react"
+import { ArrowLeft, Home, Loader2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 
@@ -47,7 +47,6 @@ const ArtistApplicationForm = () => {
   const [primarySocialPlatform, setPrimarySocialPlatform] = useState("")
   const [socialProfileUrl, setSocialProfileUrl] = useState("")
   const [followerCount, setFollowerCount] = useState("")
-  const [songSampleFile, setSongSampleFile] = useState<File | null>(null)
   const [ownsRights, setOwnsRights] = useState(false)
   const [notReleasedPublicly, setNotReleasedPublicly] = useState(false)
   const [agreesTerms, setAgreesTerms] = useState(false)
@@ -55,31 +54,12 @@ const ArtistApplicationForm = () => {
   // Form validation: require agreesTerms checkbox
   const isFormValid = agreesTerms
 
-  const uploadFile = async (file: File, folder: string): Promise<string> => {
-    const fileExt = file.name.split(".").pop()
-    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`
-
-    const { error: uploadError } = await supabase.storage
-      .from("audio")
-      .upload(fileName, file)
-
-    if (uploadError) throw uploadError
-
-    const { data } = supabase.storage.from("audio").getPublicUrl(fileName)
-    return data.publicUrl
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     setIsSubmitting(true)
 
     try {
-      // Upload song sample if provided
-      let songSampleUrl = "https://placeholder-sample.mp3"
-      if (songSampleFile) {
-        songSampleUrl = await uploadFile(songSampleFile, "applications")
-      }
 
       // Insert application with defaults for missing fields (TESTING MODE)
       const { data: insertedApp, error } = await supabase.from("artist_applications").insert({
@@ -93,7 +73,7 @@ const ArtistApplicationForm = () => {
         primary_social_platform: primarySocialPlatform || "instagram",
         social_profile_url: socialProfileUrl || "https://instagram.com/test",
         follower_count: parseInt(followerCount) || 1000,
-        song_sample_url: songSampleUrl,
+        song_sample_url: "https://placeholder-not-required.mp3",
         hook_preview_url: null,
         owns_rights: true,
         not_released_publicly: true,
@@ -303,42 +283,8 @@ const ArtistApplicationForm = () => {
               </div>
             </GlowCard>
 
-            {/* Section 4: Music Quality */}
-            <GlowCard className="p-4 md:p-5">
-              <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6 text-center">
-                Music Quality
-              </h3>
-              <div className="space-y-2">
-                <Label className="text-sm">Upload Song Sample (.MP3 or .WAV)</Label>
-                <div className="mt-2">
-                  <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
-                    <div className="flex flex-col items-center justify-center py-4">
-                      {songSampleFile ? (
-                        <>
-                          <CheckCircle className="w-8 h-8 text-primary mb-2" />
-                          <p className="text-sm text-muted-foreground truncate max-w-[250px]">
-                            {songSampleFile.name}
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                          <p className="text-sm text-muted-foreground">Click to upload .MP3 or .WAV</p>
-                        </>
-                      )}
-                    </div>
-                    <input
-                      type="file"
-                      className="hidden"
-                      accept=".mp3,.wav"
-                      onChange={(e) => setSongSampleFile(e.target.files?.[0] || null)}
-                    />
-                  </label>
-                </div>
-              </div>
-            </GlowCard>
 
-            {/* Section 5: Rights Confirmation */}
+            {/* Section 4: Rights Confirmation */}
             <GlowCard className="p-4 md:p-5">
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6 text-center">
                 Rights Confirmation
