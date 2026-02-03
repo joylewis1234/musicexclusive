@@ -63,6 +63,7 @@ import ArtistEarnings from "./pages/artist/ArtistEarnings";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
 import ArtistAgreementAccept from "./pages/artist/ArtistAgreementAccept";
 import EditArtistProfile from "./pages/artist/EditArtistProfile";
+import MarketingStudio from "./pages/artist/MarketingStudio";
 import { ArtistProfilePreviewWrapper } from "./components/artist/ArtistProfilePreviewWrapper";
 
 // Admin pages
@@ -163,6 +164,7 @@ const App = () => (
                   <Route path="/artist/dashboard" element={<ArtistDashboard />} />
                   <Route path="/artist/profile/edit" element={<EditArtistProfile />} />
                   <Route path="/artist/earnings" element={<ArtistEarnings />} />
+                  <Route path="/artist/marketing" element={<MarketingStudio />} />
                 </Route>
                 
                 {/* Artist routes without bottom nav */}
