@@ -46,17 +46,23 @@ const ArtistLogin = () => {
     try {
       // First check if this email has an approved application pending setup
       // (these users don't have auth accounts yet)
-      const { data: applicationCheck, error: applicationCheckError } = await supabase
-        .from("artist_applications")
-        .select("status")
-        .eq("contact_email", email)
-        .maybeSingle();
+      let applicationCheck: { status: string } | null = null;
+      try {
+        const { data, error: applicationCheckError } = await supabase
+          .from("artist_applications")
+          .select("status")
+          .eq("contact_email", email)
+          .maybeSingle();
 
-      if (applicationCheckError) {
-        console.error("[ArtistLogin] application pre-check error:", applicationCheckError);
-        toast.error("Could not verify application status. Please try again.");
-        setIsLoading(false);
-        return;
+        if (applicationCheckError) {
+          // Log but don't block login - proceed to sign-in attempt
+          console.warn("[ArtistLogin] application pre-check warning:", applicationCheckError);
+        } else {
+          applicationCheck = data;
+        }
+      } catch (preCheckErr) {
+        // Non-blocking: log and continue
+        console.warn("[ArtistLogin] application pre-check exception:", preCheckErr);
       }
 
       if (applicationCheck?.status === "approved_pending_setup") {
