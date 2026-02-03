@@ -9,9 +9,9 @@ interface ArtistCardProps {
 const ArtistCard = ({ name, genre, imageUrl }: ArtistCardProps) => {
   return (
     <div 
-      className="relative flex-shrink-0 w-[200px] md:w-[240px] aspect-[3/4] rounded-2xl overflow-hidden group cursor-pointer transition-all duration-300 hover:-translate-y-1"
+      className="relative flex-shrink-0 w-[230px] md:w-[275px] aspect-[3/4] rounded-2xl overflow-hidden group cursor-pointer transition-all duration-300 hover:-translate-y-1"
       style={{
-        boxShadow: "0 0 20px hsl(var(--primary) / 0.2), 0 0 40px hsl(var(--primary) / 0.1)",
+        boxShadow: "0 0 25px hsl(var(--primary) / 0.25), 0 0 50px hsl(var(--primary) / 0.12)",
       }}
     >
       {/* Glow border */}
