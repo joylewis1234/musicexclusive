@@ -49,8 +49,7 @@ interface ArtistApplication {
   follower_count: number;
   primary_social_platform: string;
   social_profile_url: string;
-  spotify_url: string | null;
-  apple_music_url: string | null;
+  spotify_url: string | null; // Now stores general music link
   song_sample_url: string;
   hook_preview_url: string | null;
   owns_rights: boolean;
@@ -474,18 +473,7 @@ const AdminArtistApplications = () => {
                         className="flex items-center gap-2 text-sm text-primary hover:underline"
                       >
                         <ExternalLink className="w-4 h-4" />
-                        Spotify Profile
-                      </a>
-                    )}
-                    {selectedApplication.apple_music_url && (
-                      <a
-                        href={selectedApplication.apple_music_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Apple Music Profile
+                        Music Link
                       </a>
                     )}
                     {selectedApplication.song_sample_url && (
