@@ -27,8 +27,9 @@ const formSchema = z.object({
   vaultCode: z
     .string()
     .trim()
-    .length(4, { message: "Code must be exactly 4 digits" })
-    .regex(/^\d{4}$/, { message: "Code must be 4 digits (0-9)" }),
+    .length(4, { message: "Code must be exactly 4 characters" })
+    .regex(/^[A-Z0-9]{4}$/i, { message: "Code must be 4 alphanumeric characters" })
+    .transform((val) => val.toUpperCase()),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -361,17 +362,16 @@ const SubmitVaultCode = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-muted-foreground text-xs uppercase tracking-wider">
-                            4-Digit Vault Code
+                            4-Character Vault Code
                           </FormLabel>
                           <FormControl>
                             <Input
-                              placeholder="0000"
+                              placeholder="ABCD"
                               {...field}
-                              className="h-14 text-center text-2xl tracking-[0.5em] font-display bg-muted/30 border-border/50 focus:border-primary/50 text-foreground rounded-xl"
+                              onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                              className="h-14 text-center text-2xl tracking-[0.5em] font-display bg-muted/30 border-border/50 focus:border-primary/50 text-foreground rounded-xl uppercase"
                               autoComplete="off"
                               maxLength={4}
-                              inputMode="numeric"
-                              pattern="[0-9]*"
                             />
                           </FormControl>
                           <FormMessage className="text-center" />
