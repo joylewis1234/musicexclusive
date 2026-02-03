@@ -153,14 +153,28 @@ const ArtistDashboard = () => {
         setSongs(songData || []);
       }
     } catch (err: any) {
-      if (err?.name === "AbortError" || signal?.aborted) return;
+      // Check for abort-related errors (component unmount, navigation, etc.)
+      const isAbortError = 
+        err?.name === "AbortError" || 
+        signal?.aborted ||
+        err?.message?.toLowerCase().includes("abort") ||
+        err?.message?.toLowerCase().includes("cancelled") ||
+        err?.message?.toLowerCase().includes("canceled");
+      
+      if (isAbortError) {
+        console.log("[Dashboard] Request aborted (navigation or unmount)");
+        return;
+      }
+      
       console.error("[Dashboard] Fetch error:", err);
       const msg = err?.message || "Could not load dashboard data";
       setLoadError(msg);
       toast.error(msg);
     } finally {
-      setIsLoading(false);
-      setSongsLoading(false);
+      if (!abortRef.current?.signal.aborted) {
+        setIsLoading(false);
+        setSongsLoading(false);
+      }
     }
   }, []);
 
