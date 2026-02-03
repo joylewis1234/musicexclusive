@@ -94,7 +94,7 @@ serve(async (req) => {
     }
 
     const baseUrl = appUrl || 'https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app';
-    const loginLink = `${baseUrl}/fan/agreements?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
+    const loginLink = `${baseUrl}/vault/congrats?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
     const resetPasswordLink = `${baseUrl}/forgot-password?email=${encodeURIComponent(email)}`;
 
     const subject = "🎉 You're In! Welcome to the Music Exclusive Vault";
