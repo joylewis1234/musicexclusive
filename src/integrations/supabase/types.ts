@@ -392,6 +392,50 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_assets: {
+        Row: {
+          artist_id: string
+          badges: string[] | null
+          chosen_caption: string | null
+          created_at: string
+          format: string
+          id: string
+          promo_image_url: string
+          template_id: string
+          track_id: string
+        }
+        Insert: {
+          artist_id: string
+          badges?: string[] | null
+          chosen_caption?: string | null
+          created_at?: string
+          format: string
+          id?: string
+          promo_image_url: string
+          template_id: string
+          track_id: string
+        }
+        Update: {
+          artist_id?: string
+          badges?: string[] | null
+          chosen_caption?: string | null
+          created_at?: string
+          format?: string
+          id?: string
+          promo_image_url?: string
+          template_id?: string
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_assets_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payout_batches: {
         Row: {
           artist_user_id: string

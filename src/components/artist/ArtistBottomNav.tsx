@@ -1,11 +1,12 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, User, DollarSign, Crown } from "lucide-react";
+import { LayoutDashboard, User, DollarSign, Megaphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/artist/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/artist/profile/edit", label: "Profile", icon: User },
   { path: "/artist/earnings", label: "Earnings", icon: DollarSign },
+  { path: "/artist/marketing", label: "Marketing", icon: Megaphone },
 ];
 
 const ArtistBottomNav = () => {
@@ -28,7 +29,7 @@ const ArtistBottomNav = () => {
         }}
       />
       
-      <div className="flex items-center justify-around h-16 max-w-md mx-auto px-4">
+      <div className="flex items-center justify-around h-16 max-w-md mx-auto px-2">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path;
           const Icon = item.icon;
@@ -38,6 +39,8 @@ const ArtistBottomNav = () => {
             ? "profile-tab" 
             : item.path === "/artist/earnings" 
             ? "earnings-tab" 
+            : item.path === "/artist/marketing"
+            ? "marketing-tab"
             : undefined;
           
           return (
@@ -76,7 +79,7 @@ const ArtistBottomNav = () => {
               </div>
               <span
                 className={cn(
-                  "text-[10px] font-display uppercase tracking-wider transition-all duration-200",
+                  "text-[9px] font-display uppercase tracking-wider transition-all duration-200",
                 )}
                 style={isActive ? { 
                   color: 'hsl(280, 80%, 70%)',
