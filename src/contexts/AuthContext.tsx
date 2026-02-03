@@ -32,6 +32,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const isBenignAbortError = (err: unknown) => {
+    const anyErr = err as any;
+    const name = String(anyErr?.name ?? "");
+    const message = String(anyErr?.message ?? anyErr ?? "").toLowerCase();
+    return (
+      name === "AbortError" ||
+      message.includes("signal is aborted") ||
+      message.includes("request cancelled") ||
+      message.includes("request canceled") ||
+      message.includes("cancelled") ||
+      message.includes("canceled")
+    );
+  };
+
   const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
     const { data, error } = await supabase
       .from("user_roles")
@@ -67,9 +81,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
           // Defer role fetch to avoid blocking
           setTimeout(async () => {
-            const userRole = await fetchUserRole(currentSession.user.id);
-            setRole(userRole);
-            setIsLoading(false);
+            try {
+              const userRole = await fetchUserRole(currentSession.user.id);
+              setRole(userRole);
+            } catch (err) {
+              if (!isBenignAbortError(err)) {
+                console.error("[AuthContext] Role fetch failed:", err);
+              }
+              // Keep role null; route guards will treat this as loading.
+              setRole(null);
+            } finally {
+              setIsLoading(false);
+            }
           }, 0);
         } else {
           setRole(null);
@@ -79,15 +102,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: existingSession }, error }) => {
+      if (error && !isBenignAbortError(error)) {
+        console.error("[AuthContext] getSession error:", error);
+      }
+
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
-      
-      if (existingSession?.user) {
-        const userRole = await fetchUserRole(existingSession.user.id);
-        setRole(userRole);
+
+      try {
+        if (existingSession?.user) {
+          const userRole = await fetchUserRole(existingSession.user.id);
+          setRole(userRole);
+        }
+      } catch (err) {
+        if (!isBenignAbortError(err)) {
+          console.error("[AuthContext] Initial role fetch failed:", err);
+        }
+        setRole(null);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();
