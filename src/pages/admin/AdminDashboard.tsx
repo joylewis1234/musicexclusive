@@ -113,10 +113,10 @@ const AdminDashboard = () => {
             </button>
             <button
               onClick={handleSignOut}
-              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="Sign out"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors text-sm font-medium"
             >
-              <LogOut className="w-5 h-5" />
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
             </button>
           </div>
         </div>
