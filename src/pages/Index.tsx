@@ -8,24 +8,20 @@ import { BenefitCard } from "@/components/BenefitCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
 import { KeyRound, Send, RotateCcw, FileText } from "lucide-react"
 import vaultPortal from "@/assets/vault-portal.png"
-import artist1 from "@/assets/artist-1.jpg"
-import artist2 from "@/assets/artist-2.jpg"
-import artist3 from "@/assets/artist-3.jpg"
-import artistHiphop from "@/assets/artist-hiphop.jpg"
-import artistChristian from "@/assets/artist-christian.jpg"
-import artistRock from "@/assets/artist-rock.jpg"
-import artistCountry from "@/assets/artist-country.jpg"
-import artistLatin from "@/assets/artist-latin.jpg"
-import artistPop from "@/assets/artist-pop.jpg"
+import artistNovaRae from "@/assets/artist-nova-rae.jpg"
+import artistKairoBlaze from "@/assets/artist-kairo-blaze.jpg"
+import artistSkyeMonroe from "@/assets/artist-skye-monroe.jpg"
+import artistZionChase from "@/assets/artist-zion-chase.jpg"
+import artistLunaVale from "@/assets/artist-luna-vale.jpg"
+import artistEdenReign from "@/assets/artist-eden-reign.jpg"
 
 const artists = [
-  { name: "Maranda B.", genre: "R&B", imageUrl: artist1 },
-  { name: "King Trey", genre: "Hip Hop/Rap", imageUrl: artistHiphop },
-  { name: "Grace Divine", genre: "Christian", imageUrl: artistChristian },
-  { name: "Jake Stone", genre: "Rock", imageUrl: artistRock },
-  { name: "Dusty Roads", genre: "Country", imageUrl: artistCountry },
-  { name: "Carlos Vega", genre: "Latin", imageUrl: artistLatin },
-  { name: "Zara Nova", genre: "Pop", imageUrl: artistPop },
+  { name: "Nova Rae", genre: "Alt Pop", imageUrl: artistNovaRae },
+  { name: "Kairo Blaze", genre: "Afrobeats", imageUrl: artistKairoBlaze },
+  { name: "Skye Monroe", genre: "R&B / Soul", imageUrl: artistSkyeMonroe },
+  { name: "Zion Chase", genre: "Hip Hop", imageUrl: artistZionChase },
+  { name: "Luna Vale", genre: "Indie Pop", imageUrl: artistLunaVale },
+  { name: "Eden Reign", genre: "Christian", imageUrl: artistEdenReign },
 ]
 
 const steps = [
