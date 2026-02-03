@@ -37,27 +37,38 @@ const Subscribe = () => {
     { icon: Gift, text: "Priority access to new drops" },
   ];
 
-  // Redirect to auth if not logged in
+  // Wait for auth loading before redirecting - the user might be coming back from Stripe
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Check auth status with a short delay to allow session recovery
   useEffect(() => {
-    if (!user) {
+    const checkAuth = async () => {
+      // Wait a moment for session to restore
+      await new Promise(resolve => setTimeout(resolve, 500));
+      setAuthLoading(false);
+    };
+    checkAuth();
+  }, []);
+
+  // Redirect to auth if not logged in (but only after auth check is complete)
+  useEffect(() => {
+    if (!authLoading && !user) {
       navigate("/auth/fan", { state: { flow: "superfan" }, replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, authLoading]);
 
-  // Check for payment success from URL params
+  // Check for payment success from URL params - redirect to proper verification
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
     if (paymentStatus === "success") {
-      // Add 25 credits for superfan subscription
-      addCredits(25).then(() => {
-        refetch();
-        setIsComplete(true);
-        toast.success("Subscription activated! 25 credits added.");
-      });
+      // This is legacy - subscriptions should now redirect through /checkout/return
+      // Show success state and redirect to dashboard
+      setIsComplete(true);
+      toast.success("Subscription activated!");
     } else if (paymentStatus === "cancelled") {
       toast.info("Subscription cancelled.");
     }
-  }, [searchParams, addCredits, refetch]);
+  }, [searchParams]);
 
   const handleSubscribe = async () => {
     const email = user?.email || state?.email;
