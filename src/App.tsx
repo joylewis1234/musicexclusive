@@ -19,6 +19,7 @@ import ArtistBenefits from "./pages/ArtistBenefits";
 import EnterVault from "./pages/EnterVault";
 import SubmitVaultCode from "./pages/SubmitVaultCode";
 import VaultStatus from "./pages/VaultStatus";
+import VaultWinCongrats from "./pages/VaultWinCongrats";
 import Agreements from "./pages/Agreements";
 import ChooseAccess from "./pages/ChooseAccess";
 import Subscribe from "./pages/Subscribe";
@@ -97,6 +98,7 @@ const App = () => (
                 <Route path="/vault/enter" element={<EnterVault />} />
                 <Route path="/vault/submit" element={<SubmitVaultCode />} />
                 <Route path="/vault/status" element={<VaultStatus />} />
+                <Route path="/vault/congrats" element={<VaultWinCongrats />} />
                 <Route path="/agreements/fan" element={<Agreements />} />
                 <Route path="/fan/agreements" element={<FanAgreementStep />} />
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
