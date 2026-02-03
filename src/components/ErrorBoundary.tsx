@@ -14,7 +14,25 @@ export class ErrorBoundary extends React.Component<
 > {
   state: ErrorBoundaryState = { error: null, componentStack: undefined, lastRejection: undefined };
 
+  private isBenignAbortRejection = (reason: unknown): boolean => {
+    const anyReason = reason as any;
+    const name = String(anyReason?.name ?? "");
+    const message = String(anyReason?.message ?? anyReason ?? "");
+    const combined = `${name} ${message}`.toLowerCase();
+
+    // Common harmless cases during route changes/unmounts
+    return (
+      name === "AbortError" ||
+      combined.includes("signal is aborted") ||
+      combined.includes("request cancelled") ||
+      combined.includes("request canceled") ||
+      combined.includes("cancelled") ||
+      combined.includes("canceled")
+    );
+  };
+
   private onUnhandledRejection = (event: PromiseRejectionEvent) => {
+    if (this.isBenignAbortRejection(event.reason)) return;
     // Don’t crash the page; surface the error.
     this.setState({ lastRejection: event.reason });
   };
