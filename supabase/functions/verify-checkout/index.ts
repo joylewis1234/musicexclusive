@@ -61,12 +61,18 @@ serve(async (req) => {
     logStep("Session retrieved", { 
       status: session.status, 
       paymentStatus: session.payment_status,
+      mode: session.mode,
       email: session.metadata?.email || session.customer_email
     });
 
+    // For subscriptions, check status "complete" or payment_status "paid"
+    const isSubscription = session.mode === "subscription";
+    const isPaid = session.payment_status === "paid";
+    const isComplete = session.status === "complete";
+    
     // Verify payment was successful
-    if (session.payment_status !== "paid") {
-      logStep("Payment not completed", { paymentStatus: session.payment_status });
+    if (!isPaid && !(isSubscription && isComplete)) {
+      logStep("Payment not completed", { paymentStatus: session.payment_status, status: session.status });
       return new Response(
         JSON.stringify({ error: "Payment not completed", status: session.payment_status }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -86,7 +92,6 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
     // Check if this session was already processed (idempotency)
     const { data: existingEvent } = await supabaseAdmin
       .from("stripe_events")
@@ -165,20 +170,28 @@ serve(async (req) => {
       logStep("New member created with credits", { email: customerEmail, credits });
     }
 
-    // Create ledger entry
+    // Create ledger entry - use appropriate type based on session mode
     const usdAmount = credits * 0.20;
     const paymentIntentId = typeof session.payment_intent === 'string' 
       ? session.payment_intent 
       : session.payment_intent?.id;
+    
+    // For subscriptions, use the subscription ID as reference
+    const subscriptionId = typeof session.subscription === 'string' 
+      ? session.subscription 
+      : session.subscription?.id;
+    
+    const ledgerType = isSubscription ? "SUBSCRIPTION_CREDITS" : "CREDITS_PURCHASE";
+    const ledgerReference = paymentIntentId || subscriptionId || sessionId;
 
     const { error: ledgerError } = await supabaseAdmin
       .from("credit_ledger")
       .insert({
         user_email: customerEmail,
-        type: "CREDITS_PURCHASE",
+        type: ledgerType,
         credits_delta: credits,
         usd_delta: usdAmount,
-        reference: paymentIntentId || sessionId,
+        reference: ledgerReference,
       });
 
     if (ledgerError) {
