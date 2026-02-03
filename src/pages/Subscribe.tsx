@@ -37,6 +37,13 @@ const Subscribe = () => {
     { icon: Gift, text: "Priority access to new drops" },
   ];
 
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!user) {
+      navigate("/auth/fan", { state: { flow: "superfan" }, replace: true });
+    }
+  }, [user, navigate]);
+
   // Check for payment success from URL params
   useEffect(() => {
     const paymentStatus = searchParams.get("payment");
