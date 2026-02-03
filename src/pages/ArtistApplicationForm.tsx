@@ -41,8 +41,7 @@ const ArtistApplicationForm = () => {
   const [artistName, setArtistName] = useState("")
   const [contactEmail, setContactEmail] = useState("")
   const [countryCity, setCountryCity] = useState("")
-  const [spotifyUrl, setSpotifyUrl] = useState("")
-  const [appleMusicUrl, setAppleMusicUrl] = useState("")
+  const [musicUrl, setMusicUrl] = useState("")
   const [yearsReleasing, setYearsReleasing] = useState("")
   const [genres, setGenres] = useState("")
   const [primarySocialPlatform, setPrimarySocialPlatform] = useState("")
@@ -94,8 +93,8 @@ const ArtistApplicationForm = () => {
         artist_name: artistName || "Test Artist",
         contact_email: contactEmail || "test@example.com",
         country_city: countryCity || null,
-        spotify_url: spotifyUrl || null,
-        apple_music_url: appleMusicUrl || null,
+        spotify_url: musicUrl || null,
+        apple_music_url: null,
         years_releasing: yearsReleasing || "1-2 years",
         genres: genres || "Test Genre",
         primary_social_platform: primarySocialPlatform || "instagram",
@@ -225,24 +224,17 @@ const ArtistApplicationForm = () => {
               </h3>
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="spotifyUrl" className="text-sm">Spotify Artist Profile URL</Label>
+                  <Label htmlFor="musicUrl" className="text-sm">Where can we hear your music?</Label>
                   <Input
-                    id="spotifyUrl"
-                    value={spotifyUrl}
-                    onChange={(e) => setSpotifyUrl(e.target.value)}
-                    placeholder="https://open.spotify.com/artist/..."
+                    id="musicUrl"
+                    value={musicUrl}
+                    onChange={(e) => setMusicUrl(e.target.value)}
+                    placeholder="Spotify, Apple Music, SoundCloud, YouTube..."
                     className="h-12 text-base"
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="appleMusicUrl" className="text-sm">Apple Music Artist Profile URL</Label>
-                  <Input
-                    id="appleMusicUrl"
-                    value={appleMusicUrl}
-                    onChange={(e) => setAppleMusicUrl(e.target.value)}
-                    placeholder="https://music.apple.com/artist/..."
-                    className="h-12 text-base"
-                  />
+                  <p className="text-xs text-muted-foreground">
+                    Link to your music on any platform (Spotify, Apple Music, SoundCloud, YouTube, etc.)
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-sm">Years Releasing Music</Label>
