@@ -60,7 +60,6 @@ const ArtistApplicationForm = () => {
     setIsSubmitting(true)
 
     try {
-
       // Insert application with defaults for missing fields (TESTING MODE)
       const { data: insertedApp, error } = await supabase.from("artist_applications").insert({
         artist_name: artistName || "Test Artist",
@@ -99,11 +98,20 @@ const ArtistApplicationForm = () => {
       navigate("/artist/application-status", {
         state: { artistName: artistName || "Test Artist", contactEmail: contactEmail || "test@example.com" },
       })
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Application error:", error)
+      
+      // Safely extract error message
+      let errorMessage = "There was an error submitting your application. Please try again."
+      if (error instanceof Error) {
+        errorMessage = error.message
+      } else if (typeof error === 'object' && error !== null && 'message' in error) {
+        errorMessage = String((error as { message: unknown }).message)
+      }
+      
       toast({
         title: "Submission Failed",
-        description: "There was an error submitting your application. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
