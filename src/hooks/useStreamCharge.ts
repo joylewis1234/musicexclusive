@@ -64,10 +64,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
   const chargeStream = useCallback(async (
     trackId: string
   ): Promise<StreamChargeResult> => {
-    // Prevent duplicate charges in the same session
-    if (chargedTracksRef.current.has(trackId)) {
-      return { success: true }; // Already charged, no error
-    }
+    // Every play charges - no duplicate prevention
 
     if (!userEmail) {
       return { success: false, error: "Not logged in" };
@@ -195,8 +192,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
         payout_status: "pending",
       });
 
-      // Mark as charged for this session
-      chargedTracksRef.current.add(trackId);
+      // Stream charged successfully
 
       // Show encouraging toast
       toast.success("1 credit used • Enjoy 🎶");
