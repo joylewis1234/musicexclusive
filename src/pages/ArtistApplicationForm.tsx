@@ -48,7 +48,6 @@ const ArtistApplicationForm = () => {
   const [socialProfileUrl, setSocialProfileUrl] = useState("")
   const [followerCount, setFollowerCount] = useState("")
   const [songSampleFile, setSongSampleFile] = useState<File | null>(null)
-  const [hookPreviewFile, setHookPreviewFile] = useState<File | null>(null)
   const [ownsRights, setOwnsRights] = useState(false)
   const [notReleasedPublicly, setNotReleasedPublicly] = useState(false)
   const [agreesTerms, setAgreesTerms] = useState(false)
@@ -77,15 +76,9 @@ const ArtistApplicationForm = () => {
 
     try {
       // Upload song sample if provided
-      let songSampleUrl = "https://placeholder-sample.wav"
+      let songSampleUrl = "https://placeholder-sample.mp3"
       if (songSampleFile) {
         songSampleUrl = await uploadFile(songSampleFile, "applications")
-      }
-
-      // Upload hook preview if provided
-      let hookPreviewUrl = null
-      if (hookPreviewFile) {
-        hookPreviewUrl = await uploadFile(hookPreviewFile, "applications")
       }
 
       // Insert application with defaults for missing fields (TESTING MODE)
@@ -101,7 +94,7 @@ const ArtistApplicationForm = () => {
         social_profile_url: socialProfileUrl || "https://instagram.com/test",
         follower_count: parseInt(followerCount) || 1000,
         song_sample_url: songSampleUrl,
-        hook_preview_url: hookPreviewUrl,
+        hook_preview_url: null,
         owns_rights: true,
         not_released_publicly: true,
         agrees_terms: true,
@@ -315,63 +308,32 @@ const ArtistApplicationForm = () => {
               <h3 className="font-display text-sm uppercase tracking-widest text-primary mb-6 text-center">
                 Music Quality
               </h3>
-              <div className="space-y-5">
-                <div className="space-y-2">
-                  <Label className="text-sm">Upload Song Sample (.WAV only)</Label>
-                  <div className="mt-2">
-                    <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
-                      <div className="flex flex-col items-center justify-center py-4">
-                        {songSampleFile ? (
-                          <>
-                            <CheckCircle className="w-8 h-8 text-primary mb-2" />
-                            <p className="text-sm text-muted-foreground truncate max-w-[250px]">
-                              {songSampleFile.name}
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-8 h-8 text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">Click to upload .WAV</p>
-                          </>
-                        )}
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept=".wav"
-                        onChange={(e) => setSongSampleFile(e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm">Upload 15s Hook Preview (Optional)</Label>
-                  <p className="text-xs text-muted-foreground mb-2">.WAV or .MP3</p>
-                  <div>
-                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
-                      <div className="flex flex-col items-center justify-center py-3">
-                        {hookPreviewFile ? (
-                          <>
-                            <CheckCircle className="w-7 h-7 text-primary mb-2" />
-                            <p className="text-sm text-muted-foreground truncate max-w-[250px]">
-                              {hookPreviewFile.name}
-                            </p>
-                          </>
-                        ) : (
-                          <>
-                            <Upload className="w-7 h-7 text-muted-foreground mb-2" />
-                            <p className="text-sm text-muted-foreground">Click to upload</p>
-                          </>
-                        )}
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept=".wav,.mp3"
-                        onChange={(e) => setHookPreviewFile(e.target.files?.[0] || null)}
-                      />
-                    </label>
-                  </div>
+              <div className="space-y-2">
+                <Label className="text-sm">Upload Song Sample (.MP3 or .WAV)</Label>
+                <div className="mt-2">
+                  <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary/50 transition-colors bg-muted/20">
+                    <div className="flex flex-col items-center justify-center py-4">
+                      {songSampleFile ? (
+                        <>
+                          <CheckCircle className="w-8 h-8 text-primary mb-2" />
+                          <p className="text-sm text-muted-foreground truncate max-w-[250px]">
+                            {songSampleFile.name}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                          <p className="text-sm text-muted-foreground">Click to upload .MP3 or .WAV</p>
+                        </>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept=".mp3,.wav"
+                      onChange={(e) => setSongSampleFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
                 </div>
               </div>
             </GlowCard>
