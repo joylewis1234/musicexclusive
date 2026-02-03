@@ -163,15 +163,8 @@ const handler = async (req: Request): Promise<Response> => {
                   ${application.spotify_url ? `
                   <tr>
                     <td style="padding: 6px 0;">
-                      <span style="color: #94a3b8; font-size: 13px;">🎧 Spotify:</span>
+                      <span style="color: #94a3b8; font-size: 13px;">🎵 Music Link:</span>
                       <a href="${application.spotify_url}" style="color: #a78bfa; font-size: 13px; text-decoration: none; margin-left: 8px;">Listen →</a>
-                    </td>
-                  </tr>` : ""}
-                  ${application.apple_music_url ? `
-                  <tr>
-                    <td style="padding: 6px 0;">
-                      <span style="color: #94a3b8; font-size: 13px;">🍎 Apple Music:</span>
-                      <a href="${application.apple_music_url}" style="color: #a78bfa; font-size: 13px; text-decoration: none; margin-left: 8px;">Listen →</a>
                     </td>
                   </tr>` : ""}
                   ${application.song_sample_url ? `
