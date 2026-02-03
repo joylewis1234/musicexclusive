@@ -81,16 +81,28 @@ const ArtistLogin = () => {
         return;
       }
 
-      // Check artist application status
-      const { data: application, error: appError } = await supabase
-        .from("artist_applications")
-        .select("status")
-        .eq("contact_email", email)
-        .maybeSingle();
+      // Check artist application status (non-blocking - if this fails, still try to navigate)
+      let application: { status: string } | null = null;
+      try {
+        const { data, error: appError } = await supabase
+          .from("artist_applications")
+          .select("status")
+          .eq("contact_email", email)
+          .maybeSingle();
 
-      if (appError) {
-        console.error("[ArtistLogin] Error fetching application:", appError);
-        toast.error("Could not verify your artist status. Please try again.");
+        if (appError) {
+          console.warn("[ArtistLogin] Application lookup warning:", appError);
+          // Don't block - user is authenticated, let AuthContext/ProtectedRoute handle routing
+          toast.success("Welcome back!");
+          navigate("/artist/dashboard", { replace: true });
+          return;
+        }
+        application = data;
+      } catch (lookupErr) {
+        console.warn("[ArtistLogin] Application lookup exception:", lookupErr);
+        // Don't block - user is authenticated
+        toast.success("Welcome back!");
+        navigate("/artist/dashboard", { replace: true });
         return;
       }
 
