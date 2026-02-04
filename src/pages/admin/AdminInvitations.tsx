@@ -56,7 +56,7 @@ interface InviteLog {
   sent_at: string | null;
 }
 
-const BENEFITS_LINK = "/artist/benefits";
+const BENEFITS_LINK = "/artist-benefits";
 
 // Generate plain text version of email
 const generateEmailText = (artistName: string, applyLink: string): string => {
