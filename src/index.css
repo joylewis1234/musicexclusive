@@ -336,7 +336,7 @@
   /* === NEON PINK-PURPLE TRAILING RING === */
   .animate-vault-ring {
     position: absolute;
-    inset: -8px;
+    inset: 12px;
     border-radius: 50%;
     border: 3px solid transparent;
     background: conic-gradient(
