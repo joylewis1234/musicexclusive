@@ -56,3 +56,9 @@ verify_jwt = false
 
 [functions.send-vault-retry-win-email]
 verify_jwt = false
+
+[functions.send-vault-resend-email]
+verify_jwt = false
+
+[functions.validate-vault-code]
+verify_jwt = false
