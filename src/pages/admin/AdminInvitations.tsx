@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, startOfWeek, endOfWeek } from "date-fns";
 import {
   Shield,
   Home,
@@ -25,9 +25,11 @@ import {
   XCircle,
   Clock,
   UserPlus,
+  Eye,
+  Loader2,
 } from "lucide-react";
 
-type Platform = "email" | "dm";
+type InviteMode = "email" | "dm";
 type InvitationStatus = "generated" | "sent" | "applied" | "approved" | "denied";
 
 interface Invitation {
@@ -36,19 +38,29 @@ interface Invitation {
   artist_name: string;
   artist_email: string | null;
   artist_social_handle: string | null;
-  platform: Platform;
+  platform: InviteMode;
   status: InvitationStatus;
   notes: string | null;
   apply_link: string;
 }
 
-const APPLY_LINK = "/artist-benefits";
+interface InviteLog {
+  id: string;
+  created_at: string;
+  invite_type: "email" | "dm";
+  artist_name: string;
+  artist_email: string | null;
+  artist_social_handle: string | null;
+  status: "pending" | "sent" | "failed";
+  error_message: string | null;
+  sent_at: string | null;
+}
 
-// Generate plain text version of email (for copying/downloading and as email fallback)
+const BENEFITS_LINK = "/artist/benefits";
+
+// Generate plain text version of email
 const generateEmailText = (artistName: string, applyLink: string): string => {
-  return `Subject: Top-Tier Artist Alert 🚨 Your Exclusive Invite to Music Exclusive
-
-Hi ${artistName},
+  return `Hi ${artistName},
 
 You've been spotted as a top-tier artist, and we are officially inviting you to Music Exclusive.
 
@@ -93,7 +105,7 @@ Music Exclusive Team
 support@musicexclusive.co`;
 };
 
-// Generate full HTML email (for sending as HTML)
+// Generate full HTML email
 const generateEmailHtml = (artistName: string, applyLink: string): string => {
   return `<!DOCTYPE html>
 <html>
@@ -274,6 +286,7 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
 </html>`;
 };
 
+// Generate DM text
 const generateDMMessage = (artistName: string, applyLink: string): string => {
   return `Hey ${artistName} 🚨🎶
 Top-tier artist alert. You've been personally invited to Music Exclusive.
@@ -309,26 +322,50 @@ const StatusBadge = ({ status }: { status: InvitationStatus }) => {
   );
 };
 
+const LogStatusBadge = ({ status }: { status: "pending" | "sent" | "failed" }) => {
+  const config = {
+    pending: { color: "text-yellow-400 bg-yellow-400/10", icon: Clock },
+    sent: { color: "text-green-400 bg-green-400/10", icon: CheckCircle },
+    failed: { color: "text-red-400 bg-red-400/10", icon: XCircle },
+  };
+
+  const { color, icon: Icon } = config[status];
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${color}`}>
+      <Icon className="w-3 h-3" />
+      {status}
+    </span>
+  );
+};
+
 const AdminInvitations = () => {
   const navigate = useNavigate();
   const { signOut, user } = useAuth();
   const queryClient = useQueryClient();
 
+  // Form state
+  const [mode, setMode] = useState<InviteMode>("email");
   const [artistName, setArtistName] = useState("");
   const [artistEmail, setArtistEmail] = useState("");
   const [artistSocialHandle, setArtistSocialHandle] = useState("");
   const [notes, setNotes] = useState("");
-  const [platform, setPlatform] = useState<Platform>("email");
-  const [generatedMessage, setGeneratedMessage] = useState("");
-  const [generatedHtml, setGeneratedHtml] = useState("");
-  const [currentInvitationId, setCurrentInvitationId] = useState<string | null>(null);
+  
+  // Preview state
+  const [showPreview, setShowPreview] = useState(false);
+  const [generatedDMText, setGeneratedDMText] = useState("");
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
   };
 
-  const { data: invitations = [], isLoading } = useQuery({
+  const fullApplyLink = typeof window !== "undefined" 
+    ? `${window.location.origin}${BENEFITS_LINK}` 
+    : BENEFITS_LINK;
+
+  // Queries
+  const { data: invitations = [], isLoading: loadingInvitations } = useQuery({
     queryKey: ["artist-invitations"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -341,49 +378,83 @@ const AdminInvitations = () => {
     },
   });
 
-  const createInvitationMutation = useMutation({
-    mutationFn: async () => {
-      if (!user?.id) throw new Error("Not authenticated");
-      if (!artistName.trim()) throw new Error("Artist name is required");
-
-      const fullApplyLink = `${window.location.origin}${APPLY_LINK}`;
-
+  const { data: inviteLogs = [], isLoading: loadingLogs } = useQuery({
+    queryKey: ["invitation-email-logs"],
+    queryFn: async () => {
       const { data, error } = await supabase
-        .from("artist_invitations")
-        .insert({
-          created_by_admin_id: user.id,
-          artist_name: artistName.trim(),
-          artist_email: artistEmail.trim() || null,
-          artist_social_handle: artistSocialHandle.trim() || null,
-          platform,
-          notes: notes.trim() || null,
-          apply_link: fullApplyLink,
-          status: "generated",
-        })
-        .select()
-        .single();
+        .from("invitation_email_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(20);
 
       if (error) throw error;
-      return data as Invitation;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["artist-invitations"] });
-
-      if (platform === "email") {
-        setGeneratedMessage(generateEmailText(data.artist_name, data.apply_link));
-        setGeneratedHtml(generateEmailHtml(data.artist_name, data.apply_link));
-      } else {
-        setGeneratedMessage(generateDMMessage(data.artist_name, data.apply_link));
-        setGeneratedHtml("");
-      }
-
-      setCurrentInvitationId(data.id);
-      toast.success("Invitation generated successfully!");
-    },
-    onError: (error: Error) => {
-      toast.error(error.message);
+      return data as InviteLog[];
     },
   });
+
+  // Calculate weekly stats
+  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+  const sentThisWeek = inviteLogs.filter(log => {
+    const logDate = new Date(log.created_at);
+    return log.status === "sent" && logDate >= weekStart && logDate <= weekEnd;
+  }).length;
+
+  // Mutations
+  const sendEmailMutation = useMutation({
+    mutationFn: async ({ isTest = false }: { isTest?: boolean }) => {
+      if (!artistEmail && !isTest) throw new Error("Artist email is required");
+      
+      const htmlBody = generateEmailHtml(artistName || "there", fullApplyLink);
+      const textBody = generateEmailText(artistName || "there", fullApplyLink);
+
+      const { data, error } = await supabase.functions.invoke("send-artist-invite", {
+        body: {
+          artistName: artistName || "there",
+          artistEmail: isTest ? "support@musicexclusive.co" : artistEmail,
+          htmlBody,
+          textBody,
+          isTest,
+        },
+      });
+
+      if (error) throw error;
+      if (data.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data, { isTest }) => {
+      queryClient.invalidateQueries({ queryKey: ["invitation-email-logs"] });
+      
+      if (isTest) {
+        toast.success("Test email sent to support@musicexclusive.co!");
+      } else {
+        toast.success(`Email sent to ${artistEmail}!`);
+        // Also record in artist_invitations for tracking
+        recordInvitation("email");
+        handleReset();
+      }
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to send email: ${error.message}`);
+    },
+  });
+
+  const recordInvitation = async (platform: InviteMode) => {
+    if (!user?.id) return;
+    
+    await supabase.from("artist_invitations").insert({
+      created_by_admin_id: user.id,
+      artist_name: artistName.trim() || "Unknown",
+      artist_email: artistEmail.trim() || null,
+      artist_social_handle: artistSocialHandle.trim() || null,
+      platform,
+      notes: notes.trim() || null,
+      apply_link: fullApplyLink,
+      status: "sent",
+    });
+    
+    queryClient.invalidateQueries({ queryKey: ["artist-invitations"] });
+  };
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: InvitationStatus }) => {
@@ -403,30 +474,58 @@ const AdminInvitations = () => {
     },
   });
 
-  const handleGenerate = () => {
-    createInvitationMutation.mutate();
+  const handleGenerateDM = () => {
+    const dmText = generateDMMessage(artistName || "there", fullApplyLink);
+    setGeneratedDMText(dmText);
+    
+    // Record the DM generation
+    if (user?.id) {
+      supabase.from("artist_invitations").insert({
+        created_by_admin_id: user.id,
+        artist_name: artistName.trim() || "Unknown",
+        artist_email: null,
+        artist_social_handle: artistSocialHandle.trim() || null,
+        platform: "dm",
+        notes: notes.trim() || null,
+        apply_link: fullApplyLink,
+        status: "generated",
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["artist-invitations"] });
+      });
+    }
+    
+    toast.success("DM generated! Copy it below.");
   };
 
-  const handleCopy = async () => {
+  const handleCopyDM = async () => {
     try {
-      await navigator.clipboard.writeText(generatedMessage);
-      toast.success("Copied to clipboard!");
+      await navigator.clipboard.writeText(generatedDMText);
+      toast.success("DM copied to clipboard!");
     } catch {
       toast.error("Failed to copy");
     }
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([generatedMessage], { type: "text/plain" });
+  const handleDownloadDM = () => {
+    const blob = new Blob([generatedDMText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `invitation-${artistName.replace(/\s+/g, "-").toLowerCase()}.txt`;
+    a.download = `invitation-${(artistName || "artist").replace(/\s+/g, "-").toLowerCase()}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast.success("Downloaded!");
+  };
+
+  const handleReset = () => {
+    setArtistName("");
+    setArtistEmail("");
+    setArtistSocialHandle("");
+    setNotes("");
+    setGeneratedDMText("");
+    setShowPreview(false);
   };
 
   const handleCopyInvitation = async (invitation: Invitation) => {
@@ -440,38 +539,6 @@ const AdminInvitations = () => {
     } catch {
       toast.error("Failed to copy");
     }
-  };
-
-  const handleCopyHtml = async () => {
-    try {
-      await navigator.clipboard.writeText(generatedHtml);
-      toast.success("HTML copied to clipboard!");
-    } catch {
-      toast.error("Failed to copy HTML");
-    }
-  };
-
-  const handleDownloadHtml = () => {
-    const blob = new Blob([generatedHtml], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `invitation-${artistName.replace(/\s+/g, "-").toLowerCase()}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    toast.success("HTML downloaded!");
-  };
-
-  const handleReset = () => {
-    setArtistName("");
-    setArtistEmail("");
-    setArtistSocialHandle("");
-    setNotes("");
-    setGeneratedMessage("");
-    setGeneratedHtml("");
-    setCurrentInvitationId(null);
   };
 
   return (
@@ -514,119 +581,160 @@ const AdminInvitations = () => {
       {/* Main Content */}
       <main className="pt-20 pb-12 px-4">
         <div className="container max-w-4xl mx-auto space-y-6">
-          {/* Form Section */}
-          <GlowCard className="p-6">
-            <SectionHeader title="Generate Artist Invitation" align="left" />
-            <p className="text-muted-foreground text-sm mb-6">
-              Create personalized invitation messages to recruit artists to Music Exclusive.
-            </p>
-
-            <div className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="artistName">Artist Name *</Label>
-                  <Input
-                    id="artistName"
-                    value={artistName}
-                    onChange={(e) => setArtistName(e.target.value)}
-                    placeholder="Enter artist name"
-                    disabled={createInvitationMutation.isPending}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="artistEmail">Artist Email (optional)</Label>
-                  <Input
-                    id="artistEmail"
-                    type="email"
-                    value={artistEmail}
-                    onChange={(e) => setArtistEmail(e.target.value)}
-                    placeholder="artist@email.com"
-                    disabled={createInvitationMutation.isPending}
-                  />
-                </div>
+          {/* Weekly Stats */}
+          <GlowCard className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Invites Sent This Week</p>
+                <p className="text-3xl font-bold text-primary">{sentThisWeek}</p>
               </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="artistSocial">Social Handle (optional)</Label>
-                  <Input
-                    id="artistSocial"
-                    value={artistSocialHandle}
-                    onChange={(e) => setArtistSocialHandle(e.target.value)}
-                    placeholder="@username"
-                    disabled={createInvitationMutation.isPending}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Platform</Label>
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      variant={platform === "email" ? "default" : "outline"}
-                      className={`flex-1 ${platform === "email" ? "bg-primary" : ""}`}
-                      onClick={() => setPlatform("email")}
-                      disabled={createInvitationMutation.isPending}
-                    >
-                      <Mail className="w-4 h-4 mr-2" />
-                      Email
-                    </Button>
-                    <Button
-                      type="button"
-                      variant={platform === "dm" ? "default" : "outline"}
-                      className={`flex-1 ${platform === "dm" ? "bg-primary" : ""}`}
-                      onClick={() => setPlatform("dm")}
-                      disabled={createInvitationMutation.isPending}
-                    >
-                      <MessageSquare className="w-4 h-4 mr-2" />
-                      Text/DM
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes (optional)</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Add internal notes about this artist..."
-                  rows={2}
-                  disabled={createInvitationMutation.isPending}
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <Button
-                  onClick={handleGenerate}
-                  disabled={!artistName.trim() || createInvitationMutation.isPending}
-                  className="bg-gradient-to-r from-primary to-purple-600 hover:opacity-90"
-                >
-                  {createInvitationMutation.isPending ? "Generating..." : "Generate Invitation"}
-                </Button>
-                {generatedMessage && (
-                  <Button variant="outline" onClick={handleReset}>
-                    Clear & Start New
-                  </Button>
-                )}
-              </div>
+              <Mail className="w-10 h-10 text-primary/50" />
             </div>
           </GlowCard>
 
-          {/* Generated Message Output */}
-          {generatedMessage && (
+          {/* Mode Toggle & Form */}
+          <GlowCard className="p-6">
+            <SectionHeader title="Generate Artist Invitation" align="left" />
+            
+            {/* Mode Toggle */}
+            <div className="flex gap-2 mb-6">
+              <Button
+                type="button"
+                variant={mode === "email" ? "default" : "outline"}
+                className={`flex-1 ${mode === "email" ? "bg-primary" : ""}`}
+                onClick={() => { setMode("email"); setGeneratedDMText(""); }}
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Email Invite
+              </Button>
+              <Button
+                type="button"
+                variant={mode === "dm" ? "default" : "outline"}
+                className={`flex-1 ${mode === "dm" ? "bg-primary" : ""}`}
+                onClick={() => { setMode("dm"); setShowPreview(false); }}
+              >
+                <MessageSquare className="w-4 h-4 mr-2" />
+                DM Text Invite
+              </Button>
+            </div>
+
+            <div className="space-y-4">
+              {mode === "email" ? (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="artistName">Artist Name (optional)</Label>
+                      <Input
+                        id="artistName"
+                        value={artistName}
+                        onChange={(e) => setArtistName(e.target.value)}
+                        placeholder="Enter artist name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="artistEmail">Artist Email *</Label>
+                      <Input
+                        id="artistEmail"
+                        type="email"
+                        value={artistEmail}
+                        onChange={(e) => setArtistEmail(e.target.value)}
+                        placeholder="artist@email.com"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notes">Notes (optional)</Label>
+                    <Textarea
+                      id="notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Internal notes about this artist..."
+                      rows={2}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button
+                      onClick={() => setShowPreview(!showPreview)}
+                      variant="outline"
+                      className="gap-2"
+                    >
+                      <Eye className="w-4 h-4" />
+                      {showPreview ? "Hide Preview" : "Preview Email"}
+                    </Button>
+                    <Button
+                      onClick={() => sendEmailMutation.mutate({ isTest: true })}
+                      variant="outline"
+                      disabled={sendEmailMutation.isPending}
+                      className="gap-2"
+                    >
+                      {sendEmailMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Send Test to Support
+                    </Button>
+                    <Button
+                      onClick={() => sendEmailMutation.mutate({ isTest: false })}
+                      disabled={!artistEmail || sendEmailMutation.isPending}
+                      className="bg-gradient-to-r from-primary to-purple-600 hover:opacity-90 gap-2"
+                    >
+                      {sendEmailMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      Send Email
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="artistNameDM">Artist Name (optional)</Label>
+                      <Input
+                        id="artistNameDM"
+                        value={artistName}
+                        onChange={(e) => setArtistName(e.target.value)}
+                        placeholder="Enter artist name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="artistSocial">Social Handle (optional)</Label>
+                      <Input
+                        id="artistSocial"
+                        value={artistSocialHandle}
+                        onChange={(e) => setArtistSocialHandle(e.target.value)}
+                        placeholder="@username"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="notesDM">Notes (optional)</Label>
+                    <Textarea
+                      id="notesDM"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      placeholder="Internal notes about this artist..."
+                      rows={2}
+                    />
+                  </div>
+                  <Button
+                    onClick={handleGenerateDM}
+                    className="bg-gradient-to-r from-primary to-purple-600 hover:opacity-90"
+                  >
+                    Generate DM
+                  </Button>
+                </>
+              )}
+            </div>
+          </GlowCard>
+
+          {/* Email Preview Panel */}
+          {mode === "email" && showPreview && (
             <GlowCard className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <SectionHeader
-                  title={platform === "email" ? "Email Invitation" : "Text/DM Invitation"}
-                  align="left"
-                />
+                <SectionHeader title="Email Preview" align="left" />
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={async () => {
                     try {
-                      await navigator.clipboard.writeText(`${window.location.origin}/artist/benefits`);
+                      await navigator.clipboard.writeText(fullApplyLink);
                       toast.success("Apply link copied!");
                     } catch {
                       toast.error("Failed to copy");
@@ -637,86 +745,100 @@ const AdminInvitations = () => {
                   Copy Apply Link
                 </Button>
               </div>
-
-              {/* HTML Version for Email */}
-              {platform === "email" && generatedHtml && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-sm font-semibold text-primary">HTML Version (for sending)</Label>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" onClick={handleCopyHtml}>
-                        <Copy className="w-4 h-4 mr-2" />
-                        Copy HTML
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={handleDownloadHtml}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Download .html
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="bg-muted/50 rounded-lg border border-primary/30 overflow-hidden">
-                    <div className="p-3 bg-primary/10 border-b border-primary/20 text-xs text-muted-foreground">
-                      Preview (how it will look in email clients)
-                    </div>
-                    <div 
-                      className="p-4 max-h-96 overflow-y-auto"
-                      dangerouslySetInnerHTML={{ __html: generatedHtml }}
-                    />
-                  </div>
+              <div className="bg-muted/50 rounded-lg border border-primary/30 overflow-hidden">
+                <div className="p-3 bg-primary/10 border-b border-primary/20 text-xs text-muted-foreground flex items-center justify-between">
+                  <span>Preview (how it will look in email clients)</span>
+                  <span className="text-primary font-medium">Subject: You've been spotted as a top tier artist. You're invited.</span>
                 </div>
-              )}
-
-              {/* Plain Text Version */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <Label className="text-sm font-semibold">
-                    {platform === "email" ? "Plain Text Version (fallback)" : "Message"}
-                  </Label>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={handleCopy}>
-                      <Copy className="w-4 h-4 mr-2" />
-                      Copy Text
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={handleDownload}>
-                      <Download className="w-4 h-4 mr-2" />
-                      Download .txt
-                    </Button>
-                  </div>
-                </div>
-                <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
-                  <pre className="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed">
-                    {generatedMessage}
-                  </pre>
-                </div>
+                <div 
+                  className="p-4 max-h-[600px] overflow-y-auto"
+                  dangerouslySetInnerHTML={{ __html: generateEmailHtml(artistName || "there", fullApplyLink) }}
+                />
               </div>
-
-              {currentInvitationId && (
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => updateStatusMutation.mutate({ id: currentInvitationId, status: "sent" })}
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    Mark as Sent
-                  </Button>
-                </div>
-              )}
             </GlowCard>
           )}
 
-          {/* Invitations Table */}
+          {/* DM Output */}
+          {mode === "dm" && generatedDMText && (
+            <GlowCard className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <SectionHeader title="Text/DM Message" align="left" />
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={handleCopyDM}>
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleDownloadDM}>
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+              </div>
+              <div className="bg-muted/50 rounded-lg p-4 border border-border/50">
+                <pre className="whitespace-pre-wrap text-sm text-foreground font-mono leading-relaxed">
+                  {generatedDMText}
+                </pre>
+              </div>
+              <div className="mt-4">
+                <Button variant="outline" onClick={handleReset}>
+                  Clear & Start New
+                </Button>
+              </div>
+            </GlowCard>
+          )}
+
+          {/* Recent Email Logs */}
+          <GlowCard className="p-6">
+            <SectionHeader title="Recent Email Sends" align="left" />
+            {loadingLogs ? (
+              <div className="text-center py-4 text-muted-foreground">Loading...</div>
+            ) : inviteLogs.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">No emails sent yet.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border/50">
+                      <th className="text-left py-2 px-2 text-muted-foreground font-medium">Date</th>
+                      <th className="text-left py-2 px-2 text-muted-foreground font-medium">Artist</th>
+                      <th className="text-left py-2 px-2 text-muted-foreground font-medium">Email</th>
+                      <th className="text-left py-2 px-2 text-muted-foreground font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inviteLogs.slice(0, 10).map((log) => (
+                      <tr key={log.id} className="border-b border-border/30">
+                        <td className="py-2 px-2 text-muted-foreground">
+                          {format(new Date(log.created_at), "MMM d, HH:mm")}
+                        </td>
+                        <td className="py-2 px-2">{log.artist_name}</td>
+                        <td className="py-2 px-2 text-muted-foreground">{log.artist_email || "-"}</td>
+                        <td className="py-2 px-2">
+                          <LogStatusBadge status={log.status} />
+                          {log.error_message && (
+                            <span className="ml-2 text-xs text-red-400">{log.error_message}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </GlowCard>
+
+          {/* Invitations Tracking Table */}
           <GlowCard className="p-6">
             <SectionHeader title="Invitation Tracking" align="left" />
-            <p className="text-muted-foreground text-sm mb-6">
-              Track all artist invitations and their status.
+            <p className="text-muted-foreground text-sm mb-4">
+              Track all artist invitations and their lifecycle status.
             </p>
 
-            {isLoading ? (
+            {loadingInvitations ? (
               <div className="text-center py-8 text-muted-foreground">Loading...</div>
             ) : invitations.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No invitations yet. Generate your first one above!
+                No invitations yet. Send your first one above!
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -726,7 +848,7 @@ const AdminInvitations = () => {
                       <th className="text-left py-3 px-2 text-muted-foreground font-medium">Date</th>
                       <th className="text-left py-3 px-2 text-muted-foreground font-medium">Artist</th>
                       <th className="text-left py-3 px-2 text-muted-foreground font-medium hidden md:table-cell">Contact</th>
-                      <th className="text-left py-3 px-2 text-muted-foreground font-medium">Platform</th>
+                      <th className="text-left py-3 px-2 text-muted-foreground font-medium">Type</th>
                       <th className="text-left py-3 px-2 text-muted-foreground font-medium">Status</th>
                       <th className="text-left py-3 px-2 text-muted-foreground font-medium">Actions</th>
                     </tr>
