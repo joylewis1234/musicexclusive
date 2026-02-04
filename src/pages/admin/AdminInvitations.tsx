@@ -107,14 +107,33 @@ support@musicexclusive.co`;
 
 // Generate full HTML email
 const generateEmailHtml = (artistName: string, applyLink: string): string => {
+  // Using unique timestamp to prevent email clients from collapsing as quoted text
+  const uniqueId = Date.now().toString(36);
   return `<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
   <title>Your Exclusive Invite to Music Exclusive</title>
+  <!--[if mso]>
+  <noscript>
+    <xml>
+      <o:OfficeDocumentSettings>
+        <o:PixelsPerInch>96</o:PixelsPerInch>
+      </o:OfficeDocumentSettings>
+    </xml>
+  </noscript>
+  <![endif]-->
 </head>
-<body style="margin:0; padding:0; background-color:#0a0a0a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+<body style="margin:0; padding:0; background-color:#0a0a0a; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;">
+  <!-- Preheader text (hidden but prevents quoted text detection) -->
+  <div style="display:none; max-height:0; overflow:hidden; mso-hide:all;" aria-hidden="true">
+    ${artistName}, you've been personally invited to join Music Exclusive - where artists earn $0.10 per stream with weekly payouts.
+    &nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+  
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#0a0a0a;">
     <tr>
       <td align="center" style="padding:40px 20px;">
@@ -155,13 +174,13 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
 
               <!-- How you get paid -->
               <h2 style="margin:30px 0 15px 0; font-size:18px; font-weight:bold; color:#ffffff;">How you get paid:</h2>
-              <p style="margin:0 0 10px 0; font-size:14px; color:#a1a1aa; line-height:1.8;">
-                Fans stream using credits.<br>
-                1 credit = $0.20 per stream<br>
-                Each stream is split 50/50<br>
-                <span style="color:#22c55e;">$0.10 paid to you (artist)</span><br>
-                $0.10 paid to Music Exclusive (platform)
-              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr><td style="padding:4px 0; font-size:14px; color:#a1a1aa;">Fans stream using credits.</td></tr>
+                <tr><td style="padding:4px 0; font-size:14px; color:#a1a1aa;">1 credit = $0.20 per stream</td></tr>
+                <tr><td style="padding:4px 0; font-size:14px; color:#a1a1aa;">Each stream is split 50/50</td></tr>
+                <tr><td style="padding:4px 0; font-size:14px; color:#22c55e; font-weight:600;">$0.10 paid to you (artist)</td></tr>
+                <tr><td style="padding:4px 0; font-size:14px; color:#a1a1aa;">$0.10 paid to Music Exclusive (platform)</td></tr>
+              </table>
               <p style="margin:20px 0; font-size:14px; color:#a1a1aa; line-height:1.6;">
                 Weekly payouts happen every Monday.<br>
                 You also get full transparency reporting inside your dashboard.
@@ -177,7 +196,7 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
                         <td style="padding:24px 20px 16px 20px; background:linear-gradient(180deg, rgba(168,85,247,0.15) 0%, transparent 100%);">
                           <div style="text-align:center;">
                             <div style="font-size:12px; font-weight:600; letter-spacing:2px; color:#f59e0b; text-transform:uppercase; margin-bottom:8px;">
-                              ⚡ YOUR WEEKLY POTENTIAL ⚡
+                              YOUR WEEKLY POTENTIAL
                             </div>
                             <div style="font-size:22px; font-weight:800; color:#ffffff; letter-spacing:-0.5px;">
                               What Your Week Could Look Like
@@ -204,7 +223,7 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
                                 </table>
                               </td>
                               <td style="padding:8px; width:20%; text-align:center;">
-                                <div style="font-size:24px; color:#ec4899;">✕</div>
+                                <div style="font-size:24px; color:#ec4899;">×</div>
                               </td>
                               <td style="padding:8px; width:40%;">
                                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(145deg, #1e1040, #150a28); border:2px solid #ec4899; border-radius:16px; box-shadow:0 0 20px rgba(236,72,153,0.3);">
@@ -222,7 +241,7 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
                             <!-- Arrow Down -->
                             <tr>
                               <td colspan="3" style="text-align:center; padding:12px 0;">
-                                <div style="font-size:28px; color:#f59e0b;">⬇️</div>
+                                <div style="font-size:28px; color:#f59e0b;">↓</div>
                               </td>
                             </tr>
 
@@ -244,7 +263,7 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
                             <!-- Arrow Down -->
                             <tr>
                               <td colspan="3" style="text-align:center; padding:12px 0;">
-                                <div style="font-size:28px; color:#22c55e;">⬇️</div>
+                                <div style="font-size:28px; color:#22c55e;">↓</div>
                               </td>
                             </tr>
 
@@ -273,11 +292,15 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
 
               <!-- Real earning potential -->
               <p style="margin:20px 0; font-size:14px; color:#a1a1aa; line-height:1.6;">
-                <strong style="color:#ffffff;">Real earning potential example:</strong><br>
-                If you convert 200 fans from your social media following and they stream your music 50 times each in one week, that's:<br>
-                200 fans × 50 streams = 10,000 streams/week<br>
-                10,000 streams × $0.10 per stream = <strong style="color:#22c55e;">$1,000/week+</strong>
+                <strong style="color:#ffffff;">Real earning potential example:</strong>
               </p>
+              <p style="margin:0 0 10px 0; font-size:14px; color:#a1a1aa; line-height:1.6;">
+                If you convert 200 fans from your social media following and they stream your music 50 times each in one week, that's:
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                <tr><td style="padding:4px 0; font-size:14px; color:#a1a1aa;">200 fans × 50 streams = 10,000 streams/week</td></tr>
+                <tr><td style="padding:4px 0; font-size:14px; color:#a1a1aa;">10,000 streams × $0.10 per stream = <strong style="color:#22c55e;">$1,000/week+</strong></td></tr>
+              </table>
 
               <p style="margin:20px 0; font-size:14px; color:#a1a1aa; line-height:1.6;">
                 There is no other streaming platform where artists can realistically earn that kind of money in a single week from true fans streaming their music.
@@ -288,14 +311,16 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
                 <tr>
                   <td align="center">
                     <a href="${applyLink}" style="display:inline-block; background:linear-gradient(135deg, #8b5cf6, #a855f7); color:#ffffff; font-weight:bold; text-decoration:none; padding:16px 40px; border-radius:50px; font-size:16px; letter-spacing:0.05em;">
-                      APPLY NOW →
+                      APPLY NOW
                     </a>
                   </td>
                 </tr>
               </table>
 
               <p style="margin:20px 0 0 0; font-size:14px; color:#a1a1aa; line-height:1.6;">
-                We've already heard your music and you're great.<br>
+                We've already heard your music and you're great.
+              </p>
+              <p style="margin:8px 0 0 0; font-size:14px; color:#a1a1aa; line-height:1.6;">
                 Now apply to enter the platform and release your music where superfans listen first.
               </p>
 
@@ -314,10 +339,18 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
             </td>
           </tr>
 
+          <!-- Anti-quote spacer -->
+          <tr>
+            <td style="padding:20px 0; font-size:1px; line-height:1px; color:#0a0a0a;" aria-hidden="true">
+              &nbsp;
+            </td>
+          </tr>
+
         </table>
       </td>
     </tr>
   </table>
+  <!-- Unique identifier to prevent quote detection: ${uniqueId} -->
 </body>
 </html>`;
 };
