@@ -91,6 +91,9 @@ serve(async (req) => {
                 <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3);">
                   <tr>
                     <td style="padding: 40px;">
+                      <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="https://www.themusicisexclusive.com/favicon.png" alt="Music Exclusive" width="56" height="56" style="display: block; margin: 0 auto; border-radius: 12px;" />
+                      </div>
                       <h1 style="margin: 0 0 20px 0; color: #ffffff; font-size: 28px; text-align: center;">
                         🎵 Music Exclusive
                       </h1>

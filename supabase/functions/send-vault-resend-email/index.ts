@@ -113,9 +113,10 @@ serve(async (req) => {
                 <td align="center" style="padding: 40px 20px;">
                   <table role="presentation" style="max-width: 480px; width: 100%; border-collapse: collapse;">
                     
-                    <!-- Header -->
+                    <!-- Header with Logo -->
                     <tr>
                       <td align="center" style="padding-bottom: 30px;">
+                        <img src="https://www.themusicisexclusive.com/favicon.png" alt="Music Exclusive" width="48" height="48" style="display: block; margin: 0 auto 16px auto; border-radius: 8px;" />
                         <h1 style="margin: 0; font-size: 24px; font-weight: bold; color: #ffffff; letter-spacing: 0.1em; text-transform: uppercase;">
                           MUSIC EXCLUSIVE™
                         </h1>

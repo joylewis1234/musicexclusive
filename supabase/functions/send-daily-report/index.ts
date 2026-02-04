@@ -204,6 +204,7 @@ function generateEmailHtml(report: ReportData): string {
     <body>
       <div class="container">
         <div class="header">
+          <img src="https://www.themusicisexclusive.com/favicon.png" alt="Music Exclusive" width="56" height="56" style="display: block; margin: 0 auto 16px auto; border-radius: 12px;" />
           <h1>Music Exclusive™</h1>
           <p>Daily Company Report — ${report.reportDate}</p>
         </div>
