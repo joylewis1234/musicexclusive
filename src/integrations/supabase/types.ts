@@ -923,6 +923,15 @@ export type Database = {
       }
     }
     Functions: {
+      get_fan_top_artists: {
+        Args: { p_fan_id: string; p_limit?: number }
+        Returns: {
+          artist_id: string
+          artist_name: string
+          avatar_url: string
+          like_count: number
+        }[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

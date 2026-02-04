@@ -20,73 +20,29 @@ export const useFanTopArtists = (fanId: string | null) => {
       }
 
       try {
-        // Get all track likes for this fan
-        const { data: likes, error: likesError } = await supabase
-          .from("track_likes")
-          .select("track_id")
-          .eq("fan_id", fanId);
-
-        if (likesError) {
-          console.error("Error fetching likes:", likesError);
-          setIsLoading(false);
-          return;
-        }
-
-        if (!likes || likes.length === 0) {
-          setTopArtists([]);
-          setIsLoading(false);
-          return;
-        }
-
-        // Get tracks for these likes to find artist_ids
-        const trackIds = likes.map((l) => l.track_id);
-        const { data: tracks, error: tracksError } = await supabase
-          .from("tracks")
-          .select("id, artist_id")
-          .in("id", trackIds);
-
-        if (tracksError) {
-          console.error("Error fetching tracks:", tracksError);
-          setIsLoading(false);
-          return;
-        }
-
-        // Count likes per artist
-        const artistLikeCounts: Record<string, number> = {};
-        tracks?.forEach((track) => {
-          const artistId = track.artist_id;
-          artistLikeCounts[artistId] = (artistLikeCounts[artistId] || 0) + 1;
+        // Single RPC call with joins instead of 3 sequential queries
+        const { data, error } = await supabase.rpc("get_fan_top_artists", {
+          p_fan_id: fanId,
+          p_limit: 5,
         });
 
-        // Get unique artist IDs and fetch their profiles
-        const artistIds = Object.keys(artistLikeCounts);
-        if (artistIds.length === 0) {
+        if (error) {
+          console.error("Error fetching top artists:", error);
           setTopArtists([]);
-          setIsLoading(false);
           return;
         }
 
-        const { data: artists, error: artistsError } = await supabase
-          .from("public_artist_profiles")
-          .select("id, artist_name, avatar_url")
-          .in("id", artistIds);
-
-        if (artistsError) {
-          console.error("Error fetching artists:", artistsError);
-          setIsLoading(false);
-          return;
-        }
-
-        // Build top artists list sorted by like count
-        const topArtistsList: TopArtist[] = (artists || [])
-          .map((artist) => ({
-            id: artist.id!,
-            name: artist.artist_name || "Unknown Artist",
-            likeCount: artistLikeCounts[artist.id!] || 0,
-            imageUrl: artist.avatar_url,
-          }))
-          .sort((a, b) => b.likeCount - a.likeCount)
-          .slice(0, 5);
+        const topArtistsList: TopArtist[] = (data || []).map((row: {
+          artist_id: string;
+          artist_name: string;
+          avatar_url: string | null;
+          like_count: number;
+        }) => ({
+          id: row.artist_id,
+          name: row.artist_name || "Unknown Artist",
+          likeCount: row.like_count,
+          imageUrl: row.avatar_url,
+        }));
 
         setTopArtists(topArtistsList);
       } catch (error) {
