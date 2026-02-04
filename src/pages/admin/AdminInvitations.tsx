@@ -69,6 +69,77 @@ $0.10 paid to Music Exclusive (platform)
 Weekly payouts happen every Monday.
 You also get full transparency reporting inside your dashboard.
 
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:16px 0;">
+  <tr>
+    <td align="center">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%; max-width:600px; background:#0b0b14; border:1px solid #a855f7; border-radius:14px;">
+        <tr>
+          <td style="padding:16px 16px 10px 16px; font-family:Arial, sans-serif; color:#ffffff;">
+            <div style="font-size:16px; font-weight:700; letter-spacing:0.2px;">
+              Earnings Potential Example
+            </div>
+            <div style="font-size:13px; line-height:18px; color:#cfcfe6; margin-top:6px;">
+              A simple way to picture what your week can look like on Music Exclusive
+            </div>
+          </td>
+        </tr>
+
+        <tr>
+          <td style="padding:0 16px 16px 16px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+              <tr>
+                <td style="padding:8px; width:25%;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#101022; border:1px solid rgba(168,85,247,0.45); border-radius:12px;">
+                    <tr>
+                      <td style="padding:12px; font-family:Arial, sans-serif; color:#ffffff; text-align:center;">
+                        <div style="font-size:20px; font-weight:800;">👥 200</div>
+                        <div style="font-size:12px; color:#cfcfe6; margin-top:4px;">fans</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+
+                <td style="padding:8px; width:25%;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#101022; border:1px solid rgba(168,85,247,0.45); border-radius:12px;">
+                    <tr>
+                      <td style="padding:12px; font-family:Arial, sans-serif; color:#ffffff; text-align:center;">
+                        <div style="font-size:20px; font-weight:800;">🎧 50</div>
+                        <div style="font-size:12px; color:#cfcfe6; margin-top:4px;">streams each</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+
+                <td style="padding:8px; width:25%;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#101022; border:1px solid rgba(168,85,247,0.45); border-radius:12px;">
+                    <tr>
+                      <td style="padding:12px; font-family:Arial, sans-serif; color:#ffffff; text-align:center;">
+                        <div style="font-size:20px; font-weight:800;">🔥 10,000</div>
+                        <div style="font-size:12px; color:#cfcfe6; margin-top:4px;">streams/week</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+
+                <td style="padding:8px; width:25%;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#101022; border:1px solid rgba(168,85,247,0.45); border-radius:12px;">
+                    <tr>
+                      <td style="padding:12px; font-family:Arial, sans-serif; color:#ffffff; text-align:center;">
+                        <div style="font-size:20px; font-weight:800;">💰 $1,000+</div>
+                        <div style="font-size:12px; color:#cfcfe6; margin-top:4px;">in one week</div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
 Real earning potential example:
 If you convert 200 fans from your social media following and they stream your music 50 times each in one week, that's:
 200 fans × 50 streams = 10,000 streams/week
