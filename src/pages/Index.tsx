@@ -6,7 +6,7 @@ import { ArtistPreviewStrip } from "@/components/ArtistPreviewStrip"
 import { StepCard } from "@/components/StepCard"
 import { BenefitCard } from "@/components/BenefitCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
-import { KeyRound, Send, RotateCcw, FileText } from "lucide-react"
+import { KeyRound, Send, RotateCcw, FileText, ChevronDown } from "lucide-react"
 import vaultPortal from "@/assets/vault-portal.png"
 import artistNovaRae from "@/assets/artist-nova-rae.jpg"
 import artistKairoBlaze from "@/assets/artist-kairo-blaze.jpg"
@@ -129,6 +129,18 @@ const Index = () => {
       {/* Vault Portal Section */}
       <section className="relative px-4 py-8 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
+          {/* Try Your Luck Header */}
+          <div className="text-center mb-6">
+            <p className="text-xl md:text-2xl font-display font-bold tracking-wider text-foreground mb-3">
+              Try Your Luck
+            </p>
+            <div className="flex justify-center items-center gap-2">
+              <ChevronDown className="w-6 h-6 text-primary animate-bounce" />
+              <ChevronDown className="w-6 h-6 text-primary animate-bounce [animation-delay:150ms]" />
+              <ChevronDown className="w-6 h-6 text-primary animate-bounce [animation-delay:300ms]" />
+            </div>
+          </div>
+          
           {/* Vault Portal Image */}
           <div className="relative mx-auto w-full max-w-md aspect-square">
             {/* Animated glow orbs behind */}
@@ -225,6 +237,18 @@ const Index = () => {
       {/* Second Vault Portal Section */}
       <section className="relative px-4 py-8 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
+          {/* Try Your Luck Header */}
+          <div className="text-center mb-6">
+            <p className="text-xl md:text-2xl font-display font-bold tracking-wider text-foreground mb-3">
+              Try Your Luck
+            </p>
+            <div className="flex justify-center items-center gap-2">
+              <ChevronDown className="w-6 h-6 text-primary animate-bounce" />
+              <ChevronDown className="w-6 h-6 text-primary animate-bounce [animation-delay:150ms]" />
+              <ChevronDown className="w-6 h-6 text-primary animate-bounce [animation-delay:300ms]" />
+            </div>
+          </div>
+          
           {/* Vault Portal Image */}
           <div className="relative mx-auto w-full max-w-md aspect-square">
             {/* Animated glow orbs behind */}
