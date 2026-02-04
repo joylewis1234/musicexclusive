@@ -12,7 +12,8 @@ import {
   LogOut,
   BarChart3,
   Wrench,
-  UserPlus
+  UserPlus,
+  Mail
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -41,6 +42,14 @@ const AdminDashboard = () => {
       path: "/admin/artist-applications",
       color: "text-cyan-400",
       tooltip: "Review pending artist applications. Approve to send setup email, or deny to notify rejection.",
+    },
+    {
+      title: "Artist Invitations",
+      description: "Generate invitation messages and track outreach",
+      icon: Mail,
+      path: "/admin/invitations",
+      color: "text-emerald-400",
+      tooltip: "Create personalized invitations for artists. Track sent invitations and their conversion status.",
     },
     {
       title: "Fan Activity Reports",

@@ -217,6 +217,45 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_invitations: {
+        Row: {
+          apply_link: string
+          artist_email: string | null
+          artist_name: string
+          artist_social_handle: string | null
+          created_at: string
+          created_by_admin_id: string
+          id: string
+          notes: string | null
+          platform: string
+          status: string
+        }
+        Insert: {
+          apply_link: string
+          artist_email?: string | null
+          artist_name: string
+          artist_social_handle?: string | null
+          created_at?: string
+          created_by_admin_id: string
+          id?: string
+          notes?: string | null
+          platform: string
+          status?: string
+        }
+        Update: {
+          apply_link?: string
+          artist_email?: string | null
+          artist_name?: string
+          artist_social_handle?: string | null
+          created_at?: string
+          created_by_admin_id?: string
+          id?: string
+          notes?: string | null
+          platform?: string
+          status?: string
+        }
+        Relationships: []
+      }
       artist_payouts: {
         Row: {
           artist_id: string

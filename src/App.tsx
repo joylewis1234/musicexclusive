@@ -74,6 +74,7 @@ import AdminDailyReport from "./pages/admin/AdminDailyReport";
 import AdminPayouts from "./pages/admin/AdminPayouts";
 import AdminArtistApplications from "./pages/admin/AdminArtistApplications";
 import ArtistApplicationAction from "./pages/admin/ArtistApplicationAction";
+import AdminInvitations from "./pages/admin/AdminInvitations";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 // Testing pages (temporary)
 import TestTools from "./pages/testing/TestTools";
@@ -231,6 +232,11 @@ const App = () => (
                 <Route path="/admin/artist-applications" element={
                   <AdminProtectedRoute>
                     <AdminArtistApplications />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/admin/invitations" element={
+                  <AdminProtectedRoute>
+                    <AdminInvitations />
                   </AdminProtectedRoute>
                 } />
                 {/* Token-based actions from email links */}
