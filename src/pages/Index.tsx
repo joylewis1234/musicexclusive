@@ -142,11 +142,8 @@ const Index = () => {
           </div>
           
           {/* Vault Portal Image */}
-          <div className="relative mx-auto w-full max-w-md aspect-square perspective-1000">
-            {/* Atmospheric background glow - blends vault into page */}
-            <div className="absolute -inset-16 bg-gradient-radial from-primary/20 via-secondary/10 to-transparent blur-3xl opacity-60" />
-            
-            {/* Neon pink trailing ring */}
+          <div className="relative mx-auto w-full max-w-md aspect-square">
+            {/* Neon pink trailing ring - needs absolute positioning within relative parent */}
             <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
             
             {/* Animated glow orbs behind */}
@@ -154,20 +151,12 @@ const Index = () => {
             <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
             <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
             
-            {/* 3D floating container for vault image */}
-            <div className="relative w-full h-full animate-float-3d">
-              {/* Edge fade mask for seamless blending */}
-              <div className="absolute inset-0 vault-edge-blend">
-                <img
-                  src={vaultPortal}
-                  alt="Vault Portal"
-                  className="w-full h-full object-contain vault-glow drop-shadow-[0_0_60px_hsl(var(--primary)/0.4)]"
-                />
-              </div>
-              
-              {/* Reflective surface effect */}
-              <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-transparent rounded-full opacity-50 pointer-events-none" />
-            </div>
+            {/* Static vault portal image with breathing glow */}
+            <img
+              src={vaultPortal}
+              alt="Vault Portal"
+              className="relative w-full h-full object-contain vault-glow"
+            />
             
             {/* Inner energy lightning effect - overlaid on top with blend mode */}
             <div className="absolute inset-[20%] rounded-full overflow-hidden pointer-events-none mix-blend-screen">
@@ -181,7 +170,7 @@ const Index = () => {
               variant="ghost"
               size="lg"
               onClick={() => navigate("/vault/enter")}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse z-30"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
             >
               Enter the Vault
             </Button>
@@ -264,11 +253,8 @@ const Index = () => {
           </div>
           
           {/* Vault Portal Image */}
-          <div className="relative mx-auto w-full max-w-md aspect-square perspective-1000">
-            {/* Atmospheric background glow - blends vault into page */}
-            <div className="absolute -inset-16 bg-gradient-radial from-primary/20 via-secondary/10 to-transparent blur-3xl opacity-60" />
-            
-            {/* Neon pink trailing ring */}
+          <div className="relative mx-auto w-full max-w-md aspect-square">
+            {/* Neon pink trailing ring - needs absolute positioning within relative parent */}
             <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
             
             {/* Animated glow orbs behind */}
@@ -276,20 +262,12 @@ const Index = () => {
             <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
             <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
             
-            {/* 3D floating container for vault image */}
-            <div className="relative w-full h-full animate-float-3d">
-              {/* Edge fade mask for seamless blending */}
-              <div className="absolute inset-0 vault-edge-blend">
-                <img
-                  src={vaultPortal}
-                  alt="Vault Portal"
-                  className="w-full h-full object-contain vault-glow drop-shadow-[0_0_60px_hsl(var(--primary)/0.4)]"
-                />
-              </div>
-              
-              {/* Reflective surface effect */}
-              <div className="absolute inset-0 bg-gradient-to-b from-white/5 via-transparent to-transparent rounded-full opacity-50 pointer-events-none" />
-            </div>
+            {/* Static vault portal image with breathing glow */}
+            <img
+              src={vaultPortal}
+              alt="Vault Portal"
+              className="relative w-full h-full object-contain vault-glow"
+            />
             
             {/* Inner energy lightning effect - overlaid on top with blend mode */}
             <div className="absolute inset-[20%] rounded-full overflow-hidden pointer-events-none mix-blend-screen">
