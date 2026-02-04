@@ -326,12 +326,17 @@ const EnterVault = () => {
           <GlowCard glowColor="gradient" hover={false} className="group">
             <div className="p-8 md:p-10">
               {/* Header */}
-              <div className="flex justify-center mb-8">
+              <div className="flex flex-col items-center mb-8">
                 <SectionHeader 
                   title={isSubmitted ? "YOUR VAULT CODE" : "ENTER THE VAULT"} 
                   framed 
                   align="center" 
                 />
+                {!isSubmitted && (
+                  <span className="mt-3 px-3 py-1 text-[10px] font-display uppercase tracking-widest text-primary/80 bg-primary/10 border border-primary/20 rounded-full">
+                    Vault Lottery access system is Patent Pending
+                  </span>
+                )}
               </div>
 
               {isSubmitted ? (

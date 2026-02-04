@@ -1,12 +1,13 @@
-import { useNavigate, Link } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
+import Footer from "@/components/Footer"
 import { ArtistCard } from "@/components/ArtistCard"
 import { ArtistPreviewStrip } from "@/components/ArtistPreviewStrip"
 import { StepCard } from "@/components/StepCard"
 import { BenefitCard } from "@/components/BenefitCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
-import { KeyRound, Send, RotateCcw, FileText, ChevronDown } from "lucide-react"
+import { KeyRound, Send, RotateCcw, ChevronDown } from "lucide-react"
 import vaultPortal from "@/assets/vault-portal.png"
 import artistNovaRae from "@/assets/artist-nova-rae.jpg"
 import artistKairoBlaze from "@/assets/artist-kairo-blaze.jpg"
@@ -369,70 +370,7 @@ const Index = () => {
       </section>
 
       {/* Footer */}
-      <footer className="px-4 py-12 border-t border-border/30">
-        <div className="container max-w-lg md:max-w-xl mx-auto">
-          {/* Legal Section */}
-          <div className="text-center mb-8">
-            <p className="text-primary/80 text-[11px] font-display uppercase tracking-[0.2em] mb-6">
-              Legal
-            </p>
-            
-            {/* 2-Column Grid of Legal Links */}
-            <div className="grid grid-cols-2 gap-3 max-w-sm mx-auto mb-6">
-              <Link 
-                to="/terms" 
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group"
-              >
-                <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
-                <span className="text-foreground/90 text-xs font-medium">Terms of Use</span>
-              </Link>
-              <Link 
-                to="/privacy" 
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group"
-              >
-                <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
-                <span className="text-foreground/90 text-xs font-medium">Privacy Policy</span>
-              </Link>
-              <Link 
-                to="/dmca" 
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group"
-              >
-                <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
-                <span className="text-foreground/90 text-xs font-medium">Copyright & DMCA</span>
-              </Link>
-              <Link 
-                to="/refunds" 
-                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group"
-              >
-                <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
-                <span className="text-foreground/90 text-xs font-medium">Refund Policy</span>
-              </Link>
-            </div>
-            
-            {/* Artist Agreement - Full Width */}
-            <Link 
-              to="/artist-agreement" 
-              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-muted/30 border border-border/40 hover:border-primary/40 hover:bg-muted/50 transition-all group max-w-sm mx-auto"
-            >
-              <FileText className="w-3.5 h-3.5 text-primary/70 group-hover:text-primary transition-colors" />
-              <span className="text-foreground/90 text-xs font-medium">Artist Participation Agreement</span>
-            </Link>
-          </div>
-          
-          {/* Divider */}
-          <div className="h-px bg-border/30 mb-6" />
-          
-          {/* Agreement Notice */}
-          <p className="text-muted-foreground text-[11px] text-center mb-4 leading-relaxed">
-            By using Music Exclusive, you agree to our Terms and Policies.
-          </p>
-          
-          {/* Copyright */}
-          <p className="text-muted-foreground/70 text-[10px] font-body text-center">
-            © {new Date().getFullYear()} Music Exclusive™. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      <Footer />
 
       {/* Spacer for mini player */}
       <div className="h-24" />
