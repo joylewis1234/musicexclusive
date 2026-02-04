@@ -333,6 +333,40 @@
     }
   }
 
+  /* === NEON PINK TRAILING RING === */
+  .animate-vault-ring {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    background: conic-gradient(
+      from 0deg at 50% 50%,
+      transparent 0deg,
+      hsl(330 100% 60% / 0) 30deg,
+      hsl(330 100% 65% / 0.3) 60deg,
+      hsl(330 100% 70% / 0.6) 90deg,
+      hsl(330 100% 75% / 0.9) 120deg,
+      hsl(330 100% 70% / 0.6) 150deg,
+      hsl(330 100% 65% / 0.3) 180deg,
+      transparent 210deg
+    ) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    animation: vault-ring-rotate 3s linear infinite;
+    filter: drop-shadow(0 0 10px hsl(330 100% 65% / 0.8)) drop-shadow(0 0 20px hsl(330 100% 60% / 0.5));
+  }
+
+  @keyframes vault-ring-rotate {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
   /* === VAULT PORTAL ENHANCED ANIMATIONS === */
 
   /* 1. Slow rotation for outer ring (30s full rotation) */
