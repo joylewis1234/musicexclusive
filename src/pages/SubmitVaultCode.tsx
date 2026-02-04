@@ -74,151 +74,65 @@ const SubmitVaultCode = () => {
     setIsBlocked(false);
     
     try {
-      const now = new Date();
-      const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
-      
-      // First check if this email is rate-limited
-      const { data: emailRecord } = await supabase
-        .from("vault_codes")
-        .select("id, attempts_count, last_attempt_at")
-        .eq("email", values.email)
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      
-      if (emailRecord) {
-        const lastAttempt = emailRecord.last_attempt_at 
-          ? new Date(emailRecord.last_attempt_at) 
-          : null;
-        
-        // Check if blocked (5+ attempts within 10 minutes)
-        if (lastAttempt && lastAttempt > tenMinutesAgo && emailRecord.attempts_count >= 5) {
-          setIsBlocked(true);
-          return;
-        }
-      }
-      
-      // Find matching vault code record - check for valid codes (not expired OR codes with 'lost' status for re-entry)
-      const { data: vaultRecord, error: fetchError } = await supabase
-        .from("vault_codes")
-        .select("*")
-        .eq("email", values.email)
-        .eq("code", values.vaultCode)
-        .maybeSingle();
-      
-      if (fetchError) {
-        console.error("Error fetching vault code:", fetchError);
+      // Call server-side rate-limited validation
+      const { data, error } = await supabase.functions.invoke("validate-vault-code", {
+        body: {
+          email: values.email,
+          vaultCode: values.vaultCode,
+          mode: "submit",
+        },
+      });
+
+      if (error) {
+        console.error("Error validating vault code:", error);
         toast.error("Something went wrong. Please try again.");
         return;
       }
-      
-      // Check if code exists and is valid (not used, or is a re-entry with 'lost' status)
-      const isValidForReentry = vaultRecord && 
-        (vaultRecord.status === "lost" || vaultRecord.status === "pending") &&
-        !vaultRecord.used_at;
-      
-      const isValidFreshCode = vaultRecord && 
-        !vaultRecord.used_at && 
-        new Date(vaultRecord.expires_at) > now;
-      
-      if (!vaultRecord || (!isValidForReentry && !isValidFreshCode)) {
-        // Invalid or expired code - increment attempts
-        if (emailRecord) {
-          const lastAttempt = emailRecord.last_attempt_at 
-            ? new Date(emailRecord.last_attempt_at) 
-            : null;
-          
-          // Reset count if last attempt was more than 10 minutes ago
-          const newAttemptsCount = lastAttempt && lastAttempt > tenMinutesAgo 
-            ? emailRecord.attempts_count + 1 
-            : 1;
-          
-          await supabase
-            .from("vault_codes")
-            .update({ 
-              attempts_count: newAttemptsCount,
-              last_attempt_at: now.toISOString()
-            })
-            .eq("id", emailRecord.id);
-          
-          // Check if now blocked
-          if (newAttemptsCount >= 5) {
-            setIsBlocked(true);
-            return;
-          }
+
+      // Handle rate limiting
+      if (data.error === "rate_limited") {
+        setIsBlocked(true);
+        return;
+      }
+
+      // Handle invalid code
+      if (data.error === "invalid_code") {
+        setShowError(true);
+        if (data.attemptsRemaining !== undefined && data.attemptsRemaining <= 2) {
+          toast.warning(`${data.attemptsRemaining} attempts remaining`);
         }
-        
+        return;
+      }
+
+      // Handle expired code
+      if (data.error === "expired_code") {
         setShowError(true);
         return;
       }
-      
-      // Determine outcome - For testing, use random. In production, this would be a draw system.
-      // Re-entry users with 'lost' status get another chance
-      const isWinner = Math.random() > 0.5; // 50% chance for testing
-      
-      if (isWinner) {
-        // Valid code - mark as used and update status to 'won'
-        const { error: updateError } = await supabase
-          .from("vault_codes")
-          .update({ 
-            used_at: now.toISOString(),
-            attempts_count: 0,
-            last_attempt_at: null,
-            status: "won"
-          })
-          .eq("id", vaultRecord.id);
-        
-        if (updateError) {
-          console.error("Error updating vault code:", updateError);
-          toast.error("Something went wrong. Please try again.");
-          return;
-        }
-        
-        // Send vault win email with the code
-        try {
-          const { error: emailError } = await supabase.functions.invoke("send-vault-win-email", {
-            body: {
-              email: values.email,
-              name: vaultRecord.name,
-              vaultCode: values.vaultCode,
-            },
-          });
-          
-          if (emailError) {
-            console.error("Failed to send vault win email:", emailError);
-          }
-        } catch (emailErr) {
-          console.error("Error sending vault win email:", emailErr);
-        }
-        
+
+      // Handle other errors
+      if (data.error) {
+        toast.error(data.message || "Something went wrong. Please try again.");
+        return;
+      }
+
+      // Success - navigate based on result
+      if (data.result === "winner") {
         toast.success("Code verified! Welcome to the vault.");
-        
-        // Navigate to vault status as winner
         navigate("/vault/status", { 
           state: { 
             email: values.email, 
-            name: vaultRecord.name,
+            name: data.name,
             vaultCode: values.vaultCode,
             vaultState: "winner"
           } 
         });
       } else {
-        // Not selected - keep the code valid for next draw
-        await supabase
-          .from("vault_codes")
-          .update({ 
-            attempts_count: 0,
-            last_attempt_at: null,
-            status: "lost",
-            next_draw_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
-          })
-          .eq("id", vaultRecord.id);
-        
-        // Navigate to vault status as not selected
+        // Not selected
         navigate("/vault/status", { 
           state: { 
             email: values.email, 
-            name: vaultRecord.name,
+            name: data.name,
             vaultCode: values.vaultCode,
             vaultState: "not_selected"
           } 
