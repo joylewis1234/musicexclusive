@@ -372,15 +372,6 @@ const Index = () => {
       {/* Footer */}
       <Footer />
 
-      {/* Spacer for mini player */}
-      <div className="h-24" />
-
-      {/* Mini Player Space Placeholder */}
-      <div className="fixed bottom-0 left-0 right-0 h-20 bg-card/95 backdrop-blur-xl border-t border-border/40 flex items-center justify-center z-50 shadow-card">
-        <p className="text-muted-foreground text-xs font-display uppercase tracking-widest">
-          Mini Player Area
-        </p>
-      </div>
     </div>
   )
 }
