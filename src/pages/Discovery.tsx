@@ -7,6 +7,7 @@ import { DiscoveryTrackCard } from "@/components/discovery/DiscoveryTrackCard";
 import { ShareTrackModal } from "@/components/ShareTrackModal";
 import { useAudioPreview } from "@/hooks/useAudioPreview";
 import { useTracks, DbTrack, getArtistName } from "@/hooks/useTracks";
+import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { Genre } from "@/data/discoveryArtists";
 import { Track } from "@/contexts/PlayerContext";
 
@@ -40,6 +41,10 @@ const Discovery = () => {
 
   // Fetch tracks from database
   const { tracks, isLoading: isLoadingTracks } = useTracks();
+
+  // Batch fetch like counts for all tracks (no fanId needed for Discovery - read-only display)
+  const trackIds = useMemo(() => tracks.map(t => t.id), [tracks]);
+  const { getLikeState } = useTrackLikesBatch(trackIds, null);
 
   // Featured tracks (first 5 for hot section)
   const [featuredTrackIds, setFeaturedTrackIds] = useState<string[]>([]);
@@ -203,6 +208,7 @@ const Discovery = () => {
                 isPreviewLoading={currentPreviewId === track.id && isPreviewLoading}
                 previewProgress={currentPreviewId === track.id ? previewProgress : 0}
                 previewError={currentPreviewId === track.id ? previewError : null}
+                likeCount={getLikeState(track.id).count}
                 onPreview={() => handlePreview(track)}
                 onStream={() => handleStreamTrack(track)}
                 onShare={() => handleShare(track)}

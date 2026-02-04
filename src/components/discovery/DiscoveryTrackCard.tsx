@@ -2,23 +2,8 @@ import { Play, Pause, Share2, Headphones, Loader2, AlertCircle, User, Heart } fr
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
-import { useTrackLikes } from "@/hooks/useTrackLikes";
 
 import artist1 from "@/assets/artist-1.jpg";
-import artist2 from "@/assets/artist-2.jpg";
-import artist3 from "@/assets/artist-3.jpg";
-
-// Artist image mapping
-const artistImages: Record<string, string> = {
-  nova: artist1,
-  aura: artist2,
-  echo: artist3,
-  pulse: artist1,
-  drift: artist2,
-  vega: artist3,
-  zenith: artist1,
-  luna: artist2,
-};
 
 interface DiscoveryTrackCardProps {
   track: DbTrack;
@@ -26,6 +11,7 @@ interface DiscoveryTrackCardProps {
   isPreviewLoading: boolean;
   previewProgress: number;
   previewError: string | null;
+  likeCount: number;
   onPreview: () => void;
   onStream: () => void;
   onShare: () => void;
@@ -38,6 +24,7 @@ export const DiscoveryTrackCard = ({
   isPreviewLoading,
   previewProgress,
   previewError,
+  likeCount,
   onPreview,
   onStream,
   onShare,
@@ -49,7 +36,6 @@ export const DiscoveryTrackCard = ({
   const hasPreviewAudio = !!track.preview_audio_url || !!track.full_audio_url;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
-  const { likeCount } = useTrackLikes(track.id, null);
 
   return (
     <div 
