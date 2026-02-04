@@ -10,6 +10,7 @@ import { ShareArtistSection } from "@/components/profile/ShareArtistSection";
 import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { ShareExclusiveTrackModal } from "@/components/profile/ShareExclusiveTrackModal";
 import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
+import { PlayerErrorBoundary, TrackListErrorBoundary } from "@/components/error-boundaries";
 import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
 import { useCredits } from "@/hooks/useCredits";
@@ -406,19 +407,21 @@ const ArtistProfilePage = () => {
         bio={artistProfile.bio || `Exclusive artist on Music Exclusive™. Experience premium, unreleased music only available inside the Vault.`} 
       />
 
-      {/* Vault Player */}
-      <CompactVaultPlayer
-        track={selectedTrack}
-        hasVaultAccess={hasVaultAccess}
-        isLiked={selectedTrack ? getLikeState(selectedTrack.id).isLiked : false}
-        onAccessDenied={() => setShowAccessGate(true)}
-        onPlay={handlePlayRequest}
-        onLike={handlePlayerLike}
-        onShare={handlePlayerShare}
-        skipPlayConfirm={selectedTrack ? hasBeenCharged(selectedTrack.id) : false}
-        autoPlay={shouldAutoPlay}
-        onAutoPlayConsumed={() => setShouldAutoPlay(false)}
-      />
+      {/* Vault Player - wrapped in error boundary */}
+      <PlayerErrorBoundary onRetry={() => setSelectedTrack(null)}>
+        <CompactVaultPlayer
+          track={selectedTrack}
+          hasVaultAccess={hasVaultAccess}
+          isLiked={selectedTrack ? getLikeState(selectedTrack.id).isLiked : false}
+          onAccessDenied={() => setShowAccessGate(true)}
+          onPlay={handlePlayRequest}
+          onLike={handlePlayerLike}
+          onShare={handlePlayerShare}
+          skipPlayConfirm={selectedTrack ? hasBeenCharged(selectedTrack.id) : false}
+          autoPlay={shouldAutoPlay}
+          onAutoPlayConsumed={() => setShouldAutoPlay(false)}
+        />
+      </PlayerErrorBoundary>
 
       {/* Track List Section */}
       <section className="px-5 pb-6">
@@ -458,35 +461,37 @@ const ArtistProfilePage = () => {
             </p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {tracks.map((track, index) => {
-              const likeState = getLikeState(track.id);
-              return (
-                <AppleMusicTrackRow
-                  key={track.id}
-                  ref={(el) => { trackRefs.current[track.id] = el; }}
-                  track={{
-                    id: track.id,
-                    title: track.title,
-                    artworkUrl: track.artwork_url,
-                    duration: track.duration,
-                  }}
-                  index={index}
-                  fanId={fanId}
-                  hasVaultAccess={hasVaultAccess}
-                  isSelected={selectedTrack?.id === track.id}
-                  isHighlighted={highlightTrackId === track.id}
-                  likeCount={likeState.count}
-                  isLiked={likeState.isLiked}
-                  isLikeLoading={isTrackLoading(track.id)}
-                  onToggleLike={() => toggleLike(track.id)}
-                  onSelect={() => handleSelectTrack(track)}
-                  onShare={() => handleShareTrack(track)}
-                  fallbackImage={artistProfile.avatar_url || artist1}
-                />
-              );
-            })}
-          </div>
+          <TrackListErrorBoundary>
+            <div className="space-y-1">
+              {tracks.map((track, index) => {
+                const likeState = getLikeState(track.id);
+                return (
+                  <AppleMusicTrackRow
+                    key={track.id}
+                    ref={(el) => { trackRefs.current[track.id] = el; }}
+                    track={{
+                      id: track.id,
+                      title: track.title,
+                      artworkUrl: track.artwork_url,
+                      duration: track.duration,
+                    }}
+                    index={index}
+                    fanId={fanId}
+                    hasVaultAccess={hasVaultAccess}
+                    isSelected={selectedTrack?.id === track.id}
+                    isHighlighted={highlightTrackId === track.id}
+                    likeCount={likeState.count}
+                    isLiked={likeState.isLiked}
+                    isLikeLoading={isTrackLoading(track.id)}
+                    onToggleLike={() => toggleLike(track.id)}
+                    onSelect={() => handleSelectTrack(track)}
+                    onShare={() => handleShareTrack(track)}
+                    fallbackImage={artistProfile.avatar_url || artist1}
+                  />
+                );
+              })}
+            </div>
+          </TrackListErrorBoundary>
         )}
       </section>
 

@@ -4,6 +4,7 @@ import { ChevronLeft, Coins, Loader2, Sparkles, Wallet } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
+import { PaymentErrorBoundary } from "@/components/error-boundaries";
 import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -121,85 +122,87 @@ const AddCredits = () => {
           </div>
         </GlowCard>
 
-        {/* Quick Purchase Options */}
-        <div className="space-y-3">
-          <h3 className="text-xs uppercase tracking-wider text-muted-foreground text-center">
-            Quick Add
-          </h3>
+        {/* Quick Purchase Options - wrapped in error boundary */}
+        <PaymentErrorBoundary onBack={() => navigate(-1)}>
+          <div className="space-y-3">
+            <h3 className="text-xs uppercase tracking-wider text-muted-foreground text-center">
+              Quick Add
+            </h3>
 
-          <div className="grid gap-3">
-            {QUICK_OPTIONS.map((option) => {
-              const isSelected = selectedOption?.credits === option.credits;
-              const isLoading = isProcessing && isSelected;
+            <div className="grid gap-3">
+              {QUICK_OPTIONS.map((option) => {
+                const isSelected = selectedOption?.credits === option.credits;
+                const isLoading = isProcessing && isSelected;
 
-              return (
-                <button
-                  key={option.credits}
-                  onClick={() => handlePurchase(option)}
-                  disabled={isProcessing}
-                  className={cn(
-                    "relative group rounded-xl overflow-hidden transition-all duration-300",
-                    "active:scale-[0.98] hover:-translate-y-0.5",
-                    isProcessing && !isSelected && "opacity-50"
-                  )}
-                >
-                  {/* Glow border */}
-                  <div
+                return (
+                  <button
+                    key={option.credits}
+                    onClick={() => handlePurchase(option)}
+                    disabled={isProcessing}
                     className={cn(
-                      "absolute inset-0 rounded-xl transition-opacity duration-300",
-                      "bg-gradient-to-r from-primary via-purple-500 to-pink-500",
-                      isSelected ? "opacity-100" : "opacity-40 group-hover:opacity-70"
-                    )}
-                    style={{
-                      filter: isSelected ? "blur(4px)" : "blur(2px)"
-                    }}
-                  />
-
-                  {/* Content */}
-                  <div
-                    className={cn(
-                      "relative m-[1px] rounded-xl p-4",
-                      "bg-card flex items-center justify-between"
+                      "relative group rounded-xl overflow-hidden transition-all duration-300",
+                      "active:scale-[0.98] hover:-translate-y-0.5",
+                      isProcessing && !isSelected && "opacity-50"
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center"
-                        style={{
-                          background: "hsla(280, 80%, 50%, 0.15)",
-                          border: "1px solid hsla(280, 80%, 50%, 0.3)"
-                        }}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="w-5 h-5 text-primary animate-spin" />
-                        ) : (
-                          <Coins className="w-5 h-5 text-primary" />
-                        )}
-                      </div>
-                      <div className="text-left">
-                        <p className="font-display font-semibold text-foreground">
-                          +{option.credits} credits
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {option.credits} streams
-                        </p>
-                      </div>
-                    </div>
+                    {/* Glow border */}
+                    <div
+                      className={cn(
+                        "absolute inset-0 rounded-xl transition-opacity duration-300",
+                        "bg-gradient-to-r from-primary via-purple-500 to-pink-500",
+                        isSelected ? "opacity-100" : "opacity-40 group-hover:opacity-70"
+                      )}
+                      style={{
+                        filter: isSelected ? "blur(4px)" : "blur(2px)"
+                      }}
+                    />
 
-                    <div className="text-right">
-                      <p
-                        className="text-xl font-bold text-primary"
-                        style={{ textShadow: "0 0 15px hsla(280, 80%, 50%, 0.4)" }}
-                      >
-                        ${option.dollars.toFixed(2)}
-                      </p>
+                    {/* Content */}
+                    <div
+                      className={cn(
+                        "relative m-[1px] rounded-xl p-4",
+                        "bg-card flex items-center justify-between"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="w-10 h-10 rounded-full flex items-center justify-center"
+                          style={{
+                            background: "hsla(280, 80%, 50%, 0.15)",
+                            border: "1px solid hsla(280, 80%, 50%, 0.3)"
+                          }}
+                        >
+                          {isLoading ? (
+                            <Loader2 className="w-5 h-5 text-primary animate-spin" />
+                          ) : (
+                            <Coins className="w-5 h-5 text-primary" />
+                          )}
+                        </div>
+                        <div className="text-left">
+                          <p className="font-display font-semibold text-foreground">
+                            +{option.credits} credits
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {option.credits} streams
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <p
+                          className="text-xl font-bold text-primary"
+                          style={{ textShadow: "0 0 15px hsla(280, 80%, 50%, 0.4)" }}
+                        >
+                          ${option.dollars.toFixed(2)}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        </PaymentErrorBoundary>
 
         {/* MVP Testing Notice */}
         <GlowCard glowColor="gradient" hover={false}>
