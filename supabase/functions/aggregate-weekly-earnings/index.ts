@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { verifyAdmin } from "../_shared/verify-admin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -85,6 +86,19 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Verify admin authorization
+  const authHeader = req.headers.get("Authorization");
+  const { user, error: authError } = await verifyAdmin(authHeader);
+  if (authError || !user) {
+    logStep("Auth failed", { error: authError });
+    return new Response(
+      JSON.stringify({ error: authError || "Unauthorized" }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+  
+  logStep("Authorized admin", { userId: user.id, email: user.email });
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",

@@ -25,18 +25,54 @@ serve(async (req) => {
   try {
     logStep("Webhook received");
     
-    const body = await req.text();
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
     
-    // Parse the event
-    let event: Stripe.Event;
-    try {
-      event = JSON.parse(body) as Stripe.Event;
-    } catch (err) {
-      logStep("Failed to parse webhook body", { error: String(err) });
-      return new Response(JSON.stringify({ error: "Invalid payload" }), {
-        status: 400,
+    if (!stripeKey) {
+      logStep("STRIPE_SECRET_KEY not configured");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+    
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    const signature = req.headers.get("stripe-signature");
+    const body = await req.text();
+    
+    // Verify webhook signature if secret is configured
+    let event: Stripe.Event;
+    
+    if (webhookSecret && signature) {
+      try {
+        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+        logStep("Webhook signature verified");
+      } catch (err) {
+        logStep("Invalid webhook signature", { error: String(err) });
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else if (webhookSecret && !signature) {
+      // Secret is configured but no signature provided - reject
+      logStep("Missing stripe-signature header");
+      return new Response(JSON.stringify({ error: "Missing signature" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } else {
+      // No webhook secret configured - parse as JSON (legacy mode, log warning)
+      logStep("WARNING: STRIPE_WEBHOOK_SECRET not configured - signature verification skipped");
+      try {
+        event = JSON.parse(body) as Stripe.Event;
+      } catch (err) {
+        logStep("Failed to parse webhook body", { error: String(err) });
+        return new Response(JSON.stringify({ error: "Invalid payload" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     logStep("Event parsed", { type: event.type, eventId: event.id });
