@@ -77,9 +77,6 @@ import AdminArtistApplications from "./pages/admin/AdminArtistApplications";
 import ArtistApplicationAction from "./pages/admin/ArtistApplicationAction";
 import AdminInvitations from "./pages/admin/AdminInvitations";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
-// Testing pages (temporary)
-import TestTools from "./pages/testing/TestTools";
-import TestPayouts from "./pages/testing/TestPayouts";
 
 const queryClient = new QueryClient();
 
@@ -245,9 +242,7 @@ const App = () => (
                 <Route path="/admin/artist-applications/approve" element={<ArtistApplicationAction />} />
                 <Route path="/admin/artist-applications/deny" element={<ArtistApplicationAction />} />
                 
-                {/* Testing routes (temporary - no auth required) */}
-                <Route path="/testing/tools" element={<TestTools />} />
-                <Route path="/testing/payouts" element={<TestPayouts />} />
+                
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
