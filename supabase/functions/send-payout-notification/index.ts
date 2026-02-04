@@ -107,11 +107,6 @@ function artistPayoutPaidEmail(artistName: string, amount: string, weekStart: st
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(16, 185, 129, 0.1)); border-radius: 16px; border: 1px solid rgba(34, 197, 94, 0.3); padding: 40px;">
           <tr>
-            <td align="center" style="padding-bottom: 16px;">
-              <img src="https://www.themusicisexclusive.com/favicon.png" alt="Music Exclusive" width="48" height="48" style="display: block; margin: 0 auto; border-radius: 10px;" />
-            </td>
-          </tr>
-          <tr>
             <td align="center" style="padding-bottom: 20px;">
               <span style="font-size: 48px;">💰</span>
             </td>
@@ -177,11 +172,6 @@ function artistPayoutFailedEmail(artistName: string, reason: string): string {
     <tr>
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 500px; background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.1)); border-radius: 16px; border: 1px solid rgba(239, 68, 68, 0.3); padding: 40px;">
-          <tr>
-            <td align="center" style="padding-bottom: 16px;">
-              <img src="https://www.themusicisexclusive.com/favicon.png" alt="Music Exclusive" width="48" height="48" style="display: block; margin: 0 auto; border-radius: 10px;" />
-            </td>
-          </tr>
           <tr>
             <td align="center" style="padding-bottom: 20px;">
               <span style="font-size: 48px;">⚠️</span>

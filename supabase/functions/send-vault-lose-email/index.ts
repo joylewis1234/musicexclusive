@@ -78,10 +78,9 @@ function buildLoseEmailHtml(name: string, email: string, vaultCode: string, logi
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background: linear-gradient(145deg, rgba(139, 92, 246, 0.08), rgba(236, 72, 153, 0.05), rgba(251, 191, 36, 0.03)); border-radius: 20px; border: 1px solid rgba(139, 92, 246, 0.2); padding: 48px 40px;">
           
-          <!-- Header with Logo -->
+          <!-- Header -->
           <tr>
             <td align="center" style="padding-bottom: 32px;">
-              <img src="https://www.themusicisexclusive.com/favicon.png" alt="Music Exclusive" width="56" height="56" style="display: block; margin: 0 auto 16px auto; border-radius: 12px;" />
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: 1px;">Not This Time…</h1>
               <p style="margin: 12px 0 0 0; color: #a78bfa; font-size: 18px;">But Tomorrow Could Be Yours 💫</p>
             </td>
