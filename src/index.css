@@ -662,4 +662,56 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* === 3D VAULT PORTAL ENHANCEMENTS === */
+  
+  /* Perspective container for 3D effects */
+  .perspective-1000 {
+    perspective: 1000px;
+    transform-style: preserve-3d;
+  }
+
+  /* Radial gradient for atmospheric glow */
+  .bg-gradient-radial {
+    background: radial-gradient(circle at center, var(--tw-gradient-from), var(--tw-gradient-via), var(--tw-gradient-to));
+  }
+
+  /* Subtle 3D floating animation */
+  .animate-float-3d {
+    animation: float-3d 6s ease-in-out infinite;
+    transform-style: preserve-3d;
+  }
+
+  @keyframes float-3d {
+    0%, 100% {
+      transform: translateY(0) rotateX(0deg) rotateY(0deg);
+    }
+    25% {
+      transform: translateY(-8px) rotateX(2deg) rotateY(-1deg);
+    }
+    50% {
+      transform: translateY(-4px) rotateX(0deg) rotateY(2deg);
+    }
+    75% {
+      transform: translateY(-10px) rotateX(-1deg) rotateY(-1deg);
+    }
+  }
+
+  /* Edge blend mask - fades edges into background */
+  .vault-edge-blend {
+    mask-image: radial-gradient(
+      ellipse 85% 85% at center,
+      black 50%,
+      rgba(0, 0, 0, 0.8) 70%,
+      rgba(0, 0, 0, 0.4) 85%,
+      transparent 100%
+    );
+    -webkit-mask-image: radial-gradient(
+      ellipse 85% 85% at center,
+      black 50%,
+      rgba(0, 0, 0, 0.8) 70%,
+      rgba(0, 0, 0, 0.4) 85%,
+      transparent 100%
+    );
+  }
 }
