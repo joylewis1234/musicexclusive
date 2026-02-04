@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { verifyAdmin } from "../_shared/verify-admin.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -22,6 +23,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Verify admin authorization
+    const authHeader = req.headers.get("Authorization");
+    const { user, error: authError } = await verifyAdmin(authHeader);
+    if (authError || !user) {
+      console.error("[APPROVE-ARTIST] Auth failed:", authError);
+      return new Response(
+        JSON.stringify({ success: false, error: authError || "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+    
+    console.log("[APPROVE-ARTIST] Authorized admin:", user.email || user.id);
+    
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     
