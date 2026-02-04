@@ -231,6 +231,43 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Second Vault Portal Section */}
+      <section className="relative px-4 py-8 overflow-hidden">
+        <div className="container max-w-lg md:max-w-4xl mx-auto">
+          {/* Vault Portal Image */}
+          <div className="relative mx-auto w-full max-w-md aspect-square">
+            {/* Animated glow orbs behind */}
+            <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
+            <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
+            <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
+            
+            {/* Static vault portal image with breathing glow */}
+            <img
+              src={vaultPortal}
+              alt="Vault Portal"
+              className="relative w-full h-full object-contain vault-glow"
+            />
+            
+            {/* Inner energy lightning effect - overlaid on top with blend mode */}
+            <div className="absolute inset-[20%] rounded-full overflow-hidden pointer-events-none mix-blend-screen">
+              <div className="absolute inset-0 animate-vault-lightning-1 opacity-70" />
+              <div className="absolute inset-0 animate-vault-lightning-2 opacity-60" />
+              <div className="absolute inset-0 animate-vault-lightning-3 opacity-50" />
+            </div>
+            
+            {/* Center button overlay */}
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => navigate("/vault/enter")}
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
+            >
+              Enter the Vault
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Benefits Section */}
       <section className="px-4 py-16">
         <div className="container max-w-lg md:max-w-2xl mx-auto">
