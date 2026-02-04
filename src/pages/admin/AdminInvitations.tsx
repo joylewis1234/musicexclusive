@@ -120,9 +120,10 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
       <td align="center" style="padding:40px 20px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:100%; max-width:600px;">
           
-          <!-- Header -->
+          <!-- Header with Logo -->
           <tr>
             <td align="center" style="padding-bottom:30px;">
+              <img src="https://www.themusicisexclusive.com/favicon.png" alt="Music Exclusive" width="48" height="48" style="display:block; margin:0 auto 16px auto; border-radius:8px;" />
               <h1 style="margin:0; font-size:24px; font-weight:bold; color:#ffffff; letter-spacing:0.1em; text-transform:uppercase;">
                 MUSIC EXCLUSIVE™
               </h1>
