@@ -227,6 +227,11 @@ const FanAuth = () => {
               </div>
             )}
           </div>
+
+          {/* Patent Pending Notice */}
+          <p className="mt-6 text-center text-[10px] text-primary/60 font-display tracking-wider">
+            Music Exclusive™ | Patent Pending
+          </p>
         </GlowCard>
       </main>
     </div>
