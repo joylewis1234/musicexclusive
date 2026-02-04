@@ -406,6 +406,21 @@ const AdminInvitations = () => {
                   align="left"
                 />
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(`${window.location.origin}/artist/benefits`);
+                        toast.success("Apply link copied!");
+                      } catch {
+                        toast.error("Failed to copy");
+                      }
+                    }}
+                  >
+                    <Copy className="w-4 h-4 mr-2" />
+                    Copy Apply Link
+                  </Button>
                   <Button variant="outline" size="sm" onClick={handleCopy}>
                     <Copy className="w-4 h-4 mr-2" />
                     Copy
