@@ -431,6 +431,45 @@ export type Database = {
         }
         Relationships: []
       }
+      invitation_email_logs: {
+        Row: {
+          admin_user_id: string
+          artist_email: string | null
+          artist_name: string
+          artist_social_handle: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          invite_type: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          admin_user_id: string
+          artist_email?: string | null
+          artist_name: string
+          artist_social_handle?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invite_type: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          admin_user_id?: string
+          artist_email?: string | null
+          artist_name?: string
+          artist_social_handle?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          invite_type?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       marketing_assets: {
         Row: {
           artist_id: string
