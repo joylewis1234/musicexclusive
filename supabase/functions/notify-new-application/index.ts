@@ -78,10 +78,9 @@ const handler = async (req: Request): Promise<Response> => {
       <td align="center">
         <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3); overflow: hidden;">
           
-          <!-- Header with Logo -->
+          <!-- Header -->
           <tr>
             <td style="padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
-              <img src="https://www.themusicisexclusive.com/favicon.png" alt="Music Exclusive" width="56" height="56" style="display: block; margin: 0 auto 16px auto; border-radius: 12px;" />
               <h1 style="margin: 0; font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 2px;">
                 MUSIC EXCLUSIVE
               </h1>
