@@ -73,7 +73,7 @@ serve(async (req) => {
       from: "Music Exclusive <noreply@themusicisexclusive.com>",
       reply_to: "support@musicexclusive.co",
       to: [recipientEmail],
-      subject: `${subjectPrefix}You've been spotted as a top tier artist. You're invited.`,
+      subject: `${subjectPrefix}[Private Invitation] You've been spotted as a top tier artist. You're invited.`,
       html: htmlBody,
       text: textBody,
     });
