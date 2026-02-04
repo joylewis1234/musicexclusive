@@ -84,11 +84,22 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
     const currentState = likesMap[trackId];
     if (!currentState) return;
 
+    const wasLiked = currentState.isLiked;
+    const prevCount = currentState.count;
+
+    // Optimistic update - instant UI feedback
+    setLikesMap((prev) => ({
+      ...prev,
+      [trackId]: {
+        count: wasLiked ? Math.max(0, prevCount - 1) : prevCount + 1,
+        isLiked: !wasLiked,
+      },
+    }));
+
     setLoadingTrackId(trackId);
 
     try {
-      if (currentState.isLiked) {
-        // Unlike
+      if (wasLiked) {
         const { error } = await supabase
           .from("track_likes")
           .delete()
@@ -96,39 +107,28 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
           .eq("fan_id", fanId);
 
         if (error) throw error;
-
-        setLikesMap((prev) => ({
-          ...prev,
-          [trackId]: {
-            count: Math.max(0, prev[trackId].count - 1),
-            isLiked: false,
-          },
-        }));
       } else {
-        // Like
         const { error } = await supabase.from("track_likes").insert({
           track_id: trackId,
           fan_id: fanId,
         });
 
         if (error) throw error;
-
-        setLikesMap((prev) => ({
-          ...prev,
-          [trackId]: {
-            count: prev[trackId].count + 1,
-            isLiked: true,
-          },
-        }));
       }
     } catch (error) {
       console.error("Error toggling like:", error);
-      // Refetch to sync state
-      fetchAllLikeData();
+      // Revert optimistic update on failure
+      setLikesMap((prev) => ({
+        ...prev,
+        [trackId]: {
+          count: prevCount,
+          isLiked: wasLiked,
+        },
+      }));
     } finally {
       setLoadingTrackId(null);
     }
-  }, [fanId, likesMap, loadingTrackId, fetchAllLikeData]);
+  }, [fanId, likesMap, loadingTrackId]);
 
   const getLikeState = useCallback((trackId: string): LikeState => {
     return likesMap[trackId] || { count: 0, isLiked: false };
