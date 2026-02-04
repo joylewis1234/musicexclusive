@@ -288,19 +288,17 @@ const Index = () => {
           </div>
           
           {/* Superfan CTA under second vault */}
-          <div className="flex flex-col items-center mt-8 animate-fade-up">
+          <div className="relative w-full max-w-xs mx-auto mt-8">
             <Button 
-              variant="outline" 
+              variant="secondary" 
               size="lg" 
-              className="w-full max-w-xs h-auto py-3 whitespace-normal text-amber-400 border-amber-500/50 hover:border-amber-400 hover:bg-amber-500/10 shadow-[0_0_20px_rgba(251,191,36,0.4)] animate-glow-pulse"
+              className="w-full"
               onClick={() => navigate("/auth/fan", { state: { flow: "superfan" } })}
             >
-              <span className="block text-center leading-tight font-display tracking-wider">
-                Unlock Superfan Access
-              </span>
+              Unlock Superfan Access
             </Button>
-            <p className="text-amber-400/80 text-xs font-display uppercase tracking-wider mt-3 text-center animate-pulse">
-              ✨ Skip the lottery — guaranteed instant access ✨
+            <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
+              ✨ Skip the lottery — guaranteed access
             </p>
           </div>
         </div>
