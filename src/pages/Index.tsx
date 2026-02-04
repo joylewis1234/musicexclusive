@@ -130,19 +130,22 @@ const Index = () => {
       <section className="relative px-4 py-8 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
           {/* Try Your Luck Header */}
-          <div className="text-center mb-6">
-            <p className="text-xl md:text-2xl font-display font-bold tracking-wider text-foreground mb-3">
-              Try Your Luck
+          <div className="text-center mb-8">
+            <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-4 text-glow">
+              TRY YOUR LUCK
             </p>
-            <div className="flex justify-center items-center gap-2">
-              <ChevronDown className="w-6 h-6 text-primary animate-bounce" />
-              <ChevronDown className="w-6 h-6 text-primary animate-bounce [animation-delay:150ms]" />
-              <ChevronDown className="w-6 h-6 text-primary animate-bounce [animation-delay:300ms]" />
+            <div className="flex justify-center items-center gap-3">
+              <ChevronDown className="w-8 h-8 text-primary animate-bounce" />
+              <ChevronDown className="w-8 h-8 text-primary animate-bounce [animation-delay:150ms]" />
+              <ChevronDown className="w-8 h-8 text-primary animate-bounce [animation-delay:300ms]" />
             </div>
           </div>
           
           {/* Vault Portal Image */}
           <div className="relative mx-auto w-full max-w-md aspect-square">
+            {/* Neon pink trailing ring */}
+            <div className="animate-vault-ring" />
+            
             {/* Animated glow orbs behind */}
             <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
             <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
@@ -238,19 +241,22 @@ const Index = () => {
       <section className="relative px-4 py-8 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
           {/* Try Your Luck Header */}
-          <div className="text-center mb-6">
-            <p className="text-xl md:text-2xl font-display font-bold tracking-wider text-foreground mb-3">
-              Try Your Luck
+          <div className="text-center mb-8">
+            <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-4 text-glow">
+              TRY YOUR LUCK
             </p>
-            <div className="flex justify-center items-center gap-2">
-              <ChevronDown className="w-6 h-6 text-primary animate-bounce" />
-              <ChevronDown className="w-6 h-6 text-primary animate-bounce [animation-delay:150ms]" />
-              <ChevronDown className="w-6 h-6 text-primary animate-bounce [animation-delay:300ms]" />
+            <div className="flex justify-center items-center gap-3">
+              <ChevronDown className="w-8 h-8 text-primary animate-bounce" />
+              <ChevronDown className="w-8 h-8 text-primary animate-bounce [animation-delay:150ms]" />
+              <ChevronDown className="w-8 h-8 text-primary animate-bounce [animation-delay:300ms]" />
             </div>
           </div>
           
           {/* Vault Portal Image */}
           <div className="relative mx-auto w-full max-w-md aspect-square">
+            {/* Neon pink trailing ring */}
+            <div className="animate-vault-ring" />
+            
             {/* Animated glow orbs behind */}
             <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
             <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
