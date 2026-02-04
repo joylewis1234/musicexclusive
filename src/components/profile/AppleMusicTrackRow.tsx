@@ -1,9 +1,10 @@
 import { forwardRef } from "react";
-import { Play, Heart, Share2, Crown, Check } from "lucide-react";
+import { Play, Share2, Check } from "lucide-react";
 import { useTrackLikes } from "@/hooks/useTrackLikes";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-
+import { ExclusiveBadge } from "@/components/ui/ExclusiveBadge";
+import { LikeButton } from "@/components/ui/LikeButton";
 interface AppleMusicTrackRowProps {
   track: {
     id: string;
@@ -115,28 +116,7 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
             {track.title}
           </p>
           
-          {/* Exclusive badge - Neon Purple + Gold Crown */}
-          <div 
-            className="relative px-2 py-0.5 rounded-full flex-shrink-0"
-            style={{
-              background: 'hsla(280, 80%, 50%, 0.15)',
-            }}
-          >
-            <Crown 
-              className="absolute -top-1 -left-0.5 w-2.5 h-2.5 rotate-[-12deg]"
-              style={{
-                color: 'hsl(45, 90%, 55%)',
-                filter: 'drop-shadow(0 0 2px hsla(45, 90%, 55%, 0.8))'
-              }}
-              fill="hsl(45, 90%, 55%)"
-            />
-            <span 
-              className="text-[9px] font-display uppercase tracking-wider pl-1"
-              style={{ color: 'hsl(280, 80%, 70%)' }}
-            >
-              Exclusive
-            </span>
-          </div>
+          <ExclusiveBadge />
         </div>
         
         {/* Duration */}
@@ -147,26 +127,12 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
 
       {/* Actions */}
       <div className="flex items-center gap-1 flex-shrink-0">
-        {/* Like button */}
-        <button
+        <LikeButton
+          isLiked={isLiked}
+          isLoading={isLoading}
+          canLike={canLike}
           onClick={handleLikeClick}
-          disabled={isLoading}
-          className={cn(
-            "p-2 rounded-full transition-all",
-            isLiked
-              ? "text-pink-400"
-              : "text-muted-foreground hover:text-foreground",
-            !canLike && "opacity-40"
-          )}
-          aria-label={isLiked ? "Unlike" : "Like"}
-        >
-          <Heart 
-            className={cn(
-              "w-5 h-5 transition-transform",
-              isLiked && "fill-current scale-110"
-            )} 
-          />
-        </button>
+        />
 
         {/* Share button */}
         <button
