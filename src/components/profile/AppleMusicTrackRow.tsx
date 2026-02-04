@@ -1,10 +1,10 @@
 import { forwardRef } from "react";
 import { Play, Share2, Check } from "lucide-react";
-import { useTrackLikes } from "@/hooks/useTrackLikes";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { ExclusiveBadge } from "@/components/ui/ExclusiveBadge";
 import { LikeButton } from "@/components/ui/LikeButton";
+
 interface AppleMusicTrackRowProps {
   track: {
     id: string;
@@ -17,6 +17,10 @@ interface AppleMusicTrackRowProps {
   hasVaultAccess: boolean;
   isSelected: boolean;
   isHighlighted?: boolean;
+  likeCount: number;
+  isLiked: boolean;
+  isLikeLoading: boolean;
+  onToggleLike: () => void;
   onSelect: () => void;
   onShare: () => void;
   fallbackImage: string;
@@ -35,12 +39,14 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
   hasVaultAccess,
   isSelected,
   isHighlighted = false,
+  likeCount,
+  isLiked,
+  isLikeLoading,
+  onToggleLike,
   onSelect,
   onShare,
   fallbackImage,
 }, ref) => {
-  const { likeCount, isLiked, toggleLike, isLoading } = useTrackLikes(track.id, fanId);
-
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -54,7 +60,7 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
     }
     
     if (fanId) {
-      toggleLike();
+      onToggleLike();
     }
   };
 
@@ -129,7 +135,7 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
       <div className="flex items-center gap-1 flex-shrink-0">
         <LikeButton
           isLiked={isLiked}
-          isLoading={isLoading}
+          isLoading={isLikeLoading}
           canLike={canLike}
           onClick={handleLikeClick}
         />

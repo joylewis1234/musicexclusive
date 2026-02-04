@@ -9,7 +9,7 @@ import { CompactVaultPlayer } from "@/components/profile/CompactVaultPlayer";
 import { ShareArtistSection } from "@/components/profile/ShareArtistSection";
 import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { ShareExclusiveTrackModal } from "@/components/profile/ShareExclusiveTrackModal";
-import { useTrackLikes } from "@/hooks/useTrackLikes";
+import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
@@ -78,8 +78,9 @@ const ArtistProfile = () => {
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
 
-  // Track likes for the selected track
-  const { isLiked, toggleLike } = useTrackLikes(selectedTrack?.id || "", fanId);
+  // Track IDs for batch like fetching
+  const trackIds = tracks.map(t => t.id);
+  const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
 
   // Fetch fan's vault membership
   useEffect(() => {
@@ -277,8 +278,8 @@ const ArtistProfile = () => {
       });
       return;
     }
-    if (fanId) {
-      toggleLike();
+    if (fanId && selectedTrack) {
+      toggleLike(selectedTrack.id);
     }
   };
 
@@ -365,7 +366,7 @@ const ArtistProfile = () => {
       <CompactVaultPlayer
         track={selectedTrack}
         hasVaultAccess={hasVaultAccess}
-        isLiked={isLiked}
+        isLiked={selectedTrack ? getLikeState(selectedTrack.id).isLiked : false}
         onAccessDenied={() => setShowAccessGate(true)}
         onLike={handlePlayerLike}
         onShare={handlePlayerShare}
@@ -410,26 +411,33 @@ const ArtistProfile = () => {
           </div>
         ) : (
           <div className="space-y-1">
-            {tracks.map((track, index) => (
-              <AppleMusicTrackRow
-                key={track.id}
-                ref={(el) => { trackRefs.current[track.id] = el; }}
-                track={{
-                  id: track.id,
-                  title: track.title,
-                  artworkUrl: track.artwork_url,
-                  duration: track.duration,
-                }}
-                index={index}
-                fanId={fanId}
-                hasVaultAccess={hasVaultAccess}
-                isSelected={selectedTrack?.id === track.id}
-                isHighlighted={selectedTrackId === track.id}
-                onSelect={() => handleSelectTrack(track)}
-                onShare={() => handleShareTrack(track)}
-                fallbackImage={artist.imageUrl}
-              />
-            ))}
+            {tracks.map((track, index) => {
+              const likeState = getLikeState(track.id);
+              return (
+                <AppleMusicTrackRow
+                  key={track.id}
+                  ref={(el) => { trackRefs.current[track.id] = el; }}
+                  track={{
+                    id: track.id,
+                    title: track.title,
+                    artworkUrl: track.artwork_url,
+                    duration: track.duration,
+                  }}
+                  index={index}
+                  fanId={fanId}
+                  hasVaultAccess={hasVaultAccess}
+                  isSelected={selectedTrack?.id === track.id}
+                  isHighlighted={selectedTrackId === track.id}
+                  likeCount={likeState.count}
+                  isLiked={likeState.isLiked}
+                  isLikeLoading={isTrackLoading(track.id)}
+                  onToggleLike={() => toggleLike(track.id)}
+                  onSelect={() => handleSelectTrack(track)}
+                  onShare={() => handleShareTrack(track)}
+                  fallbackImage={artist.imageUrl}
+                />
+              );
+            })}
           </div>
         )}
       </section>

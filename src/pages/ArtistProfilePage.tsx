@@ -10,7 +10,7 @@ import { ShareArtistSection } from "@/components/profile/ShareArtistSection";
 import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { ShareExclusiveTrackModal } from "@/components/profile/ShareExclusiveTrackModal";
 import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
-import { useTrackLikes } from "@/hooks/useTrackLikes";
+import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
 import { useCredits } from "@/hooks/useCredits";
 import { supabase } from "@/integrations/supabase/client";
@@ -76,8 +76,9 @@ const ArtistProfilePage = () => {
   
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
-
-  const { isLiked, toggleLike } = useTrackLikes(selectedTrack?.id || "", fanId);
+  // Track IDs for batch like fetching
+  const trackIds = tracks.map(t => t.id);
+  const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
   const { chargeStream, hasBeenCharged, isProcessing: isCharging } = useStreamCharge(user?.email);
   const { credits, refetch: refetchCredits } = useCredits();
 
@@ -278,8 +279,8 @@ const ArtistProfilePage = () => {
       toast.error("Enter the Vault to like tracks.");
       return;
     }
-    if (fanId) {
-      toggleLike();
+    if (fanId && selectedTrack) {
+      toggleLike(selectedTrack.id);
     }
   };
 
@@ -409,7 +410,7 @@ const ArtistProfilePage = () => {
       <CompactVaultPlayer
         track={selectedTrack}
         hasVaultAccess={hasVaultAccess}
-        isLiked={isLiked}
+        isLiked={selectedTrack ? getLikeState(selectedTrack.id).isLiked : false}
         onAccessDenied={() => setShowAccessGate(true)}
         onPlay={handlePlayRequest}
         onLike={handlePlayerLike}
@@ -458,26 +459,33 @@ const ArtistProfilePage = () => {
           </div>
         ) : (
           <div className="space-y-1">
-            {tracks.map((track, index) => (
-              <AppleMusicTrackRow
-                key={track.id}
-                ref={(el) => { trackRefs.current[track.id] = el; }}
-                track={{
-                  id: track.id,
-                  title: track.title,
-                  artworkUrl: track.artwork_url,
-                  duration: track.duration,
-                }}
-                index={index}
-                fanId={fanId}
-                hasVaultAccess={hasVaultAccess}
-                isSelected={selectedTrack?.id === track.id}
-                isHighlighted={highlightTrackId === track.id}
-                onSelect={() => handleSelectTrack(track)}
-                onShare={() => handleShareTrack(track)}
-                fallbackImage={artistProfile.avatar_url || artist1}
-              />
-            ))}
+            {tracks.map((track, index) => {
+              const likeState = getLikeState(track.id);
+              return (
+                <AppleMusicTrackRow
+                  key={track.id}
+                  ref={(el) => { trackRefs.current[track.id] = el; }}
+                  track={{
+                    id: track.id,
+                    title: track.title,
+                    artworkUrl: track.artwork_url,
+                    duration: track.duration,
+                  }}
+                  index={index}
+                  fanId={fanId}
+                  hasVaultAccess={hasVaultAccess}
+                  isSelected={selectedTrack?.id === track.id}
+                  isHighlighted={highlightTrackId === track.id}
+                  likeCount={likeState.count}
+                  isLiked={likeState.isLiked}
+                  isLikeLoading={isTrackLoading(track.id)}
+                  onToggleLike={() => toggleLike(track.id)}
+                  onSelect={() => handleSelectTrack(track)}
+                  onShare={() => handleShareTrack(track)}
+                  fallbackImage={artistProfile.avatar_url || artist1}
+                />
+              );
+            })}
           </div>
         )}
       </section>

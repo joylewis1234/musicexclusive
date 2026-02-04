@@ -1,6 +1,5 @@
 import { forwardRef } from "react";
 import { Heart } from "lucide-react";
-import { useTrackLikes } from "@/hooks/useTrackLikes";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
@@ -17,6 +16,10 @@ interface TrackListItemProps {
   hasVaultAccess: boolean;
   isSelected: boolean;
   isHighlighted?: boolean;
+  likeCount: number;
+  isLiked: boolean;
+  isLikeLoading: boolean;
+  onToggleLike: () => void;
   onSelect: () => void;
 }
 
@@ -26,10 +29,12 @@ export const TrackListItem = forwardRef<HTMLDivElement, TrackListItemProps>(({
   hasVaultAccess,
   isSelected,
   isHighlighted = false,
+  likeCount,
+  isLiked,
+  isLikeLoading,
+  onToggleLike,
   onSelect,
 }, ref) => {
-  const { likeCount, isLiked, toggleLike, isLoading } = useTrackLikes(track.id, fanId);
-
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     
@@ -43,7 +48,7 @@ export const TrackListItem = forwardRef<HTMLDivElement, TrackListItemProps>(({
     }
     
     if (fanId) {
-      toggleLike();
+      onToggleLike();
     }
   };
 
@@ -103,14 +108,14 @@ export const TrackListItem = forwardRef<HTMLDivElement, TrackListItemProps>(({
         {/* Like button */}
         <button
           onClick={handleLikeClick}
-          disabled={isLoading}
+          disabled={isLikeLoading}
           className={cn(
             "flex items-center gap-1.5 px-2.5 py-1.5 rounded-full transition-all duration-200",
             isLiked
               ? "bg-pink-500/20 text-pink-400"
               : "bg-muted/30 text-muted-foreground hover:bg-muted/50",
             !canLike && "opacity-50",
-            isLoading && "cursor-not-allowed"
+            isLikeLoading && "cursor-not-allowed"
           )}
           aria-label={isLiked ? "Unlike" : "Like"}
         >
