@@ -16,7 +16,7 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2, Eye, EyeOff } from "lucide-react";
+import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2, Eye, EyeOff, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -319,6 +319,18 @@ const EnterVault = () => {
             />
           ))}
         </div>
+        
+        {/* Try Your Luck Header with Arrows */}
+        <div className="text-center mt-6">
+          <p className="text-2xl md:text-3xl font-display font-black tracking-wider text-foreground mb-3 text-glow">
+            TRY YOUR LUCK
+          </p>
+          <div className="flex justify-center items-center gap-3">
+            <ChevronDown className="w-7 h-7 text-primary animate-bounce" />
+            <ChevronDown className="w-7 h-7 text-primary animate-bounce [animation-delay:150ms]" />
+            <ChevronDown className="w-7 h-7 text-primary animate-bounce [animation-delay:300ms]" />
+          </div>
+        </div>
       </section>
 
       <div className="flex-1 flex items-center justify-center">
@@ -602,10 +614,9 @@ const EnterVault = () => {
       </div>
 
       {/* ========================================
-          RETURNING FAN LOGIN SECTION
-          For fans who already have a vault code
+          ALREADY HAVE A CODE DIVIDER
           ======================================== */}
-      <section className="mt-12 mb-8">
+      <section className="mt-12">
         <div className="w-full max-w-md mx-auto mb-4">
           <div className="flex items-center gap-4">
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent" />
@@ -615,6 +626,33 @@ const EnterVault = () => {
             <div className="flex-1 h-px bg-gradient-to-r from-transparent via-muted-foreground/30 to-transparent" />
           </div>
         </div>
+      </section>
+
+      {/* ========================================
+          SUPERFAN ACCESS CTA
+          Skip the lottery option
+          ======================================== */}
+      <section className="my-8">
+        <div className="w-full max-w-xs mx-auto">
+          <Button 
+            variant="secondary" 
+            size="lg" 
+            className="w-full"
+            onClick={() => navigate("/auth/fan", { state: { flow: "superfan" } })}
+          >
+            Unlock Superfan Access
+          </Button>
+          <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
+            ✨ Skip the lottery — guaranteed access
+          </p>
+        </div>
+      </section>
+
+      {/* ========================================
+          RETURNING FAN LOGIN SECTION
+          For fans who already have a vault code
+          ======================================== */}
+      <section className="mb-8">
         <ReturningFanLogin />
       </section>
     </div>
