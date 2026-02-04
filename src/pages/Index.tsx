@@ -122,15 +122,6 @@ const Index = () => {
               </p>
             </div>
             
-            {/* Artist CTA */}
-            <Button 
-              variant="outline" 
-              size="default" 
-              className="mt-6 text-xs tracking-widest"
-              onClick={() => navigate("/artist/apply")}
-            >
-              Music Artists Apply Here
-            </Button>
           </div>
         </div>
       </section>
@@ -317,6 +308,16 @@ const Index = () => {
               <span className="block text-center leading-tight">
                 Want Access Now?<br />Become a Superfan
               </span>
+            </Button>
+            
+            {/* Artist CTA */}
+            <Button 
+              variant="outline" 
+              size="default" 
+              className="mt-4 text-xs tracking-widest"
+              onClick={() => navigate("/artist/apply")}
+            >
+              Music Artists Apply Here
             </Button>
           </div>
         </div>
