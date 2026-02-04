@@ -2,7 +2,7 @@ import { Play, Pause, Share2, Headphones, Loader2, AlertCircle, User, Heart } fr
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
-import { useLikeCount } from "@/hooks/useLikeCount";
+import { useTrackLikes } from "@/hooks/useTrackLikes";
 
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
@@ -49,7 +49,7 @@ export const DiscoveryTrackCard = ({
   const hasPreviewAudio = !!track.preview_audio_url || !!track.full_audio_url;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
-  const likeCount = useLikeCount(track.id);
+  const { likeCount } = useTrackLikes(track.id, null);
 
   return (
     <div 
