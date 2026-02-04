@@ -65,6 +65,11 @@ const Footer = () => {
         <p className="text-center text-[11px] text-muted-foreground/70 font-display tracking-wider">
           Music Exclusive™ | Patent Pending
         </p>
+        
+        {/* Copyright Statement */}
+        <p className="text-center text-[10px] text-muted-foreground/50 mt-3">
+          © {new Date().getFullYear()} Music Exclusive LLC. All rights reserved.
+        </p>
       </div>
     </footer>
   );
