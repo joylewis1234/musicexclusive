@@ -234,13 +234,20 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection number="16" title="Miscellaneous" showDivider={false}>
+      <LegalSection number="16" title="Miscellaneous">
         <ul className="list-disc list-outside ml-5 space-y-2">
           <li><strong>Taxes:</strong> You are responsible for any taxes you owe.</li>
           <li><strong>Severability:</strong> If any part of these Terms is invalid, the rest remains enforceable.</li>
           <li><strong>Amendments:</strong> We may update these Terms at any time.</li>
           <li><strong>Assignment:</strong> Company may assign these Terms; users may not assign without written consent.</li>
         </ul>
+      </LegalSection>
+
+      <LegalSection number="17" title="Intellectual Property Notice" showDivider={false}>
+        <p>
+          Music Exclusive™ is patent pending. The platform experience, systems, and exclusive 
+          access flow are protected under pending patent applications. All rights are reserved.
+        </p>
       </LegalSection>
 
       <div className="mt-10 pt-6 border-t border-border/30">
