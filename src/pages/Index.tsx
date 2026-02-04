@@ -143,8 +143,8 @@ const Index = () => {
           
           {/* Vault Portal Image */}
           <div className="relative mx-auto w-full max-w-md aspect-square">
-            {/* Neon pink trailing ring */}
-            <div className="animate-vault-ring" />
+            {/* Neon pink trailing ring - needs absolute positioning within relative parent */}
+            <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
             
             {/* Animated glow orbs behind */}
             <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
@@ -254,8 +254,8 @@ const Index = () => {
           
           {/* Vault Portal Image */}
           <div className="relative mx-auto w-full max-w-md aspect-square">
-            {/* Neon pink trailing ring */}
-            <div className="animate-vault-ring" />
+            {/* Neon pink trailing ring - needs absolute positioning within relative parent */}
+            <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
             
             {/* Animated glow orbs behind */}
             <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
