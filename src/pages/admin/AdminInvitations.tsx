@@ -167,61 +167,97 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
                 You also get full transparency reporting inside your dashboard.
               </p>
 
-              <!-- Earnings Potential Graphic -->
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:24px 0;">
+              <!-- Earnings Potential Graphic - Exciting Version -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:30px 0;">
                 <tr>
                   <td align="center">
-                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#0b0b14; border:1px solid #a855f7; border-radius:14px;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(135deg, #0f0a1e 0%, #1a0a2e 50%, #0a1628 100%); border:2px solid transparent; border-image:linear-gradient(135deg, #a855f7, #ec4899, #f59e0b) 1; border-radius:20px; overflow:hidden;">
+                      <!-- Header with glow effect -->
                       <tr>
-                        <td style="padding:16px 16px 10px 16px; font-family:Arial, sans-serif; color:#ffffff;">
-                          <div style="font-size:16px; font-weight:700; letter-spacing:0.2px;">
-                            Earnings Potential Example
-                          </div>
-                          <div style="font-size:13px; line-height:18px; color:#cfcfe6; margin-top:6px;">
-                            A simple way to picture what your week can look like on Music Exclusive
+                        <td style="padding:24px 20px 16px 20px; background:linear-gradient(180deg, rgba(168,85,247,0.15) 0%, transparent 100%);">
+                          <div style="text-align:center;">
+                            <div style="font-size:12px; font-weight:600; letter-spacing:2px; color:#f59e0b; text-transform:uppercase; margin-bottom:8px;">
+                              ⚡ YOUR WEEKLY POTENTIAL ⚡
+                            </div>
+                            <div style="font-size:22px; font-weight:800; color:#ffffff; letter-spacing:-0.5px;">
+                              What Your Week Could Look Like
+                            </div>
                           </div>
                         </td>
                       </tr>
+
+                      <!-- Flow Steps -->
                       <tr>
-                        <td style="padding:0 16px 16px 16px;">
+                        <td style="padding:0 16px 24px 16px;">
                           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                            <!-- Row 1: Fans + Arrow + Streams -->
                             <tr>
-                              <td style="padding:8px; width:25%;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#101022; border:1px solid rgba(168,85,247,0.45); border-radius:12px;">
+                              <td style="padding:8px; width:40%;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(145deg, #1e1040, #150a28); border:2px solid #a855f7; border-radius:16px; box-shadow:0 0 20px rgba(168,85,247,0.3);">
                                   <tr>
-                                    <td style="padding:12px; font-family:Arial, sans-serif; color:#ffffff; text-align:center;">
-                                      <div style="font-size:20px; font-weight:800;">👥 200</div>
-                                      <div style="font-size:12px; color:#cfcfe6; margin-top:4px;">fans</div>
+                                    <td style="padding:20px 12px; text-align:center;">
+                                      <div style="font-size:36px; margin-bottom:8px;">👥</div>
+                                      <div style="font-size:32px; font-weight:900; color:#ffffff; text-shadow:0 0 10px rgba(168,85,247,0.5);">200</div>
+                                      <div style="font-size:13px; color:#c084fc; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-top:4px;">True Fans</div>
                                     </td>
                                   </tr>
                                 </table>
                               </td>
-                              <td style="padding:8px; width:25%;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#101022; border:1px solid rgba(168,85,247,0.45); border-radius:12px;">
+                              <td style="padding:8px; width:20%; text-align:center;">
+                                <div style="font-size:24px; color:#ec4899;">✕</div>
+                              </td>
+                              <td style="padding:8px; width:40%;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(145deg, #1e1040, #150a28); border:2px solid #ec4899; border-radius:16px; box-shadow:0 0 20px rgba(236,72,153,0.3);">
                                   <tr>
-                                    <td style="padding:12px; font-family:Arial, sans-serif; color:#ffffff; text-align:center;">
-                                      <div style="font-size:20px; font-weight:800;">🎧 50</div>
-                                      <div style="font-size:12px; color:#cfcfe6; margin-top:4px;">streams each</div>
+                                    <td style="padding:20px 12px; text-align:center;">
+                                      <div style="font-size:36px; margin-bottom:8px;">🎧</div>
+                                      <div style="font-size:32px; font-weight:900; color:#ffffff; text-shadow:0 0 10px rgba(236,72,153,0.5);">50</div>
+                                      <div style="font-size:13px; color:#f472b6; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Streams Each</div>
                                     </td>
                                   </tr>
                                 </table>
                               </td>
-                              <td style="padding:8px; width:25%;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#101022; border:1px solid rgba(168,85,247,0.45); border-radius:12px;">
+                            </tr>
+
+                            <!-- Arrow Down -->
+                            <tr>
+                              <td colspan="3" style="text-align:center; padding:12px 0;">
+                                <div style="font-size:28px; color:#f59e0b;">⬇️</div>
+                              </td>
+                            </tr>
+
+                            <!-- Row 2: Total Streams -->
+                            <tr>
+                              <td colspan="3" style="padding:8px;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(145deg, #1a2040, #0f1628); border:2px solid #06b6d4; border-radius:16px; box-shadow:0 0 25px rgba(6,182,212,0.3);">
                                   <tr>
-                                    <td style="padding:12px; font-family:Arial, sans-serif; color:#ffffff; text-align:center;">
-                                      <div style="font-size:20px; font-weight:800;">🔥 10,000</div>
-                                      <div style="font-size:12px; color:#cfcfe6; margin-top:4px;">streams/week</div>
+                                    <td style="padding:20px; text-align:center;">
+                                      <div style="font-size:36px; margin-bottom:8px;">🔥</div>
+                                      <div style="font-size:38px; font-weight:900; color:#ffffff; text-shadow:0 0 15px rgba(6,182,212,0.5);">10,000</div>
+                                      <div style="font-size:14px; color:#67e8f9; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-top:4px;">Streams Per Week</div>
                                     </td>
                                   </tr>
                                 </table>
                               </td>
-                              <td style="padding:8px; width:25%;">
-                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#101022; border:1px solid rgba(168,85,247,0.45); border-radius:12px;">
+                            </tr>
+
+                            <!-- Arrow Down -->
+                            <tr>
+                              <td colspan="3" style="text-align:center; padding:12px 0;">
+                                <div style="font-size:28px; color:#22c55e;">⬇️</div>
+                              </td>
+                            </tr>
+
+                            <!-- Row 3: Money - The Big Payoff -->
+                            <tr>
+                              <td colspan="3" style="padding:8px;">
+                                <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(145deg, #1a3020, #0a2010); border:3px solid #22c55e; border-radius:20px; box-shadow:0 0 30px rgba(34,197,94,0.4), inset 0 0 20px rgba(34,197,94,0.1);">
                                   <tr>
-                                    <td style="padding:12px; font-family:Arial, sans-serif; color:#ffffff; text-align:center;">
-                                      <div style="font-size:20px; font-weight:800;">💰 $1,000+</div>
-                                      <div style="font-size:12px; color:#cfcfe6; margin-top:4px;">in one week</div>
+                                    <td style="padding:28px 20px; text-align:center;">
+                                      <div style="font-size:44px; margin-bottom:10px;">💰</div>
+                                      <div style="font-size:48px; font-weight:900; color:#22c55e; text-shadow:0 0 20px rgba(34,197,94,0.6); letter-spacing:-2px;">$1,000+</div>
+                                      <div style="font-size:16px; color:#86efac; font-weight:700; text-transform:uppercase; letter-spacing:2px; margin-top:8px;">In Just One Week</div>
+                                      <div style="font-size:12px; color:#a1a1aa; margin-top:10px; font-style:italic;">Paid directly to you every Monday</div>
                                     </td>
                                   </tr>
                                 </table>
