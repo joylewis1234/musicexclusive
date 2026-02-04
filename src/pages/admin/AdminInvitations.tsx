@@ -123,7 +123,6 @@ const generateEmailHtml = (artistName: string, applyLink: string): string => {
           <!-- Header -->
           <tr>
             <td align="center" style="padding-bottom:30px;">
-              <img src="https://lovable.dev/opengraph-image-p98pqg.png" alt="Music Exclusive" width="60" height="60" style="display:block; margin:0 auto 15px auto; border-radius:12px;" />
               <h1 style="margin:0; font-size:24px; font-weight:bold; color:#ffffff; letter-spacing:0.1em; text-transform:uppercase;">
                 MUSIC EXCLUSIVE™
               </h1>
