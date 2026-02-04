@@ -52,39 +52,52 @@ export const ReturningFanLogin = () => {
     setErrorMessage(null);
 
     try {
-      // Look up the vault code for this email
-      const { data: vaultEntry, error } = await supabase
-        .from("vault_codes")
-        .select("*")
-        .eq("email", values.email.toLowerCase())
-        .eq("code", values.vaultCode)
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Call server-side rate-limited validation in lookup mode
+      const { data, error } = await supabase.functions.invoke("validate-vault-code", {
+        body: {
+          email: values.email,
+          vaultCode: values.vaultCode,
+          mode: "lookup",
+        },
+      });
 
       if (error) {
-        console.error("Error looking up vault code:", error);
+        console.error("Error validating vault code:", error);
         setErrorMessage("Something went wrong. Please try again.");
         return;
       }
 
-      if (!vaultEntry) {
-        setErrorMessage("We couldn't find that Vault Code. Double-check your email and try again.");
+      // Handle rate limiting
+      if (data.error === "rate_limited") {
+        const minutes = Math.ceil((data.retryAfterSeconds || 600) / 60);
+        setErrorMessage(`Too many attempts. Please try again in ${minutes} minutes.`);
+        return;
+      }
+
+      // Handle invalid code
+      if (data.error === "invalid_code") {
+        setErrorMessage(data.message || "We couldn't find that Vault Code. Double-check your email and try again.");
+        return;
+      }
+
+      // Handle other errors
+      if (data.error) {
+        setErrorMessage(data.message || "Something went wrong. Please try again.");
         return;
       }
 
       // Store in session for continuity
-      sessionStorage.setItem("vaultCode", vaultEntry.code);
+      sessionStorage.setItem("vaultCode", values.vaultCode.toUpperCase());
       sessionStorage.setItem("vaultEmail", values.email);
-      sessionStorage.setItem("vaultName", vaultEntry.name);
+      sessionStorage.setItem("vaultName", data.name);
 
       // Route based on status
-      if (vaultEntry.status === "won") {
+      if (data.status === "won") {
         // Winner - go to agreements
         navigate("/fan/agreements", {
           state: {
             email: values.email,
-            name: vaultEntry.name,
+            name: data.name,
             vaultCode: values.vaultCode,
             flow: "vault",
           },
@@ -94,11 +107,11 @@ export const ReturningFanLogin = () => {
         navigate("/vault/status", {
           state: {
             email: values.email,
-            name: vaultEntry.name,
+            name: data.name,
             vaultCode: values.vaultCode,
             vaultState: "not_selected",
-            fromReturn: true, // Flag to show "still in line" messaging
-            nextDrawDate: vaultEntry.next_draw_date,
+            fromReturn: true,
+            nextDrawDate: data.nextDrawDate,
           },
         });
       }
