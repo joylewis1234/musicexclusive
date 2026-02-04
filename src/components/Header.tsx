@@ -78,7 +78,7 @@ const Header = () => {
               <span className="font-display text-xl font-bold tracking-widest uppercase">
                 <span className="text-foreground">MUSIC </span>
                 <span className="text-primary">EXCLUSIVE</span>
-                <span className="text-muted-foreground text-[8px] align-super ml-0.5">™</span>
+                <span className="text-muted-foreground text-[11px] align-super ml-1 font-medium">™</span>
               </span>
               <button 
                 onClick={() => setOpen(false)}
@@ -181,7 +181,7 @@ const Header = () => {
           <span className="font-display text-base font-bold tracking-widest uppercase whitespace-nowrap">
             <span className="text-foreground">MUSIC </span>
             <span className="text-primary">EXCLUSIVE</span>
-            <span className="text-muted-foreground text-[6px] align-super ml-0.5">™</span>
+            <span className="text-muted-foreground text-[10px] align-super ml-0.5 font-medium">™</span>
           </span>
         </button>
 
