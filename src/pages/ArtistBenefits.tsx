@@ -316,7 +316,7 @@ const ArtistBenefits = () => {
               <div className="p-6 text-center">
                 <p className="text-muted-foreground text-sm mb-2">500 fans × 20 streams/week = 10,000 streams</p>
                 <p className="text-muted-foreground text-sm mb-4">10,000 × $0.10 = </p>
-                <p className="text-5xl md:text-6xl font-display font-black gradient-text text-glow">
+                <p className="text-4xl md:text-6xl font-display font-black gradient-text text-glow">
                   $1,000/week
                 </p>
                 <p className="text-muted-foreground text-sm mt-4 font-body">
