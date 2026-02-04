@@ -21,7 +21,11 @@ async function sendBatchCreatedNotification(
   totalGross: number,
   totalArtistNet: number,
   applicationsApproved: number,
-  applicationsDenied: number
+  applicationsDenied: number,
+  invitationsGenerated: number,
+  invitationsSent: number,
+  invitationsApplied: number,
+  invitedArtists: Array<{ artist_name: string; contact: string; platform: string; status: string }>
 ): Promise<void> {
   try {
     const response = await fetch(`${supabaseUrl}/functions/v1/send-payout-notification`, {
@@ -39,10 +43,21 @@ async function sendBatchCreatedNotification(
         totalArtistNet: `$${totalArtistNet.toFixed(2)}`,
         applicationsApproved,
         applicationsDenied,
+        invitationsGenerated,
+        invitationsSent,
+        invitationsApplied,
+        invitedArtists,
       }),
     });
     const result = await response.json();
-    logStep("Batch created notification sent", { success: result.success, applicationsApproved, applicationsDenied });
+    logStep("Batch created notification sent", { 
+      success: result.success, 
+      applicationsApproved, 
+      applicationsDenied,
+      invitationsGenerated,
+      invitationsSent,
+      invitationsApplied
+    });
   } catch (error) {
     logStep("Failed to send batch created notification", { error: String(error) });
   }
@@ -305,6 +320,35 @@ serve(async (req) => {
 
     logStep("Application stats fetched", { applicationsApproved, applicationsDenied });
 
+    // Fetch artist invitation stats for this week
+    let invitationsGenerated = 0;
+    let invitationsSent = 0;
+    let invitationsApplied = 0;
+    const invitedArtists: Array<{ artist_name: string; contact: string; platform: string; status: string }> = [];
+
+    const { data: weekInvitations } = await supabaseAdmin
+      .from("artist_invitations")
+      .select("artist_name, artist_email, artist_social_handle, platform, status")
+      .gte("created_at", previousWeekStart.toISOString())
+      .lte("created_at", previousWeekEnd.toISOString());
+
+    if (weekInvitations && weekInvitations.length > 0) {
+      for (const inv of weekInvitations) {
+        invitedArtists.push({
+          artist_name: inv.artist_name,
+          contact: inv.artist_email || inv.artist_social_handle || "N/A",
+          platform: inv.platform,
+          status: inv.status,
+        });
+
+        invitationsGenerated++;
+        if (inv.status === "sent") invitationsSent++;
+        if (inv.status === "applied") invitationsApplied++;
+      }
+    }
+
+    logStep("Invitation stats fetched", { invitationsGenerated, invitationsSent, invitationsApplied });
+
     // Send notification to company about batch creation
     if (batchesCreated.length > 0) {
       const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -318,7 +362,11 @@ serve(async (req) => {
         batchTotalGross,
         batchTotalArtistNet,
         applicationsApproved,
-        applicationsDenied
+        applicationsDenied,
+        invitationsGenerated,
+        invitationsSent,
+        invitationsApplied,
+        invitedArtists
       );
     }
 

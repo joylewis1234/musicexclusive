@@ -232,11 +232,29 @@ function companyBatchCreatedEmail(
   totalGross: string, 
   totalArtistNet: string,
   applicationsApproved?: number,
-  applicationsDenied?: number
+  applicationsDenied?: number,
+  invitationsGenerated?: number,
+  invitationsSent?: number,
+  invitationsApplied?: number,
+  invitedArtists?: Array<{ artist_name: string; contact: string; platform: string; status: string }>
 ): string {
   const hasApplicationStats = applicationsApproved !== undefined || applicationsDenied !== undefined;
   const approvedCount = applicationsApproved ?? 0;
   const deniedCount = applicationsDenied ?? 0;
+
+  const hasInvitationStats = invitationsGenerated !== undefined && invitationsGenerated > 0;
+  const generatedCount = invitationsGenerated ?? 0;
+  const sentCount = invitationsSent ?? 0;
+  const appliedCount = invitationsApplied ?? 0;
+  
+  const invitedArtistRows = (invitedArtists ?? []).map(a => `
+    <tr>
+      <td style="padding: 8px; border: 1px solid #e0e0e0;">${a.artist_name}</td>
+      <td style="padding: 8px; border: 1px solid #e0e0e0;">${a.contact}</td>
+      <td style="padding: 8px; border: 1px solid #e0e0e0;">${a.platform === 'email' ? 'Email' : 'DM'}</td>
+      <td style="padding: 8px; border: 1px solid #e0e0e0;">${a.status.charAt(0).toUpperCase() + a.status.slice(1)}</td>
+    </tr>
+  `).join('');
   
   return `
 <!DOCTYPE html>
@@ -280,6 +298,37 @@ function companyBatchCreatedEmail(
         <td style="padding: 12px; border: 1px solid #f5c6cb; color: #721c24; font-weight: bold;">${deniedCount}</td>
       </tr>
     </table>
+    ` : ''}
+
+    ${hasInvitationStats ? `
+    <h2 style="margin: 20px 0 15px 0; color: #1a1a1a; font-size: 18px;">📧 Artist Invitations Summary</h2>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+      <tr>
+        <td style="padding: 12px; background: #e8f4fd; border: 1px solid #b8daff; font-weight: bold; width: 40%;">📝 Generated</td>
+        <td style="padding: 12px; border: 1px solid #b8daff; color: #004085; font-weight: bold;">${generatedCount}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; background: #fff3cd; border: 1px solid #ffc107; font-weight: bold;">📤 Sent</td>
+        <td style="padding: 12px; border: 1px solid #ffc107; color: #856404; font-weight: bold;">${sentCount}</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; background: #d4edda; border: 1px solid #c3e6cb; font-weight: bold;">✅ Applied</td>
+        <td style="padding: 12px; border: 1px solid #c3e6cb; color: #155724; font-weight: bold;">${appliedCount}</td>
+      </tr>
+    </table>
+
+    ${invitedArtistRows.length > 0 ? `
+    <h3 style="margin: 15px 0 10px 0; color: #1a1a1a; font-size: 16px;">Artists Invited This Week</h3>
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px;">
+      <tr style="background: #f9f9f9;">
+        <th style="padding: 8px; border: 1px solid #e0e0e0; text-align: left;">Artist</th>
+        <th style="padding: 8px; border: 1px solid #e0e0e0; text-align: left;">Contact</th>
+        <th style="padding: 8px; border: 1px solid #e0e0e0; text-align: left;">Platform</th>
+        <th style="padding: 8px; border: 1px solid #e0e0e0; text-align: left;">Status</th>
+      </tr>
+      ${invitedArtistRows}
+    </table>
+    ` : ''}
     ` : ''}
     
     <p style="color: #666; font-size: 14px;">
@@ -396,6 +445,11 @@ interface NotificationRequest {
   // Artist application stats for weekly batch email
   applicationsApproved?: number;
   applicationsDenied?: number;
+  // Artist invitation stats for weekly batch email
+  invitationsGenerated?: number;
+  invitationsSent?: number;
+  invitationsApplied?: number;
+  invitedArtists?: Array<{ artist_name: string; contact: string; platform: string; status: string }>;
 }
 
 serve(async (req) => {
@@ -446,10 +500,19 @@ serve(async (req) => {
           request.totalGross, 
           request.totalArtistNet,
           request.applicationsApproved,
-          request.applicationsDenied
+          request.applicationsDenied,
+          request.invitationsGenerated,
+          request.invitationsSent,
+          request.invitationsApplied,
+          request.invitedArtists
         );
         result = await sendEmail(resendKey, COMPANY_EMAIL, "📊 Weekly Payout Batch Created - Awaiting Approval", html);
-        logStep("Batch created email sent", { success: result.success, applicationsApproved: request.applicationsApproved, applicationsDenied: request.applicationsDenied });
+        logStep("Batch created email sent", { 
+          success: result.success, 
+          applicationsApproved: request.applicationsApproved, 
+          applicationsDenied: request.applicationsDenied,
+          invitationsGenerated: request.invitationsGenerated
+        });
         break;
       }
 
