@@ -338,7 +338,7 @@
     position: absolute;
     inset: 35px;
     border-radius: 50%;
-    border: 3px solid transparent;
+    border: 8px solid transparent;
     background: conic-gradient(
       from 0deg at 50% 50%,
       transparent 0deg,
