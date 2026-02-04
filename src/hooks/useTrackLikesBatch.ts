@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 interface LikeState {
   count: number;
@@ -77,6 +78,67 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
   useEffect(() => {
     fetchAllLikeData();
   }, [fetchAllLikeData]);
+
+  // Subscribe to realtime changes on track_likes
+  const channelRef = useRef<RealtimeChannel | null>(null);
+
+  useEffect(() => {
+    if (trackIds.length === 0) return;
+
+    // Clean up previous channel
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+    }
+
+    const channel = supabase
+      .channel("track-likes-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "track_likes",
+        },
+        (payload) => {
+          const trackId = (payload.new as any)?.track_id || (payload.old as any)?.track_id;
+          
+          // Only update if this track is in our list
+          if (!trackId || !trackIds.includes(trackId)) return;
+
+          // Skip if this is our own action (already handled optimistically)
+          const eventFanId = (payload.new as any)?.fan_id || (payload.old as any)?.fan_id;
+          if (eventFanId === fanId) return;
+
+          // Update count based on event type
+          setLikesMap((prev) => {
+            const current = prev[trackId] || { count: 0, isLiked: false };
+            
+            if (payload.eventType === "INSERT") {
+              return {
+                ...prev,
+                [trackId]: { ...current, count: current.count + 1 },
+              };
+            } else if (payload.eventType === "DELETE") {
+              return {
+                ...prev,
+                [trackId]: { ...current, count: Math.max(0, current.count - 1) },
+              };
+            }
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [trackIdsKey, fanId]);
 
   const toggleLike = useCallback(async (trackId: string) => {
     if (!fanId || !trackId || loadingTrackId) return;
