@@ -163,8 +163,6 @@ const ArtistSetupAccount = () => {
         },
       });
 
-      let userId: string | null = null;
-
       if (signUpError) {
         // If user already exists, try to sign them in instead
         if (signUpError.message.includes("already registered") || 
@@ -177,34 +175,47 @@ const ArtistSetupAccount = () => {
           });
 
           if (signInError) {
-            // If sign in fails, the password might be different from before
             toast.error("This email is already registered. Please try logging in at /artist/login or use 'Forgot Password' if needed.");
             setIsSubmitting(false);
             return;
           }
 
-          userId = signInData.user?.id ?? null;
+          // User signed in successfully - finalize and redirect
+          const accessToken = signInData.session?.access_token;
+          if (accessToken) {
+            await supabase.functions.invoke("finalize-artist-setup", {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+          }
+
+          toast.success("Welcome back!");
+          navigate("/artist/dashboard", { replace: true });
+          return;
         } else {
           toast.error(signUpError.message);
           setIsSubmitting(false);
           return;
         }
-      } else {
-        userId = signUpData.user?.id ?? null;
       }
 
-      if (!userId) {
-        toast.error("Failed to create or authenticate account");
-        setIsSubmitting(false);
+      // New signup successful - with auto-confirm, we should have a session
+      // But to be safe, sign in explicitly to ensure we have a valid session
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        console.error("Sign in after signup failed:", signInError);
+        // The account was created but we couldn't sign in - this shouldn't happen with auto-confirm
+        toast.error("Account created! Please log in with your new credentials.");
+        navigate("/artist/login", { replace: true });
         return;
       }
 
-      // Get the current session token to call the finalize function
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
-
+      // Now we definitely have a session - call finalize
+      const accessToken = signInData.session?.access_token;
       if (accessToken) {
-        // Call edge function to finalize setup (update status, create profile, etc.)
         const { error: finalizeError } = await supabase.functions.invoke(
           "finalize-artist-setup",
           {
@@ -214,10 +225,8 @@ const ArtistSetupAccount = () => {
 
         if (finalizeError) {
           console.error("Error finalizing artist setup:", finalizeError);
-          // Continue anyway - the edge function handles this gracefully
+          // Continue anyway - login fallback will handle it
         }
-      } else {
-        console.warn("No access token available for finalize-artist-setup");
       }
 
       toast.success("Account setup complete!");
