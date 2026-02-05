@@ -100,8 +100,8 @@ const ArtistApplicationForm = () => {
         console.error("Failed to send notification email:", notifyError)
       }
 
-      navigate("/artist/application-status", {
-        state: { artistName: artistName || "Test Artist", contactEmail: contactEmail || "test@example.com" },
+      navigate("/artist/application-submitted", {
+        state: { artistName: artistName || "Artist" },
       })
     } catch (error: unknown) {
       console.error("Application error:", error)
