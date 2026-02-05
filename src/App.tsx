@@ -153,6 +153,8 @@ const App = () => (
                 <Route path="/artist/apply" element={<ArtistApply />} />
                 <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
                 <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
+                 {/* Public: artists who were approved but don't have an account yet */}
+                 <Route path="/artist/setup-account" element={<ArtistSetupAccount />} />
                 
                 {/* Artist protected routes with bottom nav */}
                 <Route element={
@@ -179,11 +181,6 @@ const App = () => (
                 <Route path="/artist/upload" element={
                   <ArtistProtectedRoute>
                     <ArtistUpload />
-                  </ArtistProtectedRoute>
-                } />
-                <Route path="/artist/setup-account" element={
-                  <ArtistProtectedRoute>
-                    <ArtistSetupAccount />
                   </ArtistProtectedRoute>
                 } />
                 <Route path="/artist/agreement-accept" element={
