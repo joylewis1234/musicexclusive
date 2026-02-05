@@ -5,6 +5,9 @@ import { verifyAdmin } from "../_shared/verify-admin.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
+// Use production URL by default
+const DEFAULT_BASE_URL = "https://musicexclusive.lovable.app";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -41,7 +44,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { applicationId, baseUrl = "https://music-exclusive.lovable.app" }: ApproveArtistRequest = await req.json();
+    const { applicationId, baseUrl = DEFAULT_BASE_URL }: ApproveArtistRequest = await req.json();
 
     if (!applicationId) {
       throw new Error("Application ID is required");
@@ -109,7 +112,7 @@ const handler = async (req: Request): Promise<Response> => {
               </p>
               <div style="text-align: center; margin: 35px 0;">
                 <a href="${setupLink}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-size: 16px; font-weight: 700; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);">
-                  SET UP MY ARTIST ACCOUNT
+                  CREATE MY ACCOUNT
                 </a>
               </div>
             </td>
