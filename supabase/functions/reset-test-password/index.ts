@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { email } = await req.json();
+    const { email, password } = await req.json();
 
     if (!email) {
       return new Response(
@@ -31,17 +31,35 @@ serve(async (req) => {
     if (listError) throw listError;
 
     const user = users.users.find(u => u.email === email);
+
+    // If user doesn't exist, create them
     if (!user) {
+      const newPassword = password || `TestPass${Date.now()}!`;
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: newPassword,
+        email_confirm: true,
+      });
+
+      if (createError) throw createError;
+
+      // Clean up any orphaned user_roles for this email (from previously deleted auth users)
+      // The ensure_admin_role trigger will auto-create admin role for admin emails
+      
       return new Response(
-        JSON.stringify({ error: "User not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({
+          success: true,
+          action: "created",
+          email,
+          new_password: newPassword,
+          user_id: newUser.user?.id,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Generate new password
-    const newPassword = `TestPass${Date.now()}!`;
-
-    // Update password
+    // User exists, reset password
+    const newPassword = password || `TestPass${Date.now()}!`;
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       user.id,
       { password: newPassword }
@@ -52,6 +70,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
+        action: "reset",
         email,
         new_password: newPassword,
         user_id: user.id,

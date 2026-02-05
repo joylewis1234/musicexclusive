@@ -82,6 +82,18 @@ Deno.serve(async (req) => {
     const contactEmail = application.contact_email?.toLowerCase().trim();
     const deletedItems: string[] = [];
 
+    // SAFETY GUARD: Never delete admin accounts
+    const ADMIN_EMAILS = ["support@musicexclusive.co", "tinytunesmusic@gmail.com"];
+    const isAdminEmail = contactEmail && ADMIN_EMAILS.includes(contactEmail);
+    if (isAdminEmail) {
+      return new Response(
+        JSON.stringify({ 
+          error: "Cannot delete: this application uses an admin email address. Only artist/test accounts can be deleted." 
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 2. Delete email_logs for this application
     const { error: emailLogsError } = await supabaseAdmin
       .from("email_logs")
