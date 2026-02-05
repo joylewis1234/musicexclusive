@@ -236,21 +236,48 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     // Send email to support - use verified domain
-    const emailResult = await resend.emails.send({
-      from: "Music Exclusive <noreply@themusicisexclusive.com>",
-      reply_to: "support@musicexclusive.co",
-      to: ["support@musicexclusive.co"],
-      subject: `🎵 New Artist Application: ${application.artist_name}`,
-      html: emailHtml,
-    });
+    let emailStatus = "sent";
+    let emailError: string | null = null;
+    let resendId: string | null = null;
 
-    console.log("Notification email sent:", emailResult);
+    try {
+      const emailResult = await resend.emails.send({
+        from: "Music Exclusive <noreply@themusicisexclusive.com>",
+        reply_to: "support@musicexclusive.co",
+        to: ["support@musicexclusive.co"],
+        subject: `🎵 New Artist Application: ${application.artist_name}`,
+        html: emailHtml,
+      });
+
+      console.log("Notification email sent:", emailResult);
+      resendId = emailResult?.data?.id ?? null;
+    } catch (sendErr) {
+      emailStatus = "failed";
+      emailError = sendErr instanceof Error ? sendErr.message : "Unknown send error";
+      console.error("Failed to send notification email:", sendErr);
+    }
+
+    // Log to email_logs
+    try {
+      await supabase.from("email_logs").insert({
+        email_type: "artist_application_submitted",
+        recipient_email: "support@musicexclusive.co",
+        application_id: applicationId,
+        status: emailStatus,
+        error_message: emailError,
+        resend_id: resendId,
+        sent_at: emailStatus === "sent" ? new Date().toISOString() : null,
+      });
+    } catch (logErr) {
+      console.error("Failed to log email:", logErr);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
         applicationId,
-        emailSent: true,
+        emailSent: emailStatus === "sent",
+        emailError,
       }),
       {
         status: 200,
