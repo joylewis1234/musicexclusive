@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Home, Mic2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Home, Mic2, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
 const setupSchema = z.object({
@@ -35,6 +35,8 @@ const ArtistSetupAccount = () => {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [confirmRights, setConfirmRights] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof SetupFormData, string>>>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Get email from URL params or check for pending setup applications
   useEffect(() => {
@@ -317,7 +319,7 @@ const ArtistSetupAccount = () => {
           </div>
 
           <h1 className="font-display text-2xl font-bold text-foreground text-center mb-2">
-            Complete Your Setup
+            Create Your Account
           </h1>
           
           <p className="text-muted-foreground text-center mb-6">
@@ -346,14 +348,28 @@ const ArtistSetupAccount = () => {
               <label className="text-sm text-muted-foreground mb-1.5 block">
                 Create Password
               </label>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={`bg-muted/30 ${errors.password ? "border-destructive" : ""}`}
-                disabled={isSubmitting}
-              />
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={`bg-muted/30 pr-10 ${errors.password ? "border-destructive" : ""}`}
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
               {errors.password && (
                 <p className="text-destructive text-xs mt-1">{errors.password}</p>
               )}
@@ -364,14 +380,28 @@ const ArtistSetupAccount = () => {
               <label className="text-sm text-muted-foreground mb-1.5 block">
                 Confirm Password
               </label>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className={`bg-muted/30 ${errors.confirmPassword ? "border-destructive" : ""}`}
-                disabled={isSubmitting}
-              />
+              <div className="relative">
+                <Input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className={`bg-muted/30 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  tabIndex={-1}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
               {errors.confirmPassword && (
                 <p className="text-destructive text-xs mt-1">{errors.confirmPassword}</p>
               )}
