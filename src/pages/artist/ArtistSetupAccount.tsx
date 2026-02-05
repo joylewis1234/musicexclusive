@@ -29,6 +29,9 @@ const ArtistSetupAccount = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [lookupEmail, setLookupEmail] = useState("");
+  const [isLookingUpEmail, setIsLookingUpEmail] = useState(false);
+  const [lookupError, setLookupError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -64,9 +67,10 @@ const ArtistSetupAccount = () => {
         }
 
         setEmail(data.contact_email);
+        setLookupEmail(data.contact_email);
         setApplicationStatus(data.status);
       } else {
-        // No email provided - show error
+        // No email provided - allow manual lookup (some email clients strip query params)
         setApplicationStatus("no_email");
       }
       
@@ -75,6 +79,51 @@ const ArtistSetupAccount = () => {
 
     checkApplication();
   }, [searchParams]);
+
+  const handleLookupApprovedEmail = async () => {
+    setLookupError(null);
+
+    const trimmed = lookupEmail.trim();
+    if (!trimmed) {
+      setLookupError("Please enter the email you applied with.");
+      return;
+    }
+
+    const parsed = z.string().email().safeParse(trimmed);
+    if (!parsed.success) {
+      setLookupError("Please enter a valid email address.");
+      return;
+    }
+
+    setIsLookingUpEmail(true);
+    try {
+      const { data, error } = await supabase
+        .from("artist_applications")
+        .select("status, contact_email")
+        .eq("contact_email", trimmed)
+        .maybeSingle();
+
+      if (error || !data) {
+        setLookupError("We couldn't find an application for that email.");
+        return;
+      }
+
+      setEmail(data.contact_email);
+      setApplicationStatus(data.status);
+
+      if (data.status !== "approved" && data.status !== "approved_pending_setup") {
+        return;
+      }
+
+      // If approved, proceed to the setup form
+      toast.success("Approved application found. Create your password to continue.");
+    } catch (err) {
+      console.error("[ArtistSetupAccount] lookup error:", err);
+      setLookupError("Something went wrong. Please try again.");
+    } finally {
+      setIsLookingUpEmail(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -231,6 +280,46 @@ const ArtistSetupAccount = () => {
     );
   }
 
+  // Already active - they should log in instead
+  if (applicationStatus === "active") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+          <div className="container max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Back</span>
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
+          <GlowCard className="max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="font-display text-xl font-bold text-foreground mb-3">
+              Account Already Created
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              This artist account is already set up. Please log in to continue.
+            </p>
+            <Button onClick={() => navigate("/artist/login")}>Go to Artist Login</Button>
+          </GlowCard>
+        </main>
+      </div>
+    );
+  }
+
   // No email provided or not found
   if (applicationStatus === "no_email" || applicationStatus === "not_found") {
     return (
@@ -259,11 +348,32 @@ const ArtistSetupAccount = () => {
               <AlertCircle className="w-8 h-8 text-muted-foreground" />
             </div>
             <h1 className="font-display text-xl font-bold text-foreground mb-3">
-              Setup Link Required
+              Create Your Account
             </h1>
             <p className="text-muted-foreground mb-6">
-              Please use the setup link from your approval email to complete your account setup.
+              Enter the email you applied with to continue setup.
             </p>
+
+            <div className="space-y-3 text-left">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1.5 block">Application Email</label>
+                <Input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={lookupEmail}
+                  onChange={(e) => setLookupEmail(e.target.value)}
+                  className="bg-muted/30"
+                  disabled={isLookingUpEmail}
+                />
+                {lookupError ? <p className="text-destructive text-xs mt-1">{lookupError}</p> : null}
+              </div>
+
+              <Button className="w-full" onClick={handleLookupApprovedEmail} disabled={isLookingUpEmail}>
+                {isLookingUpEmail ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Continue
+              </Button>
+            </div>
+
             <div className="space-y-3">
               <Button variant="outline" className="w-full" onClick={() => navigate("/artist/login")}>
                 Already have an account? Login
