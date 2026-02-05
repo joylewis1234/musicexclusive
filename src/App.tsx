@@ -57,6 +57,7 @@ import AddCredits from "./pages/AddCredits";
 import ArtistApply from "./pages/ArtistApply";
 import ArtistApplicationForm from "./pages/ArtistApplicationForm";
 import ArtistApplicationStatus from "./pages/ArtistApplicationStatus";
+import ArtistApplicationSubmitted from "./pages/ArtistApplicationSubmitted";
 import ArtistProfilePage from "./pages/ArtistProfilePage";
 import ArtistUpload from "./pages/ArtistUpload";
 import ArtistDashboard from "./pages/artist/ArtistDashboard";
@@ -153,8 +154,10 @@ const App = () => (
                 <Route path="/artist/apply" element={<ArtistApply />} />
                 <Route path="/artist/application-form" element={<ArtistApplicationForm />} />
                 <Route path="/artist/application-status" element={<ArtistApplicationStatus />} />
-                 {/* Public: artists who were approved but don't have an account yet */}
-                 <Route path="/artist/setup-account" element={<ArtistSetupAccount />} />
+                <Route path="/artist/application-submitted" element={<ArtistApplicationSubmitted />} />
+                {/* Public: artists who were approved but don't have an account yet */}
+                <Route path="/artist/setup-account" element={<ArtistSetupAccount />} />
+                <Route path="/artist/signup" element={<ArtistSetupAccount />} />
                 
                 {/* Artist protected routes with bottom nav */}
                 <Route element={
