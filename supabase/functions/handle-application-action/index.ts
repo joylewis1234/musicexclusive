@@ -1,8 +1,11 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
-import { Resend } from "https://esm.sh/resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
+ import { Resend } from "https://esm.sh/resend@2.0.0";
+ 
+ const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+ 
+ // Use production URL by default
+ const DEFAULT_BASE_URL = "https://musicexclusive.lovable.app";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -28,7 +31,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { token, adminEmail, ipAddress, userAgent, baseUrl = "https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app" }: ActionRequest = await req.json();
+    const { token, adminEmail, ipAddress, userAgent, baseUrl = DEFAULT_BASE_URL }: ActionRequest = await req.json();
 
     if (!token) {
       throw new Error("Token is required");
@@ -157,7 +160,7 @@ const handler = async (req: Request): Promise<Response> => {
               <!-- CTA Button -->
               <div style="text-align: center; margin: 35px 0;">
                 <a href="${setupLink}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-size: 16px; font-weight: 700; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);">
-                  SET UP MY ARTIST ACCOUNT
+                  CREATE MY ACCOUNT
                 </a>
               </div>
 
