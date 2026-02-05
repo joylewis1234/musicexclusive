@@ -184,12 +184,6 @@ const AdminArtistApplications = () => {
   };
 
   const handleApprove = async (application: ArtistApplication) => {
-    // Validate email first
-    if (!application.contact_email || !application.contact_email.includes("@")) {
-      toast.error("Missing artist email. Cannot send approval email.");
-      return;
-    }
-    
     setProcessingId(application.id);
     try {
       const { data, error } = await supabase.functions.invoke("approve-artist", {
@@ -202,15 +196,12 @@ const AdminArtistApplications = () => {
       if (error) throw error;
 
       if (data.success) {
-        if (data.emailSent) {
-          toast.success("Approval email sent!", {
-            description: `Email sent to ${application.contact_email}`,
-          });
-        } else {
-          toast.error("Failed to send approval email", {
-            description: data.emailError || "Unknown error occurred",
-          });
-        }
+        // Approval succeeded (DB updated) — always show success
+        toast.success(`${application.artist_name} approved successfully!`, {
+          description: data.emailSent
+            ? `Approval email sent to ${application.contact_email}`
+            : `Approved, but email failed: ${data.emailError || "Unknown error"}. Use Resend button.`,
+        });
         fetchApplications();
         setIsDetailOpen(false);
       } else {
