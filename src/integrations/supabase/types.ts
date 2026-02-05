@@ -401,6 +401,50 @@ export type Database = {
           },
         ]
       }
+      email_logs: {
+        Row: {
+          application_id: string | null
+          created_at: string
+          email_type: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          resend_id: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          application_id?: string | null
+          created_at?: string
+          email_type: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          application_id?: string | null
+          created_at?: string
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          resend_id?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_logs_application_id_fkey"
+            columns: ["application_id"]
+            isOneToOne: false
+            referencedRelation: "artist_applications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fan_terms_acceptances: {
         Row: {
           accepted_at: string
