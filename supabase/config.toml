@@ -68,3 +68,6 @@ verify_jwt = false
 
 [functions.lookup-artist-application]
 verify_jwt = false
+
+[functions.finalize-artist-setup]
+verify_jwt = false
