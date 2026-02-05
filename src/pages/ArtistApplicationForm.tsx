@@ -60,8 +60,13 @@ const ArtistApplicationForm = () => {
     setIsSubmitting(true)
 
     try {
+      // Generate ID client-side so we don't need to SELECT/RETURN the inserted row
+      // (SELECT often fails under RLS for logged-out users on production).
+      const applicationId = crypto.randomUUID()
+
       // Insert application with defaults for missing fields (TESTING MODE)
-      const { data: insertedApp, error } = await supabase.from("artist_applications").insert({
+      const { error } = await supabase.from("artist_applications").insert({
+        id: applicationId,
         artist_name: artistName || "Test Artist",
         contact_email: contactEmail || "test@example.com",
         country_city: countryCity || null,
@@ -78,7 +83,7 @@ const ArtistApplicationForm = () => {
         not_released_publicly: true,
         agrees_terms: true,
         status: "pending",
-      }).select().single()
+      })
 
       if (error) throw error
 
@@ -86,7 +91,7 @@ const ArtistApplicationForm = () => {
       try {
         await supabase.functions.invoke("notify-new-application", {
           body: {
-            applicationId: insertedApp.id,
+            applicationId,
             baseUrl: window.location.origin,
           },
         })
