@@ -81,6 +81,20 @@ const ArtistLogin = () => {
         return;
       }
 
+      // Finalize artist setup (ensures status is "active" and profile exists)
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const accessToken = sessionData?.session?.access_token;
+        if (accessToken) {
+          await supabase.functions.invoke("finalize-artist-setup", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        }
+      } catch (finalizeErr) {
+        console.warn("[ArtistLogin] finalize-artist-setup warning:", finalizeErr);
+        // Non-blocking - continue with login
+      }
+
       // Check artist application status (non-blocking - if this fails, still try to navigate)
       let application: { status: string } | null = null;
       try {
