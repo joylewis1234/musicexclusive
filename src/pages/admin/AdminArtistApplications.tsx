@@ -21,6 +21,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
   ArrowLeft,
   Home,
   CheckCircle,
@@ -36,6 +48,8 @@ import {
   Mail,
   RefreshCw,
   AlertCircle,
+  Trash2,
+  ShieldAlert,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -78,6 +92,9 @@ const AdminArtistApplications = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [testCleanupMode, setTestCleanupMode] = useState(false);
+  const [deleteConfirmApp, setDeleteConfirmApp] = useState<ArtistApplication | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Check for token in URL (for email link actions)
   const tokenParam = searchParams.get("token");
@@ -283,6 +300,35 @@ const AdminArtistApplications = () => {
     }
   };
 
+  const handleDeleteApplication = async (application: ArtistApplication) => {
+    setDeletingId(application.id);
+    setDeleteConfirmApp(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("delete-test-application", {
+        body: { applicationId: application.id },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast.success("Deleted. You can now re-test with the same email.", {
+          description: `Removed: ${data.deleted?.join(", ")}`,
+        });
+        fetchApplications();
+        setIsDetailOpen(false);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("Failed to delete application", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
@@ -357,6 +403,23 @@ const AdminArtistApplications = () => {
             </p>
           </div>
 
+          {/* Test Cleanup Mode Toggle */}
+          <div className="flex items-center gap-3 mb-6 p-3 rounded-lg border border-border bg-card">
+            <ShieldAlert className="w-5 h-5 text-muted-foreground" />
+            <Label htmlFor="cleanup-mode" className="text-sm text-muted-foreground cursor-pointer select-none">
+              Enable Test Cleanup Mode
+            </Label>
+            <Switch
+              id="cleanup-mode"
+              checked={testCleanupMode}
+              onCheckedChange={setTestCleanupMode}
+            />
+            {testCleanupMode && (
+              <span className="text-xs text-destructive font-medium ml-auto">
+                Delete buttons visible
+              </span>
+            )}
+          </div>
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <GlowCard className="p-4 text-center">
@@ -450,6 +513,23 @@ const AdminArtistApplications = () => {
                                 <XCircle className="w-4 h-4 mr-1" /> Deny
                               </Button>
                             </>
+                          )}
+                          {testCleanupMode && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeleteConfirmApp(app)}
+                              disabled={deletingId === app.id}
+                            >
+                              {deletingId === app.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <Trash2 className="w-4 h-4 mr-1" /> Delete
+                                </>
+                              )}
+                            </Button>
                           )}
                         </div>
                       </TableCell>
@@ -699,6 +779,27 @@ const AdminArtistApplications = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirmApp} onOpenChange={(open) => !open && setDeleteConfirmApp(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this application?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the application and any linked artist account created from it. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteConfirmApp && handleDeleteApplication(deleteConfirmApp)}
+            >
+              Delete Permanently
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
