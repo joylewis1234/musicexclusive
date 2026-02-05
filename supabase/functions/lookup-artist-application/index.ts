@@ -49,11 +49,16 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // NOTE: We intentionally do NOT use `.single()` / `.maybeSingle()` here.
+    // Some artists may submit multiple applications with the same email, which would
+    // otherwise throw `PGRST116` (multiple rows). Instead we take the most recent.
     const { data, error } = await supabaseAdmin
       .from("artist_applications")
-      .select("status, contact_email")
-      .eq("contact_email", email)
-      .maybeSingle();
+      .select("status, contact_email, created_at")
+      // Case-insensitive exact match (no wildcards)
+      .ilike("contact_email", email)
+      .order("created_at", { ascending: false })
+      .limit(1);
 
     if (error) {
       console.error("[lookup-artist-application] query error:", error);
@@ -63,7 +68,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!data) {
+    const row = data?.[0] ?? null;
+
+    if (!row) {
       // Important: keep copy generic to reduce email enumeration value.
       return new Response(
         JSON.stringify({
@@ -75,13 +82,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const status = String(data.status) as ApplicationStatus;
+    const status = String(row.status) as ApplicationStatus;
 
     return new Response(
       JSON.stringify({
         success: true,
         found: true,
-        email: data.contact_email,
+        email: row.contact_email,
         status,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
