@@ -34,19 +34,20 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
       }
 
       try {
-        // Check artist_applications by email
-        const { data: application, error } = await supabase
+        // Check artist_applications by email (case-insensitive)
+        const { data: applications, error } = await supabase
           .from("artist_applications")
           .select("status")
-          .eq("contact_email", user.email)
-          .maybeSingle();
+          .ilike("contact_email", user.email ?? "")
+          .order("created_at", { ascending: false })
+          .limit(1);
 
         if (error) {
           console.error("[ArtistProtectedRoute] Status fetch error:", error);
           setArtistStatus(null);
           return;
         }
-
+        const application = applications?.[0] ?? null;
         setArtistStatus(application ? (application.status as ArtistStatus) : null);
       } catch (err) {
         const anyErr = err as any;
