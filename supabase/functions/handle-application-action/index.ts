@@ -255,7 +255,7 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("id", application.id);
 
       // Send denial email to artist
-      const artistBenefitsLink = `${baseUrl}/artist-benefits`;
+      const reapplyLink = `${baseUrl}/artist/apply`;
 
       const denialEmailHtml = `
 <!DOCTYPE html>
@@ -277,7 +277,7 @@ const handler = async (req: Request): Promise<Response> => {
                 MUSIC EXCLUSIVE
               </h1>
               <p style="margin: 15px 0 0; color: #94a3b8; font-size: 14px; letter-spacing: 1px;">
-                Application Update
+                Thank You for Applying
               </p>
             </td>
           </tr>
@@ -289,23 +289,26 @@ const handler = async (req: Request): Promise<Response> => {
                 Hi ${application.artist_name},
               </p>
               <p style="margin: 0 0 20px; color: #cbd5e1; font-size: 15px; line-height: 1.7;">
-                Thank you for your interest in joining Music Exclusive. After careful consideration, we've decided not to move forward with your application at this time.
+                Thank you so much for taking the time to apply to Music Exclusive. We truly appreciate your interest in joining our community of artists.
+              </p>
+              <p style="margin: 0 0 20px; color: #cbd5e1; font-size: 15px; line-height: 1.7;">
+                After reviewing your application, we've decided not to move forward at this time. But here's the important part: <strong style="color: #a78bfa;">the door is always open.</strong>
               </p>
               <p style="margin: 0 0 25px; color: #cbd5e1; font-size: 15px; line-height: 1.7;">
-                This doesn't mean never — we encourage you to keep building your fanbase, refining your sound, and growing your presence. We'd love to hear from you again in the future.
+                Keep creating, keep building your audience, and keep pushing your sound forward. When you feel ready, we'd love to hear from you again.
               </p>
 
               <!-- Encouragement Box -->
               <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.2); border-radius: 12px; padding: 25px; margin: 30px 0;">
                 <p style="margin: 0; color: #a78bfa; font-size: 14px; line-height: 1.7; text-align: center;">
-                  💜 Keep creating. Keep growing. We believe in you.
+                  💜 Your next chapter is still being written. We believe in you.
                 </p>
               </div>
 
               <!-- CTA Button -->
               <div style="text-align: center; margin-top: 30px;">
-                <a href="${artistBenefitsLink}" style="display: inline-block; background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); color: #a78bfa; text-decoration: none; padding: 16px 35px; border-radius: 12px; font-size: 14px; font-weight: 600; letter-spacing: 1px;">
-                  VIEW ARTIST REQUIREMENTS
+                <a href="${reapplyLink}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 18px 40px; border-radius: 12px; font-size: 16px; font-weight: 700; letter-spacing: 1px; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);">
+                  SUBMIT AGAIN WHEN YOU'RE READY
                 </a>
               </div>
             </td>
@@ -315,10 +318,10 @@ const handler = async (req: Request): Promise<Response> => {
           <tr>
             <td style="padding: 25px 30px; background: rgba(0, 0, 0, 0.3); border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center;">
               <p style="margin: 0; color: #64748b; font-size: 12px;">
-                Thank you for your understanding.
+                We're rooting for you.
               </p>
               <p style="margin: 8px 0 0; color: #475569; font-size: 11px;">
-                — The Music Exclusive Team
+                - The Music Exclusive Team
               </p>
             </td>
           </tr>
