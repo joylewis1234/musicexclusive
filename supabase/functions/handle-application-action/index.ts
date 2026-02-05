@@ -122,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("id", application.id);
 
       // Send approval email to artist
-      const setupLink = `${baseUrl}/artist/setup-account?email=${encodeURIComponent(application.contact_email)}`;
+      const setupLink = `${baseUrl}/artist/signup?email=${encodeURIComponent(application.contact_email)}`;
 
       const approvalEmailHtml = `
 <!DOCTYPE html>
@@ -225,7 +225,7 @@ const handler = async (req: Request): Promise<Response> => {
         from: "Music Exclusive <noreply@themusicisexclusive.com>",
         reply_to: "support@musicexclusive.co",
         to: [application.contact_email],
-        subject: "Your Music Exclusive Artist Application Was Approved 🎉",
+        subject: "You're Approved. Welcome to Music Exclusive",
         html: approvalEmailHtml,
       });
       
@@ -255,7 +255,7 @@ const handler = async (req: Request): Promise<Response> => {
         .eq("id", application.id);
 
       // Send denial email to artist
-      const reapplyLink = `${baseUrl}/artist/apply`;
+      const artistBenefitsLink = `${baseUrl}/artist-benefits`;
 
       const denialEmailHtml = `
 <!DOCTYPE html>
@@ -304,8 +304,8 @@ const handler = async (req: Request): Promise<Response> => {
 
               <!-- CTA Button -->
               <div style="text-align: center; margin-top: 30px;">
-                <a href="${reapplyLink}" style="display: inline-block; background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); color: #a78bfa; text-decoration: none; padding: 16px 35px; border-radius: 12px; font-size: 14px; font-weight: 600; letter-spacing: 1px;">
-                  REAPPLY IN THE FUTURE
+                <a href="${artistBenefitsLink}" style="display: inline-block; background: rgba(139, 92, 246, 0.2); border: 1px solid rgba(139, 92, 246, 0.4); color: #a78bfa; text-decoration: none; padding: 16px 35px; border-radius: 12px; font-size: 14px; font-weight: 600; letter-spacing: 1px;">
+                  VIEW ARTIST REQUIREMENTS
                 </a>
               </div>
             </td>
