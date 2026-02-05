@@ -199,24 +199,25 @@ const ArtistSetupAccount = () => {
         return;
       }
 
-      // Insert artist role (ignore if already exists)
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role: "artist" });
+      // Get the current session token to call the finalize function
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
 
-      if (roleError && !roleError.message.includes("duplicate")) {
-        console.error("Error inserting role:", roleError);
-        // Continue anyway - role can be fixed later
-      }
+      if (accessToken) {
+        // Call edge function to finalize setup (update status, create profile, etc.)
+        const { error: finalizeError } = await supabase.functions.invoke(
+          "finalize-artist-setup",
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
 
-      // Update application status to active
-      const { error: updateError } = await supabase
-        .from("artist_applications")
-        .update({ status: "active" })
-        .eq("contact_email", email);
-
-      if (updateError) {
-        console.error("Error updating application status:", updateError);
+        if (finalizeError) {
+          console.error("Error finalizing artist setup:", finalizeError);
+          // Continue anyway - the edge function handles this gracefully
+        }
+      } else {
+        console.warn("No access token available for finalize-artist-setup");
       }
 
       toast.success("Account setup complete!");
