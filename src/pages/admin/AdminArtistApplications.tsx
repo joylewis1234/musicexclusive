@@ -33,9 +33,21 @@ import {
   Users,
   Calendar,
   MapPin,
+  Mail,
+  RefreshCw,
+  AlertCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+
+interface EmailLog {
+  id: string;
+  email_type: string;
+  status: string;
+  error_message: string | null;
+  sent_at: string | null;
+  created_at: string;
+}
 
 interface ArtistApplication {
   id: string;
@@ -49,7 +61,7 @@ interface ArtistApplication {
   follower_count: number;
   primary_social_platform: string;
   social_profile_url: string;
-  spotify_url: string | null; // Now stores general music link
+  spotify_url: string | null;
   song_sample_url: string;
   hook_preview_url: string | null;
   owns_rights: boolean;
@@ -60,10 +72,12 @@ const AdminArtistApplications = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [applications, setApplications] = useState<ArtistApplication[]>([]);
+  const [emailLogs, setEmailLogs] = useState<Record<string, EmailLog | null>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [selectedApplication, setSelectedApplication] = useState<ArtistApplication | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   // Check for token in URL (for email link actions)
   const tokenParam = searchParams.get("token");
@@ -122,6 +136,28 @@ const AdminArtistApplications = () => {
 
       if (error) throw error;
       setApplications(data || []);
+      
+      // Fetch email logs for all applications
+      if (data && data.length > 0) {
+        const applicationIds = data.map(app => app.id);
+        const { data: logs, error: logsError } = await supabase
+          .from("email_logs")
+          .select("*")
+          .in("application_id", applicationIds)
+          .eq("email_type", "artist_approved")
+          .order("created_at", { ascending: false });
+        
+        if (!logsError && logs) {
+          // Group by application_id, keeping only the most recent
+          const logsMap: Record<string, EmailLog | null> = {};
+          logs.forEach(log => {
+            if (!logsMap[log.application_id]) {
+              logsMap[log.application_id] = log as EmailLog;
+            }
+          });
+          setEmailLogs(logsMap);
+        }
+      }
     } catch (error) {
       console.error("Error fetching applications:", error);
       toast.error("Failed to load applications");
@@ -131,6 +167,12 @@ const AdminArtistApplications = () => {
   };
 
   const handleApprove = async (application: ArtistApplication) => {
+    // Validate email first
+    if (!application.contact_email || !application.contact_email.includes("@")) {
+      toast.error("Missing artist email. Cannot send approval email.");
+      return;
+    }
+    
     setProcessingId(application.id);
     try {
       const { data, error } = await supabase.functions.invoke("approve-artist", {
@@ -143,11 +185,15 @@ const AdminArtistApplications = () => {
       if (error) throw error;
 
       if (data.success) {
-        toast.success(`${application.artist_name} approved!`, {
-          description: data.emailSent 
-            ? "Approval email sent to artist." 
-            : `Setup link: ${data.setupLink}`,
-        });
+        if (data.emailSent) {
+          toast.success("Approval email sent!", {
+            description: `Email sent to ${application.contact_email}`,
+          });
+        } else {
+          toast.error("Failed to send approval email", {
+            description: data.emailError || "Unknown error occurred",
+          });
+        }
         fetchApplications();
         setIsDetailOpen(false);
       } else {
@@ -155,9 +201,42 @@ const AdminArtistApplications = () => {
       }
     } catch (error) {
       console.error("Approve error:", error);
-      toast.error("Failed to approve application");
+      toast.error("Failed to approve application", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleResendApprovalEmail = async (application: ArtistApplication) => {
+    setResendingId(application.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("approve-artist", {
+        body: {
+          applicationId: application.id,
+          baseUrl: window.location.origin,
+          resend: true,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.emailSent) {
+        toast.success("Approval email resent!", {
+          description: `Email sent to ${application.contact_email}`,
+        });
+        fetchApplications();
+      } else {
+        throw new Error(data.emailError || "Failed to send email");
+      }
+    } catch (error) {
+      console.error("Resend error:", error);
+      toast.error("Failed to resend email", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -523,6 +602,71 @@ const AdminArtistApplications = () => {
                     </p>
                   </div>
                 </div>
+
+                {/* Email Debug Panel - Show for approved applications */}
+                {(selectedApplication.status === "approved_pending_setup" || selectedApplication.status === "approved") && (
+                  <div className="border-t border-border pt-4">
+                    <h4 className="text-xs text-primary uppercase tracking-wide mb-3 flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      Email Status
+                    </h4>
+                    {emailLogs[selectedApplication.id] ? (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          {emailLogs[selectedApplication.id]?.status === "sent" ? (
+                            <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
+                              <CheckCircle className="w-3 h-3 mr-1" /> Sent
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/30">
+                              <AlertCircle className="w-3 h-3 mr-1" /> Failed
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {emailLogs[selectedApplication.id]?.sent_at 
+                              ? format(new Date(emailLogs[selectedApplication.id]!.sent_at!), "MMM d, yyyy h:mm a")
+                              : format(new Date(emailLogs[selectedApplication.id]!.created_at), "MMM d, yyyy h:mm a")}
+                          </span>
+                        </div>
+                        {emailLogs[selectedApplication.id]?.error_message && (
+                          <p className="text-sm text-red-400 bg-red-500/10 p-2 rounded">
+                            Error: {emailLogs[selectedApplication.id]?.error_message}
+                          </p>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResendApprovalEmail(selectedApplication)}
+                          disabled={resendingId === selectedApplication.id}
+                        >
+                          {resendingId === selectedApplication.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                          )}
+                          Resend Approval Email
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">No email log found</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleResendApprovalEmail(selectedApplication)}
+                          disabled={resendingId === selectedApplication.id}
+                        >
+                          {resendingId === selectedApplication.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <RefreshCw className="w-4 h-4 mr-2" />
+                          )}
+                          Send Approval Email
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Action Buttons */}
                 {selectedApplication.status === "pending" && (
