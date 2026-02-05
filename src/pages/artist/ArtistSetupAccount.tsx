@@ -47,28 +47,27 @@ const ArtistSetupAccount = () => {
       const emailParam = searchParams.get("email");
       
       if (emailParam) {
-        // Verify this email has an approved application
-        const { data, error } = await supabase
-          .from("artist_applications")
-          .select("status, contact_email")
-          .eq("contact_email", emailParam)
-          .maybeSingle();
+        // Use backend lookup to bypass RLS (artist_applications is not publicly readable)
+        const { data, error } = await supabase.functions.invoke("lookup-artist-application", {
+          body: { email: emailParam },
+        });
 
-        if (error || !data) {
+        if (error || !data?.success) {
+          console.warn("[ArtistSetupAccount] lookup failed:", error || data);
           setApplicationStatus("not_found");
           setIsLoading(false);
           return;
         }
 
-        if (data.status !== "approved" && data.status !== "approved_pending_setup") {
-          setApplicationStatus(data.status);
+        if (!data.found) {
+          setApplicationStatus("not_found");
           setIsLoading(false);
           return;
         }
 
-        setEmail(data.contact_email);
-        setLookupEmail(data.contact_email);
-        setApplicationStatus(data.status);
+        setEmail(String(data.email ?? emailParam));
+        setLookupEmail(String(data.email ?? emailParam));
+        setApplicationStatus(String(data.status));
       } else {
         // No email provided - allow manual lookup (some email clients strip query params)
         setApplicationStatus("no_email");
@@ -97,26 +96,27 @@ const ArtistSetupAccount = () => {
 
     setIsLookingUpEmail(true);
     try {
-      const { data, error } = await supabase
-        .from("artist_applications")
-        .select("status, contact_email")
-        .eq("contact_email", trimmed)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke("lookup-artist-application", {
+        body: { email: trimmed },
+      });
 
-      if (error || !data) {
-        setLookupError("We couldn't find an application for that email.");
+      if (error || !data?.success) {
+        console.warn("[ArtistSetupAccount] lookup failed:", error || data);
+        setLookupError("We couldn't verify that email right now. Please try again.");
         return;
       }
 
-      setEmail(data.contact_email);
-      setApplicationStatus(data.status);
-
-      if (data.status !== "approved" && data.status !== "approved_pending_setup") {
+      if (!data.found) {
+        setLookupError("We couldn't find an approved application for that email.");
         return;
       }
 
-      // If approved, proceed to the setup form
-      toast.success("Approved application found. Create your password to continue.");
+      setEmail(String(data.email ?? trimmed));
+      setApplicationStatus(String(data.status));
+
+      if (data.status === "approved" || data.status === "approved_pending_setup") {
+        toast.success("Approved application found. Create your password to continue.");
+      }
     } catch (err) {
       console.error("[ArtistSetupAccount] lookup error:", err);
       setLookupError("Something went wrong. Please try again.");
