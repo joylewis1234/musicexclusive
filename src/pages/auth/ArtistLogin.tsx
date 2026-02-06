@@ -27,6 +27,40 @@ const ArtistLogin = () => {
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
+  // Masked Supabase URL for debug
+  const maskedUrl = (import.meta.env.VITE_SUPABASE_URL || "").replace(/^(https?:\/\/[^.]+).*/, "$1.***");
+
+  /**
+   * Lookup application via the edge function (uses service_role, bypasses RLS).
+   * Supports lookup by auth_user_id OR email.
+   */
+  const lookupApplication = async (params: { auth_user_id?: string; email?: string }) => {
+    const body: Record<string, string> = {};
+    if (params.auth_user_id) body.auth_user_id = params.auth_user_id;
+    if (params.email) body.email = params.email;
+
+    console.log("[ArtistLogin] Edge fn lookup-artist-application body:", body);
+
+    const { data, error } = await supabase.functions.invoke("lookup-artist-application", { body });
+
+    if (error) {
+      console.error("[ArtistLogin] lookup-artist-application invoke error:", error);
+      return null;
+    }
+
+    console.log("[ArtistLogin] lookup-artist-application result:", data);
+    return data as {
+      success: boolean;
+      found: boolean;
+      status?: string;
+      email?: string;
+      application_id?: string;
+      artist_name?: string;
+      auth_user_id?: string;
+      message?: string;
+    } | null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
@@ -46,23 +80,17 @@ const ArtistLogin = () => {
 
     const normalizedEmail = normalizeEmail(email);
     console.log("[ArtistLogin] Attempting login for:", normalizedEmail);
+    console.log("[ArtistLogin] Supabase env:", maskedUrl);
 
     setIsLoading(true);
 
     try {
-      // Pre-check: if application exists and is approved_pending_setup, redirect to setup
+      // Pre-check via edge function (bypasses RLS, works before sign-in)
       try {
-        const { data } = await supabase
-          .from("artist_applications")
-          .select("status")
-          .ilike("contact_email", normalizedEmail)
-          .order("created_at", { ascending: false })
-          .limit(1);
+        const preCheck = await lookupApplication({ email: normalizedEmail });
+        console.log("[ArtistLogin] Pre-check result:", preCheck);
 
-        const preCheck = data?.[0] ?? null;
-        console.log("[ArtistLogin] Pre-check application:", preCheck);
-
-        if (preCheck?.status === "approved_pending_setup") {
+        if (preCheck?.found && preCheck.status === "approved_pending_setup") {
           toast.success("Your application is approved! Complete your account setup.");
           navigate(`/artist/setup-account?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
           setIsLoading(false);
@@ -114,55 +142,44 @@ const ArtistLogin = () => {
       const newRole = await refreshRole();
       console.log("[ArtistLogin] Role after refresh:", newRole);
 
-      // If role is artist, go straight to dashboard — ArtistProtectedRoute handles the rest
+      // If role is artist, go straight to dashboard
       if (newRole === "artist") {
         toast.success("Welcome back, artist!");
         navigate("/artist/dashboard", { replace: true });
         return;
       }
 
-      // If role is not artist, check if there's an application
-      // Priority 1: lookup by auth_user_id (strongest link)
-      console.log("[ArtistLogin] Role is not 'artist' (got:", newRole, "). Checking application by auth_user_id then email...");
+      // Role is not artist — lookup application via edge function
+      console.log("[ArtistLogin] Role is not 'artist' (got:", newRole, "). Looking up application via edge function...");
 
       const { data: { user: currentUser } } = await supabase.auth.getUser();
-      let application: { status: string } | null = null;
-      let appRowCount = 0;
+      let application: { status: string; found: boolean } | null = null;
 
-      // Try auth_user_id lookup first via edge function
+      // Priority 1: lookup by auth_user_id
       if (currentUser?.id) {
-        try {
-          const { data: lookupData } = await supabase.functions.invoke("lookup-artist-application", {
-            body: { auth_user_id: currentUser.id },
-          });
-          if (lookupData?.found) {
-            application = { status: lookupData.status };
-            appRowCount = 1;
-            console.log("[ArtistLogin] Found application by auth_user_id:", lookupData);
-          }
-        } catch (lookupErr) {
-          console.warn("[ArtistLogin] auth_user_id lookup failed:", lookupErr);
+        const lookupById = await lookupApplication({ auth_user_id: currentUser.id });
+        if (lookupById?.found) {
+          application = { status: lookupById.status!, found: true };
+          console.log("[ArtistLogin] Found application by auth_user_id:", lookupById);
         }
       }
 
-      // Fallback: email lookup
+      // Priority 2: lookup by normalized email
       if (!application) {
-        const { data: appRows, error: appError } = await supabase
-          .from("artist_applications")
-          .select("status")
-          .ilike("contact_email", normalizedEmail)
-          .order("created_at", { ascending: false })
-          .limit(1);
-
-        application = appRows?.[0] ?? null;
-        appRowCount = appRows?.length ?? 0;
-        console.log("[ArtistLogin] Email fallback lookup:", { application, error: appError, queriedEmail: normalizedEmail, rowCount: appRowCount });
+        const lookupByEmail = await lookupApplication({ email: normalizedEmail });
+        if (lookupByEmail?.found) {
+          application = { status: lookupByEmail.status!, found: true };
+          console.log("[ArtistLogin] Found application by email:", lookupByEmail);
+        } else {
+          console.log("[ArtistLogin] No application found by email:", lookupByEmail);
+        }
       }
 
       if (!application) {
-        // Authenticated but no artist role AND no application — show helpful screen
         setApplicationStatus("no_application");
-        setDebugInfo(`Queried email: ${normalizedEmail} | Role: ${newRole ?? "none"} | Application rows: ${appRowCount} | User ID: ${currentUser?.id ?? "unknown"}`);
+        setDebugInfo(
+          `Queried email: ${normalizedEmail} | Role: ${newRole ?? "none"} | User ID: ${currentUser?.id ?? "unknown"} | Supabase: ${maskedUrl} | Lookup: edge function (service_role)`
+        );
         setIsLoading(false);
         return;
       }
@@ -171,7 +188,6 @@ const ArtistLogin = () => {
       switch (application.status) {
         case "active":
         case "approved":
-          // They have an application but role wasn't artist — try navigating anyway
           toast.success("Welcome back!");
           navigate("/artist/dashboard", { replace: true });
           break;
