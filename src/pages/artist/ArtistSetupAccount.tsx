@@ -47,35 +47,56 @@ const ArtistSetupAccount = () => {
   // Get email from URL params or check for pending setup applications
   useEffect(() => {
     const checkApplication = async () => {
+      const applicationId = searchParams.get("application_id");
       const emailParam = searchParams.get("email");
-      
-      if (emailParam) {
-        // Use backend lookup to bypass RLS (artist_applications is not publicly readable)
+
+      // Prefer application_id lookup (deterministic), fall back to email
+      const lookupBody: Record<string, string> = {};
+      if (applicationId) {
+        lookupBody.application_id = applicationId;
+      } else if (emailParam) {
+        lookupBody.email = emailParam;
+      } else {
+        // No identifier provided - allow manual lookup
+        setApplicationStatus("no_email");
+        setIsLoading(false);
+        return;
+      }
+
+      console.log("[ArtistSetupAccount] Looking up application:", lookupBody);
+
+      try {
         const { data, error } = await supabase.functions.invoke("lookup-artist-application", {
-          body: { email: emailParam },
+          body: lookupBody,
         });
 
-        if (error || !data?.success) {
-          console.warn("[ArtistSetupAccount] lookup failed:", error || data);
+        console.log("[ArtistSetupAccount] Lookup response:", { data, error });
+
+        if (error) {
+          console.error("[ArtistSetupAccount] Edge function error:", error);
+          // Network / deployment error — let user try manual lookup
+          setApplicationStatus("no_email");
+          setLookupError("Could not reach verification service. Please enter your email below.");
+          setIsLoading(false);
+          return;
+        }
+
+        if (!data?.success || !data?.found) {
           setApplicationStatus("not_found");
           setIsLoading(false);
           return;
         }
 
-        if (!data.found) {
-          setApplicationStatus("not_found");
-          setIsLoading(false);
-          return;
-        }
-
-        setEmail(String(data.email ?? emailParam));
-        setLookupEmail(String(data.email ?? emailParam));
-        setApplicationStatus(String(data.status));
-      } else {
-        // No email provided - allow manual lookup (some email clients strip query params)
+        const status = String(data.status);
+        setEmail(String(data.email ?? emailParam ?? ""));
+        setLookupEmail(String(data.email ?? emailParam ?? ""));
+        setApplicationStatus(status);
+      } catch (err) {
+        console.error("[ArtistSetupAccount] Unexpected lookup error:", err);
         setApplicationStatus("no_email");
+        setLookupError("Could not reach verification service. Please enter your email below.");
       }
-      
+
       setIsLoading(false);
     };
 
@@ -99,18 +120,27 @@ const ArtistSetupAccount = () => {
 
     setIsLookingUpEmail(true);
     try {
+      console.log("[ArtistSetupAccount] Manual lookup for:", trimmed);
+
       const { data, error } = await supabase.functions.invoke("lookup-artist-application", {
         body: { email: trimmed },
       });
 
-      if (error || !data?.success) {
-        console.warn("[ArtistSetupAccount] lookup failed:", error || data);
-        setLookupError("We couldn't verify that email right now. Please try again shortly.");
+      console.log("[ArtistSetupAccount] Manual lookup response:", { data, error });
+
+      if (error) {
+        console.error("[ArtistSetupAccount] Edge function network error:", error);
+        setLookupError(`Verification service error: ${error.message || "Network error"}. Please try again.`);
+        return;
+      }
+
+      if (!data?.success) {
+        setLookupError(`Verification failed: ${data?.message || "Unknown error"}. Please try again.`);
         return;
       }
 
       if (!data.found) {
-        setLookupError("We couldn't find an application for that email. Please check the email address and try again.");
+        setLookupError("No approved application found for that email. Please check the email address or apply first.");
         return;
       }
 
@@ -119,17 +149,21 @@ const ArtistSetupAccount = () => {
       setApplicationStatus(status);
 
       if (status === "approved" || status === "approved_pending_setup") {
-        toast.success("Approved application found. Create your password to continue.");
+        toast.success("Approved application found! Create your password to continue.");
       } else if (status === "pending") {
         setLookupError("Your application is still under review. You'll receive an email once it's approved.");
       } else if (status === "rejected") {
-        setLookupError("Your application was not approved. You can re-apply anytime at the Artist Apply page.");
+        setLookupError("Your application was not approved. You can re-apply anytime.");
       } else if (status === "active") {
         setLookupError("Your account is already set up. Please log in instead.");
+      } else {
+        // Unexpected status — still allow if it looks approved-ish
+        console.warn("[ArtistSetupAccount] Unexpected status:", status);
+        setLookupError(`Application status: "${status}". Please contact support if you believe this is an error.`);
       }
     } catch (err) {
       console.error("[ArtistSetupAccount] lookup error:", err);
-      setLookupError("Something went wrong. Please try again.");
+      setLookupError("Something went wrong connecting to the server. Please try again.");
     } finally {
       setIsLookingUpEmail(false);
     }
