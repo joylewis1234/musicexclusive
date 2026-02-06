@@ -13,6 +13,7 @@ import {
   Loader2,
   Trash2,
   Info,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,7 +84,12 @@ const GENRES = [
 /*  Inner form component (wrapped by error boundary)                    */
 /* ------------------------------------------------------------------ */
 
-function ArtistUploadForm() {
+interface ArtistUploadFormProps {
+  /** Ref the parent uses to call our reset function from the error boundary */
+  resetRef: React.MutableRefObject<(() => void) | null>;
+}
+
+function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -120,17 +126,70 @@ function ArtistUploadForm() {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
+  /* ---------------------------------------------------------------- */
+  /*  Core reset function                                               */
+  /* ---------------------------------------------------------------- */
+
+  /** Safely revoke the previous cover object URL if one exists */
+  const revokePreviousCoverUrl = useCallback(() => {
+    if (coverObjectUrlRef.current) {
+      URL.revokeObjectURL(coverObjectUrlRef.current);
+      coverObjectUrlRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Master reset – clears all runtime state.
+   * @param clearDraft  if true, also removes the localStorage draft
+   */
+  const resetUploadForm = useCallback(
+    ({ clearDraft: shouldClearDraft }: { clearDraft: boolean }) => {
+      // Text fields
+      setTitle("");
+      setGenre("");
+      setAgreesToTerms(false);
+
+      // Cover
+      setCoverFile(null);
+      revokePreviousCoverUrl();
+      setCoverPreview(null);
+      setCoverMeta(null);
+      setCoverError(null);
+      setCoverProcessing(false);
+
+      // Audio
+      audioFileRef.current = null;
+      setAudioMeta(null);
+      setAudioError(null);
+      setAudioValidating(false);
+
+      // Upload hook state
+      resetUpload();
+      setShowDiagnostics(false);
+      setShowClearConfirm(false);
+
+      // Draft
+      if (shouldClearDraft) {
+        clearDraft();
+      }
+    },
+    [clearDraft, resetUpload, revokePreviousCoverUrl],
+  );
+
+  // Expose resetUploadForm to the parent (error boundary)
+  useEffect(() => {
+    resetRef.current = () => resetUploadForm({ clearDraft: true });
+    return () => { resetRef.current = null; };
+  }, [resetRef, resetUploadForm]);
+
   // --- Cleanup blob URLs on unmount ---
   useEffect(() => {
     return () => {
-      if (coverObjectUrlRef.current) {
-        URL.revokeObjectURL(coverObjectUrlRef.current);
-        coverObjectUrlRef.current = null;
-      }
+      revokePreviousCoverUrl();
     };
-  }, []);
+  }, [revokePreviousCoverUrl]);
 
-  // --- Hydrate form from draft once ---
+  // --- Hydrate form from draft once (NO error flags) ---
   useEffect(() => {
     if (!draftLoaded) return;
     setTitle(draft.title || "");
@@ -139,6 +198,9 @@ function ArtistUploadForm() {
     if (draft.coverPreview) setCoverPreview(draft.coverPreview);
     if (draft.coverMeta) setCoverMeta(draft.coverMeta);
     if (draft.audioMeta) setAudioMeta(draft.audioMeta);
+    // Explicitly ensure no stale errors on hydration
+    setCoverError(null);
+    setAudioError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draftLoaded]);
 
@@ -156,22 +218,20 @@ function ArtistUploadForm() {
       uploadState.step !== "success"
   );
 
-  // --- Redirect on success ---
+  // --- On success: full reset + toast ---
   useEffect(() => {
     if (uploadState.step === "success") {
-      clearDraft();
-      toast({ title: "Track published successfully!", description: "Your exclusive track is now live." });
-      const timer = setTimeout(() => navigate("/artist/dashboard"), 1500);
+      toast({
+        title: "Track published successfully!",
+        description: "Ready for your next upload.",
+      });
+      const timer = setTimeout(() => {
+        resetUploadForm({ clearDraft: true });
+        navigate("/artist/dashboard");
+      }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [uploadState.step, navigate, toast, clearDraft]);
-
-  // --- Show error toast ---
-  useEffect(() => {
-    if (uploadState.step === "error" && uploadState.errorMessage) {
-      toast({ title: "Upload failed", description: uploadState.errorMessage, variant: "destructive" });
-    }
-  }, [uploadState.step, uploadState.errorMessage, toast]);
+  }, [uploadState.step, navigate, toast, resetUploadForm]);
 
   // --- Redirect if agreement not accepted ---
   useEffect(() => {
@@ -194,18 +254,6 @@ function ArtistUploadForm() {
   }
 
   /* ---------------------------------------------------------------- */
-  /*  Helpers                                                          */
-  /* ---------------------------------------------------------------- */
-
-  /** Safely revoke the previous cover object URL if one exists */
-  const revokePreviousCoverUrl = () => {
-    if (coverObjectUrlRef.current) {
-      URL.revokeObjectURL(coverObjectUrlRef.current);
-      coverObjectUrlRef.current = null;
-    }
-  };
-
-  /* ---------------------------------------------------------------- */
   /*  Handlers                                                         */
   /* ---------------------------------------------------------------- */
 
@@ -214,7 +262,9 @@ function ArtistUploadForm() {
     if (e.target) e.target.value = ""; // allow re-selecting same file
     if (!file) return;
 
+    // Clear any prior errors (cover + upload-level)
     setCoverError(null);
+    if (uploadState.step === "error") resetUpload();
 
     if (!SAFE_UPLOADS) {
       // --- Legacy path ---
@@ -267,7 +317,10 @@ function ArtistUploadForm() {
     if (e.target) e.target.value = "";
     if (!file) return;
 
+    // Clear any prior errors (audio + upload-level)
     setAudioError(null);
+    if (uploadState.step === "error") resetUpload();
+
     setAudioValidating(true);
 
     try {
@@ -299,6 +352,22 @@ function ArtistUploadForm() {
     } finally {
       setAudioValidating(false);
     }
+  };
+
+  /** Clear upload-level errors when the user edits text fields */
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    if (uploadState.step === "error") resetUpload();
+  };
+
+  const handleGenreChange = (val: string) => {
+    setGenre(val);
+    if (uploadState.step === "error") resetUpload();
+  };
+
+  const handleAgreementChange = (checked: boolean) => {
+    setAgreesToTerms(checked);
+    if (uploadState.step === "error") resetUpload();
   };
 
   const handlePublish = async () => {
@@ -348,27 +417,20 @@ function ArtistUploadForm() {
     }).catch((err) => console.error("[Upload] Retry error:", err));
   };
 
-  const handleReset = () => {
+  /** "Start Over" in the upload-error card – keeps fields, just resets upload state */
+  const handleResetUploadState = () => {
     resetUpload();
     setShowDiagnostics(false);
   };
 
+  /** "Start New Upload" – full wipe including draft */
+  const handleStartNewUpload = () => {
+    resetUploadForm({ clearDraft: true });
+  };
+
+  /** "Clear draft" confirm dialog callback */
   const handleClearDraft = () => {
-    clearDraft();
-    setTitle("");
-    setGenre("");
-    setAgreesToTerms(false);
-    setCoverFile(null);
-    revokePreviousCoverUrl();
-    setCoverPreview(null);
-    setCoverMeta(null);
-    setCoverError(null);
-    audioFileRef.current = null;
-    setAudioMeta(null);
-    setAudioError(null);
-    resetUpload();
-    setShowDiagnostics(false);
-    setShowClearConfirm(false);
+    resetUploadForm({ clearDraft: true });
   };
 
   /* ---------------------------------------------------------------- */
@@ -383,7 +445,14 @@ function ArtistUploadForm() {
           <Button variant="ghost" size="icon" onClick={() => navigate("/artist/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-display text-lg font-semibold tracking-wide">Upload Exclusive Track</h1>
+          <h1 className="font-display text-lg font-semibold tracking-wide flex-1">Upload Exclusive Track</h1>
+          {/* Start New Upload – visible when there's any content or error */}
+          {(hasDraft || uploadState.step === "error" || uploadState.step === "success") && !isUploading && (
+            <Button variant="outline" size="sm" onClick={handleStartNewUpload}>
+              <RotateCcw className="h-4 w-4 mr-1" />
+              New Upload
+            </Button>
+          )}
         </div>
       </div>
 
@@ -394,7 +463,7 @@ function ArtistUploadForm() {
           <Input
             id="title"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => handleTitleChange(e.target.value)}
             placeholder="Enter track title"
             maxLength={100}
             disabled={isUploading}
@@ -404,7 +473,7 @@ function ArtistUploadForm() {
         {/* Genre */}
         <div className="space-y-2">
           <Label>Genre *</Label>
-          <Select value={genre} onValueChange={setGenre} disabled={isUploading}>
+          <Select value={genre} onValueChange={handleGenreChange} disabled={isUploading}>
             <SelectTrigger>
               <SelectValue placeholder="Select genre" />
             </SelectTrigger>
@@ -532,7 +601,7 @@ function ArtistUploadForm() {
           <Checkbox
             id="terms"
             checked={agreesToTerms}
-            onCheckedChange={(checked) => setAgreesToTerms(checked === true)}
+            onCheckedChange={(checked) => handleAgreementChange(checked === true)}
             disabled={isUploading}
           />
           <Label htmlFor="terms" className="text-sm leading-relaxed cursor-pointer">
@@ -545,7 +614,7 @@ function ArtistUploadForm() {
         </div>
 
         {/* Upload Progress */}
-        {uploadState.step !== "idle" && (
+        {uploadState.step !== "idle" && uploadState.step !== "error" && uploadState.step !== "success" && (
           <GlowCard className="p-4">
             <UploadProgressBar
               step={uploadState.step}
@@ -581,7 +650,7 @@ function ArtistUploadForm() {
                 <RefreshCw className="h-4 w-4 mr-1" />
                 Retry Upload
               </Button>
-              <Button variant="outline" size="sm" onClick={handleReset}>
+              <Button variant="outline" size="sm" onClick={handleResetUploadState}>
                 Start Over
               </Button>
             </div>
@@ -682,13 +751,11 @@ function ArtistUploadForm() {
 /* ------------------------------------------------------------------ */
 
 const ArtistUpload = () => {
-  // The reset callback is passed down so the error boundary can clear
-  // the draft without needing its own access to hooks.
   const resetFormRef = useRef<(() => void) | null>(null);
 
   return (
     <UploadErrorBoundary onResetForm={() => resetFormRef.current?.()}>
-      <ArtistUploadForm />
+      <ArtistUploadForm resetRef={resetFormRef} />
     </UploadErrorBoundary>
   );
 };
