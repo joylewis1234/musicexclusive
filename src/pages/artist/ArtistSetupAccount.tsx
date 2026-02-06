@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Home, Mic2, Loader2, CheckCircle2, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 
@@ -24,10 +25,12 @@ type SetupFormData = z.infer<typeof setupSchema>;
 
 const ArtistSetupAccount = () => {
   const navigate = useNavigate();
+  const { refreshRole } = useAuth();
   const [searchParams] = useSearchParams();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [lookupEmail, setLookupEmail] = useState("");
   const [isLookingUpEmail, setIsLookingUpEmail] = useState(false);
@@ -132,9 +135,15 @@ const ArtistSetupAccount = () => {
     }
   };
 
+  const handleRetrySetup = () => {
+    setSetupError(null);
+    setIsSubmitting(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
+    setSetupError(null);
 
     // Validate form
     const result = setupSchema.safeParse({
@@ -158,23 +167,21 @@ const ArtistSetupAccount = () => {
     setIsSubmitting(true);
 
     try {
-      // First try to create the auth account
+      // Step 1: Create auth account
+      console.log("[ArtistSetupAccount] Step 1: Creating auth account for", email);
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: window.location.origin,
-          data: {
-            display_name: email.split("@")[0],
-          },
+          data: { display_name: email.split("@")[0] },
         },
       });
 
       if (signUpError) {
-        // If user already exists, try to sign them in instead
         if (signUpError.message.includes("already registered") || 
             signUpError.message.includes("already been registered")) {
-          console.log("User already exists, attempting sign in...");
+          console.log("[ArtistSetupAccount] User already exists, attempting sign in...");
           
           const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
             email,
@@ -182,69 +189,154 @@ const ArtistSetupAccount = () => {
           });
 
           if (signInError) {
-            toast.error("This email is already registered. Please try logging in at /artist/login or use 'Forgot Password' if needed.");
+            console.error("[ArtistSetupAccount] Sign-in failed:", signInError);
+            setSetupError("This email is already registered. Please try logging in or use 'Forgot Password'.");
             setIsSubmitting(false);
             return;
           }
 
-          // User signed in successfully - finalize and redirect
+          console.log("[ArtistSetupAccount] Signed in existing user:", signInData.user?.id);
           const accessToken = signInData.session?.access_token;
           if (accessToken) {
-            await supabase.functions.invoke("finalize-artist-setup", {
+            const { error: finalizeError } = await supabase.functions.invoke("finalize-artist-setup", {
               headers: { Authorization: `Bearer ${accessToken}` },
             });
+            if (finalizeError) {
+              console.error("[ArtistSetupAccount] Finalize error (existing user):", finalizeError);
+            }
           }
+
+          // Refresh role in AuthContext so ProtectedRoute sees "artist"
+          console.log("[ArtistSetupAccount] Refreshing role in AuthContext...");
+          const newRole = await refreshRole();
+          console.log("[ArtistSetupAccount] Role after refresh:", newRole);
 
           toast.success("Welcome back!");
           navigate("/artist/dashboard", { replace: true });
           return;
         } else {
-          toast.error(signUpError.message);
+          console.error("[ArtistSetupAccount] SignUp error:", signUpError);
+          setSetupError(signUpError.message);
           setIsSubmitting(false);
           return;
         }
       }
 
-      // New signup successful - with auto-confirm, we should have a session
-      // But to be safe, sign in explicitly to ensure we have a valid session
+      console.log("[ArtistSetupAccount] Step 2: Auth account created, user ID:", signUpData.user?.id);
+
+      // Step 2: Sign in to get a definitive session
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (signInError) {
-        console.error("Sign in after signup failed:", signInError);
-        // The account was created but we couldn't sign in - this shouldn't happen with auto-confirm
-        toast.error("Account created! Please log in with your new credentials.");
-        navigate("/artist/login", { replace: true });
+        console.error("[ArtistSetupAccount] Sign-in after signup failed:", signInError);
+        setSetupError("Account created but sign-in failed. Please go to Artist Login to continue.");
+        setIsSubmitting(false);
         return;
       }
 
-      // Now we definitely have a session - call finalize
-      const accessToken = signInData.session?.access_token;
-      if (accessToken) {
-        const { error: finalizeError } = await supabase.functions.invoke(
-          "finalize-artist-setup",
-          {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
+      console.log("[ArtistSetupAccount] Step 3: Signed in, session user:", signInData.user?.id);
 
-        if (finalizeError) {
-          console.error("Error finalizing artist setup:", finalizeError);
-          // Continue anyway - login fallback will handle it
+      // Step 3: Finalize artist setup (creates role + profile in DB)
+      const accessToken = signInData.session?.access_token;
+      if (!accessToken) {
+        console.error("[ArtistSetupAccount] No access token after sign-in");
+        setSetupError("Session error. Please go to Artist Login to continue.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke(
+        "finalize-artist-setup",
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+
+      if (finalizeError) {
+        console.error("[ArtistSetupAccount] Finalize error:", finalizeError);
+        // Non-blocking: the edge function may have partially succeeded
+      } else {
+        console.log("[ArtistSetupAccount] Step 4: Finalize response:", finalizeData);
+      }
+
+      // Step 4: Refresh role in AuthContext so ProtectedRoute sees "artist"
+      console.log("[ArtistSetupAccount] Step 5: Refreshing role in AuthContext...");
+      const newRole = await refreshRole();
+      console.log("[ArtistSetupAccount] Role after refresh:", newRole);
+
+      if (!newRole) {
+        console.warn("[ArtistSetupAccount] Role is still null after refresh, retrying once...");
+        // Small delay to allow DB propagation, then retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const retryRole = await refreshRole();
+        console.log("[ArtistSetupAccount] Role after retry:", retryRole);
+        
+        if (!retryRole) {
+          setSetupError("Account created but role setup is taking longer than expected. Please go to Artist Login.");
+          setIsSubmitting(false);
+          return;
         }
       }
 
-      toast.success("Account setup complete!");
+      // Step 5: Navigate to dashboard
+      console.log("[ArtistSetupAccount] Step 6: Navigating to /artist/dashboard");
+      toast.success("Account setup complete! Welcome aboard.");
       navigate("/artist/dashboard", { replace: true });
     } catch (error) {
-      console.error("Setup error:", error);
-      toast.error("An error occurred. Please try again.");
+      console.error("[ArtistSetupAccount] Unexpected setup error:", error);
+      setSetupError("An unexpected error occurred. Please try again or go to Artist Login.");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Setup error state - shown instead of infinite spinner
+  if (setupError) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+          <div className="container max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Back</span>
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
+          <GlowCard className="max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <h1 className="font-display text-xl font-bold text-foreground mb-3">
+              Setup Issue
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              {setupError}
+            </p>
+            <div className="space-y-3">
+              <Button onClick={handleRetrySetup} className="w-full">
+                Try Again
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => navigate("/artist/login")}>
+                Go to Artist Login
+              </Button>
+            </div>
+          </GlowCard>
+        </main>
+      </div>
+    );
+  }
 
   // Loading state
   if (isLoading) {
