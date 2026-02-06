@@ -4,84 +4,124 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
-// TEMPORARY DEV BYPASS - Set to true to skip auth checks for testing
-const DEV_BYPASS = false;
-
 interface ArtistProtectedRouteProps {
   children: ReactNode;
 }
 
-type ArtistStatus = "pending" | "approved_pending_setup" | "active" | "rejected" | null;
+type ArtistGateResult =
+  | "has_profile"           // artist_profiles row exists → allow access
+  | "app_approved_pending"  // application approved but no profile yet → setup
+  | "app_pending"           // application still under review
+  | "app_rejected"          // application rejected
+  | "no_record"             // no profile and no application
+  | null;                   // still loading
 
 export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) => {
-  // All hooks MUST be called unconditionally before any early returns
   const { user, role, isLoading: authLoading } = useAuth();
   const location = useLocation();
-  const [artistStatus, setArtistStatus] = useState<ArtistStatus>(null);
+  const [gateResult, setGateResult] = useState<ArtistGateResult>(null);
   const [statusLoading, setStatusLoading] = useState(true);
 
   useEffect(() => {
-    // Skip fetch if DEV_BYPASS is on
-    if (DEV_BYPASS) {
-      setStatusLoading(false);
-      return;
-    }
-
-    const fetchArtistStatus = async () => {
+    const checkArtistAccess = async () => {
       if (!user) {
         setStatusLoading(false);
         return;
       }
 
       try {
-        // Check artist_applications by email (case-insensitive)
-        const { data: applications, error } = await supabase
+        // Primary check: does this user have an artist_profiles row?
+        const { data: profile, error: profileError } = await supabase
+          .from("artist_profiles")
+          .select("id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error("[ArtistProtectedRoute] Profile check error:", profileError);
+        }
+
+        if (profile) {
+          console.log("[ArtistProtectedRoute] Artist profile found:", profile.id);
+          setGateResult("has_profile");
+          setStatusLoading(false);
+          return;
+        }
+
+        // Fallback: check artist_applications by email (case-insensitive)
+        const normalizedEmail = (user.email ?? "").trim().toLowerCase();
+        console.log("[ArtistProtectedRoute] No profile found, checking applications for:", normalizedEmail);
+
+        const { data: applications, error: appError } = await supabase
           .from("artist_applications")
           .select("status")
-          .ilike("contact_email", user.email ?? "")
+          .ilike("contact_email", normalizedEmail)
           .order("created_at", { ascending: false })
           .limit(1);
 
-        if (error) {
-          console.error("[ArtistProtectedRoute] Status fetch error:", error);
-          setArtistStatus(null);
+        if (appError) {
+          console.error("[ArtistProtectedRoute] Application check error:", appError);
+          // If we can't check, don't block — let them through to dashboard
+          // (the dashboard itself will show empty state)
+          setGateResult("has_profile");
+          setStatusLoading(false);
           return;
         }
+
         const application = applications?.[0] ?? null;
-        setArtistStatus(application ? (application.status as ArtistStatus) : null);
+        console.log("[ArtistProtectedRoute] Application lookup result:", application);
+
+        if (!application) {
+          setGateResult("no_record");
+        } else {
+          switch (application.status) {
+            case "active":
+            case "approved":
+              // Has application but no profile — finalize should have created it
+              // Allow access and let dashboard handle the empty state
+              setGateResult("has_profile");
+              break;
+            case "approved_pending_setup":
+              setGateResult("app_approved_pending");
+              break;
+            case "pending":
+              setGateResult("app_pending");
+              break;
+            case "rejected":
+            case "not_approved":
+              setGateResult("app_rejected");
+              break;
+            default:
+              setGateResult("app_pending");
+          }
+        }
       } catch (err) {
         const anyErr = err as any;
-        const name = String(anyErr?.name ?? "");
         const message = String(anyErr?.message ?? anyErr ?? "").toLowerCase();
         const benign =
-          name === "AbortError" ||
+          String(anyErr?.name ?? "") === "AbortError" ||
           message.includes("signal is aborted") ||
           message.includes("cancelled") ||
           message.includes("canceled");
 
         if (!benign) {
-          console.error("[ArtistProtectedRoute] Unexpected status error:", err);
+          console.error("[ArtistProtectedRoute] Unexpected error:", err);
         }
-        setArtistStatus(null);
+        // On error, don't block — allow access
+        setGateResult("has_profile");
       } finally {
         setStatusLoading(false);
       }
     };
 
     if (role === "artist") {
-      fetchArtistStatus();
+      checkArtistAccess();
     } else {
       setStatusLoading(false);
     }
   }, [user, role]);
 
-  // DEV BYPASS: Skip all auth checks for testing
-  if (DEV_BYPASS) {
-    return <>{children}</>;
-  }
-
   // Show loading while checking auth and status
-  // Note: role can be temporarily null right after sign-in while we fetch it.
   if (authLoading || statusLoading || (user && !role)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -90,38 +130,39 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
     );
   }
 
-  // Not authenticated - redirect to artist login
+  // Not authenticated
   if (!user) {
     return <Navigate to="/artist/login" state={{ from: location }} replace />;
   }
 
-  // Authenticated but wrong role - show access restricted
+  // Authenticated but wrong role
   if (role !== "artist") {
     return <Navigate to="/access-restricted" state={{ userRole: role, requiredRole: "artist" }} replace />;
   }
 
-  // Artist role but check status
-  if (artistStatus !== "active") {
-    // Approved but not yet set up
-    if (artistStatus === "approved_pending_setup") {
+  // Artist role — route based on gate result
+  switch (gateResult) {
+    case "has_profile":
+      return <>{children}</>;
+
+    case "app_approved_pending":
       // Allow access to setup page
       if (location.pathname === "/artist/setup-account") {
         return <>{children}</>;
       }
       return <Navigate to="/artist/setup-account" replace />;
-    }
 
-    // Pending or rejected - go to application status
-    if (artistStatus === "pending" || artistStatus === "rejected") {
+    case "app_pending":
+    case "app_rejected":
       return <Navigate to="/artist/application-status" replace />;
-    }
 
-    // No application found - redirect to apply
-    if (!artistStatus) {
-      return <Navigate to="/artist/apply" replace />;
-    }
+    case "no_record":
+      // Authenticated artist with no profile and no application
+      // Let them through — the dashboard/login flow handles this
+      return <>{children}</>;
+
+    default:
+      // Still loading or unknown state — allow access
+      return <>{children}</>;
   }
-
-  // Artist with active status - allow access
-  return <>{children}</>;
 };
