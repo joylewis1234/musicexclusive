@@ -2,9 +2,10 @@ import { useState } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, Music, ShieldCheck, Ban, Check, Crown, Sparkles } from "lucide-react";
+import { ChevronLeft, Music, ShieldCheck, Ban, Check, Crown, Sparkles, Download } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { downloadFanAgreementPdf } from "@/utils/generateAgreementPdf";
 
 interface LocationState {
   email?: string;
@@ -123,9 +124,20 @@ const FanAgreementStep = () => {
           <div className="rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
             {/* Card Header */}
             <div className="px-6 py-5 border-b border-border/30">
-              <div className="flex items-center gap-3 mb-3">
-                <Crown className="w-5 h-5 text-primary" />
-                <span className="text-primary font-semibold">Music Exclusive</span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <Crown className="w-5 h-5 text-primary" />
+                  <span className="text-primary font-semibold">Music Exclusive</span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={downloadFanAgreementPdf}
+                  className="gap-2 text-xs"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Download PDF
+                </Button>
               </div>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Welcome to Music Exclusive — where fans get early access to music before the world hears it.
