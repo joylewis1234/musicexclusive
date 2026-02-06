@@ -7,7 +7,12 @@ export interface VerifyAdminResult {
 
 /**
  * Verifies that the request is from an authenticated admin user.
- * Uses getUser() for JWT validation, then checks user_roles table.
+ *
+ * Admin access requires BOTH:
+ * 1. A row in user_roles with role='admin'
+ * 2. The user's email on the fixed allowlist (is_admin_email)
+ *
+ * This prevents privilege escalation even if a rogue role row exists.
  */
 export async function verifyAdmin(authHeader: string | null): Promise<VerifyAdminResult> {
   if (!authHeader?.startsWith("Bearer ")) {
@@ -35,22 +40,41 @@ export async function verifyAdmin(authHeader: string | null): Promise<VerifyAdmi
   const userId = userData.user.id;
   const userEmail = userData.user.email;
 
-  // Check admin role using service role client (bypasses RLS)
+  if (!userEmail) {
+    return { user: null, error: "User has no email — cannot verify admin" };
+  }
+
+  // Use service role client (bypasses RLS)
   const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-  const { data: roleData, error: roleError } = await supabaseAdmin
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("role", "admin")
-    .maybeSingle();
+  // Run both checks in parallel: role table AND allowlist
+  const [roleResult, allowlistResult] = await Promise.all([
+    supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle(),
+    supabaseAdmin.rpc("is_admin_email", { email: userEmail }),
+  ]);
 
-  if (roleError) {
-    console.error("[VERIFY-ADMIN] Error checking role:", roleError.message);
+  if (roleResult.error) {
+    console.error("[VERIFY-ADMIN] Error checking role:", roleResult.error.message);
     return { user: null, error: "Failed to verify admin role" };
   }
 
-  if (!roleData) {
+  if (allowlistResult.error) {
+    console.error("[VERIFY-ADMIN] Error checking allowlist:", allowlistResult.error.message);
+    return { user: null, error: "Failed to verify admin allowlist" };
+  }
+
+  const hasRole = !!roleResult.data;
+  const onAllowlist = allowlistResult.data === true;
+
+  if (!hasRole || !onAllowlist) {
+    console.warn(
+      `[VERIFY-ADMIN] Access denied for ${userEmail}: hasRole=${hasRole}, onAllowlist=${onAllowlist}`
+    );
     return { user: null, error: "Forbidden - Admin access required" };
   }
 
