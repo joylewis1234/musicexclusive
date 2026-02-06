@@ -1,97 +1,11 @@
 import { LegalPageLayout, LegalSection } from "@/components/legal";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
+import { downloadArtistAgreementPdf } from "@/utils/generateAgreementPdf";
 
 const EFFECTIVE_DATE = "January 31, 2025";
 
-const FULL_AGREEMENT_TEXT = `MUSIC EXCLUSIVE
-ARTIST PARTICIPATION AGREEMENT (MVP VERSION)
-
-Effective Date: ${EFFECTIVE_DATE}
-
-This Artist Participation Agreement ("Agreement") is entered into between Music Exclusive ("Company," "we," or "us") and you ("Artist," "you," or "your"). This Agreement governs your participation as an artist on the Music Exclusive platform ("Services").
-
-By accessing the Services, uploading Content, or clicking "I Agree," you confirm you have read, understood, and agree to be bound by this Agreement.
-
-1. PLATFORM PURPOSE
-Music Exclusive is an artist-first music streaming and fan engagement platform where artists release exclusive music to fans before releasing to other digital streaming platforms.
-
-2. DEFINITIONS
-"Content" means the sound recordings, compositions, cover art, images, metadata, and other materials you upload to Music Exclusive.
-"Verified Stream" means a legitimate fan-initiated stream that meets platform validation requirements and is not fraudulent or manipulated.
-
-3. ARTIST ELIGIBILITY
-Company may approve or deny Artist participation at its sole discretion. Company may remove Artist access for violations of this Agreement, fraud, or abuse.
-
-4. EXCLUSIVITY WINDOW
-Artist agrees that each uploaded release may be exclusive to Music Exclusive for a minimum of three (3) weeks (or longer if Artist chooses).
-After the exclusivity period, Artist may distribute the release elsewhere. Music Exclusive retains the right to continue streaming the Content on the platform indefinitely unless otherwise agreed in writing.
-
-5. RIGHTS GRANTED
-Artist grants Company a non-exclusive, worldwide right to host, store, stream, display, and promote the Content solely in connection with operating and marketing the Music Exclusive platform.
-Artist retains ownership of all intellectual property rights in the Content.
-
-6. ARTIST REPRESENTATIONS & WARRANTIES
-Artist represents and warrants:
-- Artist owns or controls all necessary rights to upload and monetize the Content
-- The Content does not infringe any third-party rights
-- Artist is responsible for any third-party royalty obligations (including publishers, writers, producers, or other rights holders)
-- Artist will not upload unlawful, infringing, or improper content
-
-7. STREAMING PAYMENTS & EARNINGS (MVP)
-Fans stream music using credits.
-- 1 credit = $0.20
-- Each stream costs 1 credit ($0.20)
-
-Revenue Split:
-- 50% to Artist ($0.10 per stream)
-- 50% to Music Exclusive ($0.10 per stream)
-
-Artist earnings will be tracked inside the Artist Dashboard.
-
-8. PAYOUT SCHEDULE
-Artist payouts are issued weekly on Mondays for verified streams earned during the prior week.
-Company may delay payouts if fraud, streaming manipulation, chargebacks, or disputes are suspected.
-
-9. WEEKLY TRANSPARENCY REPORT
-Company will provide a weekly transparency report inside the Artist Earnings page showing:
-- Total verified streams
-- Total credits collected
-- Artist share
-- Platform share
-- Payout status (Pending/Paid)
-- Total payouts (lifetime)
-
-10. FRAUD, STREAMING MANIPULATION & TERMINATION
-Artist may not engage in streaming manipulation or artificial inflation of streams.
-If Company determines in its sole discretion that manipulation occurred, Company may:
-- remove Content
-- suspend or terminate Artist access
-- withhold earnings tied to manipulation
-
-11. TERMINATION
-Company may terminate this Agreement and remove Artist access at any time for breach, fraud, abuse, or platform safety reasons.
-
-12. LIMITATION OF LIABILITY
-To the maximum extent permitted by law, Company is not liable for indirect, incidental, or consequential damages arising from the Services.
-
-13. DISPUTE RESOLUTION
-Disputes shall be governed by applicable arbitration and dispute resolution terms consistent with the Company Terms of Use.
-
-END OF AGREEMENT`;
-
 const ArtistAgreement = () => {
-  const handleDownload = () => {
-    const blob = new Blob([FULL_AGREEMENT_TEXT], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Music_Exclusive_Artist_Participation_Agreement.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   return (
     <LegalPageLayout
@@ -104,11 +18,11 @@ const ArtistAgreement = () => {
         <Button 
           variant="outline" 
           size="sm" 
-          onClick={handleDownload}
+          onClick={downloadArtistAgreementPdf}
           className="gap-2"
         >
           <Download className="w-4 h-4" />
-          Download
+          Download PDF
         </Button>
       </div>
 
