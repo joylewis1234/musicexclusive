@@ -12,7 +12,7 @@ export function useErrorLogger() {
   const logError = useCallback(
     async (page: string, errorMessage: string) => {
       try {
-        await supabase.from("app_error_logs" as any).insert({
+        await (supabase.from as any)("app_error_logs").insert({
           page,
           user_id: user?.id ?? null,
           error_message: errorMessage.slice(0, 2000), // cap length
