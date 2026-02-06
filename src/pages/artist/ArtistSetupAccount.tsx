@@ -36,6 +36,8 @@ const ArtistSetupAccount = () => {
   const [isLookingUpEmail, setIsLookingUpEmail] = useState(false);
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
+  const [resolvedApplicationId, setResolvedApplicationId] = useState<string | null>(null);
+  const [applicationAuthUserId, setApplicationAuthUserId] = useState<string | null>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeTerms, setAgreeTerms] = useState(false);
@@ -101,9 +103,19 @@ const ArtistSetupAccount = () => {
         }
 
         const status = String(data.status);
+        const appId = data.application_id ?? null;
+        const authUid = data.auth_user_id ?? null;
         setEmail(String(data.email ?? emailParam ?? ""));
         setLookupEmail(String(data.email ?? emailParam ?? ""));
+        setResolvedApplicationId(appId);
+        setApplicationAuthUserId(authUid);
         setApplicationStatus(status);
+
+        // If application already linked to another user, block
+        if (authUid) {
+          console.warn("[ArtistSetupAccount] Application already linked to auth_user_id:", authUid);
+          setApplicationStatus("already_linked");
+        }
       } catch (err) {
         console.error("[ArtistSetupAccount] Unexpected lookup error:", err);
         setApplicationStatus("no_email");
@@ -159,7 +171,16 @@ const ArtistSetupAccount = () => {
 
       const status = String(data.status);
       setEmail(String(data.email ?? trimmed));
+      setResolvedApplicationId(data.application_id ?? null);
+      setApplicationAuthUserId(data.auth_user_id ?? null);
       setApplicationStatus(status);
+
+      // Block if already linked
+      if (data.auth_user_id) {
+        setApplicationStatus("already_linked");
+        setLookupError("This application is already linked to an account. Please log in instead.");
+        return;
+      }
 
       if (status === "approved" || status === "approved_pending_setup") {
         toast.success("Approved application found! Create your password to continue.");
@@ -170,7 +191,6 @@ const ArtistSetupAccount = () => {
       } else if (status === "active") {
         setLookupError("Your account is already set up. Please log in instead.");
       } else {
-        // Unexpected status — still allow if it looks approved-ish
         console.warn("[ArtistSetupAccount] Unexpected status:", status);
         setLookupError(`Application status: "${status}". Please contact support if you believe this is an error.`);
       }
@@ -279,8 +299,18 @@ const ArtistSetupAccount = () => {
 
       const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke(
         "finalize-artist-setup",
-        { headers: { Authorization: `Bearer ${accessToken}` } }
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          body: { application_id: resolvedApplicationId },
+        }
       );
+
+      // Block if finalize reports the application is already linked to another user
+      if (finalizeData?.error_code === "ALREADY_LINKED") {
+        setSetupError("This application is already linked to another account. Please log in or contact support.");
+        setIsSubmitting(false);
+        return;
+      }
 
       if (finalizeError) {
         console.error("[ArtistSetupAccount] Finalize error:", finalizeError);
@@ -450,6 +480,46 @@ const ArtistSetupAccount = () => {
               </Button>
               <Button variant="outline" className="w-full" onClick={() => navigate("/artist/login")}>
                 Already have an account? Login
+              </Button>
+            </div>
+          </GlowCard>
+        </main>
+      </div>
+    );
+  }
+
+  // Already linked to another account
+  if (applicationStatus === "already_linked") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+          <div className="container max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Back</span>
+            </button>
+            <button onClick={() => navigate("/")} className="text-muted-foreground hover:text-foreground transition-colors">
+              <Home className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
+          <GlowCard className="max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <h1 className="font-display text-xl font-bold text-foreground mb-3">
+              Account Already Created
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              This application is already linked to an existing account. Please log in with your existing credentials.
+            </p>
+            <div className="space-y-3">
+              <Button className="w-full" onClick={() => navigate("/artist/login")}>
+                Go to Artist Login
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => navigate("/")}>
+                Return Home
               </Button>
             </div>
           </GlowCard>
