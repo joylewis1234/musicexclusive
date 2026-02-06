@@ -214,14 +214,15 @@ const ArtistSetupAccount = () => {
     setIsSubmitting(true);
 
     try {
-      // Step 1: Create auth account
-      console.log("[ArtistSetupAccount] Step 1: Creating auth account for", email);
+      // Step 1: Create auth account (normalize email)
+      const normalizedEmail = email.trim().toLowerCase();
+      console.log("[ArtistSetupAccount] Step 1: Creating auth account for", normalizedEmail);
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
           emailRedirectTo: window.location.origin,
-          data: { display_name: email.split("@")[0] },
+          data: { display_name: normalizedEmail.split("@")[0] },
         },
       });
 
@@ -254,7 +255,7 @@ const ArtistSetupAccount = () => {
 
       // Step 2: Sign in to get a definitive session
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
+        email: normalizedEmail,
         password,
       });
 
