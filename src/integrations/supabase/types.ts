@@ -83,6 +83,30 @@ export type Database = {
         }
         Relationships: []
       }
+      app_error_logs: {
+        Row: {
+          created_at: string
+          error_message: string
+          id: string
+          page: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message: string
+          id?: string
+          page: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string
+          id?: string
+          page?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       application_action_tokens: {
         Row: {
           action_type: string
