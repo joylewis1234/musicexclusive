@@ -336,19 +336,75 @@ const AdminArtistApplications = () => {
       if (error) throw error;
 
       if (data.success) {
-        toast.info(`${application.artist_name}'s application denied.`, {
-          description: "Notification email sent to artist.",
-        });
-        fetchApplications();
+        // Optimistic local update
+        updateApplicationLocally(application.id, "rejected");
+
+        if (data.emailSent === false) {
+          console.error("[DENY] Email failed:", data.emailError);
+          toast.warning("Artist denied. Email failed to send.", {
+            description: "Use the Resend Denial Email button to retry.",
+            duration: 8000,
+          });
+        } else {
+          toast.success("Artist denied and email sent.", {
+            description: `Notification sent to ${application.contact_email}`,
+          });
+        }
         setIsDetailOpen(false);
       } else {
         throw new Error(data.error);
       }
     } catch (error) {
       console.error("Deny error:", error);
-      toast.error("Failed to deny application");
+      toast.error("Failed to deny application", {
+        description: error instanceof Error ? error.message : "Unknown error",
+        duration: 10000,
+      });
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleResendDenialEmail = async (application: ArtistApplication) => {
+    setResendingId(application.id);
+    try {
+      // Create a new deny token to re-trigger the email
+      const { data: tokenData, error: tokenError } = await supabase
+        .from("application_action_tokens")
+        .insert({
+          application_id: application.id,
+          action_type: "resend_denial",
+          token: crypto.randomUUID(),
+        })
+        .select()
+        .single();
+
+      if (tokenError) throw tokenError;
+
+      const { data, error } = await supabase.functions.invoke("handle-application-action", {
+        body: {
+          token: tokenData.token,
+          adminEmail: "admin_dashboard",
+          baseUrl: window.location.origin,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.emailSent !== false) {
+        toast.success("Denial email resent!", {
+          description: `Email sent to ${application.contact_email}`,
+        });
+      } else {
+        throw new Error(data.emailError || "Failed to send email");
+      }
+    } catch (error) {
+      console.error("Resend denial error:", error);
+      toast.error("Failed to resend denial email", {
+        description: error instanceof Error ? error.message : "Unknown error",
+      });
+    } finally {
+      setResendingId(null);
     }
   };
 
@@ -588,6 +644,21 @@ const AdminArtistApplications = () => {
                                 <RefreshCw className="w-4 h-4 mr-1" />
                               )}
                               Resend Email
+                            </Button>
+                          )}
+                          {app.status === "rejected" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResendDenialEmail(app)}
+                              disabled={resendingId === app.id}
+                            >
+                              {resendingId === app.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                              ) : (
+                                <RefreshCw className="w-4 h-4 mr-1" />
+                              )}
+                              Resend Denial Email
                             </Button>
                           )}
                           {testCleanupMode && (
