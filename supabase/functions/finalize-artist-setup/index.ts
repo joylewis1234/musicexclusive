@@ -85,14 +85,28 @@ Deno.serve(async (req) => {
     }
 
     if (!application) {
-      console.error("[finalize-artist-setup] No application found for:", email);
+      console.error("[finalize-artist-setup] ❌ No application found for:", email);
       return new Response(
-        JSON.stringify({ success: false, message: "No application found" }),
+        JSON.stringify({ success: false, message: "No application found. Cannot assign artist role without an approved application." }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // ── Step 2: Block if application already linked to ANOTHER auth user ──
+    // ── Step 2: Verify application is in an approved state ──
+    const allowedStatuses = ["approved", "approved_pending_setup", "active"];
+    if (!allowedStatuses.includes(application.status)) {
+      console.error("[finalize-artist-setup] ❌ Application status not approved:", application.status);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: `Application status is "${application.status}". Only approved applications can create artist accounts.`,
+          error_code: "NOT_APPROVED",
+        }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Step 3: Block if application already linked to ANOTHER auth user ──
     if (application.auth_user_id && application.auth_user_id !== user.id) {
       console.error("[finalize-artist-setup] ❌ Application already linked to another user:", application.auth_user_id, "current:", user.id);
       return new Response(
@@ -105,17 +119,25 @@ Deno.serve(async (req) => {
       );
     }
 
-    // ── Step 3: Link auth_user_id permanently ──
+    // ══════════════════════════════════════════════════════════════════════
+    // ATOMIC BLOCK: All three operations must succeed or we fail entirely.
+    // 1. Link auth_user_id to application
+    // 2. Assign artist role
+    // 3. Create artist profile (if missing)
+    // ══════════════════════════════════════════════════════════════════════
+
+    const errors: string[] = [];
+
+    // ── Step 4: Link auth_user_id permanently ──
     if (!application.auth_user_id) {
       const { error: linkError } = await supabaseAdmin
         .from("artist_applications")
-        .update({ auth_user_id: user.id })
+        .update({ auth_user_id: user.id, status: "active" })
         .eq("id", application.id)
         .is("auth_user_id", null);
 
       if (linkError) {
-        console.error("[finalize-artist-setup] auth_user_id link error:", linkError);
-        // Check if it's the unique constraint — means someone else just claimed it
+        console.error("[finalize-artist-setup] ❌ auth_user_id link error:", linkError);
         if (linkError.code === "23505") {
           return new Response(
             JSON.stringify({
@@ -126,22 +148,32 @@ Deno.serve(async (req) => {
             { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        errors.push(`Link error: ${linkError.message}`);
       } else {
         console.log("[finalize-artist-setup] ✅ Linked auth_user_id to application:", application.id);
       }
+    } else {
+      // Already linked to this user — just ensure status is active
+      const { error: statusError } = await supabaseAdmin
+        .from("artist_applications")
+        .update({ status: "active" })
+        .eq("id", application.id);
+      if (statusError) {
+        console.error("[finalize-artist-setup] status update error:", statusError);
+        errors.push(`Status update error: ${statusError.message}`);
+      }
     }
 
-    // ── Step 4: Update application status to active ──
-    const { error: updateError } = await supabaseAdmin
-      .from("artist_applications")
-      .update({ status: "active" })
-      .eq("id", application.id);
-
-    if (updateError) {
-      console.error("[finalize-artist-setup] update error:", updateError);
+    // If linking failed, abort before role/profile creation
+    if (errors.length > 0) {
+      console.error("[finalize-artist-setup] ❌ Aborting: linking failed:", errors);
+      return new Response(
+        JSON.stringify({ success: false, message: "Failed to link application to your account. Please try again.", details: errors }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    // ── Step 5: Ensure artist role exists ──
+    // ── Step 5: Assign artist role (must succeed) ──
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
       .upsert(
@@ -150,10 +182,15 @@ Deno.serve(async (req) => {
       );
 
     if (roleError) {
-      console.error("[finalize-artist-setup] role error:", roleError);
+      console.error("[finalize-artist-setup] ❌ Role assignment failed:", roleError);
+      return new Response(
+        JSON.stringify({ success: false, message: "Failed to assign artist role. Please try again.", details: roleError.message }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+    console.log("[finalize-artist-setup] ✅ Artist role assigned for user:", user.id);
 
-    // ── Step 6: Check if artist profile exists; if not, create one ──
+    // ── Step 6: Create artist profile if missing (must succeed) ──
     const { data: existingProfile } = await supabaseAdmin
       .from("artist_profiles")
       .select("id")
@@ -173,11 +210,21 @@ Deno.serve(async (req) => {
         });
 
       if (profileError) {
-        console.error("[finalize-artist-setup] profile creation error:", profileError);
-      } else {
-        console.log("[finalize-artist-setup] ✅ Created artist profile for:", email);
+        console.error("[finalize-artist-setup] ❌ Profile creation failed:", profileError);
+        // Role was assigned but profile failed — this is a partial state we must report
+        return new Response(
+          JSON.stringify({ success: false, message: "Role assigned but profile creation failed. Please try again.", details: profileError.message }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
+      console.log("[finalize-artist-setup] ✅ Created artist profile for:", email);
+    } else {
+      console.log("[finalize-artist-setup] ℹ️ Artist profile already exists:", existingProfile.id);
     }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // ALL STEPS SUCCEEDED — return success
+    // ══════════════════════════════════════════════════════════════════════
 
     return new Response(
       JSON.stringify({

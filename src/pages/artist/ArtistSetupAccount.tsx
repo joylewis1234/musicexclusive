@@ -305,19 +305,29 @@ const ArtistSetupAccount = () => {
         }
       );
 
-      // Block if finalize reports the application is already linked to another user
+      // The edge function is the SOLE authority for role + profile + link.
+      // If it fails, we must block — no partial success states.
       if (finalizeData?.error_code === "ALREADY_LINKED") {
         setSetupError("This application is already linked to another account. Please log in or contact support.");
         setIsSubmitting(false);
         return;
       }
 
-      if (finalizeError) {
-        console.error("[ArtistSetupAccount] Finalize error:", finalizeError);
-        // Non-blocking: the edge function may have partially succeeded
-      } else {
-        console.log("[ArtistSetupAccount] Step 4: Finalize response:", finalizeData);
+      if (finalizeData?.error_code === "NOT_APPROVED") {
+        setSetupError("Your application has not been approved yet. Please wait for approval before creating an account.");
+        setIsSubmitting(false);
+        return;
       }
+
+      if (finalizeError || !finalizeData?.success) {
+        const errorMsg = finalizeData?.message || finalizeError?.message || "Unknown error";
+        console.error("[ArtistSetupAccount] ❌ Finalize FAILED (hard block):", errorMsg);
+        setSetupError(`Artist setup failed: ${errorMsg}. Please try again or contact support.`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      console.log("[ArtistSetupAccount] ✅ Finalize succeeded — role, profile, and link all confirmed:", finalizeData);
 
       // Step 4: Refresh role in AuthContext so ProtectedRoute sees "artist"
       console.log("[ArtistSetupAccount] Step 5: Refreshing role in AuthContext...");
