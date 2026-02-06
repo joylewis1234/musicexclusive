@@ -101,6 +101,10 @@ const AdminArtistApplications = () => {
   const actionPath = window.location.pathname;
 
   useEffect(() => {
+    // Environment debug logging
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+    console.log("[Admin] Supabase env:", supabaseUrl.replace(/^(https?:\/\/[^.]+).*/, "$1.***"));
+
     // Handle token-based actions from email links
     if (tokenParam) {
       handleTokenAction(tokenParam);
@@ -673,7 +677,7 @@ const AdminArtistApplications = () => {
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
                                 <>
-                                  <Trash2 className="w-4 h-4 mr-1" /> Delete
+                                  <Trash2 className="w-4 h-4 mr-1" /> Hard Reset
                                 </>
                               )}
                             </Button>
@@ -931,9 +935,9 @@ const AdminArtistApplications = () => {
       <AlertDialog open={!!deleteConfirmApp} onOpenChange={(open) => !open && setDeleteConfirmApp(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this application?</AlertDialogTitle>
+            <AlertDialogTitle>Hard Reset This Artist?</AlertDialogTitle>
             <AlertDialogDescription>
-              This permanently removes the application and any linked artist account created from it. This cannot be undone.
+              This will permanently delete the application, artist profile, user role, <strong>and the auth account</strong> for <strong>{deleteConfirmApp?.contact_email}</strong>. The email can be re-used for a fresh signup afterwards. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -942,7 +946,7 @@ const AdminArtistApplications = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => deleteConfirmApp && handleDeleteApplication(deleteConfirmApp)}
             >
-              Delete Permanently
+              Hard Reset Artist
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
