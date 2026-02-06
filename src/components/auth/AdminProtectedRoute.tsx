@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
-import { Loader2 } from "lucide-react";
+import { TimeoutSpinner } from "@/components/ui/TimeoutSpinner";
 
 interface AdminProtectedRouteProps {
   children: ReactNode;
@@ -18,9 +18,11 @@ export function AdminProtectedRoute({ children }: AdminProtectedRouteProps) {
 
   if (authLoading || adminLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <TimeoutSpinner
+        page="AdminProtectedRoute"
+        loadingMessage="Verifying admin access…"
+        errorMessage="Admin verification timed out. Please check your connection and try again."
+      />
     );
   }
 
