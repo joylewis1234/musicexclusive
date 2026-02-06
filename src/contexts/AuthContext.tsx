@@ -14,6 +14,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, role: AppRole, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshRole: () => Promise<AppRole | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -189,6 +190,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
   };
 
+  const refreshRole = async (): Promise<AppRole | null> => {
+    const currentUser = user ?? (await supabase.auth.getUser()).data.user;
+    if (!currentUser) return null;
+    try {
+      const userRole = await fetchUserRole(currentUser.id);
+      setRole(userRole);
+      setIsLoading(false);
+      return userRole;
+    } catch (err) {
+      console.error("[AuthContext] refreshRole failed:", err);
+      setIsLoading(false);
+      return null;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -199,6 +215,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         signUp,
         signIn,
         signOut,
+        refreshRole,
       }}
     >
       {children}
