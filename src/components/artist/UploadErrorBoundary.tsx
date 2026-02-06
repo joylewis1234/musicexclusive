@@ -10,6 +10,7 @@ interface UploadErrorBoundaryState {
 
 interface UploadErrorBoundaryProps {
   children: React.ReactNode;
+  /** Called when user clicks "Reset this form" – parent should clear all state + draft */
   onResetForm?: () => void;
 }
 
@@ -33,13 +34,18 @@ export class UploadErrorBoundary extends React.Component<
     this.setState({ componentStack: info.componentStack });
   }
 
-  private handleDismiss = () => {
+  /** Clear the boundary error so the children re-render normally */
+  public clearError = () => {
     this.setState({ error: null, componentStack: undefined });
+  };
+
+  private handleDismiss = () => {
+    this.clearError();
   };
 
   private handleResetForm = () => {
     this.props.onResetForm?.();
-    this.setState({ error: null, componentStack: undefined });
+    this.clearError();
   };
 
   render() {
