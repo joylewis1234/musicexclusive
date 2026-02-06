@@ -1,4 +1,3 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -7,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -22,46 +21,60 @@ serve(async (req) => {
       );
     }
 
+    console.log(`[send-password-reset] Requested for: ${email} (${userType})`);
+
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Check if user exists
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    if (listError) throw listError;
+    // Derive redirect URL from request headers (supports production + preview)
+    const referer = req.headers.get("referer") || req.headers.get("origin") || "";
+    let siteOrigin = "";
+    try {
+      const url = new URL(referer);
+      siteOrigin = url.origin;
+    } catch {
+      // Fallback chain: env var → production domain
+      siteOrigin = Deno.env.get("SITE_URL") || "https://www.themusicisexclusive.com";
+    }
+    const redirectTo = `${siteOrigin}/reset-password`;
+    console.log(`[send-password-reset] Redirect URL: ${redirectTo}`);
 
-    const user = users.users.find(u => u.email?.toLowerCase() === email.toLowerCase());
-    if (!user) {
-      // Return success even if user doesn't exist (security best practice)
+    // Generate password reset link directly (no need to list users)
+    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
+      type: "recovery",
+      email: email.trim().toLowerCase(),
+      options: { redirectTo },
+    });
+
+    if (resetError) {
+      console.warn(`[send-password-reset] generateLink error: ${resetError.message}`);
+      // Security best practice: don't reveal if user exists or not
+      // Return success either way
       return new Response(
-        JSON.stringify({ success: true, message: "If an account exists, a reset email will be sent" }),
+        JSON.stringify({ success: true, message: "If an account exists, a reset email will be sent." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Generate password reset link using Supabase
-    const siteUrl = Deno.env.get("SITE_URL") || "https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app";
-    const redirectTo = `${siteUrl}/reset-password`;
+    const actionLink = resetData?.properties?.action_link;
+    if (!actionLink) {
+      console.error("[send-password-reset] No action_link generated");
+      return new Response(
+        JSON.stringify({ success: true, message: "If an account exists, a reset email will be sent." }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    const { data: resetData, error: resetError } = await supabaseAdmin.auth.admin.generateLink({
-      type: "recovery",
-      email: email,
-      options: {
-        redirectTo,
-      },
-    });
-
-    if (resetError) throw resetError;
-
-    // Extract the token from the action link
-    const actionLink = resetData.properties?.action_link;
-    if (!actionLink) throw new Error("Failed to generate reset link");
-
-    // Send email via Resend using fetch
+    // Send email via Resend
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) {
-      throw new Error("RESEND_API_KEY not configured");
+      console.error("[send-password-reset] RESEND_API_KEY not configured");
+      return new Response(
+        JSON.stringify({ error: "Email service not configured. Please contact support." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const userTypeLabel = userType === "artist" ? "Artist" : "Fan";
@@ -69,13 +82,13 @@ serve(async (req) => {
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${resendKey}`,
+        Authorization: `Bearer ${resendKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
         from: "Music Exclusive <noreply@themusicisexclusive.com>",
         reply_to: "support@musicexclusive.co",
-        to: [email],
+        to: [email.trim()],
         subject: "Reset Your Music Exclusive Password",
         html: `
         <!DOCTYPE html>
@@ -88,7 +101,7 @@ serve(async (req) => {
           <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0f; padding: 40px 20px;">
             <tr>
               <td align="center">
-                <table width="100%" max-width="600" cellpadding="0" cellspacing="0" style="max-width: 600px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3);">
+                <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3);">
                   <tr>
                     <td style="padding: 40px;">
                       <h1 style="margin: 0 0 20px 0; color: #ffffff; font-size: 28px; text-align: center;">
@@ -132,11 +145,15 @@ serve(async (req) => {
     });
 
     if (!emailResponse.ok) {
-      const errorData = await emailResponse.json();
-      throw new Error(errorData.message || "Failed to send email");
+      const errorData = await emailResponse.json().catch(() => ({}));
+      console.error("[send-password-reset] Resend API error:", JSON.stringify(errorData));
+      return new Response(
+        JSON.stringify({ error: "Failed to send reset email. Please try again." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
-    console.log(`Password reset email sent to ${email} (${userType})`);
+    console.log(`[send-password-reset] Email sent to ${email} (${userType}) via ${siteOrigin}`);
 
     return new Response(
       JSON.stringify({ success: true, message: "Password reset email sent" }),
@@ -144,9 +161,9 @@ serve(async (req) => {
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Password reset error:", message);
+    console.error("[send-password-reset] Unexpected error:", message);
     return new Response(
-      JSON.stringify({ error: message }),
+      JSON.stringify({ error: `Reset failed: ${message}` }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

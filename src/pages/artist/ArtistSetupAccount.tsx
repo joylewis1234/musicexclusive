@@ -179,47 +179,26 @@ const ArtistSetupAccount = () => {
       });
 
       if (signUpError) {
-        if (signUpError.message.includes("already registered") || 
-            signUpError.message.includes("already been registered")) {
-          console.log("[ArtistSetupAccount] User already exists, attempting sign in...");
-          
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-
-          if (signInError) {
-            console.error("[ArtistSetupAccount] Sign-in failed:", signInError);
-            setSetupError("This email is already registered. Please try logging in or use 'Forgot Password'.");
-            setIsSubmitting(false);
-            return;
-          }
-
-          console.log("[ArtistSetupAccount] Signed in existing user:", signInData.user?.id);
-          const accessToken = signInData.session?.access_token;
-          if (accessToken) {
-            const { error: finalizeError } = await supabase.functions.invoke("finalize-artist-setup", {
-              headers: { Authorization: `Bearer ${accessToken}` },
-            });
-            if (finalizeError) {
-              console.error("[ArtistSetupAccount] Finalize error (existing user):", finalizeError);
-            }
-          }
-
-          // Refresh role in AuthContext so ProtectedRoute sees "artist"
-          console.log("[ArtistSetupAccount] Refreshing role in AuthContext...");
-          const newRole = await refreshRole();
-          console.log("[ArtistSetupAccount] Role after refresh:", newRole);
-
-          toast.success("Welcome back!");
-          navigate("/artist/dashboard", { replace: true });
-          return;
-        } else {
-          console.error("[ArtistSetupAccount] SignUp error:", signUpError);
-          setSetupError(signUpError.message);
+        const msg = signUpError.message.toLowerCase();
+        
+        if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("already exists")) {
+          console.log("[ArtistSetupAccount] User already exists — routing to login/reset");
+          setSetupError("ALREADY_REGISTERED");
           setIsSubmitting(false);
           return;
         }
+        
+        if (msg.includes("weak") || msg.includes("leaked") || msg.includes("compromised") || msg.includes("hibp")) {
+          console.warn("[ArtistSetupAccount] Weak/leaked password:", signUpError.message);
+          setSetupError("PASSWORD_WEAK");
+          setIsSubmitting(false);
+          return;
+        }
+
+        console.error("[ArtistSetupAccount] SignUp error:", signUpError);
+        setSetupError(signUpError.message);
+        setIsSubmitting(false);
+        return;
       }
 
       console.log("[ArtistSetupAccount] Step 2: Auth account created, user ID:", signUpData.user?.id);
@@ -293,6 +272,21 @@ const ArtistSetupAccount = () => {
 
   // Setup error state - shown instead of infinite spinner
   if (setupError) {
+    const isAlreadyRegistered = setupError === "ALREADY_REGISTERED";
+    const isWeakPassword = setupError === "PASSWORD_WEAK";
+
+    const errorTitle = isAlreadyRegistered
+      ? "Account Already Exists"
+      : isWeakPassword
+      ? "Password Not Accepted"
+      : "Setup Issue";
+
+    const errorMessage = isAlreadyRegistered
+      ? "An account with this email already exists. Please log in with your existing password, or reset it if you've forgotten it."
+      : isWeakPassword
+      ? "That password has appeared in a data breach and can't be used. Please choose a different, more secure password."
+      : setupError;
+
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
@@ -315,22 +309,39 @@ const ArtistSetupAccount = () => {
 
         <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
           <GlowCard className="max-w-md w-full p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
-              <AlertCircle className="w-8 h-8 text-destructive" />
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${
+              isAlreadyRegistered ? "bg-amber-500/10" : "bg-destructive/10"
+            }`}>
+              <AlertCircle className={`w-8 h-8 ${
+                isAlreadyRegistered ? "text-amber-500" : "text-destructive"
+              }`} />
             </div>
             <h1 className="font-display text-xl font-bold text-foreground mb-3">
-              Setup Issue
+              {errorTitle}
             </h1>
             <p className="text-muted-foreground mb-6">
-              {setupError}
+              {errorMessage}
             </p>
             <div className="space-y-3">
-              <Button onClick={handleRetrySetup} className="w-full">
-                Try Again
-              </Button>
-              <Button variant="outline" className="w-full" onClick={() => navigate("/artist/login")}>
-                Go to Artist Login
-              </Button>
+              {isAlreadyRegistered ? (
+                <>
+                  <Button className="w-full" onClick={() => navigate("/artist/login")}>
+                    Go to Artist Login
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => navigate(`/forgot-password?type=artist`)}>
+                    Reset Password
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button onClick={handleRetrySetup} className="w-full">
+                    Try Again
+                  </Button>
+                  <Button variant="outline" className="w-full" onClick={() => navigate("/artist/login")}>
+                    Go to Artist Login
+                  </Button>
+                </>
+              )}
             </div>
           </GlowCard>
         </main>
