@@ -7,17 +7,9 @@ const corsHeaders = {
 };
 
 interface LookupRequest {
-  email: string;
+  email?: string;
+  application_id?: string;
 }
-
-type ApplicationStatus =
-  | "pending"
-  | "approved"
-  | "approved_pending_setup"
-  | "active"
-  | "rejected"
-  | "not_approved"
-  | string;
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
@@ -28,10 +20,57 @@ Deno.serve(async (req) => {
 
   try {
     const body: LookupRequest = await req.json();
+
+    const supabaseAdmin = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    // ── Lookup by application_id (deterministic, preferred) ──
+    if (body.application_id) {
+      const appId = String(body.application_id).trim();
+      console.log("[lookup-artist-application] Looking up by application_id:", appId);
+
+      const { data, error } = await supabaseAdmin
+        .from("artist_applications")
+        .select("id, status, contact_email, artist_name, created_at")
+        .eq("id", appId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("[lookup-artist-application] query error:", error);
+        return new Response(
+          JSON.stringify({ success: false, found: false, message: "Lookup failed", error_code: error.code }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (!data) {
+        return new Response(
+          JSON.stringify({ success: true, found: false, message: "No application found with that ID." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          found: true,
+          email: data.contact_email,
+          status: data.status,
+          application_id: data.id,
+          artist_name: data.artist_name,
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Lookup by email (fallback) ──
     const rawEmail = String(body?.email ?? "");
     const email = normalizeEmail(rawEmail);
 
-    // Basic validation (kept minimal to avoid edge-case blocking)
+    console.log("[lookup-artist-application] Looking up by email:", email);
+
     if (!email || !email.includes("@") || email.length > 255) {
       return new Response(
         JSON.stringify({
@@ -43,19 +82,9 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Service role to bypass RLS (artist_applications is not readable to anon/authenticated by design)
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    // NOTE: We intentionally do NOT use `.single()` / `.maybeSingle()` here.
-    // Some artists may submit multiple applications with the same email, which would
-    // otherwise throw `PGRST116` (multiple rows). Instead we take the most recent.
     const { data, error } = await supabaseAdmin
       .from("artist_applications")
-      .select("status, contact_email, created_at")
-      // Case-insensitive exact match (no wildcards)
+      .select("id, status, contact_email, artist_name, created_at")
       .ilike("contact_email", email)
       .order("created_at", { ascending: false })
       .limit(1);
@@ -63,7 +92,7 @@ Deno.serve(async (req) => {
     if (error) {
       console.error("[lookup-artist-application] query error:", error);
       return new Response(
-        JSON.stringify({ success: false, found: false, message: "Lookup failed" }),
+        JSON.stringify({ success: false, found: false, message: "Lookup failed", error_code: error.code }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -71,7 +100,6 @@ Deno.serve(async (req) => {
     const row = data?.[0] ?? null;
 
     if (!row) {
-      // Important: keep copy generic to reduce email enumeration value.
       return new Response(
         JSON.stringify({
           success: true,
@@ -82,14 +110,14 @@ Deno.serve(async (req) => {
       );
     }
 
-    const status = String(row.status) as ApplicationStatus;
-
     return new Response(
       JSON.stringify({
         success: true,
         found: true,
         email: row.contact_email,
-        status,
+        status: row.status,
+        application_id: row.id,
+        artist_name: row.artist_name,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

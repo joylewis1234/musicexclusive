@@ -146,7 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // ─── Step 5: SECONDARY — Send email (non-blocking) ──────────
-    const setupLink = `${DEFAULT_BASE_URL}/artist/signup?email=${encodeURIComponent(application.contact_email)}`;
+    const setupLink = `${DEFAULT_BASE_URL}/artist/signup?application_id=${applicationId}&email=${encodeURIComponent(application.contact_email)}`;
     let emailSent = false;
     let emailError: string | null = null;
     let resendId: string | null = null;
