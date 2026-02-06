@@ -6,8 +6,10 @@ import { Input } from "@/components/ui/input";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Loader2, Mic2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Loader2, Mic2, AlertCircle, FileText } from "lucide-react";
 import { toast } from "sonner";
+
+const normalizeEmail = (e: string) => e.trim().toLowerCase();
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
@@ -23,13 +25,14 @@ const ArtistLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
     setApplicationStatus(null);
+    setDebugInfo(null);
 
-    // Validate inputs
     const result = loginSchema.safeParse({ email, password });
     if (!result.success) {
       const fieldErrors: { email?: string; password?: string } = {};
@@ -41,40 +44,36 @@ const ArtistLogin = () => {
       return;
     }
 
+    const normalizedEmail = normalizeEmail(email);
+    console.log("[ArtistLogin] Attempting login for:", normalizedEmail);
+
     setIsLoading(true);
 
     try {
-      // First check if this email has an approved application pending setup
-      // (these users don't have auth accounts yet)
-      let applicationCheck: { status: string } | null = null;
+      // Pre-check: if application exists and is approved_pending_setup, redirect to setup
       try {
-        const { data, error: applicationCheckError } = await supabase
+        const { data } = await supabase
           .from("artist_applications")
           .select("status")
-          .eq("contact_email", email)
-          .maybeSingle();
+          .ilike("contact_email", normalizedEmail)
+          .order("created_at", { ascending: false })
+          .limit(1);
 
-        if (applicationCheckError) {
-          // Log but don't block login - proceed to sign-in attempt
-          console.warn("[ArtistLogin] application pre-check warning:", applicationCheckError);
-        } else {
-          applicationCheck = data;
+        const preCheck = data?.[0] ?? null;
+        console.log("[ArtistLogin] Pre-check application:", preCheck);
+
+        if (preCheck?.status === "approved_pending_setup") {
+          toast.success("Your application is approved! Complete your account setup.");
+          navigate(`/artist/setup-account?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
+          setIsLoading(false);
+          return;
         }
       } catch (preCheckErr) {
-        // Non-blocking: log and continue
-        console.warn("[ArtistLogin] application pre-check exception:", preCheckErr);
-      }
-
-      if (applicationCheck?.status === "approved_pending_setup") {
-        // Redirect to setup page with email
-        toast.success("Your application is approved! Complete your account setup.");
-        navigate(`/artist/setup-account?email=${encodeURIComponent(email)}`, { replace: true });
-        setIsLoading(false);
-        return;
+        console.warn("[ArtistLogin] Pre-check exception (non-blocking):", preCheckErr);
       }
 
       // Sign in
-      const { error: signInError } = await signIn(email, password);
+      const { error: signInError } = await signIn(normalizedEmail, password);
       if (signInError) {
         const errMsg = signInError.message.toLowerCase();
         console.error("[ArtistLogin] Sign-in error:", signInError.message);
@@ -90,94 +89,80 @@ const ArtistLogin = () => {
         return;
       }
 
-      // Finalize artist setup (ensures status is "active" and profile exists)
+      console.log("[ArtistLogin] Sign-in successful for:", normalizedEmail);
+
+      // Finalize artist setup (ensures role + profile exist)
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData?.session?.access_token;
         if (accessToken) {
-          await supabase.functions.invoke("finalize-artist-setup", {
+          console.log("[ArtistLogin] Calling finalize-artist-setup...");
+          const { data: finalizeResult, error: finalizeErr } = await supabase.functions.invoke("finalize-artist-setup", {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
+          if (finalizeErr) {
+            console.warn("[ArtistLogin] finalize-artist-setup error:", finalizeErr);
+          } else {
+            console.log("[ArtistLogin] finalize-artist-setup result:", finalizeResult);
+          }
         }
-        // Refresh role in AuthContext so ProtectedRoute sees "artist"
-        await refreshRole();
       } catch (finalizeErr) {
-        console.warn("[ArtistLogin] finalize-artist-setup warning:", finalizeErr);
-        // Non-blocking - continue with login
+        console.warn("[ArtistLogin] finalize-artist-setup exception:", finalizeErr);
       }
 
-      // Check artist application status (non-blocking - if this fails, still try to navigate)
-      let application: { status: string } | null = null;
-      try {
-        const { data, error: appError } = await supabase
-          .from("artist_applications")
-          .select("status")
-          .eq("contact_email", email)
-          .maybeSingle();
+      // Refresh role so ProtectedRoute sees "artist"
+      const newRole = await refreshRole();
+      console.log("[ArtistLogin] Role after refresh:", newRole);
 
-        if (appError) {
-          console.warn("[ArtistLogin] Application lookup warning:", appError);
-          // Don't block - user is authenticated, let AuthContext/ProtectedRoute handle routing
-          toast.success("Welcome back!");
-          navigate("/artist/dashboard", { replace: true });
-          return;
-        }
-        application = data;
-      } catch (lookupErr) {
-        console.warn("[ArtistLogin] Application lookup exception:", lookupErr);
-        // Don't block - user is authenticated
-        toast.success("Welcome back!");
+      // If role is artist, go straight to dashboard — ArtistProtectedRoute handles the rest
+      if (newRole === "artist") {
+        toast.success("Welcome back, artist!");
         navigate("/artist/dashboard", { replace: true });
         return;
       }
 
-      // Route based on status
+      // If role is not artist, check if there's an application
+      console.log("[ArtistLogin] Role is not 'artist' (got:", newRole, "). Checking application...");
+
+      const { data: appRows, error: appError } = await supabase
+        .from("artist_applications")
+        .select("status")
+        .ilike("contact_email", normalizedEmail)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      const application = appRows?.[0] ?? null;
+      console.log("[ArtistLogin] Application lookup:", { application, error: appError, queriedEmail: normalizedEmail, rowCount: appRows?.length ?? 0 });
+
       if (!application) {
-        // No application found - they need to apply first
+        // Authenticated but no artist role AND no application — show helpful screen
         setApplicationStatus("no_application");
-        try {
-          await supabase.auth.signOut();
-        } catch (err) {
-          console.error("[ArtistLogin] signOut failed:", err);
-        }
+        setDebugInfo(`Queried email: ${normalizedEmail} | Role: ${newRole ?? "none"} | Application rows: 0`);
         setIsLoading(false);
         return;
       }
 
+      // Route based on application status
       switch (application.status) {
         case "active":
         case "approved":
-          toast.success("Welcome back, artist!");
+          // They have an application but role wasn't artist — try navigating anyway
+          toast.success("Welcome back!");
           navigate("/artist/dashboard", { replace: true });
           break;
         case "approved_pending_setup":
           toast.success("Complete your account setup to get started.");
-          navigate(`/artist/setup-account?email=${encodeURIComponent(email)}`, { replace: true });
+          navigate(`/artist/setup-account?email=${encodeURIComponent(normalizedEmail)}`, { replace: true });
           break;
         case "pending":
           setApplicationStatus("pending");
-          try {
-            await supabase.auth.signOut();
-          } catch (err) {
-            console.error("[ArtistLogin] signOut failed:", err);
-          }
           break;
         case "rejected":
         case "not_approved":
           setApplicationStatus("not_approved");
-          try {
-            await supabase.auth.signOut();
-          } catch (err) {
-            console.error("[ArtistLogin] signOut failed:", err);
-          }
           break;
         default:
           setApplicationStatus("pending");
-          try {
-            await supabase.auth.signOut();
-          } catch (err) {
-            console.error("[ArtistLogin] signOut failed:", err);
-          }
       }
     } catch (error) {
       const anyErr = error as any;
@@ -186,8 +171,6 @@ const ArtistLogin = () => {
       const benign =
         name === "AbortError" ||
         message.includes("signal is aborted") ||
-        message.includes("request cancelled") ||
-        message.includes("request canceled") ||
         message.includes("cancelled") ||
         message.includes("canceled");
 
@@ -252,27 +235,49 @@ const ArtistLogin = () => {
                 <p className="text-muted-foreground text-xs mt-1">
                   Unfortunately, your application was not approved at this time.
                 </p>
-              </div>
-            </div>
-          )}
-
-          {applicationStatus === "no_application" && (
-            <div className="mb-6 p-4 bg-muted/30 border border-border/30 rounded-lg flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-foreground font-semibold text-sm">No Application Found</p>
-                <p className="text-muted-foreground text-xs mt-1">
-                  We couldn't find an artist application with this email. Please apply first.
-                </p>
                 <Button
                   variant="link"
                   size="sm"
                   className="p-0 h-auto mt-2 text-primary"
                   onClick={() => navigate("/artist/apply")}
                 >
-                  Apply to become an artist →
+                  Re-apply →
                 </Button>
               </div>
+            </div>
+          )}
+
+          {applicationStatus === "no_application" && (
+            <div className="mb-6 p-4 bg-muted/30 border border-border/30 rounded-lg">
+              <div className="flex items-start gap-3">
+                <FileText className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-foreground font-semibold text-sm">No Application Found</p>
+                  <p className="text-muted-foreground text-xs mt-1">
+                    We couldn't find an artist application for this email. You're signed in, but you need an approved application to access the artist dashboard.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-2">
+                <Button
+                  className="w-full"
+                  onClick={() => navigate(`/artist/apply?email=${encodeURIComponent(normalizeEmail(email))}`)}
+                >
+                  Start Application with This Email
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => window.location.href = "mailto:support@musicexclusive.co"}
+                >
+                  Contact Support
+                </Button>
+              </div>
+              {debugInfo && (
+                <p className="text-[10px] text-muted-foreground/50 mt-3 font-mono break-all">
+                  Debug: {debugInfo}
+                </p>
+              )}
             </div>
           )}
 
