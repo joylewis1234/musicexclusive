@@ -156,6 +156,7 @@ export type Database = {
           agrees_terms: boolean
           apple_music_url: string | null
           artist_name: string
+          auth_user_id: string | null
           contact_email: string
           country_city: string | null
           created_at: string
@@ -177,6 +178,7 @@ export type Database = {
           agrees_terms?: boolean
           apple_music_url?: string | null
           artist_name: string
+          auth_user_id?: string | null
           contact_email: string
           country_city?: string | null
           created_at?: string
@@ -198,6 +200,7 @@ export type Database = {
           agrees_terms?: boolean
           apple_music_url?: string | null
           artist_name?: string
+          auth_user_id?: string | null
           contact_email?: string
           country_city?: string | null
           created_at?: string
