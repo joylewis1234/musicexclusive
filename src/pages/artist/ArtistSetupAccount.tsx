@@ -102,20 +102,27 @@ const ArtistSetupAccount = () => {
 
       if (error || !data?.success) {
         console.warn("[ArtistSetupAccount] lookup failed:", error || data);
-        setLookupError("We couldn't verify that email right now. Please try again.");
+        setLookupError("We couldn't verify that email right now. Please try again shortly.");
         return;
       }
 
       if (!data.found) {
-        setLookupError("We couldn't find an approved application for that email.");
+        setLookupError("We couldn't find an application for that email. Please check the email address and try again.");
         return;
       }
 
+      const status = String(data.status);
       setEmail(String(data.email ?? trimmed));
-      setApplicationStatus(String(data.status));
+      setApplicationStatus(status);
 
-      if (data.status === "approved" || data.status === "approved_pending_setup") {
+      if (status === "approved" || status === "approved_pending_setup") {
         toast.success("Approved application found. Create your password to continue.");
+      } else if (status === "pending") {
+        setLookupError("Your application is still under review. You'll receive an email once it's approved.");
+      } else if (status === "rejected") {
+        setLookupError("Your application was not approved. You can re-apply anytime at the Artist Apply page.");
+      } else if (status === "active") {
+        setLookupError("Your account is already set up. Please log in instead.");
       }
     } catch (err) {
       console.error("[ArtistSetupAccount] lookup error:", err);
