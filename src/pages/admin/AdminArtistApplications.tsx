@@ -80,6 +80,7 @@ interface ArtistApplication {
   hook_preview_url: string | null;
   owns_rights: boolean;
   not_released_publicly: boolean;
+  auth_user_id: string | null;
 }
 
 const AdminArtistApplications = () => {
@@ -587,6 +588,8 @@ const AdminArtistApplications = () => {
                     <TableHead>Artist</TableHead>
                     <TableHead>Email</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>App ID</TableHead>
+                    <TableHead>Auth User</TableHead>
                     <TableHead>Submitted</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
@@ -595,9 +598,19 @@ const AdminArtistApplications = () => {
                   {applications.map((app) => (
                     <TableRow key={app.id}>
                       <TableCell className="font-medium">{app.artist_name}</TableCell>
-                      <TableCell className="text-muted-foreground">{app.contact_email}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs">{app.contact_email}</TableCell>
                       <TableCell>{getStatusBadge(app.status)}</TableCell>
-                      <TableCell className="text-muted-foreground">
+                      <TableCell className="text-[10px] text-muted-foreground/60 font-mono max-w-[80px] truncate" title={app.id}>
+                        {app.id.slice(0, 8)}…
+                      </TableCell>
+                      <TableCell className="text-[10px] font-mono max-w-[80px] truncate" title={app.auth_user_id || "not linked"}>
+                        {app.auth_user_id ? (
+                          <span className="text-green-500">{app.auth_user_id.slice(0, 8)}…</span>
+                        ) : (
+                          <span className="text-muted-foreground/40">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-xs">
                         {format(new Date(app.created_at), "MMM d, yyyy")}
                       </TableCell>
                       <TableCell className="text-right">
