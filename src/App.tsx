@@ -77,6 +77,7 @@ import AdminPayouts from "./pages/admin/AdminPayouts";
 import AdminArtistApplications from "./pages/admin/AdminArtistApplications";
 import ArtistApplicationAction from "./pages/admin/ArtistApplicationAction";
 import AdminInvitations from "./pages/admin/AdminInvitations";
+import AdminHealthCheck from "./pages/admin/AdminHealthCheck";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -236,6 +237,11 @@ const App = () => (
                 <Route path="/admin/invitations" element={
                   <AdminProtectedRoute>
                     <AdminInvitations />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/health-check" element={
+                  <AdminProtectedRoute>
+                    <AdminHealthCheck />
                   </AdminProtectedRoute>
                 } />
                 {/* Token-based actions from email links */}
