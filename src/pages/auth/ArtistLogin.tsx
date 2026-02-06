@@ -16,7 +16,7 @@ const loginSchema = z.object({
 
 const ArtistLogin = () => {
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const { signIn, refreshRole } = useAuth();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -90,6 +90,8 @@ const ArtistLogin = () => {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
         }
+        // Refresh role in AuthContext so ProtectedRoute sees "artist"
+        await refreshRole();
       } catch (finalizeErr) {
         console.warn("[ArtistLogin] finalize-artist-setup warning:", finalizeErr);
         // Non-blocking - continue with login
