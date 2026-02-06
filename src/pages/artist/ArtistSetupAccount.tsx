@@ -329,28 +329,19 @@ const ArtistSetupAccount = () => {
 
       console.log("[ArtistSetupAccount] ✅ Finalize succeeded — role, profile, and link all confirmed:", finalizeData);
 
-      // Step 4: Refresh role in AuthContext so ProtectedRoute sees "artist"
-      console.log("[ArtistSetupAccount] Step 5: Refreshing role in AuthContext...");
-      const newRole = await refreshRole();
-      console.log("[ArtistSetupAccount] Role after refresh:", newRole);
-
-      if (!newRole) {
-        console.warn("[ArtistSetupAccount] Role is still null after refresh, retrying once...");
-        // Small delay to allow DB propagation, then retry
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const retryRole = await refreshRole();
-        console.log("[ArtistSetupAccount] Role after retry:", retryRole);
-        
-        if (!retryRole) {
-          setSetupError("Account created but role setup is taking longer than expected. Please go to Artist Login.");
-          setIsSubmitting(false);
-          return;
-        }
-      }
-
-      // Step 5: Navigate to dashboard
-      console.log("[ArtistSetupAccount] Step 6: Navigating to /artist/dashboard");
+      // Step 4: Navigate to dashboard immediately.
+      // The edge function is the SOLE AUTHORITY — it confirmed role + profile + link.
+      // We fire refreshRole in the background so AuthContext catches up, but we do NOT
+      // block navigation on it. The onAuthStateChange listener and the dashboard's own
+      // auth check (getAuthedUserOrFail) will pick up the role independently.
+      console.log("[ArtistSetupAccount] Step 5: Navigating to /artist/dashboard (edge function confirmed success)");
       toast.success("Account setup complete! Welcome aboard.");
+
+      // Fire-and-forget: refresh role in AuthContext so route guards update
+      refreshRole().catch((err) => {
+        console.warn("[ArtistSetupAccount] Background refreshRole failed (non-blocking):", err);
+      });
+
       navigate("/artist/dashboard", { replace: true });
     } catch (error) {
       console.error("[ArtistSetupAccount] Unexpected setup error:", error);
