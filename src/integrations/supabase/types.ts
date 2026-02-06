@@ -155,6 +155,9 @@ export type Database = {
         Row: {
           agrees_terms: boolean
           apple_music_url: string | null
+          approved_application_id: string | null
+          approved_at: string | null
+          approved_by: string | null
           artist_name: string
           auth_user_id: string | null
           contact_email: string
@@ -177,6 +180,9 @@ export type Database = {
         Insert: {
           agrees_terms?: boolean
           apple_music_url?: string | null
+          approved_application_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           artist_name: string
           auth_user_id?: string | null
           contact_email: string
@@ -199,6 +205,9 @@ export type Database = {
         Update: {
           agrees_terms?: boolean
           apple_music_url?: string | null
+          approved_application_id?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
           artist_name?: string
           auth_user_id?: string | null
           contact_email?: string

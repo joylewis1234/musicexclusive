@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
 import { Resend } from "npm:resend@2.0.0";
 
-const VERSION = "v3.0.0";
+const VERSION = "v4.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -14,15 +14,12 @@ const corsHeaders = {
 const DEFAULT_BASE_URL = "https://musicexclusive.lovable.app";
 
 const handler = async (req: Request): Promise<Response> => {
-  // CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 204, headers: corsHeaders });
   }
 
-  // ─── Health check (no auth required) ──────────────────────────
   const url = new URL(req.url);
   if (url.pathname.endsWith("/health") || req.method === "GET") {
-    console.log(`[APPROVE-ARTIST ${VERSION}] Health check hit`);
     return new Response(
       JSON.stringify({ ok: true, version: VERSION, timestamp: new Date().toISOString() }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -53,25 +50,22 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { data: userData, error: userError } = await userClient.auth.getUser();
     if (userError || !userData?.user) {
-      console.error(`[APPROVE-ARTIST ${VERSION}] Auth failed:`, userError?.message);
       return new Response(
         JSON.stringify({ success: false, error: "Invalid or expired token", _version: VERSION }),
         { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    const userId = userData.user.id;
+    const adminUserId = userData.user.id;
 
-    // Check admin role
     const { data: roleData, error: roleError } = await supabase
       .from("user_roles")
       .select("role")
-      .eq("user_id", userId)
+      .eq("user_id", adminUserId)
       .eq("role", "admin")
       .maybeSingle();
 
     if (roleError || !roleData) {
-      console.error(`[APPROVE-ARTIST ${VERSION}] Not admin:`, roleError?.message);
       return new Response(
         JSON.stringify({ success: false, error: "Forbidden - Admin access required", _version: VERSION }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
@@ -100,19 +94,21 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (fetchError || !application) {
-      console.error(`[APPROVE-ARTIST ${VERSION}] Not found:`, fetchError?.message);
       return new Response(
         JSON.stringify({ success: false, error: "Application not found", _version: VERSION }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // ─── Step 4: PRIMARY — Update DB status ─────────────────────
+    // ─── Step 4: Update DB status with approval metadata ────────
     if (!isResend) {
       const { error: updateError } = await supabase
         .from("artist_applications")
         .update({
           status: "approved_pending_setup",
+          approved_at: new Date().toISOString(),
+          approved_by: adminUserId,
+          approved_application_id: applicationId,
           updated_at: new Date().toISOString(),
         })
         .eq("id", applicationId);
@@ -125,13 +121,12 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      console.log(`[APPROVE-ARTIST ${VERSION}] ✅ DB status updated to approved_pending_setup`);
+      console.log(`[APPROVE-ARTIST ${VERSION}] ✅ DB status updated to approved_pending_setup with metadata`);
     }
 
-    // ─── Approval is now complete. Email below is best-effort. ──
+    // ─── Email is best-effort below ─────────────────────────────
 
     if (!application.contact_email || !application.contact_email.includes("@")) {
-      console.warn(`[APPROVE-ARTIST ${VERSION}] No valid email — skipping`);
       return new Response(
         JSON.stringify({
           success: true,
@@ -145,7 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // ─── Step 5: SECONDARY — Send email (non-blocking) ──────────
+    // ─── Step 5: Send email (non-blocking) ──────────────────────
     const setupLink = `${DEFAULT_BASE_URL}/artist/signup?application_id=${applicationId}&email=${encodeURIComponent(application.contact_email)}`;
     let emailSent = false;
     let emailError: string | null = null;
@@ -192,7 +187,6 @@ const handler = async (req: Request): Promise<Response> => {
       console.error(`[APPROVE-ARTIST ${VERSION}] Email log insert failed:`, logErr);
     }
 
-    // ─── Always return success ──────────────────────────────────
     return new Response(
       JSON.stringify({
         success: true,
@@ -203,6 +197,8 @@ const handler = async (req: Request): Promise<Response> => {
         emailSent,
         emailError,
         resendId,
+        approved_at: new Date().toISOString(),
+        approved_by: adminUserId,
         _version: VERSION,
       }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
