@@ -91,7 +91,7 @@ const ArtistLogin = () => {
 
       console.log("[ArtistLogin] Sign-in successful for:", normalizedEmail);
 
-      // Finalize artist setup (ensures role + profile exist)
+      // Finalize artist setup (ensures role + profile exist + links auth_user_id)
       try {
         const { data: sessionData } = await supabase.auth.getSession();
         const accessToken = sessionData?.session?.access_token;
@@ -122,22 +122,47 @@ const ArtistLogin = () => {
       }
 
       // If role is not artist, check if there's an application
-      console.log("[ArtistLogin] Role is not 'artist' (got:", newRole, "). Checking application...");
+      // Priority 1: lookup by auth_user_id (strongest link)
+      console.log("[ArtistLogin] Role is not 'artist' (got:", newRole, "). Checking application by auth_user_id then email...");
 
-      const { data: appRows, error: appError } = await supabase
-        .from("artist_applications")
-        .select("status")
-        .ilike("contact_email", normalizedEmail)
-        .order("created_at", { ascending: false })
-        .limit(1);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      let application: { status: string } | null = null;
+      let appRowCount = 0;
 
-      const application = appRows?.[0] ?? null;
-      console.log("[ArtistLogin] Application lookup:", { application, error: appError, queriedEmail: normalizedEmail, rowCount: appRows?.length ?? 0 });
+      // Try auth_user_id lookup first via edge function
+      if (currentUser?.id) {
+        try {
+          const { data: lookupData } = await supabase.functions.invoke("lookup-artist-application", {
+            body: { auth_user_id: currentUser.id },
+          });
+          if (lookupData?.found) {
+            application = { status: lookupData.status };
+            appRowCount = 1;
+            console.log("[ArtistLogin] Found application by auth_user_id:", lookupData);
+          }
+        } catch (lookupErr) {
+          console.warn("[ArtistLogin] auth_user_id lookup failed:", lookupErr);
+        }
+      }
+
+      // Fallback: email lookup
+      if (!application) {
+        const { data: appRows, error: appError } = await supabase
+          .from("artist_applications")
+          .select("status")
+          .ilike("contact_email", normalizedEmail)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        application = appRows?.[0] ?? null;
+        appRowCount = appRows?.length ?? 0;
+        console.log("[ArtistLogin] Email fallback lookup:", { application, error: appError, queriedEmail: normalizedEmail, rowCount: appRowCount });
+      }
 
       if (!application) {
         // Authenticated but no artist role AND no application — show helpful screen
         setApplicationStatus("no_application");
-        setDebugInfo(`Queried email: ${normalizedEmail} | Role: ${newRole ?? "none"} | Application rows: 0`);
+        setDebugInfo(`Queried email: ${normalizedEmail} | Role: ${newRole ?? "none"} | Application rows: ${appRowCount} | User ID: ${currentUser?.id ?? "unknown"}`);
         setIsLoading(false);
         return;
       }
