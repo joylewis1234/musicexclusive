@@ -200,14 +200,20 @@ const AdminArtistApplications = () => {
     try {
       const res = await fetch(getEdgeFunctionUrl("approve-artist"), { method: "GET" });
       const data = await res.json();
-      toast.info("Approve Function Health", {
-        description: `Status: ${res.status} — ${JSON.stringify(data)}`,
-        duration: 8000,
-      });
       console.log("[TEST] approve-artist health:", res.status, data);
+
+      if (res.ok && data.ok) {
+        toast.success(`Approve function is live (v${data.version || "3.0.0"}). Ready to approve artists.`, {
+          duration: 5000,
+        });
+      } else {
+        toast.error(`Approve function failed: ${res.status} — ${data.error || res.statusText}`, {
+          duration: 8000,
+        });
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      toast.error("Approve Function Unreachable", { description: msg, duration: 8000 });
+      toast.error(`Approve function unreachable: ${msg}`, { duration: 8000 });
       console.error("[TEST] approve-artist health failed:", err);
     }
   };
