@@ -29,7 +29,10 @@ export interface CoverArtMeta {
 
 export interface ProcessedCoverArt {
   file: File;
-  previewDataUrl: string;      // base64 data-url safe for localStorage
+  /** blob: object URL – fast, no memory spike. Must be revoked when done. */
+  objectUrl: string;
+  /** Tiny base64 data-url safe for localStorage. null if generation failed. */
+  localStoragePreview: string | null;
   meta: CoverArtMeta;
 }
 
@@ -67,14 +70,29 @@ function readImageDimensions(file: File): Promise<{ width: number; height: numbe
   });
 }
 
-/** Convert a File/Blob to a base64 data-url string (safe for localStorage). */
-function fileToDataUrl(file: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error("Could not read file for preview."));
-    reader.readAsDataURL(file);
-  });
+/**
+ * Best-effort: create a tiny base64 data-url for localStorage persistence.
+ * Returns null if it fails (non-critical – the form still works without it).
+ */
+async function createTinyPreview(source: File): Promise<string | null> {
+  try {
+    const previewBlob = await imageCompression(source, {
+      maxSizeMB: 0.04,
+      maxWidthOrHeight: 180,
+      useWebWorker: true,
+      fileType: "image/jpeg" as any,
+      initialQuality: 0.5,
+    });
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(previewBlob);
+    });
+  } catch (err) {
+    console.warn("[processCoverArt] Tiny preview generation failed (non-critical):", err);
+    return null;
+  }
 }
 
 /**
@@ -83,10 +101,15 @@ function fileToDataUrl(file: Blob): Promise<string> {
  *  2. Resize to max 1600×1600 (preserve aspect).
  *  3. Compress to WEBP (or JPEG fallback).
  *  4. Iterate quality down if still > 1.5 MB.
- *  5. Return processed File + base64 preview + metadata.
+ *  5. Return processed File + object URL preview + metadata.
+ *
+ * The caller MUST call URL.revokeObjectURL(result.objectUrl) when done.
  */
 export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
   // --- Validate ---
+  if (!file) {
+    throw new Error("No file provided.");
+  }
   if (!isValidCoverType(file)) {
     throw new Error("Invalid image format. Please upload a JPG, PNG, or WEBP file.");
   }
@@ -96,14 +119,17 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
 
   // --- Choose output type ---
   // Prefer WEBP; older Safari may not encode to WEBP via canvas so fall back to JPEG.
-  const supportsWebp = typeof OffscreenCanvas !== "undefined" || (() => {
-    try {
+  let supportsWebp = false;
+  try {
+    if (typeof OffscreenCanvas !== "undefined") {
+      supportsWebp = true;
+    } else {
       const c = document.createElement("canvas");
-      return c.toDataURL("image/webp").startsWith("data:image/webp");
-    } catch {
-      return false;
+      supportsWebp = c.toDataURL("image/webp").startsWith("data:image/webp");
     }
-  })();
+  } catch {
+    supportsWebp = false;
+  }
   const outputType = supportsWebp ? "image/webp" : "image/jpeg";
 
   // --- Compress iteratively ---
@@ -133,8 +159,30 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
     quality -= 0.1;
   }
 
+  // If iterative compression failed completely, try a last-resort fallback
   if (!compressed) {
-    throw new Error("Failed to compress cover art. Please try a different image.");
+    try {
+      // Attempt simplest possible compression
+      const blob = await imageCompression(file, {
+        maxSizeMB: 2,
+        maxWidthOrHeight: 1200,
+        useWebWorker: false, // avoid web worker issues
+        initialQuality: 0.6,
+      });
+      compressed = new File([blob], `cover-${Date.now()}.jpg`, { type: "image/jpeg" });
+    } catch (fallbackErr) {
+      console.error("[processCoverArt] Last-resort compression also failed:", fallbackErr);
+    }
+  }
+
+  // Ultimate fallback: use original if small enough
+  if (!compressed) {
+    if (file.size <= 10 * 1024 * 1024) {
+      console.warn("[processCoverArt] Using original file as compression fallback");
+      compressed = file;
+    } else {
+      throw new Error("Failed to compress cover art. Please try a different image.");
+    }
   }
 
   if (compressed.size > COVER_TARGET_SIZE_MB * 1024 * 1024) {
@@ -142,7 +190,7 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
     console.warn("[processCoverArt] Could not compress below target; final size:", compressed.size);
   }
 
-  // --- Read dimensions ---
+  // --- Read dimensions (non-critical) ---
   let dims = { width: 0, height: 0 };
   try {
     dims = await readImageDimensions(compressed);
@@ -150,25 +198,17 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
     // non-critical
   }
 
-  // --- Generate preview data-url ---
-  // Create a tiny preview (max ~200px) for localStorage to keep storage small.
-  let previewDataUrl: string;
-  try {
-    const previewBlob = await imageCompression(compressed, {
-      maxSizeMB: 0.05,
-      maxWidthOrHeight: 200,
-      useWebWorker: true,
-      fileType: "image/jpeg" as any,
-      initialQuality: 0.6,
-    });
-    previewDataUrl = await fileToDataUrl(previewBlob);
-  } catch {
-    previewDataUrl = await fileToDataUrl(compressed);
-  }
+  // --- Generate previews ---
+  // Primary preview: blob URL (fast, no memory spike)
+  const objectUrl = URL.createObjectURL(compressed);
+
+  // Secondary preview: tiny base64 for localStorage (best-effort)
+  const localStoragePreview = await createTinyPreview(compressed);
 
   return {
     file: compressed,
-    previewDataUrl,
+    objectUrl,
+    localStoragePreview,
     meta: {
       name: file.name,
       processedSize: compressed.size,
@@ -199,6 +239,10 @@ const AUDIO_VALID_EXTS = ["mp3", "wav"];
  * Returns AudioMeta on success; throws a user-friendly Error on failure.
  */
 export function validateAudio(file: File): AudioMeta {
+  if (!file) {
+    throw new Error("No audio file provided.");
+  }
+
   const ext = extOf(file.name);
   const mime = (file.type || "").toLowerCase();
   const isValid = AUDIO_VALID_EXTS.includes(ext) || AUDIO_VALID_TYPES.includes(mime);
