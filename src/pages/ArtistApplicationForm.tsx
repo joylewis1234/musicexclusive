@@ -64,11 +64,16 @@ const ArtistApplicationForm = () => {
       // (SELECT often fails under RLS for logged-out users on production).
       const applicationId = crypto.randomUUID()
 
+      // Normalize email before saving
+      const normalizedEmail = (contactEmail || "test@example.com").trim().toLowerCase()
+
+      console.log("[ArtistApplicationForm] Submitting application:", { applicationId, email: normalizedEmail })
+
       // Insert application with defaults for missing fields (TESTING MODE)
       const { error } = await supabase.from("artist_applications").insert({
         id: applicationId,
         artist_name: artistName || "Test Artist",
-        contact_email: contactEmail || "test@example.com",
+        contact_email: normalizedEmail,
         country_city: countryCity || null,
         spotify_url: musicUrl || null,
         apple_music_url: null,
@@ -85,7 +90,12 @@ const ArtistApplicationForm = () => {
         status: "pending",
       })
 
-      if (error) throw error
+      if (error) {
+        console.error("[ArtistApplicationForm] Insert error:", error)
+        throw error
+      }
+
+      console.log("[ArtistApplicationForm] ✅ Application created successfully:", applicationId)
 
       // Send notification email to support@musicexclusive.co
       try {
@@ -101,7 +111,7 @@ const ArtistApplicationForm = () => {
       }
 
       navigate("/artist/application-submitted", {
-        state: { artistName: artistName || "Artist" },
+        state: { artistName: artistName || "Artist", applicationId },
       })
     } catch (error: unknown) {
       console.error("Application error:", error)
