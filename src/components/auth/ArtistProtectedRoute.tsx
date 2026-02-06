@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { TimeoutSpinner } from "@/components/ui/TimeoutSpinner";
 
 interface ArtistProtectedRouteProps {
   children: ReactNode;
@@ -124,9 +124,11 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
   // Show loading while checking auth and status
   if (authLoading || statusLoading || (user && !role)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <TimeoutSpinner
+        page="ArtistProtectedRoute"
+        loadingMessage="Verifying artist access…"
+        errorMessage="Artist verification timed out. Please check your connection and try again."
+      />
     );
   }
 

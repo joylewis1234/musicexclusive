@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth, AppRole } from "@/contexts/AuthContext";
-import { Loader2 } from "lucide-react";
+import { TimeoutSpinner } from "@/components/ui/TimeoutSpinner";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -16,9 +16,11 @@ export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) =
   // Treat that state as loading to avoid incorrect redirects.
   if (isLoading || (user && !role)) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <TimeoutSpinner
+        page={`ProtectedRoute(${allowedRole})`}
+        loadingMessage="Verifying access…"
+        errorMessage="Verification timed out. Please check your connection and try again."
+      />
     );
   }
 
