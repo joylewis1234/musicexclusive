@@ -244,18 +244,20 @@ const handler = async (req: Request): Promise<Response> => {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         }
       );
-    } else {
-      // Deny action
-      await supabase
-        .from("artist_applications")
-        .update({
-          status: "rejected",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", application.id);
+    } else if (actionType === "deny" || actionType === "resend_denial") {
+      // Update status only for initial deny (not resend)
+      if (actionType === "deny") {
+        await supabase
+          .from("artist_applications")
+          .update({
+            status: "rejected",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", application.id);
+      }
 
-      // Send denial email to artist
-      const reapplyLink = `${baseUrl}/artist/apply`;
+      // Send denial email to artist (non-blocking)
+      const reapplyLink = `${DEFAULT_BASE_URL}/artist/apply`;
 
       const denialEmailHtml = `
 <!DOCTYPE html>
@@ -334,13 +336,43 @@ const handler = async (req: Request): Promise<Response> => {
 </html>
       `;
 
-      await resend.emails.send({
-        from: "Music Exclusive <noreply@themusicisexclusive.com>",
-        reply_to: "support@musicexclusive.co",
-        to: [application.contact_email],
-        subject: "Music Exclusive Artist Application Update",
-        html: denialEmailHtml,
-      });
+      let emailSent = true;
+      let emailError: string | null = null;
+
+      try {
+        console.log("Attempting to send denial email to:", application.contact_email);
+        const emailResult = await resend.emails.send({
+          from: "Music Exclusive <noreply@themusicisexclusive.com>",
+          reply_to: "support@musicexclusive.co",
+          to: [application.contact_email],
+          subject: "Music Exclusive Artist Application Update",
+          html: denialEmailHtml,
+        });
+        console.log("Denial email result:", JSON.stringify(emailResult));
+
+        // Log success
+        await supabase.from("email_logs").insert({
+          email_type: "artist_denied",
+          recipient_email: application.contact_email,
+          application_id: application.id,
+          status: "sent",
+          sent_at: new Date().toISOString(),
+          resend_id: emailResult?.data?.id || null,
+        });
+      } catch (emailErr) {
+        emailSent = false;
+        emailError = emailErr instanceof Error ? emailErr.message : String(emailErr);
+        console.error("Denial email failed (non-blocking):", emailError);
+
+        // Log failure
+        await supabase.from("email_logs").insert({
+          email_type: "artist_denied",
+          recipient_email: application.contact_email,
+          application_id: application.id,
+          status: "failed",
+          error_message: emailError,
+        });
+      }
 
       return new Response(
         JSON.stringify({
@@ -348,6 +380,8 @@ const handler = async (req: Request): Promise<Response> => {
           action: "denied",
           artistName: application.artist_name,
           artistEmail: application.contact_email,
+          emailSent,
+          emailError,
         }),
         {
           status: 200,
