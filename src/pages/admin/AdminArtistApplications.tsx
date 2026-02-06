@@ -218,6 +218,15 @@ const AdminArtistApplications = () => {
     }
   };
 
+  const updateApplicationLocally = (id: string, newStatus: string) => {
+    setApplications(prev =>
+      prev.map(a => (a.id === id ? { ...a, status: newStatus } : a))
+    );
+    if (selectedApplication?.id === id) {
+      setSelectedApplication(prev => prev ? { ...prev, status: newStatus } : prev);
+    }
+  };
+
   const handleApprove = async (application: ArtistApplication) => {
     setProcessingId(application.id);
     try {
@@ -236,12 +245,20 @@ const AdminArtistApplications = () => {
       }
 
       if (data.success) {
-        toast.success(`${application.artist_name} approved successfully!`, {
-          description: data.emailSent
-            ? `Approval email sent to ${application.contact_email}`
-            : `Approved, but email failed: ${data.emailError || "Unknown"}. Use Resend button.`,
-        });
-        fetchApplications();
+        // Optimistic local update — no refetch needed
+        updateApplicationLocally(application.id, "approved_pending_setup");
+
+        if (data.emailSent) {
+          toast.success("Artist approved and email sent.", {
+            description: `Approval email delivered to ${application.contact_email}`,
+          });
+        } else {
+          console.error("[APPROVE] Email failed:", data.emailError);
+          toast.warning("Artist approved. Email failed to send.", {
+            description: "Use the Resend Approval Email button to retry.",
+            duration: 8000,
+          });
+        }
         setIsDetailOpen(false);
       } else {
         throw new Error(data.error || "Unknown approval error");
@@ -557,6 +574,21 @@ const AdminArtistApplications = () => {
                                 <XCircle className="w-4 h-4 mr-1" /> Deny
                               </Button>
                             </>
+                          )}
+                          {(app.status === "approved_pending_setup" || app.status === "approved") && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResendApprovalEmail(app)}
+                              disabled={resendingId === app.id}
+                            >
+                              {resendingId === app.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin mr-1" />
+                              ) : (
+                                <RefreshCw className="w-4 h-4 mr-1" />
+                              )}
+                              Resend Email
+                            </Button>
                           )}
                           {testCleanupMode && (
                             <Button
