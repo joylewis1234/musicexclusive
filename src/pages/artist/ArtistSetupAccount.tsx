@@ -46,6 +46,10 @@ const ArtistSetupAccount = () => {
 
   // Get email from URL params or check for pending setup applications
   useEffect(() => {
+    // Environment debug logging
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+    console.log("[ArtistSetupAccount] Supabase env:", supabaseUrl.replace(/^(https?:\/\/[^.]+).*/, "$1.***"));
+
     const checkApplication = async () => {
       const applicationId = searchParams.get("application_id");
       const emailParam = searchParams.get("email");
@@ -76,13 +80,22 @@ const ArtistSetupAccount = () => {
           console.error("[ArtistSetupAccount] Edge function error:", error);
           // Network / deployment error — let user try manual lookup
           setApplicationStatus("no_email");
-          setLookupError("Could not reach verification service. Please enter your email below.");
+          setLookupError(`Verification service error: ${error.message || "Network error"}. Please enter your email below.`);
           setIsLoading(false);
           return;
         }
 
-        if (!data?.success || !data?.found) {
+        if (!data?.success) {
+          console.warn("[ArtistSetupAccount] Lookup failed:", data);
           setApplicationStatus("not_found");
+          setLookupError(data?.message || "No approved application found for this email.");
+          setIsLoading(false);
+          return;
+        }
+
+        if (!data?.found) {
+          setApplicationStatus("not_found");
+          setLookupError("No approved application record found for this identifier.");
           setIsLoading(false);
           return;
         }
@@ -214,9 +227,11 @@ const ArtistSetupAccount = () => {
 
       if (signUpError) {
         const msg = signUpError.message.toLowerCase();
+        const code = (signUpError as any)?.code || "unknown";
+        console.error("[ArtistSetupAccount] SignUp error:", { message: signUpError.message, code, status: (signUpError as any)?.status });
         
         if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("already exists")) {
-          console.log("[ArtistSetupAccount] User already exists — routing to login/reset");
+          console.log("[ArtistSetupAccount] User already exists — auth user found for this email");
           setSetupError("ALREADY_REGISTERED");
           setIsSubmitting(false);
           return;
@@ -229,8 +244,8 @@ const ArtistSetupAccount = () => {
           return;
         }
 
-        console.error("[ArtistSetupAccount] SignUp error:", signUpError);
-        setSetupError(signUpError.message);
+        // Show the exact error from auth for debugging
+        setSetupError(`AUTH_ERROR: ${signUpError.message} (code: ${code})`);
         setIsSubmitting(false);
         return;
       }
@@ -392,7 +407,57 @@ const ArtistSetupAccount = () => {
     );
   }
 
-  // Not approved - redirect
+  // Not found - no application record
+  if (applicationStatus === "not_found") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+          <div className="container max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Back</span>
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
+          <GlowCard className="max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-destructive" />
+            </div>
+            <h1 className="font-display text-xl font-bold text-foreground mb-3">
+              No Approved Application Found
+            </h1>
+            <p className="text-muted-foreground mb-2">
+              {lookupError || "We couldn't find an approved application matching this link."}
+            </p>
+            <p className="text-xs text-muted-foreground/70 mb-6">
+              If you've already applied, check your email for the correct link or contact support.
+            </p>
+            <div className="space-y-3">
+              <Button className="w-full" onClick={() => navigate("/artist/apply")}>
+                Apply as Artist
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => navigate("/artist/login")}>
+                Already have an account? Login
+              </Button>
+            </div>
+          </GlowCard>
+        </main>
+      </div>
+    );
+  }
+
+  // Not approved - pending/rejected
   if (applicationStatus === "pending" || applicationStatus === "not_approved" || applicationStatus === "rejected") {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -420,13 +485,15 @@ const ArtistSetupAccount = () => {
               <AlertCircle className="w-8 h-8 text-amber-500" />
             </div>
             <h1 className="font-display text-xl font-bold text-foreground mb-3">
-              Application Under Review
+              {applicationStatus === "rejected" ? "Application Not Approved" : "Application Under Review"}
             </h1>
             <p className="text-muted-foreground mb-6">
-              Your application hasn't been approved yet. Please check your application status.
+              {applicationStatus === "rejected"
+                ? "Your application was not approved this time. You can re-apply anytime."
+                : "Your application hasn't been approved yet. Please check your application status."}
             </p>
-            <Button onClick={() => navigate("/artist/application-status")}>
-              Check Application Status
+            <Button onClick={() => applicationStatus === "rejected" ? navigate("/artist/apply") : navigate("/artist/application-status")}>
+              {applicationStatus === "rejected" ? "Re-Apply" : "Check Application Status"}
             </Button>
           </GlowCard>
         </main>
