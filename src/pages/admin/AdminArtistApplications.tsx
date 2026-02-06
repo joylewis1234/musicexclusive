@@ -183,34 +183,68 @@ const AdminArtistApplications = () => {
     }
   };
 
+  const getEdgeFunctionUrl = (fnName: string) =>
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`;
+
+  const getAuthHeaders = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) throw new Error("Not logged in — please sign in again.");
+    return {
+      Authorization: `Bearer ${session.access_token}`,
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      "Content-Type": "application/json",
+    };
+  };
+
+  const handleTestApproveFunction = async () => {
+    try {
+      const res = await fetch(getEdgeFunctionUrl("approve-artist"), { method: "GET" });
+      const data = await res.json();
+      toast.info("Approve Function Health", {
+        description: `Status: ${res.status} — ${JSON.stringify(data)}`,
+        duration: 8000,
+      });
+      console.log("[TEST] approve-artist health:", res.status, data);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error("Approve Function Unreachable", { description: msg, duration: 8000 });
+      console.error("[TEST] approve-artist health failed:", err);
+    }
+  };
+
   const handleApprove = async (application: ArtistApplication) => {
     setProcessingId(application.id);
     try {
-      const { data, error } = await supabase.functions.invoke("approve-artist", {
-        body: {
-          applicationId: application.id,
-          baseUrl: window.location.origin,
-        },
+      const headers = await getAuthHeaders();
+      const res = await fetch(getEdgeFunctionUrl("approve-artist"), {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ applicationId: application.id }),
       });
 
-      if (error) throw error;
+      const data = await res.json();
+      console.log("[APPROVE] Response:", res.status, data);
+
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${data.error || res.statusText}`);
+      }
 
       if (data.success) {
-        // Approval succeeded (DB updated) — always show success
         toast.success(`${application.artist_name} approved successfully!`, {
           description: data.emailSent
             ? `Approval email sent to ${application.contact_email}`
-            : `Approved, but email failed: ${data.emailError || "Unknown error"}. Use Resend button.`,
+            : `Approved, but email failed: ${data.emailError || "Unknown"}. Use Resend button.`,
         });
         fetchApplications();
         setIsDetailOpen(false);
       } else {
-        throw new Error(data.error);
+        throw new Error(data.error || "Unknown approval error");
       }
     } catch (error) {
       console.error("Approve error:", error);
       toast.error("Failed to approve application", {
         description: error instanceof Error ? error.message : "Unknown error",
+        duration: 10000,
       });
     } finally {
       setProcessingId(null);
@@ -220,15 +254,19 @@ const AdminArtistApplications = () => {
   const handleResendApprovalEmail = async (application: ArtistApplication) => {
     setResendingId(application.id);
     try {
-      const { data, error } = await supabase.functions.invoke("approve-artist", {
-        body: {
-          applicationId: application.id,
-          baseUrl: window.location.origin,
-          resend: true,
-        },
+      const headers = await getAuthHeaders();
+      const res = await fetch(getEdgeFunctionUrl("approve-artist"), {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ applicationId: application.id, resend: true }),
       });
 
-      if (error) throw error;
+      const data = await res.json();
+      console.log("[RESEND] Response:", res.status, data);
+
+      if (!res.ok) {
+        throw new Error(`${res.status}: ${data.error || res.statusText}`);
+      }
 
       if (data.success && data.emailSent) {
         toast.success("Approval email resent!", {
@@ -394,8 +432,8 @@ const AdminArtistApplications = () => {
             </p>
           </div>
 
-          {/* Test Cleanup Mode Toggle */}
-          <div className="flex items-center gap-3 mb-6 p-3 rounded-lg border border-border bg-card">
+          {/* Debug & Test Controls */}
+          <div className="flex flex-wrap items-center gap-3 mb-6 p-3 rounded-lg border border-border bg-card">
             <ShieldAlert className="w-5 h-5 text-muted-foreground" />
             <Label htmlFor="cleanup-mode" className="text-sm text-muted-foreground cursor-pointer select-none">
               Enable Test Cleanup Mode
@@ -406,10 +444,19 @@ const AdminArtistApplications = () => {
               onCheckedChange={setTestCleanupMode}
             />
             {testCleanupMode && (
-              <span className="text-xs text-destructive font-medium ml-auto">
+              <span className="text-xs text-destructive font-medium">
                 Delete buttons visible
               </span>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestApproveFunction}
+              className="ml-auto"
+            >
+              <AlertCircle className="w-4 h-4 mr-1" />
+              Test Approve Function
+            </Button>
           </div>
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
