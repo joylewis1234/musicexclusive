@@ -76,7 +76,16 @@ const ArtistLogin = () => {
       // Sign in
       const { error: signInError } = await signIn(email, password);
       if (signInError) {
-        toast.error(signInError.message);
+        const errMsg = signInError.message.toLowerCase();
+        console.error("[ArtistLogin] Sign-in error:", signInError.message);
+        
+        if (errMsg.includes("invalid login credentials") || errMsg.includes("invalid_credentials")) {
+          toast.error("Incorrect email or password. Please try again or reset your password.");
+        } else if (errMsg.includes("email not confirmed")) {
+          toast.error("Your email hasn't been confirmed yet. Please check your inbox.");
+        } else {
+          toast.error(signInError.message);
+        }
         setIsLoading(false);
         return;
       }

@@ -26,17 +26,33 @@ const ForgotPassword = () => {
     setIsLoading(true);
 
     try {
+      console.log("[ForgotPassword] Requesting reset for:", email, "type:", userType);
       const { data, error } = await supabase.functions.invoke("send-password-reset", {
-        body: { email, userType },
+        body: { email: email.trim(), userType },
       });
 
-      if (error) throw error;
+      if (error) {
+        // supabase.functions.invoke wraps HTTP errors
+        console.error("[ForgotPassword] Edge function error:", error);
+        const errorMsg = typeof error === "object" && error.message 
+          ? error.message 
+          : "Failed to send reset email. Please try again.";
+        toast.error(errorMsg);
+        return;
+      }
+
+      // Check for error in response body (function returned 200 but with error field)
+      if (data?.error) {
+        console.error("[ForgotPassword] Function returned error:", data.error);
+        toast.error(data.error);
+        return;
+      }
 
       setIsSuccess(true);
       toast.success("Check your email for the reset link");
-    } catch (error) {
-      console.error("Password reset error:", error);
-      toast.error("Something went wrong. Please try again.");
+    } catch (error: any) {
+      console.error("[ForgotPassword] Unexpected error:", error);
+      toast.error(error?.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
