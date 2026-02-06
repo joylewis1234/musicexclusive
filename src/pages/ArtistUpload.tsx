@@ -43,12 +43,12 @@ import { useArtistAgreement } from "@/hooks/useArtistAgreement";
 import { useUploadDraft } from "@/hooks/useUploadDraft";
 import { UploadDiagnosticsPanel } from "@/components/artist/UploadDiagnosticsPanel";
 import { UploadProgressBar } from "@/components/artist/UploadProgressBar";
+import { UploadErrorBoundary } from "@/components/artist/UploadErrorBoundary";
 import {
   SAFE_UPLOADS,
   processCoverArt,
   validateAudio,
   formatBytes,
-  type ProcessedCoverArt,
   type AudioMeta,
 } from "@/utils/uploadHelpers";
 
@@ -80,10 +80,10 @@ const GENRES = [
 ];
 
 /* ------------------------------------------------------------------ */
-/*  Component                                                           */
+/*  Inner form component (wrapped by error boundary)                    */
 /* ------------------------------------------------------------------ */
 
-const ArtistUpload = () => {
+function ArtistUploadForm() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -103,6 +103,9 @@ const ArtistUpload = () => {
   const [coverProcessing, setCoverProcessing] = useState(false);
   const [coverError, setCoverError] = useState<string | null>(null);
 
+  // Track whether coverPreview is a blob: URL so we know to revoke it
+  const coverObjectUrlRef = useRef<string | null>(null);
+
   // --- Audio state (ref for the blob, meta in state) ---
   const audioFileRef = useRef<File | null>(null);
   const [audioMeta, setAudioMeta] = useState<AudioMeta | null>(null);
@@ -116,6 +119,16 @@ const ArtistUpload = () => {
   // --- Refs ---
   const coverInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+
+  // --- Cleanup blob URLs on unmount ---
+  useEffect(() => {
+    return () => {
+      if (coverObjectUrlRef.current) {
+        URL.revokeObjectURL(coverObjectUrlRef.current);
+        coverObjectUrlRef.current = null;
+      }
+    };
+  }, []);
 
   // --- Hydrate form from draft once ---
   useEffect(() => {
@@ -181,6 +194,18 @@ const ArtistUpload = () => {
   }
 
   /* ---------------------------------------------------------------- */
+  /*  Helpers                                                          */
+  /* ---------------------------------------------------------------- */
+
+  /** Safely revoke the previous cover object URL if one exists */
+  const revokePreviousCoverUrl = () => {
+    if (coverObjectUrlRef.current) {
+      URL.revokeObjectURL(coverObjectUrlRef.current);
+      coverObjectUrlRef.current = null;
+    }
+  };
+
+  /* ---------------------------------------------------------------- */
   /*  Handlers                                                         */
   /* ---------------------------------------------------------------- */
 
@@ -196,12 +221,16 @@ const ArtistUpload = () => {
       try {
         const err = validateCoverImage(file);
         if (err) { setCoverError(err); return; }
+        revokePreviousCoverUrl();
+        const objectUrl = URL.createObjectURL(file);
+        coverObjectUrlRef.current = objectUrl;
         setCoverFile(file);
-        setCoverPreview(URL.createObjectURL(file));
+        setCoverPreview(objectUrl);
         setCoverMeta({ name: file.name, processedSize: file.size, type: file.type, width: 0, height: 0 });
         updateDraft({ coverMeta: { name: file.name, processedSize: file.size, type: file.type, width: 0, height: 0 }, coverPreview: null });
       } catch (err: any) {
-        setCoverError(err?.message || "Error selecting cover image.");
+        console.error("[Upload] Legacy cover error:", { fileName: file.name, fileType: file.type, fileSize: file.size, error: err });
+        setCoverError(err?.message || "We couldn't process that file. Please try a different image.");
       }
       return;
     }
@@ -209,15 +238,23 @@ const ArtistUpload = () => {
     // --- Safe path ---
     setCoverProcessing(true);
     try {
-      const result: ProcessedCoverArt = await processCoverArt(file);
+      const result = await processCoverArt(file);
+
+      // Revoke old URL before setting new one
+      revokePreviousCoverUrl();
+      coverObjectUrlRef.current = result.objectUrl;
+
       setCoverFile(result.file);
-      setCoverPreview(result.previewDataUrl);
+      setCoverPreview(result.objectUrl);
       setCoverMeta(result.meta);
-      updateDraft({ coverPreview: result.previewDataUrl, coverMeta: result.meta });
+
+      // Persist tiny base64 to localStorage (may be null – that's fine)
+      updateDraft({ coverPreview: result.localStoragePreview, coverMeta: result.meta });
     } catch (err: any) {
-      console.error("[Upload] Cover processing error:", err);
-      setCoverError(err?.message || "Failed to process cover art. Please try a different image.");
+      console.error("[Upload] Cover processing error:", { fileName: file.name, fileType: file.type, fileSize: file.size, error: err });
+      setCoverError(err?.message || "We couldn't process that file. Please try a different image.");
       setCoverFile(null);
+      revokePreviousCoverUrl();
       setCoverPreview(null);
       setCoverMeta(null);
     } finally {
@@ -255,8 +292,8 @@ const ArtistUpload = () => {
         // Still allow – it's a warning, not a block.
       }
     } catch (err: any) {
-      console.error("[Upload] Audio validation error:", err);
-      setAudioError(err?.message || "Invalid audio file.");
+      console.error("[Upload] Audio validation error:", { fileName: file.name, fileType: file.type, fileSize: file.size, error: err });
+      setAudioError(err?.message || "We couldn't process that file. Please try a different audio file.");
       audioFileRef.current = null;
       setAudioMeta(null);
     } finally {
@@ -295,6 +332,7 @@ const ArtistUpload = () => {
       });
     } catch (err) {
       console.error("[Upload] Publish error:", err);
+      // Error is already shown via uploadState – don't crash
     }
   };
 
@@ -321,6 +359,7 @@ const ArtistUpload = () => {
     setGenre("");
     setAgreesToTerms(false);
     setCoverFile(null);
+    revokePreviousCoverUrl();
     setCoverPreview(null);
     setCoverMeta(null);
     setCoverError(null);
@@ -635,6 +674,22 @@ const ArtistUpload = () => {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page export – wrapped in the local error boundary                   */
+/* ------------------------------------------------------------------ */
+
+const ArtistUpload = () => {
+  // The reset callback is passed down so the error boundary can clear
+  // the draft without needing its own access to hooks.
+  const resetFormRef = useRef<(() => void) | null>(null);
+
+  return (
+    <UploadErrorBoundary onResetForm={() => resetFormRef.current?.()}>
+      <ArtistUploadForm />
+    </UploadErrorBoundary>
   );
 };
 
