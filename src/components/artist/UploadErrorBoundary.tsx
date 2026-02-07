@@ -6,6 +6,8 @@ import { AlertCircle, RefreshCw, Trash2 } from "lucide-react";
 interface UploadErrorBoundaryState {
   error: Error | null;
   componentStack?: string;
+  /** How many times we've auto-recovered (prevents infinite loops) */
+  autoRecoverCount: number;
 }
 
 interface UploadErrorBoundaryProps {
@@ -14,16 +16,42 @@ interface UploadErrorBoundaryProps {
   onResetForm?: () => void;
 }
 
+/** Max auto-recovery attempts before showing the manual UI */
+const MAX_AUTO_RECOVER = 1;
+
+/**
+ * Best-effort: wipe all upload draft keys from localStorage.
+ * Returns true if any keys were cleared.
+ */
+function clearUploadDrafts(): boolean {
+  let cleared = false;
+  try {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith("upload_draft_")) {
+        console.error("[ArtistUpload] Clearing potentially corrupt draft key:", key);
+        localStorage.removeItem(key);
+        cleared = true;
+      }
+    });
+  } catch {
+    // ignore – storage may be unavailable
+  }
+  return cleared;
+}
+
 /**
  * A local error boundary scoped to the Upload Exclusive Track page.
- * Catches render-time exceptions from file handling / preview / compression
- * and shows a friendly inline recovery UI instead of crashing the whole app.
+ *
+ * On the FIRST render-time crash it automatically clears any corrupt
+ * localStorage drafts and re-renders – the user never sees the error.
+ * If the crash recurs (or happens a second time) it falls through to
+ * a manual recovery UI with "Try Again" / "Reset this form" buttons.
  */
 export class UploadErrorBoundary extends React.Component<
   UploadErrorBoundaryProps,
   UploadErrorBoundaryState
 > {
-  state: UploadErrorBoundaryState = { error: null };
+  state: UploadErrorBoundaryState = { error: null, autoRecoverCount: 0 };
 
   static getDerivedStateFromError(error: Error): Partial<UploadErrorBoundaryState> {
     return { error };
@@ -31,6 +59,20 @@ export class UploadErrorBoundary extends React.Component<
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
     console.error("[UploadErrorBoundary] Caught render error:", error, info);
+
+    // --- Auto-recover on first crash ---
+    if (this.state.autoRecoverCount < MAX_AUTO_RECOVER) {
+      console.warn("[UploadErrorBoundary] Auto-recovering: clearing drafts and re-rendering...");
+      clearUploadDrafts();
+      this.setState((prev) => ({
+        error: null,
+        componentStack: undefined,
+        autoRecoverCount: prev.autoRecoverCount + 1,
+      }));
+      return;
+    }
+
+    // Beyond auto-recover limit – show manual UI
     this.setState({ componentStack: info.componentStack });
   }
 
@@ -40,25 +82,15 @@ export class UploadErrorBoundary extends React.Component<
   };
 
   /**
-   * "Try Again" – clear any corrupt localStorage drafts that may have
-   * caused the render crash, then dismiss the overlay.
+   * "Try Again" – clear corrupt localStorage drafts, then dismiss overlay.
    */
   private handleDismiss = () => {
-    // Best-effort: wipe upload drafts from localStorage to prevent re-crash
-    try {
-      Object.keys(localStorage).forEach((key) => {
-        if (key.startsWith("upload_draft_")) {
-          console.error("[ArtistUpload] Clearing potentially corrupt draft key:", key);
-          localStorage.removeItem(key);
-        }
-      });
-    } catch {
-      // ignore – storage may be unavailable
-    }
+    clearUploadDrafts();
     this.clearError();
   };
 
   private handleResetForm = () => {
+    clearUploadDrafts();
     this.props.onResetForm?.();
     this.clearError();
   };
@@ -76,7 +108,7 @@ export class UploadErrorBoundary extends React.Component<
                 Something went wrong
               </h2>
               <p className="text-sm text-muted-foreground">
-                We couldn't process that file. Please try a different image or audio file.
+                The upload form couldn't load correctly. Please try resetting the form below.
               </p>
               <pre className="mt-2 text-xs bg-muted/50 p-3 rounded overflow-x-auto whitespace-pre-wrap break-words max-h-32 text-muted-foreground">
                 {this.state.error.message}
