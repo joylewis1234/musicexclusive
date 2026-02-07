@@ -39,7 +39,22 @@ export class UploadErrorBoundary extends React.Component<
     this.setState({ error: null, componentStack: undefined });
   };
 
+  /**
+   * "Try Again" – clear any corrupt localStorage drafts that may have
+   * caused the render crash, then dismiss the overlay.
+   */
   private handleDismiss = () => {
+    // Best-effort: wipe upload drafts from localStorage to prevent re-crash
+    try {
+      Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("upload_draft_")) {
+          console.error("[ArtistUpload] Clearing potentially corrupt draft key:", key);
+          localStorage.removeItem(key);
+        }
+      });
+    } catch {
+      // ignore – storage may be unavailable
+    }
     this.clearError();
   };
 
