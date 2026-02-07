@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useNavigate, Link, useBlocker } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   ArrowLeft,
   Upload,
@@ -252,13 +252,15 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     updateDraft({ title, genre, agreementChecked: agreesToTerms });
   }, [title, genre, agreesToTerms, draftLoaded, updateDraft]);
 
-  // --- Navigation guard ---
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasDraft &&
-      currentLocation.pathname !== nextLocation.pathname &&
-      uploadState.step !== "success"
-  );
+  // --- Navigation guard (beforeunload only – useBlocker requires data router) ---
+  useEffect(() => {
+    if (!hasDraft || uploadState.step === "success") return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasDraft, uploadState.step]);
 
   // --- On success: full reset + toast ---
   useEffect(() => {
@@ -771,21 +773,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Leave Page Confirmation */}
-      <AlertDialog open={blocker.state === "blocked"} onOpenChange={() => blocker.state === "blocked" && blocker.reset?.()}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Leave page?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have an unfinished upload. Your draft will be saved, but you'll need to re-select the files when you return.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>Stay</AlertDialogCancel>
-            <AlertDialogAction onClick={() => blocker.proceed?.()}>Leave</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
