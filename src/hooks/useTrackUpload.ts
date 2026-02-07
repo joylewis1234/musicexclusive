@@ -166,7 +166,7 @@ export function useTrackUpload() {
         }
         const blob = new Blob([bytes], { type: "image/jpeg" });
         const file = new File([blob], "preflight.jpg", { type: "image/jpeg" });
-        const objectPath = `preflight/${artistId}/${Date.now()}.jpg`;
+        const objectPath = `artists/${artistId}/preflight-${Date.now()}.jpg`;
 
         const res = await uploadToStorageWithXhr({
           url: SUPABASE_URL,
@@ -300,6 +300,22 @@ export function useTrackUpload() {
           throw new Error("Audio file too large. Please upload a file under 50MB.");
         }
 
+        // Helper: get a fresh access token (refreshes if needed)
+        const getFreshToken = async (): Promise<string> => {
+          try {
+            const { data: refreshed } = await supabase.auth.refreshSession();
+            if (refreshed?.session?.access_token) {
+              return refreshed.session.access_token;
+            }
+          } catch {
+            // Fall through to getSession
+          }
+          const { data } = await supabase.auth.getSession();
+          const token = data?.session?.access_token;
+          if (!token) throw new Error("Session expired. Please log in again.");
+          return token;
+        };
+
         // Step 1: Session check
         addDiagnostic({
           step: "session_check",
@@ -309,29 +325,17 @@ export function useTrackUpload() {
           details: `online=${typeof navigator !== "undefined" ? navigator.onLine : "?"}`,
         });
 
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        const session = sessionData?.session;
-        const accessToken = session?.access_token;
-        if (sessionError || !session) {
-          const msg = safeMsg("No active session. Please log in again.", sessionError);
+        let currentAccessToken: string;
+        try {
+          currentAccessToken = await getFreshToken();
+        } catch (err) {
+          const msg = safeMsg("No active session. Please log in again.", err);
           addDiagnostic({
             step: "session_check",
             status: "error",
             message: msg,
             timestamp: new Date(),
-            details: safeStringify(sessionError ?? { reason: "missing session" }),
-          });
-          console.error("[Upload] Session check failed:", sessionError);
-          throw new Error(msg);
-        }
-        if (!accessToken) {
-          const msg = "Missing access token. Please log in again.";
-          addDiagnostic({
-            step: "session_check",
-            status: "error",
-            message: msg,
-            timestamp: new Date(),
-            details: safeStringify({ reason: "missing session.access_token" }),
+            details: safeStringify(err),
           });
           throw new Error(msg);
         }
@@ -343,12 +347,6 @@ export function useTrackUpload() {
           timestamp: new Date(),
         });
         setStep("session_check", 10);
-
-        // Optional preflight (non-blocking). Useful on Android where Storage fetch can fail mid-transfer.
-        // We only run it for a fresh attempt (not for mid-step resume).
-        if (!resumeFrom) {
-          await storageTest(userId);
-        }
 
         // Step 2: Get artist profile
         let artistId: string;
@@ -449,6 +447,10 @@ export function useTrackUpload() {
 
         if (!resumeFrom || resumeFrom === "cover_upload") {
           setStep("cover_upload", 30);
+          
+          // Refresh token before cover upload
+          try { currentAccessToken = await getFreshToken(); } catch { /* use existing */ }
+          
           addDiagnostic({
             step: "cover_upload",
             status: "pending",
@@ -466,7 +468,7 @@ export function useTrackUpload() {
             const res = await uploadToStorageWithXhr({
               url: SUPABASE_URL,
               apikey: SUPABASE_PUBLISHABLE_KEY,
-              accessToken,
+              accessToken: currentAccessToken,
               bucket: "track_covers",
               objectPath: coverPath,
               file: coverFile,
@@ -508,18 +510,14 @@ export function useTrackUpload() {
 
         // Step 5: Upload audio (unique path based on trackId)
         // Refresh session before the largest upload to prevent token expiry
-        let currentAccessToken = accessToken;
         try {
-          const { data: refreshed } = await supabase.auth.refreshSession();
-          if (refreshed?.session?.access_token) {
-            currentAccessToken = refreshed.session.access_token;
-            addDiagnostic({
-              step: "audio_upload",
-              status: "success",
-              message: "Session refreshed before audio upload",
-              timestamp: new Date(),
-            });
-          }
+          currentAccessToken = await getFreshToken();
+          addDiagnostic({
+            step: "audio_upload",
+            status: "success",
+            message: "Session refreshed before audio upload",
+            timestamp: new Date(),
+          });
         } catch {
           // Non-fatal – continue with existing token
         }
@@ -593,10 +591,7 @@ export function useTrackUpload() {
         // Step 6: Upload preview audio (optional)
         // Refresh session again before preview upload
         try {
-          const { data: refreshed2 } = await supabase.auth.refreshSession();
-          if (refreshed2?.session?.access_token) {
-            currentAccessToken = refreshed2.session.access_token;
-          }
+          currentAccessToken = await getFreshToken();
         } catch {
           // Non-fatal
         }
@@ -772,7 +767,7 @@ export function useTrackUpload() {
     },
     // Intentionally depend on current state to enable resume logic.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [addDiagnostic, cleanup, setStep, state.trackId, state.uploadedCoverPath, storageTest]
+    [addDiagnostic, cleanup, setStep, state.trackId, state.uploadedCoverPath]
   );
 
   const retry = useCallback(

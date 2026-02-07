@@ -1,27 +1,52 @@
 /**
  * Utility to detect audio duration from a File object.
  * Uses a temporary Audio element and object URL.
+ * Defensive against mobile Safari where Audio elements may not auto-load.
  */
 
-const DURATION_TIMEOUT_MS = 10_000; // 10s timeout for metadata loading
+const DURATION_TIMEOUT_MS = 5_000; // 5s timeout — fallback is fine for upload
 
 /**
  * Read the duration (in seconds, rounded) of an audio File.
  * Returns a fallback value if detection fails or times out.
+ * Never rejects — always resolves with a number.
  */
 export function getAudioDuration(file: File, fallback = 180): Promise<number> {
   return new Promise<number>((resolve) => {
     let settled = false;
-    const url = URL.createObjectURL(file);
+    let url: string | null = null;
+
+    try {
+      url = URL.createObjectURL(file);
+    } catch {
+      console.warn("[audioDuration] Failed to create object URL, using fallback");
+      resolve(fallback);
+      return;
+    }
+
     const audio = new Audio();
 
     const finish = (duration: number) => {
       if (settled) return;
       settled = true;
-      URL.revokeObjectURL(url);
-      audio.removeAttribute("src");
-      audio.load(); // release resources
+      try {
+        if (url) URL.revokeObjectURL(url);
+        audio.removeAttribute("src");
+        audio.load(); // release resources
+      } catch {
+        // ignore cleanup errors
+      }
       resolve(duration);
+    };
+
+    const extractDuration = () => {
+      const dur = audio.duration;
+      if (dur && isFinite(dur) && dur > 0) {
+        finish(Math.round(dur));
+      } else {
+        console.warn("[audioDuration] Invalid duration value:", dur);
+        finish(fallback);
+      }
     };
 
     const timer = setTimeout(() => {
@@ -29,30 +54,20 @@ export function getAudioDuration(file: File, fallback = 180): Promise<number> {
       finish(fallback);
     }, DURATION_TIMEOUT_MS);
 
-    audio.addEventListener(
-      "loadedmetadata",
-      () => {
+    // Listen for both loadedmetadata and durationchange for maximum compatibility
+    // Mobile Safari sometimes fires durationchange but not loadedmetadata
+    audio.addEventListener("loadedmetadata", () => { clearTimeout(timer); extractDuration(); }, { once: true });
+    audio.addEventListener("durationchange", () => {
+      if (audio.duration && isFinite(audio.duration) && audio.duration > 0) {
         clearTimeout(timer);
-        const dur = audio.duration;
-        if (dur && isFinite(dur) && dur > 0) {
-          finish(Math.round(dur));
-        } else {
-          console.warn("[audioDuration] Invalid duration value:", dur);
-          finish(fallback);
-        }
-      },
-      { once: true }
-    );
-
-    audio.addEventListener(
-      "error",
-      () => {
-        clearTimeout(timer);
-        console.warn("[audioDuration] Error loading audio for duration detection");
-        finish(fallback);
-      },
-      { once: true }
-    );
+        extractDuration();
+      }
+    }, { once: true });
+    audio.addEventListener("error", () => {
+      clearTimeout(timer);
+      console.warn("[audioDuration] Error loading audio for duration detection");
+      finish(fallback);
+    }, { once: true });
 
     // preload only metadata for speed
     audio.preload = "metadata";
