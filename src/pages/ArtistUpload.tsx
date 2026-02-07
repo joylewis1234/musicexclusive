@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useTrackUpload } from "@/hooks/useTrackUpload";
+import { useTrackUpload, UPLOAD_HOOK_VERSION } from "@/hooks/useTrackUpload";
 import { useArtistAgreement } from "@/hooks/useArtistAgreement";
 import { useUploadDraft } from "@/hooks/useUploadDraft";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
@@ -562,7 +562,10 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
           <Button variant="ghost" size="icon" onClick={() => navigate("/artist/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-display text-lg font-semibold tracking-wide flex-1">Upload Exclusive Track</h1>
+          <div className="flex-1">
+            <h1 className="font-display text-lg font-semibold tracking-wide">Upload Exclusive Track</h1>
+            <p className="text-[10px] text-muted-foreground font-mono">{UPLOAD_HOOK_VERSION}</p>
+          </div>
           {/* Start New Upload – visible when there's any content or error */}
           {(hasDraft || uploadState.step === "error" || uploadState.step === "success") && !isUploading && (
             <Button variant="outline" size="sm" onClick={handleStartNewUpload}>
@@ -835,7 +838,12 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
               <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-destructive">Upload failed</p>
-                <p className="text-sm text-muted-foreground mt-1">{uploadState.errorMessage}</p>
+                <p className="text-sm text-muted-foreground mt-1 select-all break-words">{uploadState.errorMessage}</p>
+                {uploadState.lastFailedStep && (
+                  <p className="text-xs text-muted-foreground mt-1 font-mono select-all">
+                    Failed at: {uploadState.lastFailedStep} | {UPLOAD_HOOK_VERSION}
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex gap-2 mt-3">
