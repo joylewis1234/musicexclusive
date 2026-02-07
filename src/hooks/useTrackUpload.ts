@@ -2,8 +2,11 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
-import { uploadToStorageWithXhr } from "@/utils/storageUpload";
+import { smartUpload } from "@/utils/storageUpload";
 import { getAudioDuration } from "@/utils/audioDuration";
+
+// Version marker – update on every change to confirm code is running
+const UPLOAD_HOOK_VERSION = "v3.0.0-2026-02-07";
 
 export type UploadStep =
   | "idle"
@@ -168,7 +171,7 @@ export function useTrackUpload() {
         const file = new File([blob], "preflight.jpg", { type: "image/jpeg" });
         const objectPath = `artists/${artistId}/preflight-${Date.now()}.jpg`;
 
-        const res = await uploadToStorageWithXhr({
+        const res = await smartUpload({
           url: SUPABASE_URL,
           apikey: SUPABASE_PUBLISHABLE_KEY,
           accessToken,
@@ -317,12 +320,13 @@ export function useTrackUpload() {
         };
 
         // Step 1: Session check
+        console.log(`[Upload ${UPLOAD_HOOK_VERSION}] Starting upload for "${title}"`);
         addDiagnostic({
           step: "session_check",
           status: "pending",
-          message: resumeFrom ? `Retrying from ${resumeFrom} (session check)` : "Checking session...",
+          message: resumeFrom ? `Retrying from ${resumeFrom} (session check)` : `Checking session... [${UPLOAD_HOOK_VERSION}]`,
           timestamp: new Date(),
-          details: `online=${typeof navigator !== "undefined" ? navigator.onLine : "?"}`,
+          details: `version=${UPLOAD_HOOK_VERSION}, online=${typeof navigator !== "undefined" ? navigator.onLine : "?"}`,
         });
 
         let currentAccessToken: string;
@@ -465,7 +469,7 @@ export function useTrackUpload() {
           });
 
           try {
-            const res = await uploadToStorageWithXhr({
+            const res = await smartUpload({
               url: SUPABASE_URL,
               apikey: SUPABASE_PUBLISHABLE_KEY,
               accessToken: currentAccessToken,
@@ -474,7 +478,6 @@ export function useTrackUpload() {
               file: coverFile,
               contentType: coverContentType,
               onProgress: (pct) => {
-                // Map 0-100 -> 30-55
                 const mapped = 30 + Math.round(pct * 0.25);
                 setStep("cover_upload", mapped);
               },
@@ -544,7 +547,7 @@ export function useTrackUpload() {
           });
 
           try {
-            const res = await uploadToStorageWithXhr({
+            const res = await smartUpload({
               url: SUPABASE_URL,
               apikey: SUPABASE_PUBLISHABLE_KEY,
               accessToken: currentAccessToken,
@@ -553,7 +556,6 @@ export function useTrackUpload() {
               file: audioFile,
               contentType: audioContentType,
               onProgress: (pct) => {
-                // Map 0-100 -> 60-85
                 const mapped = 60 + Math.round(pct * 0.25);
                 setStep("audio_upload", mapped);
               },
@@ -618,7 +620,7 @@ export function useTrackUpload() {
             });
 
             try {
-              const res = await uploadToStorageWithXhr({
+              const res = await smartUpload({
                 url: SUPABASE_URL,
                 apikey: SUPABASE_PUBLISHABLE_KEY,
                 accessToken: currentAccessToken,

@@ -279,6 +279,13 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasDraft, uploadState.step]);
 
+  // --- Auto-show diagnostics when upload errors occur ---
+  useEffect(() => {
+    if (uploadState.step === "error") {
+      setShowDiagnostics(true);
+    }
+  }, [uploadState.step]);
+
   // --- On success: full reset + toast ---
   useEffect(() => {
     if (uploadState.step === "success") {
