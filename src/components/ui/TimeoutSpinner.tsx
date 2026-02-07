@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Loader2, AlertTriangle, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useErrorLogger } from "@/hooks/useErrorLogger";
@@ -17,7 +17,7 @@ interface TimeoutSpinnerProps {
 }
 
 /**
- * A loading spinner that automatically times out after 10 seconds,
+ * A loading spinner that automatically times out,
  * shows a friendly error message with a Retry button, and logs
  * the timeout to app_error_logs.
  */
@@ -29,15 +29,27 @@ export function TimeoutSpinner({
   onRetry,
 }: TimeoutSpinnerProps) {
   const [timedOut, setTimedOut] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
   const { logError } = useErrorLogger();
+  const startRef = useRef(Date.now());
 
   useEffect(() => {
+    startRef.current = Date.now();
+
     const timer = setTimeout(() => {
       setTimedOut(true);
       logError(page, `Spinner timeout after ${timeoutMs}ms`);
     }, timeoutMs);
 
-    return () => clearTimeout(timer);
+    // Update elapsed time every second for user feedback
+    const tick = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+    }, 1000);
+
+    return () => {
+      clearTimeout(timer);
+      clearInterval(tick);
+    };
   }, [timeoutMs, page, logError]);
 
   if (timedOut) {
@@ -48,7 +60,7 @@ export function TimeoutSpinner({
             <AlertTriangle className="w-7 h-7 text-destructive" />
           </div>
           <h2 className="text-lg font-semibold text-foreground">
-            Something went wrong
+            Connection issue
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
             {errorMessage}
@@ -56,8 +68,10 @@ export function TimeoutSpinner({
           <Button
             variant="secondary"
             onClick={() => {
+              setTimedOut(false);
+              setElapsed(0);
+              startRef.current = Date.now();
               if (onRetry) {
-                setTimedOut(false);
                 onRetry();
               } else {
                 window.location.reload();
@@ -77,6 +91,11 @@ export function TimeoutSpinner({
     <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-4">
       <Loader2 className="w-8 h-8 animate-spin text-primary" />
       <p className="text-sm text-muted-foreground">{loadingMessage}</p>
+      {elapsed >= 5 && (
+        <p className="text-xs text-muted-foreground/60">
+          Still connecting… ({elapsed}s)
+        </p>
+      )}
     </div>
   );
 }
