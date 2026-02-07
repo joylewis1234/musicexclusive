@@ -1,5 +1,5 @@
 import React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,74 +27,115 @@ export const useAuth = () => {
   return context;
 };
 
+/** Fetch the highest-priority role for a given user id. */
+const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+
+  if (error || !data || data.length === 0) {
+    console.error("[AuthContext] Error fetching user role:", error);
+    return null;
+  }
+
+  // Prioritize admin > artist > fan when user has multiple roles
+  const roles = data.map(r => r.role as AppRole);
+  if (roles.includes("admin")) return "admin";
+  if (roles.includes("artist")) return "artist";
+  return roles[0];
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const isBenignAbortError = (err: unknown) => {
-    const anyErr = err as any;
-    const name = String(anyErr?.name ?? "");
-    const message = String(anyErr?.message ?? anyErr ?? "").toLowerCase();
-    return (
-      name === "AbortError" ||
-      message.includes("signal is aborted") ||
-      message.includes("request cancelled") ||
-      message.includes("request canceled") ||
-      message.includes("cancelled") ||
-      message.includes("canceled")
-    );
-  };
-
-  const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
-    const { data, error } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId);
-    
-    if (error || !data || data.length === 0) {
-      console.error("Error fetching user role:", error);
-      return null;
-    }
-    
-    // Prioritize admin > artist > fan when user has multiple roles
-    const roles = data.map(r => r.role as AppRole);
-    if (roles.includes("admin")) return "admin";
-    if (roles.includes("artist")) return "artist";
-    return roles[0];
-  };
+  // Track whether initial load has completed so the onAuthStateChange
+  // listener doesn't race with it.
+  const initialLoadDone = useRef(false);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let isMounted = true;
+
+    // ── 1. Initial load ────────────────────────────────────────────
+    // Fetches existing session + role BEFORE setting isLoading=false.
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error("[AuthContext] getSession error:", error);
+        }
+
+        if (!isMounted) return;
+
+        setSession(initialSession);
+        setUser(initialSession?.user ?? null);
+
+        if (initialSession?.user) {
+          const userRole = await fetchUserRole(initialSession.user.id);
+          if (!isMounted) return;
+          setRole(userRole);
+          console.debug("[AuthContext] Initial session resolved, role:", userRole);
+        } else {
+          setRole(null);
+          console.debug("[AuthContext] Initial session resolved: no user");
+        }
+      } catch (err) {
+        console.error("[AuthContext] initializeAuth failed:", err);
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          setRole(null);
+        }
+      } finally {
+        if (isMounted) {
+          initialLoadDone.current = true;
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    // ── 2. Ongoing auth changes ────────────────────────────────────
+    // Handles sign-in / sign-out / token refresh AFTER the initial load.
+    // Does NOT touch isLoading for the initial boot — only for subsequent
+    // sign-in events where we need to re-enter loading while fetching role.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        if (!isMounted) return;
+
+        // Skip if initial load hasn't finished — initializeAuth handles it.
+        if (!initialLoadDone.current) {
+          console.debug("[AuthContext] onAuthStateChange skipped (initial load pending), event:", event);
+          return;
+        }
+
+        console.debug("[AuthContext] onAuthStateChange event:", event);
+
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
-        
+
         if (currentSession?.user) {
-          // Important: we may already be "not loading" from initial app boot.
-          // When a user signs in, we must re-enter a loading state while we fetch their role,
-          // otherwise route guards can evaluate with user!=null but role==null and incorrectly
-          // redirect to /access-restricted.
+          // Re-enter loading so route guards wait for role resolution
           setIsLoading(true);
           setRole(null);
 
-          // Defer role fetch to avoid blocking
-          setTimeout(async () => {
-            try {
-              const userRole = await fetchUserRole(currentSession.user.id);
+          try {
+            const userRole = await fetchUserRole(currentSession.user.id);
+            if (isMounted) {
               setRole(userRole);
-            } catch (err) {
-              if (!isBenignAbortError(err)) {
-                console.error("[AuthContext] Role fetch failed:", err);
-              }
-              // Keep role null; route guards will treat this as loading.
-              setRole(null);
-            } finally {
-              setIsLoading(false);
+              console.debug("[AuthContext] Role resolved after auth change:", userRole);
             }
-          }, 0);
+          } catch (err) {
+            console.error("[AuthContext] Role fetch failed after auth change:", err);
+            if (isMounted) setRole(null);
+          } finally {
+            if (isMounted) setIsLoading(false);
+          }
         } else {
           setRole(null);
           setIsLoading(false);
@@ -102,36 +143,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: existingSession }, error }) => {
-      if (error && !isBenignAbortError(error)) {
-        console.error("[AuthContext] getSession error:", error);
-      }
-
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-
-      try {
-        if (existingSession?.user) {
-          const userRole = await fetchUserRole(existingSession.user.id);
-          setRole(userRole);
-        }
-      } catch (err) {
-        if (!isBenignAbortError(err)) {
-          console.error("[AuthContext] Initial role fetch failed:", err);
-        }
-        setRole(null);
-      } finally {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
+  // ── signUp ─────────────────────────────────────────────────────────
   const signUp = async (
-    email: string, 
-    password: string, 
+    email: string,
+    password: string,
     selectedRole: AppRole,
     displayName?: string
   ): Promise<{ error: Error | null }> => {
@@ -149,17 +170,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (error) throw error;
 
-      // Insert role after signup
       if (data.user) {
         const { error: roleError } = await supabase
           .from("user_roles")
           .insert({ user_id: data.user.id, role: selectedRole });
-        
+
         if (roleError) {
-          console.error("Error inserting role:", roleError);
+          console.error("[AuthContext] Error inserting role:", roleError);
           throw roleError;
         }
-        
+
         setRole(selectedRole);
       }
 
@@ -169,6 +189,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ── signIn ─────────────────────────────────────────────────────────
   const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
@@ -183,6 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // ── signOut ────────────────────────────────────────────────────────
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -190,6 +212,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole(null);
   };
 
+  // ── refreshRole ────────────────────────────────────────────────────
   const refreshRole = async (): Promise<AppRole | null> => {
     const currentUser = user ?? (await supabase.auth.getUser()).data.user;
     if (!currentUser) return null;
