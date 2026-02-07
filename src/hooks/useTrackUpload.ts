@@ -46,6 +46,7 @@ interface UploadParams {
   coverFile: File;
   audioFile: File;
   previewFile?: File | null;
+  previewStartSeconds?: number;
   userId: string;
 }
 
@@ -244,7 +245,7 @@ export function useTrackUpload() {
 
   const upload = useCallback(
     async (params: UploadParams, options?: { resumeFrom?: UploadStep }): Promise<boolean> => {
-      const { title, genre, coverFile, audioFile, previewFile, userId } = params;
+      const { title, genre, coverFile, audioFile, previewFile, previewStartSeconds, userId } = params;
       const resumeFrom = options?.resumeFrom;
 
       const safeMsg = (fallback: string, err?: unknown) => {
@@ -698,6 +699,7 @@ export function useTrackUpload() {
             full_audio_url: audioPublicUrl,
             status: "ready",
             duration: audioDuration,
+            preview_start_seconds: previewStartSeconds ?? 0,
           };
           if (previewPublicUrl) {
             updatePayload.preview_audio_url = previewPublicUrl;
