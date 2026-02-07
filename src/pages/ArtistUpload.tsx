@@ -189,15 +189,20 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     };
   }, [revokePreviousCoverUrl]);
 
-  // --- Hydrate form from draft once (NO error flags) ---
+  // --- Hydrate form from draft once (defensive null-guards) ---
   useEffect(() => {
     if (!draftLoaded) return;
-    setTitle(draft.title || "");
-    setGenre(draft.genre || "");
-    setAgreesToTerms(draft.agreementChecked || false);
-    if (draft.coverPreview) setCoverPreview(draft.coverPreview);
-    if (draft.coverMeta) setCoverMeta(draft.coverMeta);
-    if (draft.audioMeta) setAudioMeta(draft.audioMeta);
+    try {
+      setTitle(typeof draft.title === "string" ? draft.title : "");
+      setGenre(typeof draft.genre === "string" ? draft.genre : "");
+      setAgreesToTerms(typeof draft.agreementChecked === "boolean" ? draft.agreementChecked : false);
+      if (typeof draft.coverPreview === "string" && draft.coverPreview) setCoverPreview(draft.coverPreview);
+      if (draft.coverMeta && typeof draft.coverMeta === "object") setCoverMeta(draft.coverMeta);
+      if (draft.audioMeta && typeof draft.audioMeta === "object") setAudioMeta(draft.audioMeta);
+    } catch (err) {
+      console.error("[ArtistUpload] Draft hydration failed – clearing draft:", err);
+      clearDraft();
+    }
     // Explicitly ensure no stale errors on hydration
     setCoverError(null);
     setAudioError(null);
