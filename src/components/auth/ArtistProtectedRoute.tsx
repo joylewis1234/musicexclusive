@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useCallback } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArtistAccessCache } from "@/hooks/useArtistAccessCache";
@@ -19,20 +19,28 @@ interface ArtistProtectedRouteProps {
  * - Upload actions, re-renders, file selection, etc. never re-trigger verification.
  */
 export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) => {
-  const { user, role, isLoading: authLoading } = useAuth();
+  const { user, role, isLoading: authLoading, refreshRole } = useAuth();
   const location = useLocation();
   const { gateResult, isVerifying, verificationError, retryVerification } =
     useArtistAccessCache();
 
+  const handleRetry = useCallback(() => {
+    // Try refreshing the role first, then fall back to reload
+    refreshRole().catch(() => {
+      window.location.reload();
+    });
+  }, [refreshRole]);
+
   // ── 1. Auth loading (fast — initial session + role resolution) ──
-  // This is the ONLY full-screen blocker, and it resolves in < 1s typically.
+  // 30s timeout for slow mobile connections (was 15s — too aggressive for Android)
   if (authLoading || (user && !role)) {
     return (
       <TimeoutSpinner
         page="ArtistProtectedRoute"
-        loadingMessage="Loading…"
-        errorMessage="Session timed out. Please check your connection and try again."
-        timeoutMs={15_000}
+        loadingMessage="Connecting to your account…"
+        errorMessage="Session timed out. Tap Retry — if it keeps failing, close and reopen the app."
+        timeoutMs={30_000}
+        onRetry={handleRetry}
       />
     );
   }
