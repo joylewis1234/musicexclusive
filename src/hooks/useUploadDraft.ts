@@ -30,6 +30,24 @@ const EMPTY_DRAFT: UploadDraft = {
   audioMeta: null,
 };
 
+/**
+ * Sanitise a draft loaded from localStorage so every field has the
+ * expected type.  Corrupt / missing values are silently reset to
+ * their EMPTY_DRAFT defaults.
+ */
+function sanitiseDraft(raw: unknown): UploadDraft {
+  if (!raw || typeof raw !== "object") return { ...EMPTY_DRAFT };
+  const d = raw as Record<string, unknown>;
+  return {
+    title: typeof d.title === "string" ? d.title : "",
+    genre: typeof d.genre === "string" ? d.genre : "",
+    agreementChecked: typeof d.agreementChecked === "boolean" ? d.agreementChecked : false,
+    coverPreview: typeof d.coverPreview === "string" ? d.coverPreview : null,
+    coverMeta: d.coverMeta && typeof d.coverMeta === "object" ? (d.coverMeta as UploadDraft["coverMeta"]) : null,
+    audioMeta: d.audioMeta && typeof d.audioMeta === "object" ? (d.audioMeta as UploadDraft["audioMeta"]) : null,
+  };
+}
+
 function storageKey(userId: string) {
   return `upload_draft_${userId}`;
 }
@@ -49,11 +67,14 @@ export function useUploadDraft(userId: string | undefined) {
     try {
       const raw = localStorage.getItem(storageKey(userId));
       if (raw) {
-        const parsed = JSON.parse(raw) as Partial<UploadDraft>;
-        setDraft({ ...EMPTY_DRAFT, ...parsed });
+        const parsed = JSON.parse(raw);
+        const safe = sanitiseDraft(parsed);
+        console.debug("[ArtistUpload] Draft loaded from localStorage", { userId, hasDraftContent: !!(safe.title || safe.genre || safe.coverMeta || safe.audioMeta) });
+        setDraft(safe);
       }
     } catch (err) {
-      console.warn("[useUploadDraft] Failed to load draft:", err);
+      console.error("[ArtistUpload] Failed to load draft – clearing corrupt data:", err);
+      try { localStorage.removeItem(storageKey(userId)); } catch { /* ignore */ }
     }
     setLoaded(true);
   }, [userId]);
@@ -97,11 +118,11 @@ export function useUploadDraft(userId: string | undefined) {
     setDraft(EMPTY_DRAFT);
   }, [userId]);
 
-  // --- Has unsaved content? ---
+  // --- Has unsaved content? (null-safe) ---
   const hasDraft =
-    !!draft.title.trim() ||
+    !!(typeof draft.title === "string" && draft.title.trim()) ||
     !!draft.genre ||
-    draft.agreementChecked ||
+    !!draft.agreementChecked ||
     !!draft.coverMeta ||
     !!draft.audioMeta;
 
