@@ -46,7 +46,7 @@ interface UploadParams {
   userId: string;
 }
 
-const UPLOAD_TIMEOUT_MS = 180000; // 3 minutes to allow for retries
+const UPLOAD_TIMEOUT_MS = 600000; // 10 minutes – generous for large files on slow connections
 const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 const MAX_COVER_BYTES = 10 * 1024 * 1024;
 
@@ -507,6 +507,23 @@ export function useTrackUpload() {
         }
 
         // Step 5: Upload audio (unique path based on trackId)
+        // Refresh session before the largest upload to prevent token expiry
+        let currentAccessToken = accessToken;
+        try {
+          const { data: refreshed } = await supabase.auth.refreshSession();
+          if (refreshed?.session?.access_token) {
+            currentAccessToken = refreshed.session.access_token;
+            addDiagnostic({
+              step: "audio_upload",
+              status: "success",
+              message: "Session refreshed before audio upload",
+              timestamp: new Date(),
+            });
+          }
+        } catch {
+          // Non-fatal – continue with existing token
+        }
+
         const audioContentType = getAudioContentType(audioFile);
         const audioExt = audioExtFromContentType(audioContentType);
         const audioSafeName = sanitizeFilename(audioFile?.name || `audio.${audioExt}`);
@@ -532,7 +549,7 @@ export function useTrackUpload() {
             const res = await uploadToStorageWithXhr({
               url: SUPABASE_URL,
               apikey: SUPABASE_PUBLISHABLE_KEY,
-              accessToken,
+              accessToken: currentAccessToken,
               bucket: "track_audio",
               objectPath: audioPath,
               file: audioFile,
@@ -574,6 +591,16 @@ export function useTrackUpload() {
         }
 
         // Step 6: Upload preview audio (optional)
+        // Refresh session again before preview upload
+        try {
+          const { data: refreshed2 } = await supabase.auth.refreshSession();
+          if (refreshed2?.session?.access_token) {
+            currentAccessToken = refreshed2.session.access_token;
+          }
+        } catch {
+          // Non-fatal
+        }
+
         let previewPath: string | null = null;
         if (previewFile && previewFile instanceof File) {
           const previewContentType = getAudioContentType(previewFile);
@@ -599,7 +626,7 @@ export function useTrackUpload() {
               const res = await uploadToStorageWithXhr({
                 url: SUPABASE_URL,
                 apikey: SUPABASE_PUBLISHABLE_KEY,
-                accessToken,
+                accessToken: currentAccessToken,
                 bucket: "track_audio",
                 objectPath: previewPath,
                 file: previewFile,
