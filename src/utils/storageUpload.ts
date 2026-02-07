@@ -28,6 +28,7 @@ type UploadWithXhrParams = {
 };
 
 const RETRY_DELAYS_MS = [1500, 3000, 5000];
+const SDK_UPLOAD_TIMEOUT_MS = 120_000; // 2 min – if SDK hangs, fall back to XHR quickly
 
 /**
  * PRIMARY upload method: uses the Supabase SDK directly.
@@ -219,21 +220,33 @@ export async function uploadToStorageWithXhr(params: UploadWithXhrParams): Promi
 export async function smartUpload(params: UploadWithXhrParams): Promise<StorageXhrUploadResult> {
   const { bucket, objectPath, file, contentType, upsert, cacheControl, onProgress } = params;
 
-  console.log(`[Storage] Smart upload starting: ${bucket}/${objectPath} (${file.size} bytes)`);
+  console.log(`[Storage] Smart upload starting: ${bucket}/${objectPath} (${file.size} bytes, type=${contentType})`);
 
-  // Try SDK first (most reliable, no CORS issues)
-  const sdkResult = await uploadToStorageWithSdk({
-    bucket,
-    objectPath,
-    file,
-    contentType,
-    upsert,
-    cacheControl,
-  });
+  // Try SDK first (most reliable, no CORS issues) with a timeout
+  // so we fall back to XHR quickly if the SDK hangs
+  let sdkResult: StorageXhrUploadResult;
+  try {
+    sdkResult = await Promise.race([
+      uploadToStorageWithSdk({
+        bucket,
+        objectPath,
+        file,
+        contentType,
+        upsert,
+        cacheControl,
+      }),
+      new Promise<StorageXhrUploadResult>((_, reject) =>
+        setTimeout(() => reject(new Error("SDK upload timed out after 2 min")), SDK_UPLOAD_TIMEOUT_MS)
+      ),
+    ]);
+  } catch (timeoutErr) {
+    console.warn(`[Storage] SDK upload timed out for ${objectPath}. Trying XHR fallback...`);
+    sdkResult = { ok: false, status: 0, responseText: "SDK upload timed out" };
+  }
 
   if (sdkResult.ok) {
     console.log(`[Storage] SDK upload succeeded for ${objectPath}`);
-    onProgress?.(100); // Signal completion
+    onProgress?.(100);
     return sdkResult;
   }
 
