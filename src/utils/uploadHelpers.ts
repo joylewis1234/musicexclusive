@@ -36,8 +36,8 @@ export interface ProcessedCoverArt {
   meta: CoverArtMeta;
 }
 
-const COVER_MAX_DIMENSION = 1600;
-const COVER_TARGET_SIZE_MB = 1.5;
+const COVER_MAX_DIMENSION = 1200;            // ← updated per spec
+const COVER_TARGET_SIZE_MB = 0.7;            // ← 700 KB target
 const COVER_INITIAL_QUALITY = 0.8;
 const COVER_MIN_QUALITY = 0.4;
 const COVER_VALID_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -98,10 +98,13 @@ async function createTinyPreview(source: File): Promise<string | null> {
 /**
  * Process a user-selected cover image:
  *  1. Validate type + size.
- *  2. Resize to max 1600×1600 (preserve aspect).
- *  3. Compress to WEBP (or JPEG fallback).
- *  4. Iterate quality down if still > 1.5 MB.
+ *  2. Resize to max 1200×1200 (preserve aspect).
+ *  3. Compress to JPEG (most compatible).
+ *  4. Iterate quality down if still > 700 KB.
  *  5. Return processed File + object URL preview + metadata.
+ *
+ * If ALL compression attempts fail, the ORIGINAL file is returned
+ * as a fallback (never throws for compression failures).
  *
  * The caller MUST call URL.revokeObjectURL(result.objectUrl) when done.
  */
@@ -117,20 +120,8 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
     throw new Error("Image too large (max 30 MB input). Please choose a smaller file.");
   }
 
-  // --- Choose output type ---
-  // Prefer WEBP; older Safari may not encode to WEBP via canvas so fall back to JPEG.
-  let supportsWebp = false;
-  try {
-    if (typeof OffscreenCanvas !== "undefined") {
-      supportsWebp = true;
-    } else {
-      const c = document.createElement("canvas");
-      supportsWebp = c.toDataURL("image/webp").startsWith("data:image/webp");
-    }
-  } catch {
-    supportsWebp = false;
-  }
-  const outputType = supportsWebp ? "image/webp" : "image/jpeg";
+  // --- Always target JPEG for maximum compatibility ---
+  const outputType = "image/jpeg";
 
   // --- Compress iteratively ---
   let quality = COVER_INITIAL_QUALITY;
@@ -147,8 +138,7 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
         alwaysKeepResolution: false,
       });
 
-      const ext = outputType === "image/webp" ? "webp" : "jpg";
-      compressed = new File([blob], `cover-${Date.now()}.${ext}`, { type: outputType });
+      compressed = new File([blob], `cover-${Date.now()}.jpg`, { type: outputType });
 
       if (compressed.size <= COVER_TARGET_SIZE_MB * 1024 * 1024) {
         break; // under target
@@ -162,7 +152,6 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
   // If iterative compression failed completely, try a last-resort fallback
   if (!compressed) {
     try {
-      // Attempt simplest possible compression
       const blob = await imageCompression(file, {
         maxSizeMB: 2,
         maxWidthOrHeight: 1200,
@@ -175,18 +164,13 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
     }
   }
 
-  // Ultimate fallback: use original if small enough
+  // Ultimate fallback: use original file (never crash)
   if (!compressed) {
-    if (file.size <= 10 * 1024 * 1024) {
-      console.warn("[processCoverArt] Using original file as compression fallback");
-      compressed = file;
-    } else {
-      throw new Error("Failed to compress cover art. Please try a different image.");
-    }
+    console.warn("[processCoverArt] Using original file as compression fallback");
+    compressed = file;
   }
 
   if (compressed.size > COVER_TARGET_SIZE_MB * 1024 * 1024) {
-    // We tried our best – warn but still allow (server will accept up to 10 MB)
     console.warn("[processCoverArt] Could not compress below target; final size:", compressed.size);
   }
 
@@ -199,10 +183,7 @@ export async function processCoverArt(file: File): Promise<ProcessedCoverArt> {
   }
 
   // --- Generate previews ---
-  // Primary preview: blob URL (fast, no memory spike)
   const objectUrl = URL.createObjectURL(compressed);
-
-  // Secondary preview: tiny base64 for localStorage (best-effort)
   const localStoragePreview = await createTinyPreview(compressed);
 
   return {
@@ -269,6 +250,7 @@ export function validateAudio(file: File): AudioMeta {
 /* ------------------------------------------------------------------ */
 
 export function formatBytes(bytes: number): string {
+  if (bytes == null || isNaN(bytes)) return "0 B";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;

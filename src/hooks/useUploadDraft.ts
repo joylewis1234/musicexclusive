@@ -37,11 +37,28 @@ const EMPTY_DRAFT: UploadDraft = {
  */
 function sanitiseDraft(raw: unknown): UploadDraft {
   if (!raw || typeof raw !== "object") return { ...EMPTY_DRAFT };
+
   const d = raw as Record<string, unknown>;
+
+  // Extra safety: if title is null / number / array etc., coerce to ""
+  let title = "";
+  try {
+    title = typeof d.title === "string" ? d.title : "";
+  } catch {
+    title = "";
+  }
+
+  let genre = "";
+  try {
+    genre = typeof d.genre === "string" ? d.genre : "";
+  } catch {
+    genre = "";
+  }
+
   return {
-    title: typeof d.title === "string" ? d.title : "",
-    genre: typeof d.genre === "string" ? d.genre : "",
-    agreementChecked: typeof d.agreementChecked === "boolean" ? d.agreementChecked : false,
+    title,
+    genre,
+    agreementChecked: d.agreementChecked === true,
     coverPreview: typeof d.coverPreview === "string" ? d.coverPreview : null,
     coverMeta: d.coverMeta && typeof d.coverMeta === "object" ? (d.coverMeta as UploadDraft["coverMeta"]) : null,
     audioMeta: d.audioMeta && typeof d.audioMeta === "object" ? (d.audioMeta as UploadDraft["audioMeta"]) : null,
@@ -63,7 +80,10 @@ export function useUploadDraft(userId: string | undefined) {
 
   // --- Load on mount ---
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      setLoaded(true);
+      return;
+    }
     try {
       const raw = localStorage.getItem(storageKey(userId));
       if (raw) {
@@ -115,16 +135,23 @@ export function useUploadDraft(userId: string | undefined) {
     } catch {
       // ignore
     }
-    setDraft(EMPTY_DRAFT);
+    setDraft({ ...EMPTY_DRAFT });
   }, [userId]);
 
-  // --- Has unsaved content? (null-safe) ---
-  const hasDraft =
-    !!(typeof draft.title === "string" && draft.title.trim()) ||
-    !!draft.genre ||
-    !!draft.agreementChecked ||
-    !!draft.coverMeta ||
-    !!draft.audioMeta;
+  // --- Has unsaved content? (completely null-safe) ---
+  const hasDraft = (() => {
+    try {
+      return (
+        !!(typeof draft.title === "string" && draft.title.trim()) ||
+        !!(typeof draft.genre === "string" && draft.genre) ||
+        draft.agreementChecked === true ||
+        draft.coverMeta != null ||
+        draft.audioMeta != null
+      );
+    } catch {
+      return false;
+    }
+  })();
 
   return { draft, loaded, hasDraft, updateDraft, clearDraft };
 }
