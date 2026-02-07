@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -46,87 +46,104 @@ const ArtistSetupAccount = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Get email from URL params or check for pending setup applications
-  useEffect(() => {
+  // Extract checkApplication so it can be called from retry button
+  const checkApplication = useCallback(async () => {
     // Environment debug logging
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
     console.log("[ArtistSetupAccount] Supabase env:", supabaseUrl.replace(/^(https?:\/\/[^.]+).*/, "$1.***"));
 
-    const checkApplication = async () => {
-      const applicationId = searchParams.get("application_id");
-      const emailParam = searchParams.get("email");
+    setIsLoading(true);
+    setLookupError(null);
 
-      // Prefer application_id lookup (deterministic), fall back to email
-      const lookupBody: Record<string, string> = {};
-      if (applicationId) {
-        lookupBody.application_id = applicationId;
-      } else if (emailParam) {
-        lookupBody.email = emailParam;
-      } else {
-        // No identifier provided - allow manual lookup
+    const applicationId = searchParams.get("application_id");
+    const emailParam = searchParams.get("email");
+    const hasEmailLinkParams = !!(applicationId || emailParam);
+
+    // Prefer application_id lookup (deterministic), fall back to email
+    const lookupBody: Record<string, string> = {};
+    if (applicationId) {
+      lookupBody.application_id = applicationId;
+    } else if (emailParam) {
+      lookupBody.email = emailParam;
+    } else {
+      // No identifier provided - allow manual lookup
+      setApplicationStatus("no_email");
+      setIsLoading(false);
+      return;
+    }
+
+    console.log("[ArtistSetupAccount] Looking up application:", lookupBody);
+
+    try {
+      const { data, error } = await supabase.functions.invoke("lookup-artist-application", {
+        body: lookupBody,
+      });
+
+      console.log("[ArtistSetupAccount] Lookup response:", { data, error });
+
+      if (error) {
+        console.error("[ArtistSetupAccount] Edge function error:", error);
+        if (hasEmailLinkParams) {
+          // Came from approval email link — show clean retry screen, NOT email entry
+          console.debug("[ArtistSetupAccount] Edge function failed with email link params present, showing retry screen");
+          setEmail(emailParam || "");
+          setApplicationStatus("connection_error");
+          setIsLoading(false);
+          return;
+        }
+        // No URL params — allow manual lookup (defensive fallback)
         setApplicationStatus("no_email");
         setIsLoading(false);
         return;
       }
 
-      console.log("[ArtistSetupAccount] Looking up application:", lookupBody);
-
-      try {
-        const { data, error } = await supabase.functions.invoke("lookup-artist-application", {
-          body: lookupBody,
-        });
-
-        console.log("[ArtistSetupAccount] Lookup response:", { data, error });
-
-        if (error) {
-          console.error("[ArtistSetupAccount] Edge function error:", error);
-          // Network / deployment error — let user try manual lookup
-          setApplicationStatus("no_email");
-          setLookupError(`Verification service error: ${error.message || "Network error"}. Please enter your email below.`);
-          setIsLoading(false);
-          return;
-        }
-
-        if (!data?.success) {
-          console.warn("[ArtistSetupAccount] Lookup failed:", data);
-          setApplicationStatus("not_found");
-          setLookupError(data?.message || "No approved application found for this email.");
-          setIsLoading(false);
-          return;
-        }
-
-        if (!data?.found) {
-          setApplicationStatus("not_found");
-          setLookupError("No approved application record found for this identifier.");
-          setIsLoading(false);
-          return;
-        }
-
-        const status = String(data.status);
-        const appId = data.application_id ?? null;
-        const authUid = data.auth_user_id ?? null;
-        setEmail(String(data.email ?? emailParam ?? ""));
-        setLookupEmail(String(data.email ?? emailParam ?? ""));
-        setResolvedApplicationId(appId);
-        setApplicationAuthUserId(authUid);
-        setApplicationStatus(status);
-
-        // If application already linked to another user, block
-        if (authUid) {
-          console.warn("[ArtistSetupAccount] Application already linked to auth_user_id:", authUid);
-          setApplicationStatus("already_linked");
-        }
-      } catch (err) {
-        console.error("[ArtistSetupAccount] Unexpected lookup error:", err);
-        setApplicationStatus("no_email");
-        setLookupError("Could not reach verification service. Please enter your email below.");
+      if (!data?.success) {
+        console.warn("[ArtistSetupAccount] Lookup failed:", data);
+        setApplicationStatus("not_found");
+        setLookupError(data?.message || "No approved application found for this email.");
+        setIsLoading(false);
+        return;
       }
 
-      setIsLoading(false);
-    };
+      if (!data?.found) {
+        setApplicationStatus("not_found");
+        setLookupError("No approved application record found for this identifier.");
+        setIsLoading(false);
+        return;
+      }
 
-    checkApplication();
+      const status = String(data.status);
+      const appId = data.application_id ?? null;
+      const authUid = data.auth_user_id ?? null;
+      setEmail(String(data.email ?? emailParam ?? ""));
+      setLookupEmail(String(data.email ?? emailParam ?? ""));
+      setResolvedApplicationId(appId);
+      setApplicationAuthUserId(authUid);
+      setApplicationStatus(status);
+
+      // If application already linked to another user, block
+      if (authUid) {
+        console.warn("[ArtistSetupAccount] Application already linked to auth_user_id:", authUid);
+        setApplicationStatus("already_linked");
+      }
+    } catch (err) {
+      console.error("[ArtistSetupAccount] Unexpected lookup error:", err);
+      if (hasEmailLinkParams) {
+        console.debug("[ArtistSetupAccount] Catch: Edge function failed with email link params, showing retry screen");
+        setEmail(emailParam || "");
+        setApplicationStatus("connection_error");
+      } else {
+        setApplicationStatus("no_email");
+      }
+    }
+
+    setIsLoading(false);
   }, [searchParams]);
+
+  // Run on mount and when searchParams change
+  useEffect(() => {
+    checkApplication();
+  }, [checkApplication]);
 
   const handleLookupApprovedEmail = async () => {
     setLookupError(null);
@@ -435,6 +452,57 @@ const ArtistSetupAccount = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Connection error - edge function failed but we have email link params
+  if (applicationStatus === "connection_error") {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+          <div className="container max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Back</span>
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
+          <GlowCard className="max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-6">
+              <AlertCircle className="w-8 h-8 text-amber-500" />
+            </div>
+            <h1 className="font-display text-xl font-bold text-foreground mb-3">
+              Connection Issue
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              We couldn't verify your approval right now. This is usually a temporary issue — please try again.
+            </p>
+            <div className="space-y-3">
+              <Button className="w-full" onClick={checkApplication}>
+                Try Again
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => window.location.href = "mailto:support@musicexclusive.co?subject=Artist%20Account%20Setup%20Help"}
+              >
+                Contact Support
+              </Button>
+            </div>
+          </GlowCard>
+        </main>
       </div>
     );
   }
