@@ -15,7 +15,7 @@ import {
   Trash2,
   Info,
   RotateCcw,
-  UserCircle,
+  CircleUser,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -766,7 +766,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
         {/* Artist Profile Photo Status */}
         <div className="flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-muted/30">
-          <UserCircle className="h-5 w-5 text-muted-foreground shrink-0" />
+          <CircleUser className="h-5 w-5 text-muted-foreground shrink-0" />
           {artistProfile?.avatar_url ? (
             <div className="flex items-center gap-2">
               <img src={artistProfile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
