@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Upload,
   Music,
+  Headphones,
   ImageIcon,
   CheckCircle,
   AlertCircle,
@@ -14,6 +15,7 @@ import {
   Trash2,
   Info,
   RotateCcw,
+  UserCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +44,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useTrackUpload } from "@/hooks/useTrackUpload";
 import { useArtistAgreement } from "@/hooks/useArtistAgreement";
 import { useUploadDraft } from "@/hooks/useUploadDraft";
+import { useArtistProfile } from "@/hooks/useArtistProfile";
 import { UploadDiagnosticsPanel } from "@/components/artist/UploadDiagnosticsPanel";
 import { UploadProgressBar } from "@/components/artist/UploadProgressBar";
 import { UploadErrorBoundary } from "@/components/artist/UploadErrorBoundary";
@@ -96,6 +99,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   const { state: uploadState, upload, retry, reset: resetUpload } = useTrackUpload();
   const { hasAccepted, isLoading: isCheckingAgreement } = useArtistAgreement();
   const { draft, loaded: draftLoaded, hasDraft, updateDraft, clearDraft } = useUploadDraft(user?.id);
+  const { artistProfile } = useArtistProfile();
 
   // ── Hard-reset escape hatch (?resetUpload=1) ──────────────────────
   // If the URL contains ?resetUpload=1, wipe all upload drafts and
@@ -147,6 +151,12 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   const [audioValidating, setAudioValidating] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
 
+  // --- Preview audio state ---
+  const previewFileRef = useRef<File | null>(null);
+  const [previewMeta, setPreviewMeta] = useState<AudioMeta | null>(null);
+  const [previewValidating, setPreviewValidating] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
   // --- UI state ---
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -154,6 +164,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   // --- Refs ---
   const coverInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const previewInputRef = useRef<HTMLInputElement>(null);
 
   /* ---------------------------------------------------------------- */
   /*  Core reset function                                               */
@@ -191,6 +202,12 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
       setAudioMeta(null);
       setAudioError(null);
       setAudioValidating(false);
+
+      // Preview audio
+      previewFileRef.current = null;
+      setPreviewMeta(null);
+      setPreviewError(null);
+      setPreviewValidating(false);
 
       // Upload hook state
       resetUpload();
@@ -285,10 +302,10 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   }, [hasAccepted, isCheckingAgreement, navigate]);
 
   // --- Derived (fully null-safe) ---
-  const isUploading = uploadState?.step ? ["session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(uploadState.step) : false;
+  const isUploading = uploadState?.step ? ["session_check", "cover_upload", "audio_upload", "preview_upload", "db_insert", "db_update"].includes(uploadState.step) : false;
   const safeTitle = typeof title === "string" ? title : "";
   const safeGenre = typeof genre === "string" ? genre : "";
-  const isFormValid = !!(safeTitle.trim() && safeGenre && coverFile && audioFileRef.current && agreesToTerms);
+  const isFormValid = !!(safeTitle.trim() && safeGenre && coverFile && audioFileRef.current && previewFileRef.current && agreesToTerms);
 
   // --- Loading ---
   if (isCheckingAgreement) {
@@ -400,6 +417,51 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     }
   };
 
+  const handlePreviewSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (e.target) e.target.value = "";
+    if (!file) return;
+
+    setPreviewError(null);
+    if (uploadState.step === "error") resetUpload();
+    setPreviewValidating(true);
+
+    try {
+      // Reuse same validation with a tighter size limit (15s clip ≤ 10MB)
+      const PREVIEW_MAX_BYTES = 10 * 1024 * 1024;
+      if (!SAFE_UPLOADS) {
+        const err = legacyValidateAudio(file);
+        if (err) { setPreviewError(err); setPreviewValidating(false); return; }
+        if (file.size > PREVIEW_MAX_BYTES) {
+          setPreviewError("Preview file too large. Please upload a file under 10MB.");
+          setPreviewValidating(false);
+          return;
+        }
+        previewFileRef.current = file;
+        const meta: AudioMeta = { name: file.name, size: file.size, type: file.type || "audio/mpeg", isWav: false };
+        setPreviewMeta(meta);
+        setPreviewValidating(false);
+        return;
+      }
+
+      const meta = validateAudio(file);
+      if (file.size > PREVIEW_MAX_BYTES) {
+        setPreviewError("Preview file too large. Please upload a file under 10MB.");
+        setPreviewValidating(false);
+        return;
+      }
+      previewFileRef.current = file;
+      setPreviewMeta(meta);
+    } catch (err: any) {
+      console.error("[Upload] Preview validation error:", { fileName: file.name, fileType: file.type, fileSize: file.size, error: err });
+      setPreviewError(err?.message || "We couldn't process that file. Please try a different audio file.");
+      previewFileRef.current = null;
+      setPreviewMeta(null);
+    } finally {
+      setPreviewValidating(false);
+    }
+  };
+
   /** Clear upload-level errors when the user edits text fields */
   const handleTitleChange = (val: string) => {
     setTitle(val);
@@ -421,7 +483,8 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     if (!safeTitle.trim()) missingFields.push("Track Title");
     if (!safeGenre) missingFields.push("Genre");
     if (!coverFile) missingFields.push("Cover Art");
-    if (!audioFileRef.current) missingFields.push("Audio File");
+    if (!audioFileRef.current) missingFields.push("Full Audio File");
+    if (!previewFileRef.current) missingFields.push("15-Second Preview");
     if (!agreesToTerms) missingFields.push("Terms Agreement");
 
     if (missingFields.length > 0 || !user?.id) {
@@ -443,11 +506,11 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
         genre: safeGenre,
         coverFile: coverFile!,
         audioFile: audioFileRef.current!,
+        previewFile: previewFileRef.current,
         userId: user.id,
       });
     } catch (err) {
       console.error("[Upload] Publish error:", err);
-      // Error is already shown via uploadState – don't crash
     }
   };
 
@@ -459,6 +522,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
       genre: safeGenre,
       coverFile,
       audioFile: audioFileRef.current,
+      previewFile: previewFileRef.current,
       userId: user.id,
     }).catch((err) => console.error("[Upload] Retry error:", err));
   };
@@ -639,6 +703,82 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
               <AlertCircle className="h-3 w-3 shrink-0" />
               {audioError}
             </p>
+          )}
+        </div>
+
+        {/* 15-Second Preview */}
+        <div className="space-y-2">
+          <Label>15-Second Preview * (MP3 or WAV, max 10MB)</Label>
+          <p className="text-xs text-muted-foreground -mt-1">
+            Upload a short clip fans will hear before streaming the full track.
+          </p>
+          <input
+            ref={previewInputRef}
+            type="file"
+            accept="audio/mpeg,audio/mp3,audio/wav,audio/wave,.mp3,.wav"
+            onChange={handlePreviewSelect}
+            className="hidden"
+            disabled={isUploading || previewValidating}
+          />
+          <GlowCard
+            className="p-4 cursor-pointer hover:border-primary/50 transition-colors"
+            onClick={() => !isUploading && !previewValidating && previewInputRef.current?.click()}
+          >
+            {previewValidating ? (
+              <div className="flex items-center justify-center gap-3 py-4">
+                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                <span className="text-sm text-muted-foreground">Validating preview…</span>
+              </div>
+            ) : previewMeta ? (
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Headphones className="h-8 w-8 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{previewMeta.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatBytes(previewMeta.size)}
+                    {previewMeta.isWav ? " · WAV" : " · MP3"}
+                  </p>
+                  {!previewFileRef.current && previewMeta && (
+                    <p className="text-xs text-amber-500 mt-1 flex items-center gap-1">
+                      <Info className="h-3 w-3" />
+                      Please re-select this file to upload
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-2 py-4 text-muted-foreground">
+                <Headphones className="h-8 w-8" />
+                <span className="text-sm">Tap to select 15-second preview</span>
+              </div>
+            )}
+          </GlowCard>
+          {previewError && (
+            <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+              <AlertCircle className="h-3 w-3 shrink-0" />
+              {previewError}
+            </p>
+          )}
+        </div>
+
+
+        {/* Artist Profile Photo Status */}
+        <div className="flex items-center gap-3 p-3 rounded-lg border border-border/40 bg-muted/30">
+          <UserCircle className="h-5 w-5 text-muted-foreground shrink-0" />
+          {artistProfile?.avatar_url ? (
+            <div className="flex items-center gap-2">
+              <img src={artistProfile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+              <span className="text-sm text-muted-foreground">Profile photo set</span>
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">
+              No profile photo yet —{" "}
+              <Link to="/artist/profile/edit" className="text-primary hover:underline">
+                add one in Profile Settings
+              </Link>
+            </span>
           )}
         </div>
 

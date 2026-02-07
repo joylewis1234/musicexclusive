@@ -13,6 +13,7 @@ const stepMessages: Record<UploadStep, string> = {
   session_check: "Verifying session...",
   cover_upload: "Uploading cover art...",
   audio_upload: "Uploading audio file...",
+  preview_upload: "Uploading preview clip...",
   db_insert: "Saving track...",
   db_update: "Finalizing track...",
   success: "Track published!",

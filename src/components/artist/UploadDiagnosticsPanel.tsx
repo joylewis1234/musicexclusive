@@ -13,6 +13,7 @@ const stepLabels: Record<UploadStep, string> = {
   session_check: "Session Check",
   cover_upload: "Cover Upload",
   audio_upload: "Audio Upload",
+  preview_upload: "Preview Upload",
   db_insert: "Database Insert",
   db_update: "Database Update",
   success: "Complete",

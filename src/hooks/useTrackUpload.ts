@@ -9,6 +9,7 @@ export type UploadStep =
   | "session_check"
   | "cover_upload"
   | "audio_upload"
+  | "preview_upload"
   | "db_insert"
   | "db_update"
   | "success"
@@ -30,6 +31,7 @@ export interface UploadState {
   trackId: string | null;
   uploadedCoverPath: string | null;
   uploadedAudioPath: string | null;
+  uploadedPreviewPath: string | null;
   isTimedOut: boolean;
   lastFailedStep: UploadStep | null;
 }
@@ -39,6 +41,7 @@ interface UploadParams {
   genre: string;
   coverFile: File;
   audioFile: File;
+  previewFile?: File | null;
   userId: string;
 }
 
@@ -71,6 +74,7 @@ export function useTrackUpload() {
     trackId: null,
     uploadedCoverPath: null,
     uploadedAudioPath: null,
+    uploadedPreviewPath: null,
     isTimedOut: false,
     lastFailedStep: null,
   });
@@ -228,6 +232,7 @@ export function useTrackUpload() {
       trackId: null,
       uploadedCoverPath: null,
       uploadedAudioPath: null,
+      uploadedPreviewPath: null,
       isTimedOut: false,
       lastFailedStep: null,
     });
@@ -235,7 +240,7 @@ export function useTrackUpload() {
 
   const upload = useCallback(
     async (params: UploadParams, options?: { resumeFrom?: UploadStep }): Promise<boolean> => {
-      const { title, genre, coverFile, audioFile, userId } = params;
+      const { title, genre, coverFile, audioFile, previewFile, userId } = params;
       const resumeFrom = options?.resumeFrom;
 
       const safeMsg = (fallback: string, err?: unknown) => {
@@ -567,8 +572,74 @@ export function useTrackUpload() {
           }
         }
 
-        // Step 6: Update DB with URLs + status=ready
-        setStep("db_update", 85);
+        // Step 6: Upload preview audio (optional)
+        let previewPath: string | null = null;
+        if (previewFile && previewFile instanceof File) {
+          const previewContentType = getAudioContentType(previewFile);
+          const previewExt = audioExtFromContentType(previewContentType);
+          previewPath = `artists/${artistId}/${trackId}_preview.${previewExt}`;
+
+          if (!resumeFrom || resumeFrom === "preview_upload") {
+            setStep("preview_upload", 86);
+            addDiagnostic({
+              step: "preview_upload",
+              status: "pending",
+              message: "Uploading preview clip...",
+              timestamp: new Date(),
+              details: safeStringify({
+                path: previewPath,
+                contentType: previewContentType,
+                fileName: previewFile.name,
+                fileSize: previewFile.size,
+              }),
+            });
+
+            try {
+              const res = await uploadToStorageWithXhr({
+                url: SUPABASE_URL,
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                accessToken,
+                bucket: "track_audio",
+                objectPath: previewPath,
+                file: previewFile,
+                contentType: previewContentType,
+                onProgress: (pct) => {
+                  const mapped = 86 + Math.round(pct * 0.04);
+                  setStep("preview_upload", mapped);
+                },
+              });
+
+              if (!res.ok) {
+                const msg = safeMsg("Preview upload failed", res);
+                throw { message: msg, statusCode: String(res.status || ""), error: res, data: null };
+              }
+
+              setState((prev) => ({ ...prev, uploadedPreviewPath: previewPath }));
+              addDiagnostic({
+                step: "preview_upload",
+                status: "success",
+                message: "Preview uploaded",
+                timestamp: new Date(),
+                details: safeStringify({ path: previewPath, status: res.status }),
+              });
+            } catch (err) {
+              const msg = safeMsg("Preview upload failed", err);
+              addDiagnostic({
+                step: "preview_upload",
+                status: "error",
+                message: msg,
+                timestamp: new Date(),
+                details: safeStringify(err),
+              });
+              console.error("[Upload] Preview upload failed:", err);
+              setState((prev) => ({ ...prev, lastFailedStep: "preview_upload" }));
+              throw new Error(msg);
+            }
+          }
+        }
+
+        // Step 7: Update DB with URLs + status=ready
+        setStep("db_update", 90);
         addDiagnostic({
           step: "db_update",
           status: "pending",
@@ -578,15 +649,23 @@ export function useTrackUpload() {
 
         const coverPublicUrl = supabase.storage.from("track_covers").getPublicUrl(coverPath).data?.publicUrl || "";
         const audioPublicUrl = supabase.storage.from("track_audio").getPublicUrl(audioPath).data?.publicUrl || "";
+        const previewPublicUrl = previewPath
+          ? supabase.storage.from("track_audio").getPublicUrl(previewPath).data?.publicUrl || null
+          : null;
 
         try {
+          const updatePayload: Record<string, unknown> = {
+            artwork_url: coverPublicUrl,
+            full_audio_url: audioPublicUrl,
+            status: "ready",
+          };
+          if (previewPublicUrl) {
+            updatePayload.preview_audio_url = previewPublicUrl;
+          }
+
           const { error: updateErr } = await supabase
             .from("tracks")
-            .update(({
-              artwork_url: coverPublicUrl,
-              full_audio_url: audioPublicUrl,
-              status: "ready",
-            } as any))
+            .update(updatePayload as any)
             .eq("id", trackId);
 
           if (updateErr) {
@@ -599,7 +678,7 @@ export function useTrackUpload() {
             status: "success",
             message: "Track finalized",
             timestamp: new Date(),
-            details: safeStringify({ trackId, coverPublicUrl, audioPublicUrl }),
+            details: safeStringify({ trackId, coverPublicUrl, audioPublicUrl, previewPublicUrl }),
           });
         } catch (err) {
           const msg = safeMsg("Failed to finalize track", err);
