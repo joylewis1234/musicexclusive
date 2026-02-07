@@ -97,6 +97,35 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   const { hasAccepted, isLoading: isCheckingAgreement } = useArtistAgreement();
   const { draft, loaded: draftLoaded, hasDraft, updateDraft, clearDraft } = useUploadDraft(user?.id);
 
+  // ── Hard-reset escape hatch (?resetUpload=1) ──────────────────────
+  // If the URL contains ?resetUpload=1, wipe all upload drafts and
+  // in-memory state on first mount, then strip the param from the URL.
+  const [hardResetDone, setHardResetDone] = useState(false);
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("resetUpload") === "1") {
+        // Wipe all upload draft localStorage keys
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith("upload_draft_")) {
+            localStorage.removeItem(key);
+          }
+        });
+        // Strip the query param so it doesn't persist
+        params.delete("resetUpload");
+        const newUrl =
+          window.location.pathname +
+          (params.toString() ? `?${params.toString()}` : "") +
+          window.location.hash;
+        window.history.replaceState({}, "", newUrl);
+        // Signal that we should clear in-memory state after this effect
+        setHardResetDone(true);
+      }
+    } catch {
+      // Ignore – safety net
+    }
+  }, []);
+
   // --- Form state (synced from draft on load) ---
   const [title, setTitle] = useState("");
   const [genre, setGenre] = useState("");
@@ -189,9 +218,17 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     };
   }, [revokePreviousCoverUrl]);
 
+  // --- If hard-reset was triggered, wipe in-memory state ---
+  useEffect(() => {
+    if (hardResetDone) {
+      resetUploadForm({ clearDraft: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hardResetDone]);
+
   // --- Hydrate form from draft once (defensive null-guards) ---
   useEffect(() => {
-    if (!draftLoaded) return;
+    if (!draftLoaded || hardResetDone) return;
     try {
       setTitle(typeof draft.title === "string" ? draft.title : "");
       setGenre(typeof draft.genre === "string" ? draft.genre : "");
