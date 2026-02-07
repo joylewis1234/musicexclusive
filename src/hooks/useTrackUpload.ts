@@ -6,7 +6,7 @@ import { smartUpload } from "@/utils/storageUpload";
 import { getAudioDuration } from "@/utils/audioDuration";
 
 // Version marker – update on every change to confirm code is running
-export const UPLOAD_HOOK_VERSION = "v5.0.0-2026-02-07";
+export const UPLOAD_HOOK_VERSION = "v6.0.0-2026-02-07";
 
 export type UploadStep =
   | "idle"
