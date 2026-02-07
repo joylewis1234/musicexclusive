@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
 import { uploadToStorageWithXhr } from "@/utils/storageUpload";
+import { getAudioDuration } from "@/utils/audioDuration";
 
 export type UploadStep =
   | "idle"
@@ -653,11 +654,26 @@ export function useTrackUpload() {
           ? supabase.storage.from("track_audio").getPublicUrl(previewPath).data?.publicUrl || null
           : null;
 
+        // Detect actual audio duration from the file
+        let audioDuration = 180; // fallback
+        try {
+          audioDuration = await getAudioDuration(audioFile);
+          addDiagnostic({
+            step: "db_update",
+            status: "success",
+            message: `Audio duration detected: ${audioDuration}s`,
+            timestamp: new Date(),
+          });
+        } catch (durErr) {
+          console.warn("[Upload] Duration detection failed, using fallback:", durErr);
+        }
+
         try {
           const updatePayload: Record<string, unknown> = {
             artwork_url: coverPublicUrl,
             full_audio_url: audioPublicUrl,
             status: "ready",
+            duration: audioDuration,
           };
           if (previewPublicUrl) {
             updatePayload.preview_audio_url = previewPublicUrl;

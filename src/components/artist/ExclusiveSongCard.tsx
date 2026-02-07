@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Eye, Trash2, Lock, Loader2, Music, Clock, Share2 } from "lucide-react";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
+import { getAudioDurationFromUrl } from "@/utils/audioDuration";
 
 export interface ExclusiveSong {
   id: string;
@@ -66,6 +67,32 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   const [isPreviewEditOpen, setIsPreviewEditOpen] = useState(false);
   const [previewStartSeconds, setPreviewStartSeconds] = useState(song.preview_start_seconds || 0);
   const [isSavingPreview, setIsSavingPreview] = useState(false);
+  const [detectedDuration, setDetectedDuration] = useState<number>(song.duration || 180);
+
+  // When the Hook dialog opens, detect actual audio duration from the URL
+  // This fixes tracks that have the default 180s duration
+  useEffect(() => {
+    if (!isPreviewEditOpen || !song.full_audio_url) return;
+
+    let cancelled = false;
+    getAudioDurationFromUrl(song.full_audio_url, song.duration || 180).then((dur) => {
+      if (!cancelled && dur > 0) {
+        setDetectedDuration(dur);
+        // Also update the DB if it differs from stored value
+        if (dur !== (song.duration || 180)) {
+          supabase
+            .from("tracks")
+            .update({ duration: dur } as any)
+            .eq("id", song.id)
+            .then(({ error }) => {
+              if (error) console.warn("[Hook] Failed to update duration:", error);
+              else console.log("[Hook] Updated track duration to", dur);
+            });
+        }
+      }
+    });
+    return () => { cancelled = true; };
+  }, [isPreviewEditOpen, song.full_audio_url, song.duration, song.id]);
 
   const handleShare = async () => {
     // Build the shareable URL to the artist profile with track highlighted
@@ -300,7 +327,7 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
           <div className="py-4">
             <PreviewTimeSelector
               audioUrl={song.full_audio_url}
-              audioDuration={song.duration || 0}
+              audioDuration={detectedDuration}
               previewStartSeconds={previewStartSeconds}
               onPreviewStartChange={setPreviewStartSeconds}
             />
