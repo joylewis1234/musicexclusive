@@ -25,9 +25,12 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
   useEffect(() => {
     const checkArtistAccess = async () => {
       if (!user) {
+        console.log("[ArtistProtectedRoute] No user, skipping check");
         setStatusLoading(false);
         return;
       }
+
+      console.log("[ArtistProtectedRoute] Checking access for userId:", user.id, "role:", role);
 
       try {
         // Primary check: does this user have an artist_profiles row?
@@ -42,7 +45,7 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
         }
 
         if (profile) {
-          console.log("[ArtistProtectedRoute] Artist profile found:", profile.id);
+          console.log("[ArtistProtectedRoute] ✅ Artist profile found:", profile.id);
           setGateResult("has_profile");
           setStatusLoading(false);
           return;
@@ -62,7 +65,6 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
         if (appError) {
           console.error("[ArtistProtectedRoute] Application check error:", appError);
           // If we can't check, don't block — let them through to dashboard
-          // (the dashboard itself will show empty state)
           setGateResult("has_profile");
           setStatusLoading(false);
           return;
@@ -77,8 +79,6 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
           switch (application.status) {
             case "active":
             case "approved":
-              // Has application but no profile — finalize should have created it
-              // Allow access and let dashboard handle the empty state
               setGateResult("has_profile");
               break;
             case "approved_pending_setup":
@@ -115,11 +115,25 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
     };
 
     if (role === "artist") {
+      // CRITICAL: Reset loading + gate before async check to prevent
+      // the guard from passing through with stale gateResult=null
+      setStatusLoading(true);
+      setGateResult(null);
       checkArtistAccess();
     } else {
       setStatusLoading(false);
     }
   }, [user, role]);
+
+  // Log current state for debugging
+  console.log("[ArtistProtectedRoute] Guard state:", {
+    userId: user?.id?.slice(0, 8) ?? null,
+    role,
+    authLoading,
+    statusLoading,
+    gateResult,
+    path: location.pathname,
+  });
 
   // Show loading while checking auth and status
   if (authLoading || statusLoading || (user && !role)) {
@@ -134,37 +148,48 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
 
   // Not authenticated
   if (!user) {
+    console.log("[ArtistProtectedRoute] ❌ Redirect: no authenticated user → /artist/login");
     return <Navigate to="/artist/login" state={{ from: location }} replace />;
   }
 
   // Authenticated but wrong role
   if (role !== "artist") {
+    console.log("[ArtistProtectedRoute] ❌ Redirect: role is", role, "not artist → /access-restricted");
     return <Navigate to="/access-restricted" state={{ userRole: role, requiredRole: "artist" }} replace />;
   }
 
   // Artist role — route based on gate result
   switch (gateResult) {
     case "has_profile":
+      console.log("[ArtistProtectedRoute] ✅ Access granted (has_profile)");
       return <>{children}</>;
 
     case "app_approved_pending":
-      // Allow access to setup page
       if (location.pathname === "/artist/setup-account") {
         return <>{children}</>;
       }
+      console.log("[ArtistProtectedRoute] → Redirect: approved pending setup");
       return <Navigate to="/artist/setup-account" replace />;
 
     case "app_pending":
     case "app_rejected":
+      console.log("[ArtistProtectedRoute] → Redirect: application", gateResult);
       return <Navigate to="/artist/application-status" replace />;
 
     case "no_record":
-      // Authenticated artist with no profile and no application
-      // Let them through — the dashboard/login flow handles this
+      console.log("[ArtistProtectedRoute] ✅ Access granted (no_record, letting dashboard handle)");
       return <>{children}</>;
 
     default:
-      // Still loading or unknown state — allow access
-      return <>{children}</>;
+      // gateResult is still null — should be caught by statusLoading guard above
+      // but as safety net, show spinner instead of passing through
+      console.log("[ArtistProtectedRoute] ⏳ gateResult still null, showing spinner as safety net");
+      return (
+        <TimeoutSpinner
+          page="ArtistProtectedRoute"
+          loadingMessage="Verifying artist access…"
+          errorMessage="Artist verification timed out. Please check your connection and try again."
+        />
+      );
   }
 };
