@@ -245,9 +245,11 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     }
   }, [hasAccepted, isCheckingAgreement, navigate]);
 
-  // --- Derived ---
-  const isUploading = ["session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(uploadState.step);
-  const isFormValid = !!(title?.trim() && genre && coverFile && audioFileRef.current && agreesToTerms);
+  // --- Derived (fully null-safe) ---
+  const isUploading = uploadState?.step ? ["session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(uploadState.step) : false;
+  const safeTitle = typeof title === "string" ? title : "";
+  const safeGenre = typeof genre === "string" ? genre : "";
+  const isFormValid = !!(safeTitle.trim() && safeGenre && coverFile && audioFileRef.current && agreesToTerms);
 
   // --- Loading ---
   if (isCheckingAgreement) {
@@ -375,10 +377,10 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     if (uploadState.step === "error") resetUpload();
   };
 
-  const handlePublish = async () => {
+   const handlePublish = async () => {
     const missingFields: string[] = [];
-    if (!title?.trim()) missingFields.push("Track Title");
-    if (!genre) missingFields.push("Genre");
+    if (!safeTitle.trim()) missingFields.push("Track Title");
+    if (!safeGenre) missingFields.push("Genre");
     if (!coverFile) missingFields.push("Cover Art");
     if (!audioFileRef.current) missingFields.push("Audio File");
     if (!agreesToTerms) missingFields.push("Terms Agreement");
@@ -398,8 +400,8 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
     try {
       await upload({
-        title,
-        genre,
+        title: safeTitle,
+        genre: safeGenre,
         coverFile: coverFile!,
         audioFile: audioFileRef.current!,
         userId: user.id,
@@ -414,8 +416,8 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     if (!user?.id || !coverFile || !audioFileRef.current) return;
     setShowDiagnostics(true);
     retry({
-      title,
-      genre,
+      title: safeTitle,
+      genre: safeGenre,
       coverFile,
       audioFile: audioFileRef.current,
       userId: user.id,
@@ -663,7 +665,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
         )}
 
         {/* Diagnostics Panel Toggle */}
-        {uploadState.diagnostics.length > 0 && (
+        {(uploadState?.diagnostics?.length ?? 0) > 0 && (
           <Button
             variant="ghost"
             size="sm"
@@ -680,9 +682,9 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
         {/* Diagnostics Panel */}
         <UploadDiagnosticsPanel
-          diagnostics={uploadState.diagnostics}
+          diagnostics={uploadState?.diagnostics ?? []}
           isVisible={showDiagnostics}
-          isTimedOut={uploadState.isTimedOut}
+          isTimedOut={uploadState?.isTimedOut ?? false}
         />
 
         {/* Publish Button */}
