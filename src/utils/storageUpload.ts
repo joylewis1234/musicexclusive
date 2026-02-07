@@ -97,8 +97,8 @@ export async function uploadToStorageWithXhr(params: UploadWithXhrParams): Promi
           resolve({ ok, status, responseText: xhr.responseText || "" });
         };
 
-        // Set a generous timeout for slow mobile connections (90s)
-        xhr.timeout = 90_000;
+        // Set a very generous timeout for slow mobile connections (5 min)
+        xhr.timeout = 300_000;
 
         xhr.send(form);
       } catch (err) {
