@@ -68,6 +68,9 @@ const SubmitVaultCode = () => {
     },
   });
 
+  // Check for force query param (test mode)
+  const forceParam = searchParams.get("force") as "win" | "lose" | null;
+
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
     setShowError(false);
@@ -75,12 +78,19 @@ const SubmitVaultCode = () => {
     
     try {
       // Call server-side rate-limited validation
+      const requestBody: Record<string, string> = {
+        email: values.email,
+        vaultCode: values.vaultCode,
+        mode: "submit",
+      };
+      
+      // Pass force param for test mode
+      if (forceParam === "win" || forceParam === "lose") {
+        requestBody.forceResult = forceParam;
+      }
+
       const { data, error } = await supabase.functions.invoke("validate-vault-code", {
-        body: {
-          email: values.email,
-          vaultCode: values.vaultCode,
-          mode: "submit",
-        },
+        body: requestBody,
       });
 
       if (error) {
@@ -317,8 +327,17 @@ const SubmitVaultCode = () => {
 
               {!showError && !isBlocked && (
                 <p className="mt-6 text-muted-foreground text-sm text-center font-body">
-                  Codes expire 30 minutes after issue.
+                  Your Vault Code is permanent — use it anytime.
                 </p>
+              )}
+
+              {/* Test Mode Indicator */}
+              {forceParam && (
+                <div className="mt-4 border border-dashed border-yellow-500/50 rounded-lg p-3 bg-yellow-500/5">
+                  <p className="text-xs text-yellow-500 uppercase tracking-wider text-center font-medium">
+                    🧪 Test Mode: force={forceParam}
+                  </p>
+                </div>
               )}
             </div>
           </GlowCard>
