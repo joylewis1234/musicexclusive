@@ -82,7 +82,8 @@ const ArtistAgreementAccept = () => {
           </p>
         </div>
 
-        <GlowCard glowColor="gradient" className="p-6 md:p-8 backdrop-blur-xl bg-card/80">
+        <GlowCard glowColor="gradient" className="p-0 backdrop-blur-xl">
+          <div className="p-7 md:p-9">
           {/* Intro Text */}
           <p className="text-sm md:text-base font-body text-muted-foreground mb-4 leading-relaxed">
             <span className="text-primary font-semibold">Music Exclusive</span> is a pre-release platform built to pay artists more and reward real fans.
@@ -166,6 +167,7 @@ const ArtistAgreementAccept = () => {
                 Copyright & DMCA
               </Link>
             </div>
+          </div>
           </div>
         </GlowCard>
 
