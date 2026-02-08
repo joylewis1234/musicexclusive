@@ -208,6 +208,9 @@ const ArtistProfile = () => {
     }
   }, [role, user?.id, artist, forceFanView]);
 
+  // Artist previewing their own profile as fan - hide play buttons
+  const isArtistPreview = forceFanView && !!user?.id && !!artist && user.id === artist.userId;
+
   // Scroll to selected track from URL
   useEffect(() => {
     if (selectedTrackId && tracks.length > 0 && !hasScrolledToTrack.current) {
@@ -357,20 +360,23 @@ const ArtistProfile = () => {
         onPlayAll={handlePlayAll}
         onShareArtist={handleShareArtist}
         isPlaying={!!selectedTrack}
+        hidePlayButton={isArtistPreview}
       />
 
       {/* About Section */}
       <ArtistAboutSection bio={artist.bio} socialLinks={artist.socialLinks} />
 
-      {/* Vault Player */}
-      <CompactVaultPlayer
-        track={selectedTrack}
-        hasVaultAccess={hasVaultAccess}
-        isLiked={selectedTrack ? getLikeState(selectedTrack.id).isLiked : false}
-        onAccessDenied={() => setShowAccessGate(true)}
-        onLike={handlePlayerLike}
-        onShare={handlePlayerShare}
-      />
+      {/* Vault Player (hidden in artist preview mode) */}
+      {!isArtistPreview && (
+        <CompactVaultPlayer
+          track={selectedTrack}
+          hasVaultAccess={hasVaultAccess}
+          isLiked={selectedTrack ? getLikeState(selectedTrack.id).isLiked : false}
+          onAccessDenied={() => setShowAccessGate(true)}
+          onLike={handlePlayerLike}
+          onShare={handlePlayerShare}
+        />
+      )}
 
       {/* Track List Section */}
       <section className="px-5 pb-6">
@@ -435,6 +441,7 @@ const ArtistProfile = () => {
                   onSelect={() => handleSelectTrack(track)}
                   onShare={() => handleShareTrack(track)}
                   fallbackImage={artist.imageUrl}
+                  hidePlayButton={isArtistPreview}
                 />
               );
             })}
