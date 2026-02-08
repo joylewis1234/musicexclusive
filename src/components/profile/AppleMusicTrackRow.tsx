@@ -24,6 +24,7 @@ interface AppleMusicTrackRowProps {
   onSelect: () => void;
   onShare: () => void;
   fallbackImage: string;
+  hidePlayButton?: boolean;
 }
 
 const formatDuration = (seconds: number) => {
@@ -46,6 +47,7 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
   onSelect,
   onShare,
   fallbackImage,
+  hidePlayButton = false,
 }, ref) => {
   const handleLikeClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -75,12 +77,17 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
   return (
     <div
       ref={ref}
-      onClick={onSelect}
+      onClick={hidePlayButton ? undefined : onSelect}
       className={cn(
-        "group relative flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200",
-        showHighlight
+        "group relative flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
+        hidePlayButton
+          ? ""
+          : "cursor-pointer",
+        !hidePlayButton && showHighlight
           ? "bg-primary/10"
-          : "hover:bg-muted/30 active:bg-muted/40"
+          : !hidePlayButton
+          ? "hover:bg-muted/30 active:bg-muted/40"
+          : ""
       )}
       style={{
         boxShadow: showHighlight ? "inset 0 0 0 1px hsla(280, 80%, 50%, 0.3)" : undefined,
@@ -88,7 +95,11 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
     >
       {/* Track number or play indicator */}
       <div className="w-6 flex-shrink-0 text-center">
-        {showHighlight ? (
+        {hidePlayButton ? (
+          <span className="text-sm text-muted-foreground font-mono">
+            {index + 1}
+          </span>
+        ) : showHighlight ? (
           <div className="w-5 h-5 mx-auto rounded-full bg-primary flex items-center justify-center">
             <Play className="w-3 h-3 text-primary-foreground ml-0.5" fill="currentColor" />
           </div>
@@ -97,7 +108,7 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
             {index + 1}
           </span>
         )}
-        {!showHighlight && (
+        {!hidePlayButton && !showHighlight && (
           <Play className="w-4 h-4 text-foreground hidden group-hover:block mx-auto" />
         )}
       </div>
@@ -149,21 +160,23 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
           <Share2 className="w-5 h-5" />
         </button>
 
-        {/* Select/Selected indicator */}
-        <div 
-          className={cn(
-            "ml-1 w-7 h-7 rounded-full flex items-center justify-center transition-all",
-            isSelected 
-              ? "bg-primary text-primary-foreground" 
-              : "bg-muted/50 text-muted-foreground group-hover:bg-muted"
-          )}
-        >
-          {isSelected ? (
-            <Check className="w-4 h-4" />
-          ) : (
-            <Play className="w-3.5 h-3.5 ml-0.5" />
-          )}
-        </div>
+        {/* Select/Selected indicator (hidden in artist preview) */}
+        {!hidePlayButton && (
+          <div 
+            className={cn(
+              "ml-1 w-7 h-7 rounded-full flex items-center justify-center transition-all",
+              isSelected 
+                ? "bg-primary text-primary-foreground" 
+                : "bg-muted/50 text-muted-foreground group-hover:bg-muted"
+            )}
+          >
+            {isSelected ? (
+              <Check className="w-4 h-4" />
+            ) : (
+              <Play className="w-3.5 h-3.5 ml-0.5" />
+            )}
+          </div>
+        )}
       </div>
 
       {/* Selected glow effect */}

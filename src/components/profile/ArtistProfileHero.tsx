@@ -10,6 +10,7 @@ interface ArtistProfileHeroProps {
   onShuffle?: () => void;
   onShareArtist: () => void;
   isPlaying?: boolean;
+  hidePlayButton?: boolean;
 }
 
 export const ArtistProfileHero = ({
@@ -20,6 +21,7 @@ export const ArtistProfileHero = ({
   onShuffle,
   onShareArtist,
   isPlaying = false,
+  hidePlayButton = false,
 }: ArtistProfileHeroProps) => {
   return (
     <div className="relative">
@@ -105,28 +107,30 @@ export const ArtistProfileHero = ({
 
           {/* Action buttons row */}
           <div className="flex items-center gap-3">
-            {/* Play button - Primary CTA */}
-            <Button
-              onClick={onPlayAll}
-              size="lg"
-              className={cn(
-                "rounded-full px-6 gap-2 font-medium transition-all",
-                isPlaying 
-                  ? "bg-primary/20 border-2 border-primary text-primary hover:bg-primary/30" 
-                  : "bg-primary text-primary-foreground hover:bg-primary/90"
-              )}
-              style={{
-                boxShadow: isPlaying 
-                  ? '0 0 20px hsla(280, 80%, 50%, 0.5)' 
-                  : '0 0 15px hsla(280, 80%, 50%, 0.3)'
-              }}
-            >
-              <Play className={cn("w-5 h-5", !isPlaying && "ml-0.5")} fill={isPlaying ? "currentColor" : "white"} />
-              {isPlaying ? "Playing" : "Play"}
-            </Button>
+            {/* Play button - Primary CTA (hidden in artist preview) */}
+            {!hidePlayButton && (
+              <Button
+                onClick={onPlayAll}
+                size="lg"
+                className={cn(
+                  "rounded-full px-6 gap-2 font-medium transition-all",
+                  isPlaying 
+                    ? "bg-primary/20 border-2 border-primary text-primary hover:bg-primary/30" 
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
+                )}
+                style={{
+                  boxShadow: isPlaying 
+                    ? '0 0 20px hsla(280, 80%, 50%, 0.5)' 
+                    : '0 0 15px hsla(280, 80%, 50%, 0.3)'
+                }}
+              >
+                <Play className={cn("w-5 h-5", !isPlaying && "ml-0.5")} fill={isPlaying ? "currentColor" : "white"} />
+                {isPlaying ? "Playing" : "Play"}
+              </Button>
+            )}
 
-            {/* Shuffle button - Optional */}
-            {onShuffle && (
+            {/* Shuffle button - Optional (hidden in artist preview) */}
+            {!hidePlayButton && onShuffle && (
               <Button
                 onClick={onShuffle}
                 size="lg"
