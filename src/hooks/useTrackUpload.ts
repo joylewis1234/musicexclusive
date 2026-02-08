@@ -187,14 +187,24 @@ export function useTrackUpload() {
         });
 
         const getFreshToken = async (): Promise<string> => {
-          try {
-            const { data: refreshed } = await supabase.auth.refreshSession();
-            if (refreshed?.session?.access_token) return refreshed.session.access_token;
-          } catch { /* fall through */ }
+          // Try getSession first (instant, no network call if cached)
           const { data } = await supabase.auth.getSession();
-          const token = data?.session?.access_token;
-          if (!token) throw new Error("Session expired. Please log in again.");
-          return token;
+          const session = data?.session;
+          if (session?.access_token) {
+            // Only refresh if token expires within 5 minutes
+            const expiresAt = session.expires_at ?? 0;
+            const fiveMinFromNow = Math.floor(Date.now() / 1000) + 300;
+            if (expiresAt > fiveMinFromNow) {
+              return session.access_token;
+            }
+            // Token expiring soon — try quick refresh
+            try {
+              const { data: refreshed } = await supabase.auth.refreshSession();
+              if (refreshed?.session?.access_token) return refreshed.session.access_token;
+            } catch { /* fall through to existing token */ }
+            return session.access_token;
+          }
+          throw new Error("Session expired. Please log in again.");
         };
 
         let currentAccessToken: string;
