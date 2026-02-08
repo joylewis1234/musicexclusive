@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/artist/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/artist/profile/edit", label: "Profile", icon: User },
+  { path: "/artist/profile/edit", label: "My Profile", icon: User },
   { path: "/artist/earnings", label: "Earnings", icon: DollarSign },
 ];
 
