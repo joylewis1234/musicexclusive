@@ -32,9 +32,13 @@ const LegalPageLayout = ({
 
   // Check if we have navigation history
   const canGoBack = window.history.length > 1 && location.key !== "default";
+  const searchParams = new URLSearchParams(location.search);
+  const fromRoute = searchParams.get("from");
 
   const handleBack = () => {
-    if (canGoBack) {
+    if (fromRoute === "artist-agreement-accept") {
+      navigate("/artist/agreement-accept");
+    } else if (canGoBack) {
       navigate(-1);
     } else {
       navigate("/");
