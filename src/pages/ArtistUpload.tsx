@@ -156,6 +156,8 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   const [previewStartSeconds, setPreviewStartSeconds] = useState(0);
   const [audioDuration, setAudioDuration] = useState(0);
   const [audioObjectUrl, setAudioObjectUrl] = useState<string | null>(null);
+  // Mirror ref to avoid stale closures in callbacks without adding state deps
+  const audioObjectUrlRef = useRef<string | null>(null);
 
   // --- UI state ---
   const [showDiagnostics, setShowDiagnostics] = useState(false);
@@ -205,7 +207,8 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
       // Preview segment
       setPreviewStartSeconds(0);
       setAudioDuration(0);
-      if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
+      if (audioObjectUrlRef.current) URL.revokeObjectURL(audioObjectUrlRef.current);
+      audioObjectUrlRef.current = null;
       setAudioObjectUrl(null);
 
       // Upload hook state
@@ -427,10 +430,13 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   };
 
   // When audio file is selected, detect duration and create object URL for preview selector
-  const handleAudioFileReady = useCallback(async (file: File) => {
-    // Create object URL for preview audition
-    if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
+  // Plain function (NOT useCallback) to avoid Rules of Hooks violation — this is
+  // defined after an early return and its identity doesn't need to be stable.
+  const handleAudioFileReady = async (file: File) => {
+    // Revoke previous blob URL via ref (no state dependency needed)
+    if (audioObjectUrlRef.current) URL.revokeObjectURL(audioObjectUrlRef.current);
     const url = URL.createObjectURL(file);
+    audioObjectUrlRef.current = url;
     setAudioObjectUrl(url);
 
     // Detect duration
@@ -442,7 +448,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     } catch {
       setAudioDuration(180); // fallback
     }
-  }, [audioObjectUrl]);
+  };
 
   /** Clear upload-level errors when the user edits text fields */
   const handleTitleChange = (val: string) => {
