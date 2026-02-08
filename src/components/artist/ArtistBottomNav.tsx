@@ -1,12 +1,11 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, User, DollarSign, Megaphone } from "lucide-react";
+import { LayoutDashboard, User, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/artist/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/artist/profile/edit", label: "Profile", icon: User },
   { path: "/artist/earnings", label: "Earnings", icon: DollarSign },
-  { path: "/artist/marketing", label: "Marketing", icon: Megaphone },
 ];
 
 const ArtistBottomNav = () => {
@@ -39,8 +38,6 @@ const ArtistBottomNav = () => {
             ? "profile-tab" 
             : item.path === "/artist/earnings" 
             ? "earnings-tab" 
-            : item.path === "/artist/marketing"
-            ? "marketing-tab"
             : undefined;
           
           return (
