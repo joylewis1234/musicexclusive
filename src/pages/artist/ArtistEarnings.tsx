@@ -243,11 +243,11 @@ const ArtistEarnings = () => {
       <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
         <div className="w-full max-w-lg mx-auto flex items-center justify-between">
           <button
-            onClick={() => navigate("/artist/dashboard")}
+            onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/artist/dashboard")}
             className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-foreground/80 hover:text-foreground hover:bg-background/90 transition-all"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Dashboard</span>
+            <span className="text-sm font-medium">Back</span>
           </button>
 
           <Button

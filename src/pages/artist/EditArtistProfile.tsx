@@ -28,6 +28,7 @@ import {
   AlertCircle,
   Eye,
   Crown,
+  LogOut,
 } from "lucide-react";
 
 const GENRES = [
@@ -330,20 +331,32 @@ const EditArtistProfile = () => {
       <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
         <div className="w-full max-w-lg mx-auto flex items-center justify-between">
           <button
-            onClick={() => navigate("/artist/dashboard")}
+            onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/artist/dashboard")}
             className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-foreground/80 hover:text-foreground hover:bg-background/90 transition-all"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Dashboard</span>
+            <span className="text-sm font-medium">Back</span>
           </button>
 
-          {/* Title badge */}
-          <div 
-            className="relative px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-border/50"
-          >
-            <span className="text-sm font-display uppercase tracking-wider text-foreground/80">
-              Edit Profile
-            </span>
+          <div className="flex items-center gap-2">
+            {/* Title badge */}
+            <div 
+              className="relative px-3 py-1.5 rounded-full bg-background/80 backdrop-blur-md border border-border/50"
+            >
+              <span className="text-sm font-display uppercase tracking-wider text-foreground/80">
+                Edit Profile
+              </span>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => { await supabase.auth.signOut(); navigate("/"); }}
+              className="rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-muted-foreground hover:text-foreground gap-1.5 px-3"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
           </div>
         </div>
       </header>

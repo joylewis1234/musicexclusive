@@ -314,11 +314,11 @@ const ArtistDashboard = () => {
       <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
         <div className="w-full max-w-lg mx-auto flex items-center justify-between">
           <button
-            onClick={() => navigate("/")}
+            onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/")}
             className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-background/80 backdrop-blur-md border border-border/50 text-foreground/80 hover:text-foreground hover:bg-background/90 transition-all"
           >
             <ChevronLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Home</span>
+            <span className="text-sm font-medium">Back</span>
           </button>
 
           <div className="flex items-center gap-2">

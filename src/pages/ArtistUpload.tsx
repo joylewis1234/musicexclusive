@@ -15,6 +15,7 @@ import {
   Info,
   RotateCcw,
   CircleUser,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,6 +41,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { useTrackUpload, UPLOAD_HOOK_VERSION } from "@/hooks/useTrackUpload";
 import { useArtistAgreement } from "@/hooks/useArtistAgreement";
 import { useUploadDraft } from "@/hooks/useUploadDraft";
@@ -545,20 +547,31 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border/40 px-4 py-3">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/artist/dashboard")}>
+          <Button variant="ghost" size="icon" onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/artist/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
             <h1 className="font-display text-lg font-semibold tracking-wide">Upload Exclusive Track</h1>
             <p className="text-[10px] text-muted-foreground font-mono">{UPLOAD_HOOK_VERSION}</p>
           </div>
-          {/* Start New Upload – visible when there's any content or error */}
-          {(hasDraft || uploadState.step === "error" || uploadState.step === "success") && !isUploading && (
-            <Button variant="outline" size="sm" onClick={handleStartNewUpload}>
-              <RotateCcw className="h-4 w-4 mr-1" />
-              New Upload
+          <div className="flex items-center gap-2">
+            {/* Start New Upload – visible when there's any content or error */}
+            {(hasDraft || uploadState.step === "error" || uploadState.step === "success") && !isUploading && (
+              <Button variant="outline" size="sm" onClick={handleStartNewUpload}>
+                <RotateCcw className="h-4 w-4 mr-1" />
+                New Upload
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={async () => { await supabase.auth.signOut(); navigate("/"); }}
+              className="text-muted-foreground hover:text-foreground"
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
             </Button>
-          )}
+          </div>
         </div>
       </div>
 
