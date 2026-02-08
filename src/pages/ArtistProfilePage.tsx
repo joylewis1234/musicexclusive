@@ -401,6 +401,7 @@ const ArtistProfilePage = () => {
         onShareArtist={handleShareArtist}
         isPlaying={!!selectedTrack}
         hidePlayButton={viewerContext === "artist-preview"}
+        showVaultBackground={true}
       />
 
       {/* About Section */}

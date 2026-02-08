@@ -361,6 +361,7 @@ const ArtistProfile = () => {
         onShareArtist={handleShareArtist}
         isPlaying={!!selectedTrack}
         hidePlayButton={isArtistPreview}
+        showVaultBackground={true}
       />
 
       {/* About Section */}
