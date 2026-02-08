@@ -1,6 +1,7 @@
 import { Play, Shuffle, Share2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import vaultPortal from "@/assets/vault-portal.png";
 
 interface ArtistProfileHeroProps {
   name: string;
@@ -27,23 +28,59 @@ export const ArtistProfileHero = ({
     <div className="relative">
       {/* Full-width hero banner */}
       <div className="relative h-[50vh] min-h-[320px] max-h-[420px]">
-        {/* Background image with blur for larger screens */}
-        <img
-          src={imageUrl}
-          alt=""
-          className="absolute inset-0 w-full h-full object-cover"
-          loading="eager"
-        />
-        {/* Dark gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
-        
-        {/* Subtle animated glow at bottom */}
-        <div 
-          className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-          style={{
-            background: 'linear-gradient(to top, hsla(280, 80%, 50%, 0.08), transparent)'
-          }}
-        />
+        {hidePlayButton ? (
+          <>
+            {/* Vault portal animation background for artist preview */}
+            <div className="absolute inset-0 bg-background" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative w-full h-full max-w-md mx-auto aspect-square flex items-center justify-center">
+                {/* Neon pink trailing ring */}
+                <div className="animate-vault-ring absolute inset-[15%] rounded-full" style={{ zIndex: 20 }} />
+                
+                {/* Animated glow orbs */}
+                <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
+                <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
+                <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
+                
+                {/* Vault portal image */}
+                <img
+                  src={vaultPortal}
+                  alt="Vault Portal"
+                  className="relative w-full h-full object-contain vault-glow"
+                />
+                
+                {/* Inner energy lightning effect */}
+                <div className="absolute inset-[20%] rounded-full overflow-hidden pointer-events-none mix-blend-screen">
+                  <div className="absolute inset-0 animate-vault-lightning-1 opacity-70" />
+                  <div className="absolute inset-0 animate-vault-lightning-2 opacity-60" />
+                  <div className="absolute inset-0 animate-vault-lightning-3 opacity-50" />
+                </div>
+              </div>
+            </div>
+            {/* Bottom fade to background */}
+            <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+          </>
+        ) : (
+          <>
+            {/* Background image with blur for larger screens */}
+            <img
+              src={imageUrl}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="eager"
+            />
+            {/* Dark gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-background/30" />
+            
+            {/* Subtle animated glow at bottom */}
+            <div 
+              className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to top, hsla(280, 80%, 50%, 0.08), transparent)'
+              }}
+            />
+          </>
+        )}
       </div>
 
       {/* Artist info overlay */}
