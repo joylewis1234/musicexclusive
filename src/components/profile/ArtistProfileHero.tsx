@@ -83,8 +83,8 @@ export const ArtistProfileHero = ({
         )}
       </div>
 
-      {/* Artist info overlay */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 pb-6">
+      {/* Artist info overlay - z-30 to stay above vault animation */}
+      <div className="absolute bottom-0 left-0 right-0 px-5 pb-6 z-30">
         <div className="w-full max-w-lg mx-auto">
           {/* Artist profile photo */}
           <div className="relative w-28 h-28 mb-4">
