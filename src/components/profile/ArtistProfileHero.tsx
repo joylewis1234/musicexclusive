@@ -87,10 +87,10 @@ export const ArtistProfileHero = ({
       </div>
 
       {/* Artist info overlay - z-30 to stay above vault animation */}
-      <div className="absolute bottom-0 left-0 right-0 px-5 pb-6 z-30">
+      <div className="absolute bottom-0 left-0 right-0 px-5 pb-4 z-30">
         <div className="w-full max-w-lg mx-auto">
           {/* Artist profile photo */}
-          <div className="relative w-28 h-28 mb-4">
+          <div className="relative w-20 h-20 mb-3">
             {/* Glow ring */}
             <div 
               className="absolute -inset-1 rounded-full blur-sm"
@@ -107,14 +107,14 @@ export const ArtistProfileHero = ({
 
           {/* Artist name */}
           <h1
-            className="font-display text-4xl md:text-5xl font-bold text-foreground tracking-tight mb-2"
+            className="font-display text-3xl md:text-4xl font-bold text-foreground tracking-tight mb-1"
             style={{ textShadow: "0 2px 20px rgba(0, 0, 0, 0.5)" }}
           >
             {name}
           </h1>
 
           {/* Genre subtitle */}
-          <p className="text-muted-foreground text-sm font-medium mb-3">
+          <p className="text-muted-foreground text-sm font-medium mb-2">
             {genre}
           </p>
 
