@@ -99,12 +99,13 @@ const EnterVault = () => {
     
     setIsCheckingExisting(true);
     try {
+      // Vault codes are permanent - look up any existing code for this email
       const { data: existingCode } = await supabase
         .from("vault_codes")
-        .select("code, name, expires_at, used_at")
+        .select("code, name")
         .eq("email", email)
-        .is("used_at", null)
-        .gt("expires_at", new Date().toISOString())
+        .order("issued_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       
       if (existingCode) {
@@ -131,13 +132,13 @@ const EnterVault = () => {
     setIsSubmitting(true);
     
     try {
-      // Check if email already has an unexpired, unused code
+      // Check if email already has a vault code (codes are permanent)
       const { data: existingCode } = await supabase
         .from("vault_codes")
-        .select("code, expires_at, used_at, issued_at")
+        .select("code, issued_at")
         .eq("email", values.email)
-        .is("used_at", null)
-        .gt("expires_at", new Date().toISOString())
+        .order("issued_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
       
       if (existingCode) {
@@ -191,8 +192,6 @@ const EnterVault = () => {
           .from("vault_codes")
           .select("code")
           .eq("code", generatedCode)
-          .is("used_at", null)
-          .gt("expires_at", new Date().toISOString())
           .maybeSingle();
         
         if (!existing) break;
@@ -200,24 +199,14 @@ const EnterVault = () => {
         attempts++;
       }
       
-      // Only delete expired or used codes for this email (not valid ones)
-      const now = new Date().toISOString();
-      await supabase
-        .from("vault_codes")
-        .delete()
-        .eq("email", values.email)
-        .or(`used_at.not.is.null,expires_at.lt.${now}`);
-      
-      // Insert new vault code with expiration
-      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString(); // 30 minutes
-      
+      // Insert new vault code (no expiry - codes are permanent)
       const { error } = await supabase
         .from("vault_codes")
         .insert({
           name: values.name,
           email: values.email,
           code: generatedCode,
-          expires_at: expiresAt,
+          expires_at: null,
         });
       
       if (error) {
@@ -416,13 +405,13 @@ const EnterVault = () => {
                   </Button>
 
                   {/* Helper text */}
-                  <div className="space-y-2">
+                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground font-body">
-                      Your code expires in 30 minutes.
+                      Save this code — it's your permanent Vault Access Code.
                     </p>
                     {hasExistingCode && (
                       <p className="text-sm text-primary font-body font-medium">
-                        You already have a code — use this one to maximize your chances!
+                        Welcome back! This is your existing code — use it to enter the Vault.
                       </p>
                     )}
                   </div>
