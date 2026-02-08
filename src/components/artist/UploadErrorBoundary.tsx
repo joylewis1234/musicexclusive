@@ -47,9 +47,10 @@ export class UploadErrorBoundary extends React.Component<
 > {
   state: UploadErrorBoundaryState = { recoveryCount: 0, stuck: false };
 
-  static getDerivedStateFromError(_error: Error): Partial<UploadErrorBoundaryState> | null {
-    // Return null so we handle everything in componentDidCatch
-    return null;
+  static getDerivedStateFromError(_error: Error): Partial<UploadErrorBoundaryState> {
+    // Signal React that an error occurred – componentDidCatch decides
+    // whether to show fallback or attempt silent recovery.
+    return { stuck: false };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
