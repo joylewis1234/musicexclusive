@@ -14,6 +14,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload";
+import { AvatarCropper } from "@/components/artist/AvatarCropper";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import {
   ChevronLeft,
@@ -87,6 +88,9 @@ const EditArtistProfile = () => {
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
+
+  // Cropper state – raw file before crop
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   // Hook for avatar upload
   const avatarUploader = useAvatarUpload({ userId });
@@ -203,14 +207,23 @@ const EditArtistProfile = () => {
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Open cropper instead of processing immediately
+    setCropFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
-    const processResult = await avatarUploader.processImage(file);
+  const handleCropConfirm = async (croppedFile: File) => {
+    setCropFile(null);
+    const processResult = await avatarUploader.processImage(croppedFile);
     if (!processResult.ok) {
       toast.error(
         (processResult as { ok: false; error: { message: string } }).error.message
       );
     }
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleCropCancel = () => {
+    setCropFile(null);
   };
 
   const handleUploadProcessed = async () => {
@@ -347,114 +360,127 @@ const EditArtistProfile = () => {
             className="hidden"
           />
 
-          <div data-tutorial="avatar-upload" className="relative inline-block mb-4">
-            <div className="relative w-28 h-28">
-              <div 
-                className="absolute -inset-1 rounded-full blur-sm"
-                style={{ 
-                  background: 'linear-gradient(135deg, hsl(280, 80%, 50%), hsl(45, 90%, 55%))' 
-                }}
+          {/* Cropper overlay – shown when a file is selected for cropping */}
+          {cropFile ? (
+            <div className="mb-4">
+              <AvatarCropper
+                imageFile={cropFile}
+                onCrop={handleCropConfirm}
+                onCancel={handleCropCancel}
               />
-              <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-background bg-muted/20">
-                {avatarUploader.processedImage?.previewUrl ? (
-                  <img
-                    src={avatarUploader.processedImage.previewUrl}
-                    alt="Processed preview"
-                    className="w-full h-full object-cover"
-                  />
-                ) : avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt="Artist avatar"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = "none";
+            </div>
+          ) : (
+            <>
+              <div data-tutorial="avatar-upload" className="relative inline-block mb-4">
+                <div className="relative w-28 h-28">
+                  <div 
+                    className="absolute -inset-1 rounded-full blur-sm"
+                    style={{ 
+                      background: 'linear-gradient(135deg, hsl(280, 80%, 50%), hsl(45, 90%, 55%))' 
                     }}
                   />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-12 h-12 text-muted-foreground" />
+                  <div className="relative w-full h-full rounded-full overflow-hidden border-2 border-background bg-muted/20">
+                    {avatarUploader.processedImage?.previewUrl ? (
+                      <img
+                        src={avatarUploader.processedImage.previewUrl}
+                        alt="Processed preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt="Artist avatar"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <User className="w-12 h-12 text-muted-foreground" />
+                      </div>
+                    )}
                   </div>
-                )}
+
+                  {avatarUploader.isProcessing && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
+                      <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(280, 80%, 70%)' }} />
+                    </div>
+                  )}
+
+                  {!avatarUploader.processedImage && !avatarUploader.isProcessing && (
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={avatarUploader.isUploading}
+                      className="absolute bottom-0 right-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
+                      style={{
+                        background: 'hsl(280, 80%, 50%)',
+                        boxShadow: '0 0 12px hsla(280, 80%, 50%, 0.5)',
+                      }}
+                    >
+                      {avatarUploader.isUploading ? (
+                        <Loader2 className="w-5 h-5 animate-spin text-white" />
+                      ) : (
+                        <Camera className="w-5 h-5 text-white" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
-              {avatarUploader.isProcessing && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background/80 rounded-full">
-                  <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(280, 80%, 70%)' }} />
+              {/* Compression info */}
+              {avatarUploader.processedImage && avatarUploader.lastMeta?.compression && (
+                <div className="mb-4 text-xs text-muted-foreground">
+                  <p>
+                    Compressed:{" "}
+                    {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.originalSize)}
+                    {" → "}
+                    {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.compressedSize)}
+                    <span className="ml-1" style={{ color: 'hsl(280, 80%, 70%)' }}>
+                      ({avatarUploader.lastMeta.compression.ratio} saved)
+                    </span>
+                  </p>
                 </div>
               )}
 
-              {!avatarUploader.processedImage && !avatarUploader.isProcessing && (
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={avatarUploader.isUploading}
-                  className="absolute bottom-0 right-0 w-10 h-10 rounded-full flex items-center justify-center transition-colors disabled:opacity-50"
-                  style={{
-                    background: 'hsl(280, 80%, 50%)',
-                    boxShadow: '0 0 12px hsla(280, 80%, 50%, 0.5)',
-                  }}
-                >
-                  {avatarUploader.isUploading ? (
-                    <Loader2 className="w-5 h-5 animate-spin text-white" />
-                  ) : (
-                    <Camera className="w-5 h-5 text-white" />
-                  )}
-                </button>
+              {/* Confirm/Cancel for processed image */}
+              {avatarUploader.processedImage && (
+                <div className="flex gap-3 justify-center mb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCancelProcessed}
+                    disabled={avatarUploader.isUploading}
+                    className="rounded-full"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleUploadProcessed}
+                    disabled={avatarUploader.isUploading}
+                    className="rounded-full"
+                    style={{ background: 'hsl(280, 80%, 50%)' }}
+                  >
+                    {avatarUploader.isUploading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                        Uploading...
+                      </>
+                    ) : (
+                      "Upload Photo"
+                    )}
+                  </Button>
+                </div>
               )}
-            </div>
-          </div>
 
-          {/* Compression info */}
-          {avatarUploader.processedImage && avatarUploader.lastMeta?.compression && (
-            <div className="mb-4 text-xs text-muted-foreground">
-              <p>
-                Compressed:{" "}
-                {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.originalSize)}
-                {" → "}
-                {avatarUploader.formatFileSize(avatarUploader.lastMeta.compression.compressedSize)}
-                <span className="ml-1" style={{ color: 'hsl(280, 80%, 70%)' }}>
-                  ({avatarUploader.lastMeta.compression.ratio} saved)
-                </span>
-              </p>
-            </div>
-          )}
-
-          {/* Confirm/Cancel for processed image */}
-          {avatarUploader.processedImage && (
-            <div className="flex gap-3 justify-center mb-4">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleCancelProcessed}
-                disabled={avatarUploader.isUploading}
-                className="rounded-full"
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleUploadProcessed}
-                disabled={avatarUploader.isUploading}
-                className="rounded-full"
-                style={{ background: 'hsl(280, 80%, 50%)' }}
-              >
-                {avatarUploader.isUploading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Uploading...
-                  </>
-                ) : (
-                  "Upload Photo"
-                )}
-              </Button>
-            </div>
-          )}
-
-          {!avatarUploader.processedImage && (
-            <p className="text-muted-foreground text-xs">
-              Tap to select your artist photo
-            </p>
+              {!avatarUploader.processedImage && (
+                <p className="text-muted-foreground text-xs">
+                  Tap to select your artist photo
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
