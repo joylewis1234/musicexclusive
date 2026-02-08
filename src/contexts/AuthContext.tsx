@@ -120,21 +120,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          // Re-enter loading so route guards wait for role resolution
-          setIsLoading(true);
-          setRole(null);
+          // Only re-enter loading for actual sign-in events, NOT token refreshes.
+          // Token refreshes don't change the user — no need to re-fetch role.
+          const isNewSignIn = event === "SIGNED_IN" || event === "USER_UPDATED";
 
-          try {
-            const userRole = await fetchUserRole(currentSession.user.id);
-            if (isMounted) {
-              setRole(userRole);
-              console.debug("[AuthContext] Role resolved after auth change:", userRole);
+          if (isNewSignIn || !role) {
+            setIsLoading(true);
+            setRole(null);
+
+            try {
+              const userRole = await fetchUserRole(currentSession.user.id);
+              if (isMounted) {
+                setRole(userRole);
+                console.debug("[AuthContext] Role resolved after auth change:", userRole);
+              }
+            } catch (err) {
+              console.error("[AuthContext] Role fetch failed after auth change:", err);
+              if (isMounted) setRole(null);
+            } finally {
+              if (isMounted) setIsLoading(false);
             }
-          } catch (err) {
-            console.error("[AuthContext] Role fetch failed after auth change:", err);
-            if (isMounted) setRole(null);
-          } finally {
-            if (isMounted) setIsLoading(false);
+          } else {
+            console.debug("[AuthContext] Skipping role re-fetch for event:", event);
           }
         } else {
           setRole(null);
