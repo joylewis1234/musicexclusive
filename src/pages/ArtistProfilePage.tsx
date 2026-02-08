@@ -400,6 +400,7 @@ const ArtistProfilePage = () => {
         onPlayAll={handlePlayAll}
         onShareArtist={handleShareArtist}
         isPlaying={!!selectedTrack}
+        hidePlayButton={viewerContext === "artist-preview"}
       />
 
       {/* About Section */}
