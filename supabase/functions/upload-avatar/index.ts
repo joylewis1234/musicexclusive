@@ -99,7 +99,7 @@ serve(async (req) => {
       .upload(objectPath, fileBuffer, {
         upsert: true,
         contentType: file.type,
-        cacheControl: "3600",
+        cacheControl: "no-cache",
       });
 
     if (uploadError) {
@@ -116,9 +116,10 @@ serve(async (req) => {
 
     console.log("[upload-avatar] Upload successful:", uploadData);
 
-    // Get public URL (bucket is public)
+    // Get public URL (bucket is public) — append cache-buster so browsers fetch fresh
     const { data: publicData } = serviceClient.storage.from("avatars").getPublicUrl(objectPath);
-    const publicUrl = publicData?.publicUrl || "";
+    const rawUrl = publicData?.publicUrl || "";
+    const publicUrl = rawUrl ? `${rawUrl}?v=${Date.now()}` : "";
 
     if (!publicUrl) {
       return new Response(
