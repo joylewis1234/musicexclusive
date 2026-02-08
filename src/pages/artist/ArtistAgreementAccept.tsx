@@ -136,7 +136,7 @@ const ArtistAgreementAccept = () => {
               >
                 I agree to the{" "}
                 <Link
-                  to="/artist-agreement"
+                  to="/artist-agreement?from=artist-agreement-accept"
                   className="text-primary hover:underline font-semibold"
                   target="_blank"
                   onClick={(e) => e.stopPropagation()}
