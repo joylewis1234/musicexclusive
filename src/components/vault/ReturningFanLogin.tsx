@@ -27,8 +27,9 @@ const returnFormSchema = z.object({
   vaultCode: z
     .string()
     .trim()
-    .length(4, { message: "Vault code must be exactly 4 digits" })
-    .regex(/^\d{4}$/, { message: "Vault code must be 4 digits" }),
+    .length(4, { message: "Vault code must be exactly 4 characters" })
+    .regex(/^[A-Z0-9]{4}$/i, { message: "Vault code must be 4 alphanumeric characters" })
+    .transform((val) => val.toUpperCase()),
 });
 
 type ReturnFormValues = z.infer<typeof returnFormSchema>;
@@ -241,12 +242,11 @@ export const ReturningFanLogin = () => {
                     <FormControl>
                       <Input
                         type="text"
-                        inputMode="numeric"
-                        pattern="\d{4}"
                         maxLength={4}
-                        placeholder="4-digit Vault Code"
-                        className="h-12 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base text-center tracking-[0.3em] font-display"
+                        placeholder="4-Character Vault Code"
+                        className="h-12 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base text-center tracking-[0.3em] font-display uppercase"
                         {...field}
+                        onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                       />
                     </FormControl>
                     <FormMessage />
