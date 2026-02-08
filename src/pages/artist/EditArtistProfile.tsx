@@ -641,7 +641,7 @@ const EditArtistProfile = () => {
               size="lg"
               className="w-full h-12 gap-2 rounded-full animate-fade-in"
               style={{ animationDelay: '100ms' }}
-              onClick={() => navigate(`/artist/view/${artistProfileId}`)}
+              onClick={() => navigate(`/artist/view/${artistProfileId}?view=fan`)}
             >
               <Eye className="w-5 h-5" />
               View My Profile (Fan View)
