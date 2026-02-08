@@ -12,6 +12,7 @@ interface ArtistProfileHeroProps {
   onShareArtist: () => void;
   isPlaying?: boolean;
   hidePlayButton?: boolean;
+  showVaultBackground?: boolean;
 }
 
 export const ArtistProfileHero = ({
@@ -23,12 +24,14 @@ export const ArtistProfileHero = ({
   onShareArtist,
   isPlaying = false,
   hidePlayButton = false,
+  showVaultBackground = false,
 }: ArtistProfileHeroProps) => {
+  const useVaultBg = showVaultBackground || hidePlayButton;
   return (
     <div className="relative">
       {/* Full-width hero banner */}
       <div className="relative h-[50vh] min-h-[320px] max-h-[420px]">
-        {hidePlayButton ? (
+        {useVaultBg ? (
           <>
             {/* Vault portal animation background for artist preview */}
             <div className="absolute inset-0 bg-background" />
