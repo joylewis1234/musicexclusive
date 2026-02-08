@@ -148,6 +148,8 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
   // --- Audio state (ref for the blob, meta in state) ---
   const audioFileRef = useRef<File | null>(null);
+  // Reactive flag so isFormValid re-evaluates when file is set (refs don't trigger renders)
+  const [hasAudioFile, setHasAudioFile] = useState(false);
   const [audioMeta, setAudioMeta] = useState<AudioMeta | null>(null);
   const [audioValidating, setAudioValidating] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
@@ -200,6 +202,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
       // Audio
       audioFileRef.current = null;
+      setHasAudioFile(false);
       setAudioMeta(null);
       setAudioError(null);
       setAudioValidating(false);
@@ -315,7 +318,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   const isUploading = uploadState?.step ? ["session_check", "cover_upload", "audio_upload", "db_insert", "db_update"].includes(uploadState.step) : false;
   const safeTitle = typeof title === "string" ? title : "";
   const safeGenre = typeof genre === "string" ? genre : "";
-  const isFormValid = !!(safeTitle.trim() && safeGenre && coverFile && audioFileRef.current && agreesToTerms);
+  const isFormValid = !!(safeTitle.trim() && safeGenre && coverFile && hasAudioFile && agreesToTerms);
 
   // --- Loading ---
   if (isCheckingAgreement) {
@@ -401,6 +404,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
         const err = legacyValidateAudio(file);
         if (err) { setAudioError(err); setAudioValidating(false); return; }
         audioFileRef.current = file;
+        setHasAudioFile(true);
         const meta: AudioMeta = { name: file.name, size: file.size, type: file.type || "audio/mpeg", isWav: false };
         setAudioMeta(meta);
         updateDraft({ audioMeta: meta });
@@ -411,6 +415,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
       const meta = validateAudio(file);
       audioFileRef.current = file;
+      setHasAudioFile(true);
       setAudioMeta(meta);
       updateDraft({ audioMeta: meta });
       handleAudioFileReady(file);
@@ -423,6 +428,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
       console.error("[Upload] Audio validation error:", { fileName: file.name, fileType: file.type, fileSize: file.size, error: err });
       setAudioError(err?.message || "We couldn't process that file. Please try a different audio file.");
       audioFileRef.current = null;
+      setHasAudioFile(false);
       setAudioMeta(null);
     } finally {
       setAudioValidating(false);
