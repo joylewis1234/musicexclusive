@@ -31,7 +31,7 @@ export const ArtistProfilePreviewWrapper = () => {
 
         if (profile) {
           // Redirect to the artist view route with their profile ID
-          navigate(`/artist/view/${profile.id}`, { 
+          navigate(`/artist/view/${profile.id}?view=fan`, { 
             replace: true,
             state: { fromRoute: "/artist/dashboard" }
           });
