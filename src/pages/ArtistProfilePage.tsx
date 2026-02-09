@@ -7,6 +7,7 @@ import { ArtistAboutSection } from "@/components/profile/ArtistAboutSection";
 import { AppleMusicTrackRow } from "@/components/profile/AppleMusicTrackRow";
 import { CompactVaultPlayer } from "@/components/profile/CompactVaultPlayer";
 import { ShareArtistSection } from "@/components/profile/ShareArtistSection";
+import { ShareArtistProfileModal } from "@/components/profile/ShareArtistProfileModal";
 import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { ShareExclusiveTrackModal } from "@/components/profile/ShareExclusiveTrackModal";
 import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
@@ -70,6 +71,7 @@ const ArtistProfilePage = () => {
   const [showAccessGate, setShowAccessGate] = useState(false);
   const [shareModalOpen, setShareModalOpen] = useState(false);
   const [trackToShare, setTrackToShare] = useState<TrackData | null>(null);
+  const [shareArtistModalOpen, setShareArtistModalOpen] = useState(false);
   const [artistEmail, setArtistEmail] = useState<string>("");
   const [showStreamConfirm, setShowStreamConfirm] = useState(false);
   const [pendingPlayTrack, setPendingPlayTrack] = useState<PlayerTrack | null>(null);
@@ -273,7 +275,7 @@ const ArtistProfilePage = () => {
       toast.error("Enter the Vault to share artists.");
       return;
     }
-    toast.info("Artist sharing coming soon!");
+    setShareArtistModalOpen(true);
   };
 
   const handlePlayerLike = () => {
@@ -540,6 +542,16 @@ const ArtistProfilePage = () => {
           artistId={artistProfile.id}
         />
       )}
+
+      {/* Share Artist Profile Modal */}
+      <ShareArtistProfileModal
+        open={shareArtistModalOpen}
+        onOpenChange={setShareArtistModalOpen}
+        artistProfileId={artistProfile.id}
+        artistName={artistProfile.artist_name}
+        artistAvatarUrl={artistProfile.avatar_url}
+        artistGenre={(tracks.length > 0 && tracks[0].genre) ? tracks[0].genre : artistProfile.genre}
+      />
 
       {/* Stream Confirmation Modal */}
       <StreamConfirmModal
