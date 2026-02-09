@@ -17,10 +17,14 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
 /** Return "YYYY-MM-DD" for yesterday in America/Los_Angeles */
 function getYesterdayLA(): string {
   const now = new Date();
-  const laStr = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // "YYYY-MM-DD"
-  const laDate = new Date(laStr + "T00:00:00");
-  laDate.setDate(laDate.getDate() - 1);
-  return laDate.toISOString().split("T")[0];
+  const todayLA = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // "YYYY-MM-DD"
+  const [year, month, day] = todayLA.split("-").map(Number);
+  const todayUTC = new Date(Date.UTC(year, month - 1, day));
+  todayUTC.setUTCDate(todayUTC.getUTCDate() - 1);
+  const y = todayUTC.getUTCFullYear();
+  const m = String(todayUTC.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(todayUTC.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 /** Convert a YYYY-MM-DD date in America/Los_Angeles to a UTC ISO string for that midnight */
@@ -352,7 +356,8 @@ function escapeHtml(str: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // ── Main Handler ─────────────────────────────────────────────────────────
@@ -391,10 +396,10 @@ serve(async (req) => {
     if (sendEmail) {
       const { data: existing } = await supabaseAdmin
         .from("report_email_logs")
-        .select("id")
+        .select("id, status")
         .eq("report_date", reportDate)
         .eq("report_type", "daily")
-        .eq("status", "sent")
+        .in("status", ["sent", "pending"])
         .limit(1);
 
       if (existing && existing.length > 0) {
