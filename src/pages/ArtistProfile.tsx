@@ -504,7 +504,6 @@ const ArtistProfile = () => {
             artworkUrl: trackToShare.artwork_url || artist.imageUrl,
           }}
           artistId={artist.id}
-          currentUserEmail={user?.email || undefined}
         />
       )}
     </div>

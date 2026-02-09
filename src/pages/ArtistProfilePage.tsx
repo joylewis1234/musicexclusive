@@ -538,7 +538,6 @@ const ArtistProfilePage = () => {
             artworkUrl: trackToShare.artwork_url || artistProfile.avatar_url,
           }}
           artistId={artistProfile.id}
-          currentUserEmail={user?.email || undefined}
         />
       )}
 
