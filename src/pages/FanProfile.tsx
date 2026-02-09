@@ -224,25 +224,8 @@ const FanProfile = () => {
           )}
         </section>
 
-        {/* Wallet Balance Card */}
-        <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
-          <WalletBalanceCard />
-        </section>
-
-        {/* Discovery CTA */}
-        <section className="animate-fade-in" style={{ animationDelay: "150ms" }}>
-          <Button 
-            variant="secondary" 
-            size="lg" 
-            className="w-full"
-            onClick={() => navigate("/discovery")}
-          >
-            Explore All Music
-          </Button>
-        </section>
-
         {/* Profile Header */}
-        <section className="text-center animate-fade-in" style={{ animationDelay: "200ms" }}>
+        <section className="text-center animate-fade-in" style={{ animationDelay: "100ms" }}>
           {/* Avatar with upload */}
           <div className="relative w-24 h-24 mx-auto mb-4">
             <Avatar className="w-24 h-24 border-2 border-border">
@@ -353,6 +336,23 @@ const FanProfile = () => {
             </div>
           )}
           
+        </section>
+
+        {/* Wallet Balance Card */}
+        <section className="animate-fade-in" style={{ animationDelay: "200ms" }}>
+          <WalletBalanceCard />
+        </section>
+
+        {/* Discovery CTA */}
+        <section className="animate-fade-in" style={{ animationDelay: "250ms" }}>
+          <Button 
+            variant="secondary" 
+            size="lg" 
+            className="w-full"
+            onClick={() => navigate("/discovery")}
+          >
+            Explore All Music
+          </Button>
         </section>
 
         {/* Top 5 Artists */}
