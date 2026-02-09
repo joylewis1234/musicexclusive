@@ -702,6 +702,65 @@ export type Database = {
         }
         Relationships: []
       }
+      shared_artist_profiles: {
+        Row: {
+          artist_profile_id: string
+          created_at: string
+          id: string
+          note: string | null
+          recipient_id: string
+          sender_id: string
+          viewed_at: string | null
+        }
+        Insert: {
+          artist_profile_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          recipient_id: string
+          sender_id: string
+          viewed_at?: string | null
+        }
+        Update: {
+          artist_profile_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          recipient_id?: string
+          sender_id?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shared_artist_profiles_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "shareable_vault_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_artist_profiles_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "vault_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_artist_profiles_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "shareable_vault_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_artist_profiles_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "vault_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shared_tracks: {
         Row: {
           artist_id: string
