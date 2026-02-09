@@ -149,7 +149,7 @@ const CheckoutReturn = () => {
           {status === "error" && (
             <div className="space-y-2">
               <Button className="w-full" onClick={() => navigate("/fan/payment")}>Try Again</Button>
-              <Button className="w-full" variant="outline" onClick={() => navigate("/fan/dashboard")}>Go to Dashboard</Button>
+              <Button className="w-full" variant="outline" onClick={() => navigate("/fan/profile")}>Go to Profile</Button>
               <Button className="w-full" variant="ghost" onClick={() => navigate("/login")}>Log in</Button>
             </div>
           )}
