@@ -58,16 +58,6 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-// Generate 4-character alphanumeric code (uppercase letters + digits, excluding confusing chars)
-const generateVaultCode = (): string => {
-  // Exclude confusing characters: 0/O, 1/I/L
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let code = "";
-  for (let i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
-};
 
 const EnterVault = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -93,30 +83,24 @@ const EnterVault = () => {
     },
   });
 
-  // Check if email already has a valid code
+  // Check if email already has a valid code via edge function
   const checkExistingCode = async (email: string) => {
     if (!email || !z.string().email().safeParse(email).success) return;
     
     setIsCheckingExisting(true);
     try {
-      // Vault codes are permanent - look up any existing code for this email
-      const { data: existingCode } = await supabase
-        .from("vault_codes")
-        .select("code, name")
-        .eq("email", email)
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke("generate-vault-code", {
+        body: { name: "", email },
+      });
       
-      if (existingCode) {
+      if (!error && data?.existing && data?.code) {
         setHasExistingCode(true);
-        setVaultCode(existingCode.code);
-        setSubmittedData({ name: existingCode.name, email });
+        setVaultCode(data.code);
+        setSubmittedData({ name: data.name, email });
         setIsSubmitted(true);
-        sessionStorage.setItem("vaultCode", existingCode.code);
+        sessionStorage.setItem("vaultCode", data.code);
         sessionStorage.setItem("vaultEmail", email);
-        sessionStorage.setItem("vaultName", existingCode.name);
-        // Scroll to top to show the vault code
+        sessionStorage.setItem("vaultName", data.name);
         window.scrollTo({ top: 0, behavior: "instant" });
       } else {
         setHasExistingCode(false);
@@ -132,98 +116,61 @@ const EnterVault = () => {
     setIsSubmitting(true);
     
     try {
-      // Check if email already has a vault code (codes are permanent)
-      const { data: existingCode } = await supabase
-        .from("vault_codes")
-        .select("code, issued_at")
-        .eq("email", values.email)
-        .order("issued_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Step 1: Generate vault code via edge function (server-side, uses service_role)
+      const { data: codeResult, error: codeError } = await supabase.functions.invoke(
+        "generate-vault-code",
+        { body: { name: values.name, email: values.email } }
+      );
       
-      if (existingCode) {
-        // User already has an active vault code - prompt them to log in instead
-        toast.info("You already have a vault code! Please log in below to continue.");
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Rate limiting: Check if a code was issued recently (within 1 minute)
-      const { data: recentCodes } = await supabase
-        .from("vault_codes")
-        .select("issued_at")
-        .eq("email", values.email)
-        .gte("issued_at", new Date(Date.now() - 60 * 1000).toISOString())
-        .order("issued_at", { ascending: false })
-        .limit(1);
-      
-      if (recentCodes && recentCodes.length > 0) {
-        const lastIssued = new Date(recentCodes[0].issued_at);
-        const secondsSince = Math.floor((Date.now() - lastIssued.getTime()) / 1000);
-        const waitTime = 60 - secondsSince;
-        
-        toast.error(`Please wait ${waitTime} seconds before requesting another code`);
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Create user account first
-      const { error: signUpError } = await signUp(values.email, values.password, "fan", values.name);
-      
-      if (signUpError) {
-        // Check for specific error types
-        if (signUpError.message.includes("already registered")) {
-          toast.error("This email is already registered. Please log in below.");
+      if (codeError || !codeResult?.success) {
+        const errorMsg = codeResult?.error || "Failed to generate vault code";
+        if (errorMsg.includes("wait")) {
+          toast.error("Please wait before requesting another code.");
         } else {
-          toast.error(signUpError.message || "Failed to create account. Please try again.");
+          toast.error(errorMsg);
         }
         setIsSubmitting(false);
         return;
       }
       
-      // Generate unique 4-digit code
-      let generatedCode = generateVaultCode();
-      let attempts = 0;
-      const maxAttempts = 20;
-      
-      // Retry if code already exists (collision handling)
-      while (attempts < maxAttempts) {
-        const { data: existing } = await supabase
-          .from("vault_codes")
-          .select("code")
-          .eq("code", generatedCode)
-          .maybeSingle();
-        
-        if (!existing) break;
-        generatedCode = generateVaultCode();
-        attempts++;
-      }
-      
-      // Insert new vault code (no expiry - codes are permanent)
-      const { error } = await supabase
-        .from("vault_codes")
-        .insert({
-          name: values.name,
-          email: values.email,
-          code: generatedCode,
-          expires_at: null,
-        });
-      
-      if (error) {
-        console.error("Error inserting vault code:", error);
-        toast.error("Something went wrong. Please try again.");
+      // If the code already exists, prompt them to log in
+      if (codeResult.existing) {
+        toast.info("You already have a vault code! Please log in below to continue.");
+        setIsSubmitting(false);
         return;
       }
       
-      setVaultCode(generatedCode);
+      // Step 2: Create user account
+      const { error: signUpError } = await signUp(values.email, values.password, "fan", values.name);
+      
+      if (signUpError) {
+        if (signUpError.message.includes("already registered")) {
+          // Account already exists but no vault code before - they now have one
+          // Show the code and let them log in
+          setVaultCode(codeResult.code);
+          setSubmittedData({ name: values.name, email: values.email });
+          setIsSubmitted(true);
+          sessionStorage.setItem("vaultCode", codeResult.code);
+          sessionStorage.setItem("vaultEmail", values.email);
+          sessionStorage.setItem("vaultName", values.name);
+          window.scrollTo({ top: 0, behavior: "instant" });
+          toast.success("Your vault code is ready! Log in below to continue.");
+          setIsSubmitting(false);
+          return;
+        } else {
+          toast.error(signUpError.message || "Failed to create account. Please try again.");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      setVaultCode(codeResult.code);
       setSubmittedData({ name: values.name, email: values.email });
       setIsSubmitted(true);
       
-      // Scroll to top to show the vault code
       window.scrollTo({ top: 0, behavior: "instant" });
       
-      // Store in sessionStorage for persistence across navigation
-      sessionStorage.setItem("vaultCode", generatedCode);
+      sessionStorage.setItem("vaultCode", codeResult.code);
       sessionStorage.setItem("vaultEmail", values.email);
       sessionStorage.setItem("vaultName", values.name);
       
