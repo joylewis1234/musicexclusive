@@ -102,20 +102,21 @@ const FanProfile = () => {
 
   const { topArtists, isLoading: isLoadingArtists } = useFanTopArtists(fanVaultId);
 
-  // Fetch superfan status from vault_members
+  // Fetch superfan status by checking for subscription credits in the ledger
   useEffect(() => {
     const fetchSuperfanStatus = async () => {
       if (!user?.email) return;
       
-      const { data } = await supabase
-        .from("vault_members")
-        .select("vault_access_active, credits")
-        .eq("email", user.email)
-        .maybeSingle();
+      // A true Superfan has a SUBSCRIPTION_CREDITS entry in the ledger
+      const { data, error } = await supabase
+        .from("credit_ledger")
+        .select("id")
+        .eq("user_email", user.email)
+        .eq("type", "SUBSCRIPTION_CREDITS")
+        .limit(1);
       
-      // Superfan = has vault_access_active AND has credits (indicating subscription)
-      if (data) {
-        setIsSuperfan(data.vault_access_active && data.credits > 0);
+      if (!error) {
+        setIsSuperfan(Array.isArray(data) && data.length > 0);
       }
     };
     
