@@ -114,6 +114,17 @@ const ArtistApplicationForm = () => {
         state: { artistName: artistName || "Artist", applicationId },
       })
     } catch (error: unknown) {
+      // Detect AbortError (common during HMR, auth refresh, or network hiccup) and ignore
+      const isAbort =
+        error instanceof DOMException && error.name === "AbortError" ||
+        (error instanceof Error && /abort|cancel/i.test(error.message));
+
+      if (isAbort) {
+        console.warn("[ArtistApplicationForm] Request aborted – likely transient. Ignoring.");
+        // Don't show error toast for transient aborts; the insert likely still succeeded
+        return;
+      }
+
       console.error("Application error:", error)
       
       // Safely extract error message
