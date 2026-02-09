@@ -220,8 +220,9 @@ const FanAuth = () => {
               onClick={async () => {
                 setIsLoading(true);
                 try {
+                  const destination = getDestination();
                   const { error } = await lovable.auth.signInWithOAuth("google", {
-                    redirect_uri: window.location.origin,
+                    redirect_uri: window.location.origin + destination,
                   });
                   if (error) {
                     toast.error(error.message || "Google sign-in failed");
