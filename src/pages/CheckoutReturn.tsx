@@ -23,12 +23,6 @@ const CheckoutReturn = () => {
     return `/fan/profile?${qs.toString()}`;
   }, [credits]);
 
-  const profileUrl = useMemo(() => {
-    const qs = new URLSearchParams();
-    qs.set("payment", "success");
-    if (credits) qs.set("credits", credits);
-    return `/fan/profile?${qs.toString()}`;
-  }, [credits]);
 
   useEffect(() => {
     const run = async () => {
