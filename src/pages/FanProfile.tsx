@@ -4,7 +4,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, User, Camera, Pencil, Check, X, Loader2, LogOut, Star, Heart, Sparkles } from "lucide-react";
+import { ChevronLeft, User, Camera, Pencil, Check, X, Loader2, LogOut, Heart, Sparkles } from "lucide-react";
 import { useFanProfile } from "@/hooks/useFanProfile";
 import { useFanTopArtists } from "@/hooks/useFanTopArtists";
 import { useAuth } from "@/contexts/AuthContext";
@@ -208,6 +208,22 @@ const FanProfile = () => {
       </header>
 
       <div className="flex-1 w-full max-w-md mx-auto space-y-6">
+        {/* Vault + Superfan Badges */}
+        <section className="animate-fade-in flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <StatusBadge variant="vault" size="lg">
+              Vault Access Active
+            </StatusBadge>
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          {isSuperfan && (
+            <StatusBadge variant="superfan" size="default">
+              Superfan
+            </StatusBadge>
+          )}
+        </section>
+
         {/* Profile Header */}
         <section className="text-center animate-fade-in">
           {/* Avatar with upload */}
@@ -320,15 +336,6 @@ const FanProfile = () => {
             </div>
           )}
           
-          <div className="relative inline-block">
-            <Star 
-              className="absolute -top-[8px] -left-[8px] w-5 h-5 text-yellow-400 drop-shadow-[0_0_6px_rgba(250,204,21,0.7)] z-10 animate-[pulse_2s_ease-in-out_infinite]" 
-              fill="currentColor"
-            />
-            <StatusBadge variant={isSuperfan ? "superfan" : "default"} size="lg">
-              {isSuperfan ? "Superfan" : "Fan"}
-            </StatusBadge>
-          </div>
         </section>
 
         {/* Wallet Balance Card */}
@@ -396,15 +403,8 @@ const FanProfile = () => {
           )}
         </section>
 
-        {/* Vault Status + Discovery CTA */}
+        {/* Discovery CTA */}
         <section className="animate-fade-in" style={{ animationDelay: "300ms" }}>
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-primary" />
-            <StatusBadge variant="vault" size="default">
-              Vault Access Active
-            </StatusBadge>
-            <Sparkles className="w-5 h-5 text-primary" />
-          </div>
           <Button 
             variant="secondary" 
             size="lg" 
