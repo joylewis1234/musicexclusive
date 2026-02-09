@@ -71,3 +71,6 @@ verify_jwt = false
 
 [functions.finalize-artist-setup]
 verify_jwt = false
+
+[functions.charge-stream]
+verify_jwt = false
