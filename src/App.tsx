@@ -3,7 +3,7 @@ import AdminTestTools from "./pages/admin/AdminTestTools";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -131,7 +131,7 @@ const App = () => (
                     <FanLayout />
                   </ProtectedRoute>
                 }>
-                  {/* /fan/dashboard removed – profile is the landing tab */}
+                  <Route path="/fan/dashboard" element={<Navigate to="/fan/profile" replace />} />
                   <Route path="/fan/profile" element={<FanProfile />} />
                   <Route path="/fan/inbox" element={<FanInbox />} />
                   <Route path="/fan/payment" element={<Payment />} />
