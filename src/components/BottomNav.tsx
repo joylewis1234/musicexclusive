@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Compass, Inbox, User } from "lucide-react";
+import { Compass, Inbox, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadInboxCount } from "@/hooks/useUnreadInboxCount";
 

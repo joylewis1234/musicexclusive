@@ -16,11 +16,11 @@ const CheckoutReturn = () => {
   const sessionId = searchParams.get("session_id");
   const credits = searchParams.get("credits");
 
-  const dashboardUrl = useMemo(() => {
+  const profileUrl = useMemo(() => {
     const qs = new URLSearchParams();
     qs.set("payment", "success");
     if (credits) qs.set("credits", credits);
-    return `/fan/dashboard?${qs.toString()}`;
+    return `/fan/profile?${qs.toString()}`;
   }, [credits]);
 
   const profileUrl = useMemo(() => {
@@ -100,7 +100,7 @@ const CheckoutReturn = () => {
     };
 
     run();
-  }, [navigate, sessionId, dashboardUrl, profileUrl]);
+  }, [navigate, sessionId, profileUrl]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-10">
