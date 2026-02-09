@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -502,14 +502,15 @@ const EnterVault = () => {
                         />
                         <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">
                           I agree to the Music Exclusive{" "}
-                          <Link 
-                            to="/terms" 
+                          <a 
+                            href="/terms" 
                             target="_blank"
+                            rel="noopener noreferrer"
                             className="text-primary hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
                             Terms of Use
-                          </Link>.
+                          </a>.
                         </span>
                       </label>
 
