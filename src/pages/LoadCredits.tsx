@@ -120,7 +120,7 @@ const LoadCredits = () => {
   useEffect(() => {
     if (isComplete) {
       const timer = setTimeout(() => {
-        navigate("/fan/dashboard", { replace: true });
+        navigate("/fan/profile", { replace: true });
       }, 2500);
       return () => clearTimeout(timer);
     }
@@ -174,7 +174,7 @@ const LoadCredits = () => {
             </GlowCard>
 
             <p className="text-muted-foreground/60 text-sm mt-6">
-              Redirecting to your dashboard...
+              Redirecting to your profile...
             </p>
           </div>
         </main>

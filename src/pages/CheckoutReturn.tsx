@@ -16,19 +16,13 @@ const CheckoutReturn = () => {
   const sessionId = searchParams.get("session_id");
   const credits = searchParams.get("credits");
 
-  const dashboardUrl = useMemo(() => {
-    const qs = new URLSearchParams();
-    qs.set("payment", "success");
-    if (credits) qs.set("credits", credits);
-    return `/fan/dashboard?${qs.toString()}`;
-  }, [credits]);
-
   const profileUrl = useMemo(() => {
     const qs = new URLSearchParams();
     qs.set("payment", "success");
     if (credits) qs.set("credits", credits);
     return `/fan/profile?${qs.toString()}`;
   }, [credits]);
+
 
   useEffect(() => {
     const run = async () => {
@@ -100,7 +94,7 @@ const CheckoutReturn = () => {
     };
 
     run();
-  }, [navigate, sessionId, dashboardUrl, profileUrl]);
+  }, [navigate, sessionId, profileUrl]);
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-10">
@@ -149,7 +143,7 @@ const CheckoutReturn = () => {
           {status === "error" && (
             <div className="space-y-2">
               <Button className="w-full" onClick={() => navigate("/fan/payment")}>Try Again</Button>
-              <Button className="w-full" variant="outline" onClick={() => navigate("/fan/dashboard")}>Go to Dashboard</Button>
+              <Button className="w-full" variant="outline" onClick={() => navigate("/fan/profile")}>Go to Profile</Button>
               <Button className="w-full" variant="ghost" onClick={() => navigate("/login")}>Log in</Button>
             </div>
           )}
