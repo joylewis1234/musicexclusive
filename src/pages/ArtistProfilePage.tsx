@@ -175,7 +175,7 @@ const ArtistProfilePage = () => {
           if (highlightTrackId) {
             const highlightedTrack = tracksWithUrls.find(t => t.id === highlightTrackId);
             if (highlightedTrack) {
-              handleSelectTrack(highlightedTrack);
+              handleSelectTrack(highlightedTrack, profile);
             }
           }
         } else {
@@ -242,12 +242,13 @@ const ArtistProfilePage = () => {
     }
   }, [highlightTrackId, tracks]);
 
-  const handleSelectTrack = (track: TrackData) => {
+  const handleSelectTrack = (track: TrackData, profileOverride?: ArtistProfile | null) => {
+    const profile = profileOverride || artistProfile;
     setSelectedTrack({
       id: track.id,
       title: track.title,
-      artist: artistProfile?.artist_name || "Unknown Artist",
-      artworkUrl: track.artwork_url || artistProfile?.avatar_url || artist1,
+      artist: profile?.artist_name || "Unknown Artist",
+      artworkUrl: track.artwork_url || profile?.avatar_url || artist1,
       audioUrl: track.full_audio_url || "",
     });
   };
@@ -395,7 +396,7 @@ const ArtistProfilePage = () => {
       {/* Hero Section */}
       <ArtistProfileHero
         name={artistProfile.artist_name}
-        genre={artistProfile.genre || "Music"}
+        genre={(tracks.length > 0 && tracks[0].genre) ? tracks[0].genre : (artistProfile.genre || "Music")}
         imageUrl={artistProfile.avatar_url || artist1}
         onPlayAll={handlePlayAll}
         onShareArtist={handleShareArtist}
