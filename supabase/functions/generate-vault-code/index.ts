@@ -111,6 +111,7 @@ Deno.serve(async (req) => {
     const trimmedName = name.trim();
 
     // Generate unique 4-character code
+    let generatedCode = generateCode();
     let attempts = 0;
     const maxAttempts = 20;
 
