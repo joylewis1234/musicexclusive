@@ -738,7 +738,21 @@ export type Database = {
             foreignKeyName: "shared_tracks_recipient_id_fkey"
             columns: ["recipient_id"]
             isOneToOne: false
+            referencedRelation: "shareable_vault_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_tracks_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
             referencedRelation: "vault_members"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shared_tracks_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "shareable_vault_members"
             referencedColumns: ["id"]
           },
           {
@@ -844,6 +858,13 @@ export type Database = {
           track_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "track_likes_fan_id_fkey"
+            columns: ["fan_id"]
+            isOneToOne: false
+            referencedRelation: "shareable_vault_members"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "track_likes_fan_id_fkey"
             columns: ["fan_id"]
@@ -1076,6 +1097,21 @@ export type Database = {
           updated_at?: string | null
           user_id?: string | null
           youtube_url?: string | null
+        }
+        Relationships: []
+      }
+      shareable_vault_members: {
+        Row: {
+          display_name: string | null
+          id: string | null
+        }
+        Insert: {
+          display_name?: string | null
+          id?: string | null
+        }
+        Update: {
+          display_name?: string | null
+          id?: string | null
         }
         Relationships: []
       }
