@@ -114,7 +114,7 @@ const Subscribe = () => {
   useEffect(() => {
     if (isComplete) {
       const timer = setTimeout(() => {
-        navigate("/fan/dashboard", { replace: true });
+        navigate("/fan/profile", { replace: true });
       }, 2500);
       return () => clearTimeout(timer);
     }

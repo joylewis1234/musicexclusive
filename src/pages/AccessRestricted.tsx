@@ -14,7 +14,7 @@ const AccessRestricted = () => {
 
   const handleGoBack = () => {
     if (role === "fan") {
-      navigate("/fan/dashboard");
+      navigate("/fan/profile");
     } else if (role === "artist") {
       navigate("/artist/profile");
     } else {

@@ -49,7 +49,7 @@ const FanAuth = () => {
       return "/agreements/fan";
     }
     // Default flow: go to dashboard
-    return state?.from?.pathname || "/fan/dashboard";
+    return state?.from?.pathname || "/fan/profile";
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
