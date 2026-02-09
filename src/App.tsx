@@ -11,6 +11,7 @@ import { ArtistProtectedRoute } from "@/components/auth/ArtistProtectedRoute";
 import { FanLayout } from "@/layouts/FanLayout";
 import { ArtistLayout } from "@/layouts/ArtistLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PaymentErrorBoundary } from "@/components/error-boundaries/PaymentErrorBoundary";
 import { ScrollToTop } from "@/components/ScrollToTop";
 
 // Public pages
@@ -103,7 +104,7 @@ const App = () => (
                 <Route path="/agreements/fan" element={<Agreements />} />
                 <Route path="/fan/agreements" element={<FanAgreementStep />} />
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
-                <Route path="/subscribe" element={<Subscribe />} />
+                <Route path="/subscribe" element={<PaymentErrorBoundary onBack={() => window.history.back()}><Subscribe /></PaymentErrorBoundary>} />
                 <Route path="/load-credits" element={<LoadCredits />} />
                 <Route path="/checkout/return" element={<CheckoutReturn />} />
                 <Route path="/terms" element={<Terms />} />
