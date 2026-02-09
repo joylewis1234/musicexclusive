@@ -4,7 +4,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, User, Camera, Pencil, Check, X, Loader2, LogOut, Star, Heart } from "lucide-react";
+import { ChevronLeft, User, Camera, Pencil, Check, X, Loader2, LogOut, Star, Heart, Sparkles } from "lucide-react";
 import { useFanProfile } from "@/hooks/useFanProfile";
 import { useFanTopArtists } from "@/hooks/useFanTopArtists";
 import { useAuth } from "@/contexts/AuthContext";
@@ -396,8 +396,26 @@ const FanProfile = () => {
           )}
         </section>
 
+        {/* Vault Status + Discovery CTA */}
+        <section className="animate-fade-in" style={{ animationDelay: "300ms" }}>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <StatusBadge variant="vault" size="default">
+              Vault Access Active
+            </StatusBadge>
+            <Sparkles className="w-5 h-5 text-primary" />
+          </div>
+          <Button 
+            variant="secondary" 
+            size="lg" 
+            className="w-full"
+            onClick={() => navigate("/discovery")}
+          >
+            Explore All Music
+          </Button>
+        </section>
 
-        {/* Logout Section */}
+
         <section className="animate-fade-in pt-4 pb-8" style={{ animationDelay: "400ms" }}>
           <Button
             variant="outline"
