@@ -62,7 +62,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     const approveUrl = `${baseUrl}/admin/artist-applications/approve?token=${approveToken}`;
     const denyUrl = `${baseUrl}/admin/artist-applications/deny?token=${denyToken}`;
-    const adminDashboardUrl = `${baseUrl}/admin/artist-applications`;
+    const adminDashboardUrl = `${baseUrl}/admin/login?next=/admin/artist-applications`;
 
     // Build the email HTML with Music Exclusive branding
     const emailHtml = `
