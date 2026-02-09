@@ -12,6 +12,48 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[DAILY-REPORT] ${step}${detailsStr}`);
 };
 
+// ── Timezone helpers ─────────────────────────────────────────────────────
+
+/** Return "YYYY-MM-DD" for yesterday in America/Los_Angeles */
+function getYesterdayLA(): string {
+  const now = new Date();
+  const laStr = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // "YYYY-MM-DD"
+  const laDate = new Date(laStr + "T00:00:00");
+  laDate.setDate(laDate.getDate() - 1);
+  return laDate.toISOString().split("T")[0];
+}
+
+/** Convert a YYYY-MM-DD date in America/Los_Angeles to a UTC ISO string for that midnight */
+function laMidnightToUTC(dateStr: string): string {
+  // Build a formatter that tells us the UTC offset for this LA date
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+    timeZoneName: "longOffset",
+  });
+
+  // Parse offset from a known date in that zone
+  const probe = new Date(`${dateStr}T12:00:00Z`); // noon UTC as a probe
+  const parts = formatter.formatToParts(probe);
+  const tzPart = parts.find(p => p.type === "timeZoneName")?.value || "";
+  // tzPart is like "GMT-08:00" or "GMT-07:00"
+  const match = tzPart.match(/GMT([+-]\d{2}):(\d{2})/);
+
+  let offsetMinutes = 0;
+  if (match) {
+    const sign = match[1].startsWith("-") ? -1 : 1;
+    offsetMinutes = sign * (parseInt(match[1].replace(/[+-]/, "")) * 60 + parseInt(match[2]));
+  }
+
+  // midnight LA = midnight - offset => UTC
+  // If LA is GMT-8, midnight LA = 08:00 UTC
+  const midnightUTC = new Date(`${dateStr}T00:00:00Z`);
+  midnightUTC.setMinutes(midnightUTC.getMinutes() - offsetMinutes);
+  return midnightUTC.toISOString();
+}
+
 // ── Types ────────────────────────────────────────────────────────────────
 
 interface ReportData {
@@ -37,24 +79,28 @@ interface ReportData {
 }
 
 // ── Report Generator ─────────────────────────────────────────────────────
-// All date windows use UTC: [reportDate 00:00:00Z, reportDate+1 00:00:00Z)
 
 async function generateReport(supabase: any, reportDate: string): Promise<ReportData> {
-  // reportDate is YYYY-MM-DD.  Window = [start, end) using < for the upper bound.
-  const startOfDay = `${reportDate}T00:00:00.000Z`;
-  // Use start-of-next-day with < so we capture the full day without millisecond gaps
-  const nextDay = new Date(`${reportDate}T00:00:00.000Z`);
-  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-  const endExclusive = nextDay.toISOString(); // e.g. "2026-02-09T00:00:00.000Z"
+  const startUTC = laMidnightToUTC(reportDate);
 
-  logStep("Generating report", { reportDate, startOfDay, endExclusive });
+  const nextDay = new Date(reportDate + "T00:00:00");
+  nextDay.setDate(nextDay.getDate() + 1);
+  const nextDayStr = nextDay.toISOString().split("T")[0];
+  const endUTC = laMidnightToUTC(nextDayStr);
+
+  logStep("Generating report", { reportDate, startUTC, endUTC, timezone: "America/Los_Angeles" });
+  logStep("Query logic", {
+    streams: `stream_ledger WHERE created_at >= '${startUTC}' AND created_at < '${endUTC}'`,
+    topArtists: "GROUP BY artist_id → JOIN artist_profiles ON id::text = artist_id",
+    topTracks: "GROUP BY track_id → JOIN tracks ON id = track_id → JOIN artist_profiles ON id::text = tracks.artist_id",
+  });
 
   // ── Stream data ──────────────────────────────────────────────────────
   const { data: streams, error: streamsError } = await supabase
     .from("stream_ledger")
     .select("*")
-    .gte("created_at", startOfDay)
-    .lt("created_at", endExclusive);
+    .gte("created_at", startUTC)
+    .lt("created_at", endUTC);
 
   if (streamsError) {
     logStep("Error fetching streams", { error: streamsError.message });
@@ -74,85 +120,113 @@ async function generateReport(supabase: any, reportDate: string): Promise<Report
     .from("vault_codes")
     .select("id")
     .eq("status", "won")
-    .gte("used_at", startOfDay)
-    .lt("used_at", endExclusive);
+    .gte("used_at", startUTC)
+    .lt("used_at", endUTC);
 
   const { data: newArtists } = await supabase
     .from("artist_profiles")
     .select("id")
-    .gte("created_at", startOfDay)
-    .lt("created_at", endExclusive);
+    .gte("created_at", startUTC)
+    .lt("created_at", endUTC);
 
   const { data: newTracks } = await supabase
     .from("tracks")
     .select("id")
-    .gte("created_at", startOfDay)
-    .lt("created_at", endExclusive);
+    .gte("created_at", startUTC)
+    .lt("created_at", endUTC);
 
   // ── Top 5 Artists ────────────────────────────────────────────────────
-  const artistCounts = new Map<string, { streams: number; gross: number }>();
+  // stream_ledger.artist_id is text, stores artist_profiles.id (UUID as text)
+  const artistCounts = new Map<string, number>();
   streams?.forEach((s: any) => {
-    const prev = artistCounts.get(s.artist_id) || { streams: 0, gross: 0 };
-    artistCounts.set(s.artist_id, {
-      streams: prev.streams + 1,
-      gross: prev.gross + Number(s.amount_total),
-    });
+    artistCounts.set(s.artist_id, (artistCounts.get(s.artist_id) || 0) + 1);
   });
 
-  const sortedArtists = Array.from(artistCounts.entries())
-    .sort((a, b) => b[1].streams - a[1].streams || b[1].gross - a[1].gross)
+  const sortedArtistEntries = Array.from(artistCounts.entries())
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
-  const artistIds = sortedArtists.map(([id]) => id);
-  // stream_ledger.artist_id stores the artist_profiles.id (profile UUID),
-  // NOT the auth user_id.  Query public_artist_profiles by its "id" column.
-  let artistProfiles: Array<{ id: string; artist_name: string }> | null = null;
+  const artistIds = sortedArtistEntries.map(([id]) => id);
+  let artistNameMap = new Map<string, string>();
+
   if (artistIds.length > 0) {
-    const { data } = await supabase
-      .from("public_artist_profiles")
+    // Join directly to artist_profiles (not the view) for guaranteed id match
+    const { data: profiles, error: profilesError } = await supabase
+      .from("artist_profiles")
       .select("id, artist_name")
       .in("id", artistIds);
-    artistProfiles = data;
+
+    if (profilesError) {
+      logStep("Error fetching artist profiles", { error: profilesError.message });
+    } else if (profiles) {
+      for (const p of profiles) {
+        artistNameMap.set(p.id, p.artist_name);
+      }
+    }
   }
 
-  const topArtists = sortedArtists.map(([id, { streams: count }]) => ({
-    name: artistProfiles?.find((a) => a.id === id)?.artist_name || id.slice(0, 8) + "...",
+  const topArtists = sortedArtistEntries.map(([id, count]) => ({
+    name: artistNameMap.get(id) || `Unknown (${id.slice(0, 8)})`,
     streams: count,
   }));
 
+  logStep("Top Artists resolved", { topArtists });
+
   // ── Top 5 Tracks ────────────────────────────────────────────────────
-  const trackCounts = new Map<string, { streams: number; gross: number }>();
+  const trackCounts = new Map<string, number>();
   streams?.forEach((s: any) => {
-    const prev = trackCounts.get(s.track_id) || { streams: 0, gross: 0 };
-    trackCounts.set(s.track_id, {
-      streams: prev.streams + 1,
-      gross: prev.gross + Number(s.amount_total),
-    });
+    trackCounts.set(s.track_id, (trackCounts.get(s.track_id) || 0) + 1);
   });
 
-  const sortedTracks = Array.from(trackCounts.entries())
-    .sort((a, b) => b[1].streams - a[1].streams || b[1].gross - a[1].gross)
+  const sortedTrackEntries = Array.from(trackCounts.entries())
+    .sort((a, b) => b[1] - a[1])
     .slice(0, 5);
 
-  const trackIds = sortedTracks.map(([id]) => id);
-  let tracksData: Array<{ id: string; title: string; artist_id: string }> | null = null;
+  const trackIds = sortedTrackEntries.map(([id]) => id);
+  let trackInfoMap = new Map<string, { title: string; artistId: string }>();
+
   if (trackIds.length > 0) {
-    const { data } = await supabase
+    const { data: tracks, error: tracksError } = await supabase
       .from("tracks")
       .select("id, title, artist_id")
       .in("id", trackIds);
-    tracksData = data;
+
+    if (tracksError) {
+      logStep("Error fetching tracks", { error: tracksError.message });
+    } else if (tracks) {
+      // Collect any artist_ids we haven't fetched yet
+      const missingArtistIds = new Set<string>();
+      for (const t of tracks) {
+        trackInfoMap.set(t.id, { title: t.title, artistId: t.artist_id });
+        if (!artistNameMap.has(t.artist_id)) {
+          missingArtistIds.add(t.artist_id);
+        }
+      }
+      // Fetch any missing artist names
+      if (missingArtistIds.size > 0) {
+        const { data: extraProfiles } = await supabase
+          .from("artist_profiles")
+          .select("id, artist_name")
+          .in("id", Array.from(missingArtistIds));
+        if (extraProfiles) {
+          for (const p of extraProfiles) {
+            artistNameMap.set(p.id, p.artist_name);
+          }
+        }
+      }
+    }
   }
 
-  const topTracks = sortedTracks.map(([id, { streams: count }]) => {
-    const track = tracksData?.find((t) => t.id === id);
-    const artist = artistProfiles?.find((a) => a.id === track?.artist_id);
+  const topTracks = sortedTrackEntries.map(([id, count]) => {
+    const info = trackInfoMap.get(id);
     return {
-      title: track?.title || "Unknown",
-      artist: artist?.artist_name || "Unknown",
+      title: info?.title || "Unknown",
+      artist: info ? (artistNameMap.get(info.artistId) || "Unknown") : "Unknown",
       streams: count,
     };
   });
+
+  logStep("Top Tracks resolved", { topTracks });
 
   // ── Top 10 Fans ─────────────────────────────────────────────────────
   const fanCounts = new Map<string, number>();
@@ -166,7 +240,7 @@ async function generateReport(supabase: any, reportDate: string): Promise<Report
 
   return {
     reportDate,
-    dateRange: { start: startOfDay, end: endExclusive },
+    dateRange: { start: startUTC, end: endUTC },
     streaming: { totalStreams, totalCreditsUsed, grossRevenue, platformRevenue, artistEarnings, pendingStreams, paidStreams },
     growth: { newVaultWinners: vaultWinners?.length || 0, newArtists: newArtists?.length || 0, newTracks: newTracks?.length || 0 },
     topArtists,
@@ -178,40 +252,58 @@ async function generateReport(supabase: any, reportDate: string): Promise<Report
 // ── Email HTML ────────────────────────────────────────────────────────────
 
 function generateEmailHtml(report: ReportData): string {
-  const topArtistsHtml = report.topArtists.length > 0
-    ? report.topArtists.map((a, i) => `<tr><td>${i + 1}.</td><td>${a.name}</td><td>${a.streams} streams</td></tr>`).join("")
-    : "<tr><td colspan='3'>No streams today</td></tr>";
+  const topArtistsList = report.topArtists.length > 0
+    ? `<ol style="margin:0;padding-left:20px;">${report.topArtists.map(a =>
+        `<li style="padding:6px 0;border-bottom:1px solid #333;">${escapeHtml(a.name)} — <strong>${a.streams}</strong> stream${a.streams !== 1 ? 's' : ''}</li>`
+      ).join("")}</ol>`
+    : `<p style="color:#888;">No streams today</p>`;
 
-  const topTracksHtml = report.topTracks.length > 0
-    ? report.topTracks.map((t, i) => `<tr><td>${i + 1}.</td><td>${t.title}</td><td>${t.artist}</td><td>${t.streams}</td></tr>`).join("")
-    : "<tr><td colspan='4'>No streams today</td></tr>";
+  const topTracksList = report.topTracks.length > 0
+    ? `<ol style="margin:0;padding-left:20px;">${report.topTracks.map(t =>
+        `<li style="padding:6px 0;border-bottom:1px solid #333;"><strong>${escapeHtml(t.title)}</strong> by ${escapeHtml(t.artist)} — ${t.streams} stream${t.streams !== 1 ? 's' : ''}</li>`
+      ).join("")}</ol>`
+    : `<p style="color:#888;">No streams today</p>`;
+
+  const topFansList = report.topFans.length > 0
+    ? `<ol style="margin:0;padding-left:20px;">${report.topFans.map(f =>
+        `<li style="padding:4px 0;">${escapeHtml(f.email)} — ${f.streams} stream${f.streams !== 1 ? 's' : ''}</li>`
+      ).join("")}</ol>`
+    : `<p style="color:#888;">No streams today</p>`;
 
   return `<!DOCTYPE html>
-<html><head><style>
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0a;color:#fff;padding:40px}
-.container{max-width:600px;margin:0 auto}
-.header{text-align:center;margin-bottom:30px}
-.header h1{color:#a855f7;margin:0}
-.header p{color:#888}
-.card{background:#111;border:1px solid #333;border-radius:12px;padding:20px;margin-bottom:20px}
-.card h2{color:#a855f7;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin-top:0}
-.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
-.stat{text-align:center}
-.stat-value{font-size:24px;font-weight:bold;color:#fff}
-.stat-label{font-size:12px;color:#888}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;text-align:left;border-bottom:1px solid #333}
-th{color:#888;font-size:12px;text-transform:uppercase}
-.highlight{color:#22c55e}
-.footer{text-align:center;color:#666;font-size:12px;margin-top:30px}
-</style></head><body>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Report - ${escapeHtml(report.reportDate)}</title>
+<style>
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 40px 20px; }
+.container { max-width: 600px; margin: 0 auto; }
+.header { text-align: center; margin-bottom: 30px; }
+.header h1 { color: #a855f7; margin: 0 0 8px 0; font-size: 28px; }
+.header p { color: #888; margin: 0; font-size: 14px; }
+.card { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+.card h2 { color: #a855f7; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 16px 0; }
+.stats-grid { display: flex; flex-wrap: wrap; gap: 15px; }
+.stat { flex: 1 1 45%; text-align: center; min-width: 120px; }
+.stat-value { font-size: 24px; font-weight: bold; color: #fff; }
+.stat-label { font-size: 12px; color: #888; margin-top: 4px; }
+.highlight { color: #22c55e; }
+ol { color: #ddd; }
+ol li { font-size: 14px; }
+.footer { text-align: center; color: #666; font-size: 12px; margin-top: 30px; }
+.footer a { color: #a855f7; }
+</style>
+</head>
+<body>
 <div class="container">
   <div class="header">
-    <h1>Music Exclusive™</h1>
-    <p>Daily Company Report — ${report.reportDate}</p>
+    <h1>Music Exclusive&#8482;</h1>
+    <p>Daily Company Report &mdash; ${escapeHtml(report.reportDate)} (Pacific Time)</p>
   </div>
+
   <div class="card">
-    <h2>📊 Streaming Activity</h2>
+    <h2>&#128202; Streaming Activity</h2>
     <div class="stats-grid">
       <div class="stat"><div class="stat-value">${report.streaming.totalStreams}</div><div class="stat-label">Total Streams</div></div>
       <div class="stat"><div class="stat-value">${report.streaming.totalCreditsUsed}</div><div class="stat-label">Credits Used</div></div>
@@ -221,28 +313,46 @@ th{color:#888;font-size:12px;text-transform:uppercase}
       <div class="stat"><div class="stat-value">${report.streaming.pendingStreams} / ${report.streaming.paidStreams}</div><div class="stat-label">Pending / Paid</div></div>
     </div>
   </div>
+
   <div class="card">
-    <h2>📈 Growth</h2>
+    <h2>&#128200; Growth</h2>
     <div class="stats-grid">
       <div class="stat"><div class="stat-value">${report.growth.newVaultWinners}</div><div class="stat-label">New Vault Winners</div></div>
       <div class="stat"><div class="stat-value">${report.growth.newArtists}</div><div class="stat-label">New Artists</div></div>
       <div class="stat"><div class="stat-value">${report.growth.newTracks}</div><div class="stat-label">New Tracks</div></div>
     </div>
   </div>
+
   <div class="card">
-    <h2>🎤 Top 5 Artists Today</h2>
-    <table><thead><tr><th>#</th><th>Artist</th><th>Streams</th></tr></thead><tbody>${topArtistsHtml}</tbody></table>
+    <h2>&#127908; Top 5 Artists</h2>
+    ${topArtistsList}
   </div>
+
   <div class="card">
-    <h2>🎵 Top 5 Tracks Today</h2>
-    <table><thead><tr><th>#</th><th>Track</th><th>Artist</th><th>Streams</th></tr></thead><tbody>${topTracksHtml}</tbody></table>
+    <h2>&#127925; Top 5 Tracks</h2>
+    ${topTracksList}
   </div>
+
+  <div class="card">
+    <h2>&#128101; Top 10 Fans</h2>
+    ${topFansList}
+  </div>
+
   <div class="footer">
     <p>This report was automatically generated by Music Exclusive.</p>
-    <p>View full report: <a href="https://musicexclusive.lovable.app/admin/reports/daily?date=${report.reportDate}" style="color:#a855f7;">Open Dashboard</a></p>
+    <p><a href="https://musicexclusive.lovable.app/admin/reports/daily?date=${report.reportDate}">Open Dashboard</a></p>
   </div>
 </div>
-</body></html>`;
+</body>
+</html>`;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 // ── Main Handler ─────────────────────────────────────────────────────────
@@ -270,15 +380,14 @@ serve(async (req) => {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Default to yesterday (UTC) if no date provided
-    const reportDate = body.date || new Date(Date.now() - 86400000).toISOString().split("T")[0];
+    // Default to yesterday in America/Los_Angeles
+    const reportDate = body.date || getYesterdayLA();
     const recipientEmail = "support@musicexclusive.co";
     const sendEmail = body.sendEmail !== false;
 
     logStep("Processing request", { reportDate, recipientEmail, sendEmail });
 
     // ── Idempotency check ────────────────────────────────────────────
-    // If an email for this date was already sent successfully, skip.
     if (sendEmail) {
       const { data: existing } = await supabaseAdmin
         .from("report_email_logs")
@@ -303,8 +412,14 @@ serve(async (req) => {
     logStep("Report generated", {
       totalStreams: report.streaming.totalStreams,
       grossRevenue: report.streaming.grossRevenue,
-      topArtists: report.topArtists.length,
-      topTracks: report.topTracks.length,
+      platformRevenue: report.streaming.platformRevenue,
+      artistEarnings: report.streaming.artistEarnings,
+      pendingStreams: report.streaming.pendingStreams,
+      paidStreams: report.streaming.paidStreams,
+      topArtists: report.topArtists,
+      topTracks: report.topTracks,
+      topFans: report.topFans,
+      dateRange: report.dateRange,
     });
 
     // ── Send email ───────────────────────────────────────────────────
