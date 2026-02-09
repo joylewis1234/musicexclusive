@@ -10,13 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Send, User, Lock, Crown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
-interface VaultMember {
+interface ShareableMember {
   id: string;
-  email: string;
   display_name: string;
-  vault_access_active: boolean;
 }
 
 interface TrackInfo {
@@ -30,7 +29,6 @@ interface ShareExclusiveTrackModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   track: TrackInfo | null;
-  currentUserEmail?: string;
   artistId: string;
 }
 
@@ -38,17 +36,18 @@ export const ShareExclusiveTrackModal = ({
   open,
   onOpenChange,
   track,
-  currentUserEmail,
   artistId,
 }: ShareExclusiveTrackModalProps) => {
-  const [members, setMembers] = useState<VaultMember[]>([]);
-  const [selectedMember, setSelectedMember] = useState<VaultMember | null>(null);
+  const [members, setMembers] = useState<ShareableMember[]>([]);
+  const [selectedMember, setSelectedMember] = useState<ShareableMember | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [note, setNote] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+  const currentUserEmail = user?.email;
 
-  // Fetch active vault members
+  // Fetch active vault members via the shareable view
   useEffect(() => {
     if (open) {
       fetchVaultMembers();
@@ -57,22 +56,29 @@ export const ShareExclusiveTrackModal = ({
 
   const fetchVaultMembers = async () => {
     setIsLoading(true);
-    let query = supabase
-      .from("vault_members")
-      .select("*")
-      .eq("vault_access_active", true);
 
+    // Get current user's vault member ID to exclude them
+    let currentMemberId: string | null = null;
     if (currentUserEmail) {
-      query = query.neq("email", currentUserEmail);
+      const { data: self } = await supabase
+        .from("vault_members")
+        .select("id")
+        .eq("email", currentUserEmail)
+        .maybeSingle();
+      currentMemberId = self?.id || null;
     }
 
-    const { data, error } = await query;
+    const { data, error } = await supabase
+      .from("shareable_vault_members")
+      .select("id, display_name");
 
     if (error) {
       console.error("Error fetching vault members:", error);
       toast.error("Could not load Vault members");
+      setMembers([]);
     } else {
-      setMembers(data || []);
+      const others = (data || []).filter(m => m.id !== currentMemberId);
+      setMembers(others);
     }
     setIsLoading(false);
   };

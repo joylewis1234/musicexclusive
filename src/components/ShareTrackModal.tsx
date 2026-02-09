@@ -12,37 +12,36 @@ import { GlowCard } from "@/components/ui/GlowCard";
 import { Search, Send, User, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
 import { Track } from "@/contexts/PlayerContext";
 
-interface VaultMember {
+interface ShareableMember {
   id: string;
-  email: string;
   display_name: string;
-  vault_access_active: boolean;
 }
 
 interface ShareTrackModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   track: Track | null;
-  currentUserEmail?: string; // For filtering out current user
 }
 
 export const ShareTrackModal = ({
   open,
   onOpenChange,
   track,
-  currentUserEmail = "alex@example.com", // Default mock user
 }: ShareTrackModalProps) => {
-  const [members, setMembers] = useState<VaultMember[]>([]);
-  const [selectedMember, setSelectedMember] = useState<VaultMember | null>(null);
+  const [members, setMembers] = useState<ShareableMember[]>([]);
+  const [selectedMember, setSelectedMember] = useState<ShareableMember | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [note, setNote] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const currentUserEmail = user?.email;
 
-  // Fetch active vault members
+  // Fetch active vault members via the shareable view
   useEffect(() => {
     if (open) {
       fetchVaultMembers();
@@ -51,11 +50,22 @@ export const ShareTrackModal = ({
 
   const fetchVaultMembers = async () => {
     setIsLoading(true);
+
+    // First get the current user's vault member ID so we can exclude them
+    let currentMemberId: string | null = null;
+    if (currentUserEmail) {
+      const { data: self } = await supabase
+        .from("vault_members")
+        .select("id")
+        .eq("email", currentUserEmail)
+        .maybeSingle();
+      currentMemberId = self?.id || null;
+    }
+
+    // Query the shareable view (bypasses column-level restrictions)
     const { data, error } = await supabase
-      .from("vault_members")
-      .select("*")
-      .eq("vault_access_active", true)
-      .neq("email", currentUserEmail);
+      .from("shareable_vault_members")
+      .select("id, display_name");
 
     if (error) {
       console.error("Error fetching vault members:", error);
@@ -64,8 +74,11 @@ export const ShareTrackModal = ({
         description: "Could not load Vault members",
         variant: "destructive",
       });
+      setMembers([]);
     } else {
-      setMembers(data || []);
+      // Filter out the current user
+      const others = (data || []).filter(m => m.id !== currentMemberId);
+      setMembers(others);
     }
     setIsLoading(false);
   };
@@ -75,11 +88,11 @@ export const ShareTrackModal = ({
   );
 
   const handleSend = async () => {
-    if (!selectedMember || !track) return;
+    if (!selectedMember || !track || !currentUserEmail) return;
 
     setIsSending(true);
 
-    // Get current user's vault member ID (mock: using Alex)
+    // Get current user's vault member ID
     const { data: senderData } = await supabase
       .from("vault_members")
       .select("id")
