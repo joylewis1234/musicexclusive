@@ -136,10 +136,17 @@ const AdminFanDetail = () => {
         return;
       }
 
-      // Determine membership type
+      // Determine membership type by checking for subscription credits in the ledger
       let membershipType: FanProfile["membership_type"] = "unknown";
       if (member.vault_access_active) {
-        membershipType = member.credits >= 25 ? "superfan" : "payg";
+        const { data: subEntries } = await supabase
+          .from("credit_ledger")
+          .select("id")
+          .eq("user_email", member.email)
+          .eq("type", "SUBSCRIPTION_CREDITS")
+          .limit(1);
+        
+        membershipType = (subEntries && subEntries.length > 0) ? "superfan" : "payg";
       }
 
       setFanProfile({
