@@ -4,7 +4,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, Home, User, Camera, Pencil, Check, X, Loader2, LogOut, Star, Heart } from "lucide-react";
+import { ChevronLeft, User, Camera, Pencil, Check, X, Loader2, LogOut, Star, Heart } from "lucide-react";
 import { useFanProfile } from "@/hooks/useFanProfile";
 import { useFanTopArtists } from "@/hooks/useFanTopArtists";
 import { useAuth } from "@/contexts/AuthContext";
@@ -128,7 +128,7 @@ const FanProfile = () => {
     try {
       await supabase.auth.signOut();
       toast.success("Logged out successfully");
-      navigate("/");
+      navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
       toast.error("Failed to log out");
@@ -199,11 +199,11 @@ const FanProfile = () => {
           <span className="text-sm uppercase tracking-wider">Back</span>
         </button>
         <button
-          onClick={() => navigate("/")}
+          onClick={handleLogout}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <Home className="w-5 h-5" />
-          <span className="text-sm uppercase tracking-wider">Home</span>
+          <LogOut className="w-5 h-5" />
+          <span className="text-sm uppercase tracking-wider">Log Out</span>
         </button>
       </header>
 
