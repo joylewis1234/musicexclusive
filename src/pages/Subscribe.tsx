@@ -80,11 +80,9 @@ const Subscribe = () => {
     setIsProcessing(true);
     
     try {
-      // Don't pass successUrl - let the edge function use the correct /checkout/return URL
       const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
         body: {
           email,
-          // successUrl is intentionally omitted - the edge function will use /checkout/return
           cancelUrl: `${window.location.origin}/subscribe?payment=cancelled`,
         },
       });
@@ -96,15 +94,17 @@ const Subscribe = () => {
         return;
       }
 
-      if (data?.url) {
-        // Redirect to Stripe Checkout
-        window.location.href = data.url;
+      const checkoutUrl = data?.url;
+      if (checkoutUrl && typeof checkoutUrl === "string") {
+        window.location.href = checkoutUrl;
       } else {
-        toast.error("Failed to create checkout session");
+        console.error("Invalid checkout URL received:", data);
+        toast.error("Failed to create checkout session. Please try again.");
         setIsProcessing(false);
       }
-    } catch (err) {
-      console.error("Subscription error:", err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.error("Subscription error:", message, err);
       toast.error("Something went wrong. Please try again.");
       setIsProcessing(false);
     }
