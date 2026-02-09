@@ -35,16 +35,15 @@ Deno.serve(async (req) => {
     const body: GenerateRequest = await req.json();
     const { name, email } = body;
 
-    // Validate input
-    if (!name || !email) {
+    // Validate input - email is always required, name is required only for new code generation
+    if (!email) {
       return new Response(
-        JSON.stringify({ error: "Name and email are required" }),
+        JSON.stringify({ error: "Email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const normalizedEmail = email.toLowerCase().trim();
-    const trimmedName = name.trim();
 
     // Basic email validation
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
@@ -101,8 +100,17 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Name is required for generating a new code
+    if (!name || !name.trim()) {
+      return new Response(
+        JSON.stringify({ error: "Name is required to generate a new vault code" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const trimmedName = name.trim();
+
     // Generate unique 4-character code
-    let generatedCode = generateCode();
     let attempts = 0;
     const maxAttempts = 20;
 
