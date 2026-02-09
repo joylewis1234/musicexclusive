@@ -95,7 +95,7 @@ const ArtistApplicationForm = () => {
         throw error
       }
 
-      console.log("[ArtistApplicationForm] ✅ Application created successfully:", applicationId)
+      console.log("[ArtistApply] ✅ Submitted application only (no auth user created):", applicationId)
 
       // Send notification email to support@musicexclusive.co
       try {

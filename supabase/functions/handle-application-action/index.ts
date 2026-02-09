@@ -246,6 +246,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     } else if (actionType === "deny" || actionType === "resend_denial") {
       // Update status only for initial deny (not resend)
+      // IMPORTANT: Denial does NOT create any auth user, role, or fan record
       if (actionType === "deny") {
         await supabase
           .from("artist_applications")
@@ -254,6 +255,8 @@ const handler = async (req: Request): Promise<Response> => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", application.id);
+        
+        console.log("[ArtistDeny] Updated status to rejected + sending denial email (no auth/user creation)");
       }
 
       // Send denial email to artist (non-blocking)
