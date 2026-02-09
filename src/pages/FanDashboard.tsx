@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Home, Sparkles } from "lucide-react";
+import { ChevronLeft, LogOut, Sparkles } from "lucide-react";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { useCredits } from "@/hooks/useCredits";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,17 @@ const FanDashboard = () => {
     }
   }, [searchParams, setSearchParams, refetch, isVerifying]);
 
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Logged out successfully");
+      navigate("/login");
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to log out");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">
       {/* Navigation Header */}
@@ -75,11 +86,11 @@ const FanDashboard = () => {
           <span className="text-sm uppercase tracking-wider">Back</span>
         </button>
         <button
-          onClick={() => navigate("/")}
+          onClick={handleLogout}
           className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <Home className="w-5 h-5" />
-          <span className="text-sm uppercase tracking-wider">Home</span>
+          <LogOut className="w-5 h-5" />
+          <span className="text-sm uppercase tracking-wider">Log Out</span>
         </button>
       </header>
 
