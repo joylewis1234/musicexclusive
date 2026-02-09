@@ -102,7 +102,7 @@ const ArtistApplicationAction = () => {
               <br />
               An approval email with setup instructions has been sent to the artist.
             </p>
-            <Button onClick={() => navigate("/admin/artist-applications")} className="w-full">
+            <Button onClick={() => navigate("/admin/login?next=/admin/artist-applications")} className="w-full">
               View All Applications
             </Button>
           </>
@@ -121,7 +121,7 @@ const ArtistApplicationAction = () => {
               <br />
               A notification email has been sent to the artist.
             </p>
-            <Button onClick={() => navigate("/admin/artist-applications")} className="w-full">
+            <Button onClick={() => navigate("/admin/login?next=/admin/artist-applications")} className="w-full">
               View All Applications
             </Button>
           </>
@@ -144,7 +144,7 @@ const ArtistApplicationAction = () => {
               </p>
             )}
             <div className="space-y-3">
-              <Button onClick={() => navigate("/admin/artist-applications")} className="w-full">
+              <Button onClick={() => navigate("/admin/login?next=/admin/artist-applications")} className="w-full">
                 Go to Admin Dashboard
               </Button>
               <Button variant="ghost" onClick={() => navigate("/")} className="w-full">
