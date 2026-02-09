@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ArrowLeft, Home, Loader2 } from "lucide-react"
-import { supabase } from "@/integrations/supabase/client"
+import { supabase } from "@/integrations/supabase/client" // used only for edge function invoke
 import { useToast } from "@/hooks/use-toast"
 
 const yearsOptions = [
@@ -61,7 +61,6 @@ const ArtistApplicationForm = () => {
 
     try {
       // Generate ID client-side so we don't need to SELECT/RETURN the inserted row
-      // (SELECT often fails under RLS for logged-out users on production).
       const applicationId = crypto.randomUUID()
 
       // Normalize email before saving
@@ -69,8 +68,12 @@ const ArtistApplicationForm = () => {
 
       console.log("[ArtistApplicationForm] Submitting application:", { applicationId, email: normalizedEmail })
 
-      // Insert application with defaults for missing fields (TESTING MODE)
-      const { error } = await supabase.from("artist_applications").insert({
+      // Use direct fetch to bypass Supabase client's AbortController which can
+      // abort requests during auth token refresh when a user is already logged in.
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+
+      const insertBody = {
         id: applicationId,
         artist_name: artistName || "Test Artist",
         contact_email: normalizedEmail,
@@ -80,19 +83,31 @@ const ArtistApplicationForm = () => {
         years_releasing: yearsReleasing || "1-2 years",
         genres: genres || "Test Genre",
         primary_social_platform: primarySocialPlatform || "instagram",
-          social_profile_url: socialProfileUrl || "not_provided",
+        social_profile_url: socialProfileUrl || "not_provided",
         follower_count: parseInt(followerCount) || 1000,
-          song_sample_url: "not_required",
+        song_sample_url: "not_required",
         hook_preview_url: null,
         owns_rights: true,
         not_released_publicly: true,
         agrees_terms: true,
         status: "pending",
+      }
+
+      const res = await fetch(`${supabaseUrl}/rest/v1/artist_applications`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": supabaseKey,
+          "Authorization": `Bearer ${supabaseKey}`,
+          "Prefer": "return=minimal",
+        },
+        body: JSON.stringify(insertBody),
       })
 
-      if (error) {
-        console.error("[ArtistApplicationForm] Insert error:", error)
-        throw error
+      if (!res.ok) {
+        const errText = await res.text()
+        console.error("[ArtistApplicationForm] Insert error:", res.status, errText)
+        throw new Error(errText || `Insert failed (${res.status})`)
       }
 
       console.log("[ArtistApply] ✅ Submitted application only (no auth user created):", applicationId)
