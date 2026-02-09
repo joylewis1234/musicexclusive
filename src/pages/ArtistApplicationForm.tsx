@@ -115,9 +115,11 @@ const ArtistApplicationForm = () => {
       })
     } catch (error: unknown) {
       // Detect AbortError (common during HMR, auth refresh, or network hiccup) and ignore
+      const errMsg = String((error as any)?.message ?? (error as any)?.error_description ?? error ?? "");
+      const errName = String((error as any)?.name ?? "");
       const isAbort =
-        error instanceof DOMException && error.name === "AbortError" ||
-        (error instanceof Error && /abort|cancel/i.test(error.message));
+        errName === "AbortError" ||
+        /abort|signal is aborted|cancel/i.test(errMsg);
 
       if (isAbort) {
         console.warn("[ArtistApplicationForm] Request aborted – likely transient. Ignoring.");
