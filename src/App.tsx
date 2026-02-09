@@ -47,7 +47,7 @@ import AdminLogin from "./pages/auth/AdminLogin";
 import AccessRestricted from "./pages/AccessRestricted";
 
 // Fan pages (protected)
-import FanDashboard from "./pages/FanDashboard";
+// FanDashboard removed – /fan/profile is now the fan landing page
 import FanProfile from "./pages/FanProfile";
 import FanInbox from "./pages/FanInbox";
 import Discovery from "./pages/Discovery";
@@ -131,7 +131,7 @@ const App = () => (
                     <FanLayout />
                   </ProtectedRoute>
                 }>
-                  <Route path="/fan/dashboard" element={<FanDashboard />} />
+                  {/* /fan/dashboard removed – profile is the landing tab */}
                   <Route path="/fan/profile" element={<FanProfile />} />
                   <Route path="/fan/inbox" element={<FanInbox />} />
                   <Route path="/fan/payment" element={<Payment />} />

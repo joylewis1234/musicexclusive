@@ -269,10 +269,10 @@ const ChooseAccess = () => {
                 </p>
                 <Button
                   variant="link"
-                  onClick={() => navigate("/fan/dashboard")}
+                  onClick={() => navigate("/fan/profile")}
                   className="text-primary hover:text-primary/80"
                 >
-                  Go to Dashboard →
+                  Go to Profile →
                 </Button>
               </div>
             ) : (

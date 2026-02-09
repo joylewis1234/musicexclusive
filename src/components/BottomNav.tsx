@@ -1,10 +1,9 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, Compass, Inbox, User } from "lucide-react";
+import { Compass, Inbox, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnreadInboxCount } from "@/hooks/useUnreadInboxCount";
 
 const navItems = [
-  { path: "/fan/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/discovery", label: "Discover", icon: Compass },
   { path: "/fan/inbox", label: "Inbox", icon: Inbox, showBadge: true },
   { path: "/fan/profile", label: "Profile", icon: User },
