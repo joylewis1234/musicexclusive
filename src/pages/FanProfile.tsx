@@ -224,8 +224,25 @@ const FanProfile = () => {
           )}
         </section>
 
+        {/* Wallet Balance Card */}
+        <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
+          <WalletBalanceCard />
+        </section>
+
+        {/* Discovery CTA */}
+        <section className="animate-fade-in" style={{ animationDelay: "150ms" }}>
+          <Button 
+            variant="secondary" 
+            size="lg" 
+            className="w-full"
+            onClick={() => navigate("/discovery")}
+          >
+            Explore All Music
+          </Button>
+        </section>
+
         {/* Profile Header */}
-        <section className="text-center animate-fade-in">
+        <section className="text-center animate-fade-in" style={{ animationDelay: "200ms" }}>
           {/* Avatar with upload */}
           <div className="relative w-24 h-24 mx-auto mb-4">
             <Avatar className="w-24 h-24 border-2 border-border">
@@ -338,13 +355,8 @@ const FanProfile = () => {
           
         </section>
 
-        {/* Wallet Balance Card */}
-        <section className="animate-fade-in" style={{ animationDelay: "100ms" }}>
-          <WalletBalanceCard />
-        </section>
-
         {/* Top 5 Artists */}
-        <section className="animate-fade-in" style={{ animationDelay: "200ms" }}>
+        <section className="animate-fade-in" style={{ animationDelay: "300ms" }}>
           <h2 
             className="font-display text-sm uppercase tracking-wider text-foreground mb-4"
             style={{
@@ -402,19 +414,6 @@ const FanProfile = () => {
             </div>
           )}
         </section>
-
-        {/* Discovery CTA */}
-        <section className="animate-fade-in" style={{ animationDelay: "300ms" }}>
-          <Button 
-            variant="secondary" 
-            size="lg" 
-            className="w-full"
-            onClick={() => navigate("/discovery")}
-          >
-            Explore All Music
-          </Button>
-        </section>
-
 
         <section className="animate-fade-in pt-4 pb-8" style={{ animationDelay: "400ms" }}>
           <Button
