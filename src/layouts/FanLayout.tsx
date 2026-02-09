@@ -6,22 +6,19 @@ import { usePlayer } from "@/contexts/PlayerContext";
 const FanLayout = () => {
   const { currentTrack } = usePlayer();
 
-  // Calculate bottom padding: nav (64px) + mini-player when active (80px)
-  const bottomPadding = currentTrack ? "pb-36" : "pb-16";
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Page content with bottom padding for nav + mini-player */}
-      <div className={bottomPadding}>
+      {/* Page content – always reserve space for nav (64px) + mini-player (80px) */}
+      <div className="pb-36">
         <Outlet />
       </div>
       
-      {/* Mini-player sits above the nav */}
-      <div className={currentTrack ? "fixed bottom-16 left-0 right-0 z-50" : ""}>
+      {/* Mini-player sits above the nav – always fixed to prevent layout bounce */}
+      <div className="fixed bottom-16 left-0 right-0 z-50">
         <MiniPlayer />
       </div>
       
-      {/* Bottom navigation */}
+      {/* Bottom navigation – always fixed */}
       <BottomNav />
     </div>
   );

@@ -219,8 +219,7 @@ const Discovery = () => {
         )}
       </div>
 
-      {/* Bottom spacing for navigation */}
-      <div className="h-24" />
+      {/* Bottom spacing handled by FanLayout */}
 
       {/* Share Modal */}
       <ShareTrackModal
