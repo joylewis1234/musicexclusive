@@ -12,6 +12,8 @@ interface LocationState {
   name?: string;
   vaultCode?: string;
   flow?: string;
+  invite_token?: string;
+  invite_type?: string;
 }
 
 const FanAgreementStep = () => {
@@ -47,6 +49,9 @@ const FanAgreementStep = () => {
           name,
           vaultCode,
           agreedToTerms: true,
+          invite_token: state?.invite_token,
+          invite_type: state?.invite_type,
+          flow: state?.flow,
         },
       });
     } catch (err) {
