@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
 import { Music } from "lucide-react";
@@ -8,6 +9,8 @@ interface InboxTrackCardProps {
   senderName: string;
   trackTitle: string;
   trackArtist: string;
+  trackId: string;
+  artistId: string;
   note: string | null;
   createdAt: string;
   listenedAt: string | null;
@@ -19,18 +22,27 @@ export const InboxTrackCard = ({
   senderName,
   trackTitle,
   trackArtist,
+  trackId,
+  artistId,
   note,
   createdAt,
   listenedAt,
   index,
   onListen,
 }: InboxTrackCardProps) => {
+  const navigate = useNavigate();
+
   const formatTimeAgo = (dateString: string) => {
     try {
       return formatDistanceToNow(new Date(dateString), { addSuffix: false }) + " ago";
     } catch {
       return "";
     }
+  };
+
+  const handleListenOnProfile = () => {
+    onListen();
+    navigate(`/artist/${artistId}?track=${trackId}`);
   };
 
   return (
@@ -41,48 +53,48 @@ export const InboxTrackCard = ({
       style={{ animationDelay: `${(index + 1) * 50}ms` }}
     >
       <div className="p-4">
-        <div className="flex items-start justify-between gap-3">
-          {/* Track Info */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs text-primary font-display uppercase tracking-wider">
-                From {senderName}
+        {/* Top row: From + timeAgo */}
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs text-primary font-display uppercase tracking-wider">
+            From {senderName || "A fan"}
+          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground">
+              {formatTimeAgo(createdAt)}
+            </span>
+            {!listenedAt && (
+              <span className="px-1.5 py-0.5 rounded-full bg-accent/20 border border-accent/40 text-[9px] text-accent font-display uppercase tracking-wider">
+                New
               </span>
-              <span className="text-[10px] text-muted-foreground">
-                {formatTimeAgo(createdAt)}
-              </span>
-              {!listenedAt && (
-                <span className="ml-auto px-1.5 py-0.5 rounded-full bg-accent/20 border border-accent/40 text-[9px] text-accent font-display uppercase tracking-wider">
-                  New
-                </span>
-              )}
-            </div>
-
-            <h3 className="font-display text-sm font-semibold text-foreground truncate mb-0.5">
-              {trackTitle}
-            </h3>
-            <p className="text-xs text-muted-foreground truncate">
-              {trackArtist}
-            </p>
-
-            {note && (
-              <p className="text-xs text-muted-foreground/70 italic mt-2 line-clamp-2">
-                "{note}"
-              </p>
             )}
           </div>
-
-          {/* Listen Button */}
-          <Button
-            variant="accent"
-            size="sm"
-            className="flex-shrink-0 gap-1.5"
-            onClick={onListen}
-          >
-            <Music className="w-3.5 h-3.5" />
-            Listen
-          </Button>
         </div>
+
+        {/* Track info */}
+        <h3 className="font-display text-sm font-semibold text-foreground truncate mb-0.5">
+          {trackTitle}
+        </h3>
+        <p className="text-xs text-muted-foreground truncate">
+          {trackArtist}
+        </p>
+
+        {/* Message bubble */}
+        {note && (
+          <p className="text-xs text-muted-foreground/70 italic mt-3 line-clamp-2 px-1">
+            "{note}"
+          </p>
+        )}
+
+        {/* CTA */}
+        <Button
+          variant="accent"
+          size="sm"
+          className="w-full mt-3 gap-1.5"
+          onClick={handleListenOnProfile}
+        >
+          <Music className="w-3.5 h-3.5" />
+          Listen on Artist Profile
+        </Button>
       </div>
     </GlowCard>
   );

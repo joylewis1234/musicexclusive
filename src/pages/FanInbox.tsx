@@ -299,6 +299,8 @@ const FanInbox = () => {
                       senderName={item.sender_name}
                       trackTitle={trackInfo.title}
                       trackArtist={trackInfo.artist}
+                      trackId={item.track_id}
+                      artistId={item.artist_id}
                       note={item.note}
                       createdAt={item.created_at}
                       listenedAt={item.listened_at}
