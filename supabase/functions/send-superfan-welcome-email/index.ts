@@ -259,7 +259,7 @@ serve(async (req) => {
     const vaultCode = vaultEntry?.code || "N/A";
     const displayName = name || vaultEntry?.name || email.split("@")[0];
 
-    const baseUrl = appUrl || "https://musicexclusive.lovable.app";
+    const baseUrl = appUrl || "https://themusicisexclusive.com";
     const loginLink = `${baseUrl}/auth/fan?email=${encodeURIComponent(email)}`;
 
     // Ensure vault_members row exists and get stable UUID for inviter_id
