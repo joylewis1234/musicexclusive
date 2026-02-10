@@ -11,6 +11,7 @@ interface StreamChargeResult {
 
 export const useStreamCharge = (userEmail: string | null | undefined) => {
   const [isProcessing, setIsProcessing] = useState(false);
+  const [chargedTracks, setChargedTracks] = useState<Set<string>>(new Set());
 
   const chargeStream = useCallback(async (
     trackId: string
@@ -57,6 +58,9 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
 
       toast.success("1 credit used • Enjoy 🎶");
 
+      // Mark this track as charged for this session
+      setChargedTracks(prev => new Set(prev).add(trackId));
+
       return {
         success: true,
         newCredits: data?.newCredits,
@@ -72,10 +76,18 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
     }
   }, [userEmail]);
 
+  const clearCharged = useCallback((trackId: string) => {
+    setChargedTracks(prev => {
+      const next = new Set(prev);
+      next.delete(trackId);
+      return next;
+    });
+  }, []);
+
   return {
     chargeStream,
     isProcessing,
-    // Keep API compatible - hasBeenCharged always false now (every play charges)
-    hasBeenCharged: (_trackId: string) => false,
+    hasBeenCharged: useCallback((trackId: string) => chargedTracks.has(trackId), [chargedTracks]),
+    clearCharged,
   };
 };
