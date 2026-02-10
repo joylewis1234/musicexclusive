@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
-import { Music } from "lucide-react";
+import { Music, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface InboxTrackCardProps {
@@ -16,6 +16,7 @@ interface InboxTrackCardProps {
   listenedAt: string | null;
   index: number;
   onListen: () => void;
+  onDelete: () => void;
 }
 
 export const InboxTrackCard = ({
@@ -29,6 +30,7 @@ export const InboxTrackCard = ({
   listenedAt,
   index,
   onListen,
+  onDelete,
 }: InboxTrackCardProps) => {
   const navigate = useNavigate();
 
@@ -85,16 +87,29 @@ export const InboxTrackCard = ({
           </p>
         )}
 
-        {/* CTA */}
-        <Button
-          variant="accent"
-          size="sm"
-          className="w-full mt-3 gap-1.5"
-          onClick={handleListenOnProfile}
-        >
-          <Music className="w-3.5 h-3.5" />
-          Listen on Artist Profile
-        </Button>
+        {/* CTA row */}
+        <div className="flex items-center gap-2 mt-3">
+          <Button
+            variant="accent"
+            size="sm"
+            className="flex-1 gap-1.5"
+            onClick={handleListenOnProfile}
+          >
+            <Music className="w-3.5 h-3.5" />
+            Listen on Artist Profile
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0 h-10 w-10 text-muted-foreground hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </GlowCard>
   );
