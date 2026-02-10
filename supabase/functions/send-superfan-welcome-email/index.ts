@@ -192,6 +192,35 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
   `;
 }
 
+async function getOrCreateVaultMemberIdByEmail(supabase: any, email: string): Promise<string> {
+  const normalized = email.toLowerCase().trim();
+
+  const { data: existing } = await supabase
+    .from("vault_members")
+    .select("id")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (existing?.id) return existing.id;
+
+  const { data: created, error: createErr } = await supabase
+    .from("vault_members")
+    .insert({
+      email: normalized,
+      display_name: normalized.split("@")[0],
+      credits: 0,
+      vault_access_active: false,
+    })
+    .select("id")
+    .single();
+
+  if (createErr || !created?.id) {
+    throw new Error("Failed to create vault_members row for inviter: " + (createErr?.message || "unknown"));
+  }
+
+  return created.id;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -233,14 +262,8 @@ serve(async (req) => {
     const baseUrl = appUrl || "https://musicexclusive.lovable.app";
     const loginLink = `${baseUrl}/auth/fan?email=${encodeURIComponent(email)}`;
 
-    // Look up inviter_id using vault_members.id (stable, no auth.admin.listUsers)
-    const { data: vm } = await supabase
-      .from("vault_members")
-      .select("id")
-      .eq("email", email.toLowerCase())
-      .maybeSingle();
-
-    const inviterId = vm?.id || email; // fallback to email only if no vault_members row yet
+    // Ensure vault_members row exists and get stable UUID for inviter_id
+    const inviterId = await getOrCreateVaultMemberIdByEmail(supabase, email);
 
     // Generate the Superfan invite token
     const inviteTokenBytes = new Uint8Array(32);

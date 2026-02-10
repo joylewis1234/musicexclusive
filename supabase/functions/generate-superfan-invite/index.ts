@@ -23,6 +23,35 @@ function generateToken(): string {
   return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+async function getOrCreateVaultMemberIdByEmail(supabase: any, email: string): Promise<string> {
+  const normalized = email.toLowerCase().trim();
+
+  const { data: existing } = await supabase
+    .from("vault_members")
+    .select("id")
+    .eq("email", normalized)
+    .maybeSingle();
+
+  if (existing?.id) return existing.id;
+
+  const { data: created, error: createErr } = await supabase
+    .from("vault_members")
+    .insert({
+      email: normalized,
+      display_name: normalized.split("@")[0],
+      credits: 0,
+      vault_access_active: false,
+    })
+    .select("id")
+    .single();
+
+  if (createErr || !created?.id) {
+    throw new Error("Failed to create vault_members row for inviter: " + (createErr?.message || "unknown"));
+  }
+
+  return created.id;
+}
+
 function buildMonthlyInviteEmailHtml(name: string, inviteLink: string): string {
   return `
 <!DOCTYPE html>
@@ -92,14 +121,15 @@ serve(async (req) => {
 
     logStep("Starting", { email, sendEmail, isRenewal });
 
-    // Look up vault_members.id by email (stable identity, no auth.admin.listUsers)
+    // Ensure vault_members row exists and get stable UUID for inviter_id
+    const inviterId = await getOrCreateVaultMemberIdByEmail(supabaseAdmin, email);
+
+    // Look up display name
     const { data: vm } = await supabaseAdmin
       .from("vault_members")
-      .select("id, display_name")
-      .eq("email", email.toLowerCase())
+      .select("display_name")
+      .eq("id", inviterId)
       .maybeSingle();
-
-    const inviterId = vm?.id || email; // fallback to email if no vault_members row
     const displayName = vm?.display_name || email.split("@")[0];
 
     // Generate invite token
