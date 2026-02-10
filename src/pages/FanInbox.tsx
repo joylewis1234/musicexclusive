@@ -178,6 +178,26 @@ const FanInbox = () => {
     setIsLoadingArtists(false);
   };
 
+  const handleDeleteTrack = async (id: string) => {
+    const { error } = await supabase.from("shared_tracks").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete");
+      return;
+    }
+    setSharedTracks((prev) => prev.filter((t) => t.id !== id));
+    toast.success("Removed from inbox");
+  };
+
+  const handleDeleteArtist = async (id: string) => {
+    const { error } = await supabase.from("shared_artist_profiles").delete().eq("id", id);
+    if (error) {
+      toast.error("Failed to delete");
+      return;
+    }
+    setSharedArtists((prev) => prev.filter((a) => a.id !== id));
+    toast.success("Removed from inbox");
+  };
+
   const handleListen = async (item: SharedTrackItem) => {
     if (!item.listened_at) {
       await supabase
@@ -314,6 +334,7 @@ const FanInbox = () => {
                       listenedAt={item.listened_at}
                       index={index}
                       onListen={() => handleListen(item)}
+                      onDelete={() => handleDeleteTrack(item.id)}
                     />
                 ))}
               </section>
@@ -348,6 +369,7 @@ const FanInbox = () => {
                     viewedAt={item.viewed_at}
                     index={index}
                     onView={() => handleViewArtist(item)}
+                    onDelete={() => handleDeleteArtist(item.id)}
                   />
                 ))}
               </section>
