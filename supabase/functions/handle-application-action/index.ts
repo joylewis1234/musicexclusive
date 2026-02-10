@@ -5,7 +5,7 @@
  const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
  
  // Use production URL by default
- const DEFAULT_BASE_URL = "https://musicexclusive.lovable.app";
+ const DEFAULT_BASE_URL = "https://themusicisexclusive.com";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",

@@ -135,7 +135,7 @@ serve(async (req) => {
     // Generate invite token
     const inviteToken = generateToken();
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const baseUrl = "https://musicexclusive.lovable.app";
+    const baseUrl = "https://themusicisexclusive.com";
     const inviteLink = `${baseUrl}/invite?token=${inviteToken}&type=superfan`;
 
     const { error: insertErr } = await supabaseAdmin
