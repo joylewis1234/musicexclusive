@@ -115,7 +115,7 @@ export const InboxArtistCard = ({
             }}
           >
             <ExternalLink className="w-3.5 h-3.5" />
-            View
+            View Artist
           </Button>
         </div>
 
