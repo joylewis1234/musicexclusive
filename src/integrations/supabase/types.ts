@@ -1099,6 +1099,7 @@ export type Database = {
           superfan_active: boolean
           superfan_since: string | null
           updated_at: string
+          user_id: string | null
           vault_access_active: boolean
         }
         Insert: {
@@ -1112,6 +1113,7 @@ export type Database = {
           superfan_active?: boolean
           superfan_since?: string | null
           updated_at?: string
+          user_id?: string | null
           vault_access_active?: boolean
         }
         Update: {
@@ -1125,6 +1127,7 @@ export type Database = {
           superfan_active?: boolean
           superfan_since?: string | null
           updated_at?: string
+          user_id?: string | null
           vault_access_active?: boolean
         }
         Relationships: []

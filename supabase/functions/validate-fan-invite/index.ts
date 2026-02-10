@@ -56,7 +56,6 @@ serve(async (req) => {
 
     // Check if expired
     if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
-      // Mark as expired
       await supabaseAdmin
         .from("fan_invites")
         .update({ status: "expired" })
@@ -76,16 +75,35 @@ serve(async (req) => {
       );
     }
 
-    // Verify inviter is still eligible
+    // Verify inviter is still eligible (for superfan invites)
     if (invite.inviter_type === "superfan") {
+      // inviter_id is vault_members.id — look up directly
       const { data: member } = await supabaseAdmin
         .from("vault_members")
         .select("superfan_active")
-        .eq("email", (await supabaseAdmin.auth.admin.getUserById(invite.inviter_id)).data?.user?.email || "")
+        .eq("id", invite.inviter_id)
         .maybeSingle();
 
-      // If we can't verify or superfan is inactive, invalidate
-      if (!member?.superfan_active) {
+      // If no member found, try by email fallback (legacy invites where inviter_id was email)
+      if (!member) {
+        const { data: memberByEmail } = await supabaseAdmin
+          .from("vault_members")
+          .select("superfan_active")
+          .eq("email", invite.inviter_id)
+          .maybeSingle();
+
+        if (!memberByEmail?.superfan_active) {
+          await supabaseAdmin
+            .from("fan_invites")
+            .update({ status: "invalidated" })
+            .eq("id", invite.id);
+
+          return new Response(
+            JSON.stringify({ valid: false, error: "This invite is no longer valid" }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else if (!member.superfan_active) {
         await supabaseAdmin
           .from("fan_invites")
           .update({ status: "invalidated" })
@@ -123,7 +141,7 @@ serve(async (req) => {
         throw new Error("Failed to consume invite");
       }
 
-      // If invitee is authenticated, attach invite metadata to vault_members
+      // Attach invite metadata to vault_members
       if (inviteeEmail) {
         await supabaseAdmin
           .from("vault_members")

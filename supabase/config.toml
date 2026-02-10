@@ -86,3 +86,6 @@ verify_jwt = false
 
 [functions.generate-superfan-invite]
 verify_jwt = false
+
+[functions.backfill-vault-user-ids]
+verify_jwt = false

@@ -1,5 +1,5 @@
 // System-level function to generate a Superfan invite and optionally send it via email.
-// Called by stripe-webhook on subscription creation/renewal.
+// Called by stripe-webhook on subscription renewal.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
@@ -87,47 +87,20 @@ serve(async (req) => {
   );
 
   try {
-    const { email, sendEmail, isRenewal, stripeEventId } = await req.json();
+    const { email, sendEmail, isRenewal } = await req.json();
     if (!email) throw new Error("Missing email");
 
     logStep("Starting", { email, sendEmail, isRenewal });
 
-    // Idempotency: check if invite already generated for this stripe event
-    if (stripeEventId) {
-      const { data: existing } = await supabaseAdmin
-        .from("fan_invites")
-        .select("id, token")
-        .eq("inviter_type", "superfan")
-        .eq("status", "unused")
-        .ilike("token", `%`) // just need to check by metadata; we'll use a different approach
-        .limit(1);
-      // Simple idempotency — look up by inviter + recent creation within 1 minute
-      // This is handled by the stripe_events table idempotency in the webhook caller
-    }
+    // Look up vault_members.id by email (stable identity, no auth.admin.listUsers)
+    const { data: vm } = await supabaseAdmin
+      .from("vault_members")
+      .select("id, display_name")
+      .eq("email", email.toLowerCase())
+      .maybeSingle();
 
-    // Look up user ID from email
-    const { data: users } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1 });
-    // More reliable: get user by email
-    let userId: string | null = null;
-    let displayName = email.split("@")[0];
-
-    // Search all users for matching email
-    const { data: allUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    const matchedUser = allUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
-    if (matchedUser) {
-      userId = matchedUser.id;
-    }
-
-    if (!userId) {
-      // Try vault_members
-      const { data: vm } = await supabaseAdmin
-        .from("vault_members")
-        .select("id, display_name")
-        .eq("email", email.toLowerCase())
-        .maybeSingle();
-      userId = vm?.id || email; // fallback to email as inviter_id
-      displayName = vm?.display_name || displayName;
-    }
+    const inviterId = vm?.id || email; // fallback to email if no vault_members row
+    const displayName = vm?.display_name || email.split("@")[0];
 
     // Generate invite token
     const inviteToken = generateToken();
@@ -139,7 +112,7 @@ serve(async (req) => {
       .from("fan_invites")
       .insert({
         token: inviteToken,
-        inviter_id: userId || email,
+        inviter_id: inviterId,
         inviter_type: "superfan",
         status: "unused",
         expires_at: expiresAt,
@@ -147,9 +120,9 @@ serve(async (req) => {
 
     if (insertErr) throw new Error("Failed to create invite: " + insertErr.message);
 
-    logStep("Invite created", { userId, token: inviteToken.substring(0, 8) + "..." });
+    logStep("Invite created", { inviterId, token: inviteToken.substring(0, 8) + "..." });
 
-    // Send email if requested (renewal emails, or include in welcome)
+    // Send email if requested (renewal emails)
     if (sendEmail && isRenewal) {
       const resendKey = Deno.env.get("RESEND_API_KEY");
       if (resendKey) {
