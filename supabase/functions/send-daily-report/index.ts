@@ -14,11 +14,13 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
 
 // ── Timezone helpers ─────────────────────────────────────────────────────
 
-/** Return "YYYY-MM-DD" for yesterday in America/Los_Angeles */
-function getYesterdayLA(): string {
+const REPORT_TIMEZONE = "America/Chicago";
+
+/** Return "YYYY-MM-DD" for yesterday in America/Chicago */
+function getYesterdayCT(): string {
   const now = new Date();
-  const todayLA = now.toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" }); // "YYYY-MM-DD"
-  const [year, month, day] = todayLA.split("-").map(Number);
+  const todayCT = now.toLocaleDateString("en-CA", { timeZone: REPORT_TIMEZONE }); // "YYYY-MM-DD"
+  const [year, month, day] = todayCT.split("-").map(Number);
   const todayUTC = new Date(Date.UTC(year, month - 1, day));
   todayUTC.setUTCDate(todayUTC.getUTCDate() - 1);
   const y = todayUTC.getUTCFullYear();
@@ -27,11 +29,11 @@ function getYesterdayLA(): string {
   return `${y}-${m}-${d}`;
 }
 
-/** Convert a YYYY-MM-DD date in America/Los_Angeles to a UTC ISO string for that midnight */
-function laMidnightToUTC(dateStr: string): string {
-  // Build a formatter that tells us the UTC offset for this LA date
+/** Convert a YYYY-MM-DD date in America/Chicago to a UTC ISO string for that midnight */
+function tzMidnightToUTC(dateStr: string): string {
+  // Build a formatter that tells us the UTC offset for this CT date
   const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Los_Angeles",
+    timeZone: REPORT_TIMEZONE,
     year: "numeric", month: "2-digit", day: "2-digit",
     hour: "2-digit", minute: "2-digit", second: "2-digit",
     hour12: false,
@@ -85,14 +87,14 @@ interface ReportData {
 // ── Report Generator ─────────────────────────────────────────────────────
 
 async function generateReport(supabase: any, reportDate: string): Promise<ReportData> {
-  const startUTC = laMidnightToUTC(reportDate);
+  const startUTC = tzMidnightToUTC(reportDate);
 
   const nextDay = new Date(reportDate + "T00:00:00");
   nextDay.setDate(nextDay.getDate() + 1);
   const nextDayStr = nextDay.toISOString().split("T")[0];
-  const endUTC = laMidnightToUTC(nextDayStr);
+  const endUTC = tzMidnightToUTC(nextDayStr);
 
-  logStep("Generating report", { reportDate, startUTC, endUTC, timezone: "America/Los_Angeles" });
+  logStep("Generating report", { reportDate, startUTC, endUTC, timezone: REPORT_TIMEZONE });
   logStep("Query logic", {
     streams: `stream_ledger WHERE created_at >= '${startUTC}' AND created_at < '${endUTC}'`,
     topArtists: "GROUP BY artist_id → JOIN artist_profiles ON id::text = artist_id",
@@ -303,7 +305,7 @@ ol li { font-size: 14px; }
 <div class="container">
   <div class="header">
     <h1>Music Exclusive&#8482;</h1>
-    <p>Daily Company Report &mdash; ${escapeHtml(report.reportDate)} (Pacific Time)</p>
+    <p>Daily Company Report &mdash; ${escapeHtml(report.reportDate)} (Central Time)</p>
   </div>
 
   <div class="card">
@@ -386,7 +388,7 @@ serve(async (req) => {
     const body = await req.json().catch(() => ({}));
 
     // Default to yesterday in America/Los_Angeles
-    const reportDate = body.date || getYesterdayLA();
+    const reportDate = body.date || getYesterdayCT();
     const recipientEmail = "support@musicexclusive.co";
     const sendEmail = body.sendEmail !== false;
 
