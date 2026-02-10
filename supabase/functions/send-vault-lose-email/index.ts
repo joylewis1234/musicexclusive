@@ -141,16 +141,6 @@ function buildLoseEmailHtml(name: string, email: string, vaultCode: string, logi
             </td>
           </tr>
 
-          <!-- Next Step -->
-          <tr>
-            <td align="center" style="padding-bottom: 24px;">
-              <p style="margin: 0 0 16px 0; color: #ffffff; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">🔁 Next Step</p>
-              <a href="${loginLink}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #a855f7 50%, #ec4899 100%); color: #ffffff; font-size: 16px; font-weight: 700; text-decoration: none; padding: 18px 48px; border-radius: 12px; letter-spacing: 1px; text-transform: uppercase;">
-                RETURN TO MUSIC EXCLUSIVE
-              </a>
-            </td>
-          </tr>
-
           <!-- Reminder -->
           <tr>
             <td style="padding-bottom: 32px;">
