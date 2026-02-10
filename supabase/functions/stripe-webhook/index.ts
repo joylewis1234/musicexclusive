@@ -105,6 +105,7 @@ serve(async (req) => {
         const customerEmail = session.customer_email || session.metadata?.email;
         const credits = parseInt(session.metadata?.credits || "0", 10);
         const transactionType = session.metadata?.type || "CREDITS_PURCHASE";
+        const isSubscription = session.mode === "subscription";
         const paymentIntentId = typeof session.payment_intent === 'string' 
           ? session.payment_intent 
           : session.payment_intent?.id;
@@ -169,11 +170,12 @@ serve(async (req) => {
 
           // Create ledger entry
           const usdAmount = credits * 0.20;
+          const ledgerType = isSubscription ? "SUBSCRIPTION_CREDITS" : transactionType;
           const { error: ledgerError } = await supabaseAdmin
             .from("credit_ledger")
             .insert({
               user_email: customerEmail,
-              type: transactionType,
+              type: ledgerType,
               credits_delta: credits,
               usd_delta: usdAmount,
               reference: paymentIntentId || session.id,
@@ -188,6 +190,25 @@ serve(async (req) => {
               usd_delta: usdAmount,
               reference: paymentIntentId || session.id
             });
+          }
+
+          // Send Superfan welcome email for subscription purchases (non-blocking)
+          if (isSubscription) {
+            try {
+              const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+              const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+              fetch(`${supabaseUrl}/functions/v1/send-superfan-welcome-email`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({ email: customerEmail }),
+              }).catch(err => logStep("Superfan email fire-and-forget error", { error: String(err) }));
+              logStep("Superfan welcome email triggered", { email: customerEmail });
+            } catch (emailErr) {
+              logStep("Error triggering superfan email", { error: String(emailErr) });
+            }
           }
         }
         break;
