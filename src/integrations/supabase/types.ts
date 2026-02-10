@@ -481,6 +481,42 @@ export type Database = {
           },
         ]
       }
+      fan_invites: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          invitee_email: string | null
+          inviter_id: string
+          inviter_type: string
+          status: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          invitee_email?: string | null
+          inviter_id: string
+          inviter_type: string
+          status?: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          invitee_email?: string | null
+          inviter_id?: string
+          inviter_type?: string
+          status?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: []
+      }
       fan_terms_acceptances: {
         Row: {
           accepted_at: string
@@ -1057,7 +1093,11 @@ export type Database = {
           display_name: string
           email: string
           id: string
+          invite_token_used: string | null
           joined_at: string
+          membership_type: string
+          superfan_active: boolean
+          superfan_since: string | null
           updated_at: string
           vault_access_active: boolean
         }
@@ -1066,7 +1106,11 @@ export type Database = {
           display_name: string
           email: string
           id?: string
+          invite_token_used?: string | null
           joined_at?: string
+          membership_type?: string
+          superfan_active?: boolean
+          superfan_since?: string | null
           updated_at?: string
           vault_access_active?: boolean
         }
@@ -1075,7 +1119,11 @@ export type Database = {
           display_name?: string
           email?: string
           id?: string
+          invite_token_used?: string | null
           joined_at?: string
+          membership_type?: string
+          superfan_active?: boolean
+          superfan_since?: string | null
           updated_at?: string
           vault_access_active?: boolean
         }

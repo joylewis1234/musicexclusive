@@ -77,3 +77,12 @@ verify_jwt = false
 
 [functions.send-superfan-welcome-email]
 verify_jwt = false
+
+[functions.generate-fan-invite]
+verify_jwt = false
+
+[functions.validate-fan-invite]
+verify_jwt = false
+
+[functions.generate-superfan-invite]
+verify_jwt = false
