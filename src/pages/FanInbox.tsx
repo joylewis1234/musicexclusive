@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { ChevronLeft, LogOut, Music, Inbox as InboxIcon, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,6 +15,8 @@ interface SharedTrackItem {
   sender_name: string;
   artist_id: string;
   track_id: string;
+  track_title: string;
+  track_artist_name: string;
   note: string | null;
   created_at: string;
   listened_at: string | null;
@@ -36,7 +37,6 @@ interface SharedArtistItem {
 
 const FanInbox = () => {
   const navigate = useNavigate();
-  const { playTrack } = usePlayer();
   const { user } = useAuth();
   const currentUserEmail = user?.email;
 
@@ -81,18 +81,40 @@ const FanInbox = () => {
       return;
     }
 
+    // Get sender names
     const senderIds = [...new Set(tracks?.map((t) => t.sender_id) || [])];
     const { data: senders } = await supabase
       .from("vault_members")
-      .select("id, display_name")
+      .select("id, display_name, email")
       .in("id", senderIds);
+    const senderMap = new Map(senders?.map((s) => [s.id, { name: s.display_name, email: s.email }]) || []);
 
-    const senderMap = new Map(senders?.map((s) => [s.id, s.display_name]) || []);
+    // Get track metadata from DB
+    const trackIds = [...new Set(tracks?.map((t) => t.track_id) || [])];
+    const { data: trackMeta } = await supabase
+      .from("tracks")
+      .select("id, title, artist_id")
+      .in("id", trackIds);
+    const trackMap = new Map(trackMeta?.map((t) => [t.id, t]) || []);
 
-    const enrichedTracks: SharedTrackItem[] = (tracks || []).map((track) => ({
-      ...track,
-      sender_name: senderMap.get(track.sender_id) || "Unknown",
-    }));
+    // Get artist names for tracks
+    const artistIds = [...new Set(tracks?.map((t) => t.artist_id) || [])];
+    const { data: artistMeta } = await supabase
+      .from("public_artist_profiles")
+      .select("id, artist_name")
+      .in("id", artistIds);
+    const artistMap = new Map(artistMeta?.map((a) => [a.id, a.artist_name]) || []);
+
+    const enrichedTracks: SharedTrackItem[] = (tracks || []).map((track) => {
+      const sender = senderMap.get(track.sender_id);
+      const meta = trackMap.get(track.track_id);
+      return {
+        ...track,
+        sender_name: sender?.name || sender?.email || "A fan",
+        track_title: meta?.title || "Unknown Track",
+        track_artist_name: artistMap.get(track.artist_id) || "Unknown Artist",
+      };
+    });
 
     setSharedTracks(enrichedTracks);
     setIsLoadingTracks(false);
@@ -128,9 +150,9 @@ const FanInbox = () => {
     const senderIds = [...new Set(shares?.map((s) => s.sender_id) || [])];
     const { data: senders } = await supabase
       .from("vault_members")
-      .select("id, display_name")
+      .select("id, display_name, email")
       .in("id", senderIds);
-    const senderMap = new Map(senders?.map((s) => [s.id, s.display_name]) || []);
+    const senderMap = new Map(senders?.map((s) => [s.id, { name: s.display_name, email: s.email }]) || []);
 
     // Get artist profile details
     const artistIds = [...new Set(shares?.map((s) => s.artist_profile_id) || [])];
@@ -142,9 +164,10 @@ const FanInbox = () => {
 
     const enrichedArtists: SharedArtistItem[] = (shares || []).map((share) => {
       const artist = artistMap.get(share.artist_profile_id);
+      const sender = senderMap.get(share.sender_id);
       return {
         ...share,
-        sender_name: senderMap.get(share.sender_id) || "Unknown",
+        sender_name: sender?.name || sender?.email || "A fan",
         artist_name: artist?.artist_name || "Unknown Artist",
         artist_avatar_url: artist?.avatar_url || null,
         artist_genre: artist?.genre || null,
@@ -156,24 +179,19 @@ const FanInbox = () => {
   };
 
   const handleListen = async (item: SharedTrackItem) => {
-    const track = tracksLibrary[item.track_id];
-    if (track) {
-      if (!item.listened_at) {
-        await supabase
-          .from("shared_tracks")
-          .update({ listened_at: new Date().toISOString() })
-          .eq("id", item.id);
+    if (!item.listened_at) {
+      await supabase
+        .from("shared_tracks")
+        .update({ listened_at: new Date().toISOString() })
+        .eq("id", item.id);
 
-        setSharedTracks((prev) =>
-          prev.map((t) =>
-            t.id === item.id ? { ...t, listened_at: new Date().toISOString() } : t
-          )
-        );
-      }
-
-      playTrack(track);
-      navigate(`/player/${item.track_id}`);
+      setSharedTracks((prev) =>
+        prev.map((t) =>
+          t.id === item.id ? { ...t, listened_at: new Date().toISOString() } : t
+        )
+      );
     }
+    // Navigation is handled by InboxTrackCard's handleListenOnProfile
   };
 
   const handleViewArtist = async (item: SharedArtistItem) => {
@@ -189,14 +207,6 @@ const FanInbox = () => {
         )
       );
     }
-  };
-
-  const getTrackInfo = (trackId: string, artistId: string) => {
-    const track = tracksLibrary[trackId];
-    return {
-      title: track?.title || "Unknown Track",
-      artist: track?.artist || artistId,
-    };
   };
 
   const unreadTracks = sharedTracks.filter((t) => !t.listened_at).length;
@@ -290,15 +300,13 @@ const FanInbox = () => {
               />
             ) : (
               <section className="space-y-3">
-                {sharedTracks.map((item, index) => {
-                  const trackInfo = getTrackInfo(item.track_id, item.artist_id);
-                  return (
+                {sharedTracks.map((item, index) => (
                     <InboxTrackCard
                       key={item.id}
                       id={item.id}
                       senderName={item.sender_name}
-                      trackTitle={trackInfo.title}
-                      trackArtist={trackInfo.artist}
+                      trackTitle={item.track_title}
+                      trackArtist={item.track_artist_name}
                       trackId={item.track_id}
                       artistId={item.artist_id}
                       note={item.note}
@@ -307,8 +315,7 @@ const FanInbox = () => {
                       index={index}
                       onListen={() => handleListen(item)}
                     />
-                  );
-                })}
+                ))}
               </section>
             )}
           </TabsContent>
