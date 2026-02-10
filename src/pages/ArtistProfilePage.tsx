@@ -82,7 +82,7 @@ const ArtistProfilePage = () => {
   // Track IDs for batch like fetching
   const trackIds = tracks.map(t => t.id);
   const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
-  const { chargeStream, hasBeenCharged, isProcessing: isCharging } = useStreamCharge(user?.email);
+  const { chargeStream, hasBeenCharged, isProcessing: isCharging, clearCharged } = useStreamCharge(user?.email);
   const { credits, refetch: refetchCredits } = useCredits();
 
   // Generate public URL for storage path if needed
@@ -335,6 +335,13 @@ const ArtistProfilePage = () => {
     navigate("/fan/add-credits");
   }, [navigate]);
 
+  // When song finishes, clear charged status so next play charges again
+  const handleTrackEnded = useCallback(() => {
+    if (selectedTrack) {
+      clearCharged(selectedTrack.id);
+    }
+  }, [selectedTrack, clearCharged]);
+
   const handleBack = () => {
     if (viewerContext === "artist-own" || viewerContext === "artist-preview") {
       navigate("/artist/dashboard");
@@ -425,6 +432,7 @@ const ArtistProfilePage = () => {
           skipPlayConfirm={selectedTrack ? hasBeenCharged(selectedTrack.id) : false}
           autoPlay={shouldAutoPlay}
           onAutoPlayConsumed={() => setShouldAutoPlay(false)}
+          onTrackEnded={handleTrackEnded}
         />
       </PlayerErrorBoundary>
 
