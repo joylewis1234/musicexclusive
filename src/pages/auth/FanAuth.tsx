@@ -11,9 +11,11 @@ import { lovable } from "@/integrations/lovable/index";
 
 interface LocationState {
   from?: Location;
-  flow?: "superfan" | "vault";
+  flow?: "superfan" | "vault" | "invite";
   email?: string;
   name?: string;
+  invite_token?: string;
+  invite_type?: string;
 }
 
 const FanAuth = () => {
@@ -24,31 +26,34 @@ const FanAuth = () => {
   
   const state = location.state as LocationState | null;
   // Check both URL query param and location state for flow
-  const flowFromParams = searchParams.get("flow") as "superfan" | "vault" | null;
+  const flowFromParams = searchParams.get("flow") as "superfan" | "vault" | "invite" | null;
   const flowFromState = state?.flow;
-  const flow = flowFromParams || flowFromState; // Keep as undefined if neither exists
+  const flow = flowFromParams || flowFromState;
   const isSuperfanFlow = flow === "superfan";
   const isVaultFlow = flow === "vault";
+  const isInviteFlow = flow === "invite";
+  const inviteToken = searchParams.get("invite_token") || state?.invite_token || "";
+  const inviteType = searchParams.get("invite_type") || state?.invite_type || "";
   
   // Default to signup for superfan and vault flows
-  const [isSignUp, setIsSignUp] = useState(isSuperfanFlow || isVaultFlow);
+  const [isSignUp, setIsSignUp] = useState(isSuperfanFlow || isVaultFlow || isInviteFlow);
   const [email, setEmail] = useState(state?.email || "");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState(state?.name || "");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Determine destination based on flow
   const getDestination = () => {
     if (isSuperfanFlow) {
-      // Superfan flow: go directly to subscribe page
       return "/subscribe";
     }
+    if (isInviteFlow) {
+      // Invite flow: go to agreements, then membership selection
+      return "/fan/agreements";
+    }
     if (isVaultFlow) {
-      // Vault flow: go to agreements first
       return "/agreements/fan";
     }
-    // Default flow: go to dashboard
     return state?.from?.pathname || "/fan/profile";
   };
 
@@ -64,7 +69,7 @@ const FanAuth = () => {
           return;
         }
         toast.success("Account created! Welcome to the Vault.");
-        navigate(getDestination(), { replace: true, state: { flow, email, name: displayName } });
+        navigate(getDestination(), { replace: true, state: { flow, email, name: displayName, invite_token: inviteToken, invite_type: inviteType } });
       } else {
         const { error } = await signIn(email, password);
         if (error) {
@@ -72,7 +77,7 @@ const FanAuth = () => {
           return;
         }
         toast.success("Welcome back!");
-        navigate(getDestination(), { replace: true, state: { flow, email } });
+        navigate(getDestination(), { replace: true, state: { flow, email, invite_token: inviteToken, invite_type: inviteType } });
       }
     } finally {
       setIsLoading(false);
@@ -107,7 +112,9 @@ const FanAuth = () => {
           </div>
 
           <h1 className="font-display text-2xl font-bold text-foreground text-center mb-2">
-            {isVaultFlow
+            {isInviteFlow
+              ? (isSignUp ? "Accept Your Invite" : "Welcome Back")
+              : isVaultFlow
               ? (isSignUp ? "Create Your Account" : "Welcome Back")
               : isSuperfanFlow 
                 ? (isSignUp ? "Become a Superfan" : "Welcome Back, Superfan")
@@ -115,7 +122,11 @@ const FanAuth = () => {
           </h1>
           
           <p className="text-muted-foreground text-center mb-6">
-            {isVaultFlow
+            {isInviteFlow
+              ? (isSignUp
+                  ? "You've been invited! Create your account to continue"
+                  : "Sign in to accept your invite")
+              : isVaultFlow
               ? (isSignUp 
                   ? "You've won access! Create your account to continue"
                   : "Sign in to access your Vault membership")

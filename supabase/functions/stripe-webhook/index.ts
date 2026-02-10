@@ -130,12 +130,20 @@ serve(async (req) => {
           } else if (member) {
             // Update existing member
             const newCredits = (member.credits || 0) + credits;
+            const updateData: Record<string, unknown> = { 
+              credits: newCredits,
+              vault_access_active: true,
+            };
+            
+            if (isSubscription) {
+              updateData.membership_type = "superfan";
+              updateData.superfan_active = true;
+              updateData.superfan_since = new Date().toISOString();
+            }
+            
             const { error: updateError } = await supabaseAdmin
               .from("vault_members")
-              .update({ 
-                credits: newCredits,
-                vault_access_active: true,
-              })
+              .update(updateData)
               .eq("email", customerEmail);
             
             if (updateError) {
@@ -149,14 +157,22 @@ serve(async (req) => {
             }
           } else {
             // Create new member
+            const insertData: Record<string, unknown> = {
+              email: customerEmail,
+              display_name: customerEmail.split("@")[0],
+              credits: credits,
+              vault_access_active: true,
+            };
+            
+            if (isSubscription) {
+              insertData.membership_type = "superfan";
+              insertData.superfan_active = true;
+              insertData.superfan_since = new Date().toISOString();
+            }
+            
             const { error: insertError } = await supabaseAdmin
               .from("vault_members")
-              .insert({
-                email: customerEmail,
-                display_name: customerEmail.split("@")[0],
-                credits: credits,
-                vault_access_active: true,
-              });
+              .insert(insertData);
             
             if (insertError) {
               logStep("Error creating member", { error: insertError.message });
@@ -192,11 +208,12 @@ serve(async (req) => {
             });
           }
 
-          // Send Superfan welcome email for subscription purchases (non-blocking)
+          // Send Superfan welcome email + generate invite for subscription purchases (non-blocking)
           if (isSubscription) {
             try {
               const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
               const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+              
               fetch(`${supabaseUrl}/functions/v1/send-superfan-welcome-email`, {
                 method: "POST",
                 headers: {
@@ -205,9 +222,38 @@ serve(async (req) => {
                 },
                 body: JSON.stringify({ email: customerEmail }),
               }).catch(err => logStep("Superfan email fire-and-forget error", { error: String(err) }));
-              logStep("Superfan welcome email triggered", { email: customerEmail });
+              
+              fetch(`${supabaseUrl}/functions/v1/generate-superfan-invite`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({ email: customerEmail, sendEmail: false, isRenewal: false }),
+              }).catch(err => logStep("Superfan invite fire-and-forget error", { error: String(err) }));
+              
+              logStep("Superfan welcome email + invite triggered", { email: customerEmail });
             } catch (emailErr) {
-              logStep("Error triggering superfan email", { error: String(emailErr) });
+              logStep("Error triggering superfan email/invite", { error: String(emailErr) });
+            }
+          }
+          
+          // Consume invite token if present in metadata
+          const inviteToken = session.metadata?.invite_token;
+          if (inviteToken) {
+            try {
+              const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+              const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+              fetch(`${supabaseUrl}/functions/v1/validate-fan-invite`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({ token: inviteToken, action: "consume" }),
+              }).catch(err => logStep("Invite consume error", { error: String(err) }));
+            } catch (err) {
+              logStep("Error consuming invite", { error: String(err) });
             }
           }
         }
@@ -254,6 +300,23 @@ serve(async (req) => {
                 email: customerEmail, 
                 credits: subscriptionCredits 
               });
+              
+              // Generate monthly superfan invite (non-blocking)
+              try {
+                const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+                const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+                fetch(`${supabaseUrl}/functions/v1/generate-superfan-invite`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${supabaseAnonKey}`,
+                  },
+                  body: JSON.stringify({ email: customerEmail, sendEmail: true, isRenewal: true }),
+                }).catch(err => logStep("Monthly invite fire-and-forget error", { error: String(err) }));
+                logStep("Monthly superfan invite triggered", { email: customerEmail });
+              } catch (err) {
+                logStep("Error triggering monthly invite", { error: String(err) });
+              }
             }
           }
         }
