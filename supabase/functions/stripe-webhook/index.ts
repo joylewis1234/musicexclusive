@@ -214,6 +214,7 @@ serve(async (req) => {
               const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
               const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
               
+              // Send welcome email (which now also generates the invite link internally)
               fetch(`${supabaseUrl}/functions/v1/send-superfan-welcome-email`, {
                 method: "POST",
                 headers: {
@@ -222,15 +223,6 @@ serve(async (req) => {
                 },
                 body: JSON.stringify({ email: customerEmail }),
               }).catch(err => logStep("Superfan email fire-and-forget error", { error: String(err) }));
-              
-              fetch(`${supabaseUrl}/functions/v1/generate-superfan-invite`, {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  "Authorization": `Bearer ${supabaseAnonKey}`,
-                },
-                body: JSON.stringify({ email: customerEmail, sendEmail: false, isRenewal: false }),
-              }).catch(err => logStep("Superfan invite fire-and-forget error", { error: String(err) }));
               
               logStep("Superfan welcome email + invite triggered", { email: customerEmail });
             } catch (emailErr) {
