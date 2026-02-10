@@ -11,7 +11,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
 };
 
-const DEFAULT_BASE_URL = "https://musicexclusive.lovable.app";
+const DEFAULT_BASE_URL = "https://themusicisexclusive.com";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
