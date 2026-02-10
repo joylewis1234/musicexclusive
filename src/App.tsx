@@ -64,6 +64,7 @@ import ArtistProfilePage from "./pages/ArtistProfilePage";
 import ArtistUpload from "./pages/ArtistUpload";
 import ArtistDashboard from "./pages/artist/ArtistDashboard";
 import ArtistEarnings from "./pages/artist/ArtistEarnings";
+import ArtistInvites from "./pages/artist/ArtistInvites";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
 import ArtistAgreementAccept from "./pages/artist/ArtistAgreementAccept";
 import EditArtistProfile from "./pages/artist/EditArtistProfile";
@@ -170,6 +171,7 @@ const App = () => (
                   </ArtistProtectedRoute>
                 }>
                   <Route path="/artist/dashboard" element={<ArtistDashboard />} />
+                  <Route path="/artist/invites" element={<ArtistInvites />} />
                   <Route path="/artist/profile/edit" element={<EditArtistProfile />} />
                   <Route path="/artist/earnings" element={<ArtistEarnings />} />
                 </Route>
