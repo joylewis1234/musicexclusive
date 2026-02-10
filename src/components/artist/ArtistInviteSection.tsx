@@ -25,7 +25,7 @@ const ArtistInviteSection = ({ artistProfileId }: ArtistInviteSectionProps) => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [remaining, setRemaining] = useState(100);
 
-  const baseUrl = "https://musicexclusive.lovable.app";
+  const baseUrl = "https://themusicisexclusive.com";
 
   const fetchInvites = useCallback(async () => {
     setIsLoading(true);

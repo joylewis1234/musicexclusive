@@ -74,6 +74,7 @@ serve(async (req) => {
 
       // Generate invite(s)
       const invites = [];
+      const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       for (let i = 0; i < requested; i++) {
         const inviteToken = generateToken();
         invites.push({
@@ -81,6 +82,7 @@ serve(async (req) => {
           inviter_id: artistId,
           inviter_type: "artist",
           status: "unused",
+          expires_at: expiresAt,
         });
       }
 
