@@ -290,8 +290,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 .header p { color: #888; margin: 0; font-size: 14px; }
 .card { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
 .card h2 { color: #a855f7; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 16px 0; }
-.stats-grid { display: flex; flex-wrap: wrap; gap: 15px; }
-.stat { flex: 1 1 45%; text-align: center; min-width: 120px; }
+.stats-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.stat { flex: 1 1 40%; min-width: 0; max-width: 48%; text-align: center; box-sizing: border-box; }
 .stat-value { font-size: 24px; font-weight: bold; color: #fff; }
 .stat-label { font-size: 12px; color: #888; margin-top: 4px; }
 .highlight { color: #22c55e; }
