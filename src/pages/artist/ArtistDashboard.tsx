@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { ArtistTutorial } from "@/components/artist/tutorial/ArtistTutorial";
+import ArtistInviteSection from "@/components/artist/ArtistInviteSection";
 import { 
   Upload, 
   LogOut,
@@ -489,6 +490,10 @@ const ArtistDashboard = () => {
             </div>
           </div>
 
+          {/* Invite Fans Section */}
+          {artistProfileId && (
+            <ArtistInviteSection artistProfileId={artistProfileId} />
+          )}
 
           {/* Your Exclusive Songs Section */}
           <section className="space-y-4 animate-fade-in" style={{ animationDelay: '100ms' }}>

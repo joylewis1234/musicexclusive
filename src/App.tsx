@@ -38,6 +38,7 @@ import CopyrightDmca from "./pages/CopyrightDmca";
 import RefundPolicy from "./pages/RefundPolicy";
 import FanAgreementStep from "./pages/FanAgreementStep";
 import PatentNotice from "./pages/PatentNotice";
+import InviteLanding from "./pages/InviteLanding";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -112,6 +113,7 @@ const App = () => (
                 <Route path="/dmca" element={<CopyrightDmca />} />
                 <Route path="/refunds" element={<RefundPolicy />} />
                 <Route path="/patent-notice" element={<PatentNotice />} />
+                <Route path="/invite" element={<InviteLanding />} />
                 <Route path="/artist-agreement" element={<ArtistAgreement />} />
                 
                 {/* Login selector page */}
