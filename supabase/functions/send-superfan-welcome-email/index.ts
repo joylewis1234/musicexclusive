@@ -21,12 +21,6 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
   console.log(`[SEND-SUPERFAN-WELCOME] ${step}${details ? ` - ${JSON.stringify(details)}` : ""}`);
 };
 
-function generateToken(): string {
-  const arr = new Uint8Array(32);
-  crypto.getRandomValues(arr);
-  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
-}
-
 function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string, loginLink: string, inviteLink: string): string {
   return `
 <!DOCTYPE html>
@@ -84,36 +78,12 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
               </p>
               <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 16px; padding: 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
-                      ✅ <strong>Guaranteed Vault Access</strong> — No lottery required
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
-                      ✅ <strong>25 Monthly Credits</strong> — Stream 25 exclusive songs per month
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
-                      ✅ <strong>Early Access to Music</strong> — Hear tracks before they drop anywhere else
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
-                      ✅ <strong>Support Artists Directly</strong> — Every stream pays artists fairly
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
-                      ✅ <strong>Superfan Badge</strong> — Stand out as a premium member
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
-                      ✅ <strong>1 Monthly Invite</strong> — Share access with a friend each month
-                    </td>
-                  </tr>
+                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Guaranteed Vault Access</strong> — No lottery required</td></tr>
+                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>25 Monthly Credits</strong> — Stream 25 exclusive songs per month</td></tr>
+                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Early Access to Music</strong> — Hear tracks before they drop anywhere else</td></tr>
+                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Support Artists Directly</strong> — Every stream pays artists fairly</td></tr>
+                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Superfan Badge</strong> — Stand out as a premium member</td></tr>
+                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>1 Monthly Invite</strong> — Share access with a friend each month</td></tr>
                 </table>
               </div>
             </td>
@@ -127,36 +97,12 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
               </p>
               <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(251, 191, 36, 0.15); border-radius: 16px; padding: 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;">
-                      <strong style="color: #ffffff;">Monthly Fee:</strong> $5.00/month
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;">
-                      <strong style="color: #ffffff;">Monthly Credits:</strong> 25 credits (reset each billing cycle)
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;">
-                      <strong style="color: #ffffff;">Credit Value:</strong> 1 credit = 1 exclusive stream ($0.20 value)
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;">
-                      <strong style="color: #ffffff;">Credit Rollover:</strong> Credits do not roll over — they reset monthly
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;">
-                      <strong style="color: #ffffff;">Cancellation:</strong> Cancel anytime — access continues until end of billing period
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;">
-                      <strong style="color: #ffffff;">Refund Policy:</strong> All sales are final per our Terms of Use
-                    </td>
-                  </tr>
+                  <tr><td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;"><strong style="color: #ffffff;">Monthly Fee:</strong> $5.00/month</td></tr>
+                  <tr><td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;"><strong style="color: #ffffff;">Monthly Credits:</strong> 25 credits (reset each billing cycle)</td></tr>
+                  <tr><td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;"><strong style="color: #ffffff;">Credit Value:</strong> 1 credit = 1 exclusive stream ($0.20 value)</td></tr>
+                  <tr><td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;"><strong style="color: #ffffff;">Credit Rollover:</strong> Credits do not roll over — they reset monthly</td></tr>
+                  <tr><td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;"><strong style="color: #ffffff;">Cancellation:</strong> Cancel anytime — access continues until end of billing period</td></tr>
+                  <tr><td style="padding: 8px 0; color: #b8b8c0; font-size: 14px; line-height: 1.6;"><strong style="color: #ffffff;">Refund Policy:</strong> All sales are final per our Terms of Use</td></tr>
                 </table>
               </div>
             </td>
@@ -287,28 +233,21 @@ serve(async (req) => {
     const baseUrl = appUrl || "https://musicexclusive.lovable.app";
     const loginLink = `${baseUrl}/auth/fan?email=${encodeURIComponent(email)}`;
 
-    // Generate the Superfan invite token directly here
-    const inviteTokenBytes = new Uint8Array(32);
-    crypto.getRandomValues(inviteTokenBytes);
-    const inviteToken = Array.from(inviteTokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const inviteLink = `${baseUrl}/invite?token=${inviteToken}&type=superfan`;
-
-    // Look up inviter_id (try vault_members first, then auth)
-    let inviterId = email; // fallback
+    // Look up inviter_id using vault_members.id (stable, no auth.admin.listUsers)
     const { data: vm } = await supabase
       .from("vault_members")
       .select("id")
       .eq("email", email.toLowerCase())
       .maybeSingle();
-    if (vm?.id) {
-      inviterId = vm.id;
-    } else {
-      // Try auth user
-      const { data: allUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
-      const matched = allUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
-      if (matched) inviterId = matched.id;
-    }
+
+    const inviterId = vm?.id || email; // fallback to email only if no vault_members row yet
+
+    // Generate the Superfan invite token
+    const inviteTokenBytes = new Uint8Array(32);
+    crypto.getRandomValues(inviteTokenBytes);
+    const inviteToken = Array.from(inviteTokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const inviteLink = `${baseUrl}/invite?token=${inviteToken}&type=superfan`;
 
     // Insert the invite into fan_invites
     const { error: inviteErr } = await supabase

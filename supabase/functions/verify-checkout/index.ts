@@ -17,6 +17,18 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
+// Helper: resolve auth user_id from email (no listUsers)
+async function resolveAuthUserId(email: string): Promise<string | null> {
+  // Use vault_members first (may already have user_id from prior login)
+  const { data: vm } = await supabaseAdmin
+    .from("vault_members")
+    .select("user_id")
+    .eq("email", email.toLowerCase())
+    .maybeSingle();
+  if (vm?.user_id) return vm.user_id;
+  return null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -28,8 +40,19 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
+    // Try to extract caller's auth user_id from Authorization header
+    let callerUserId: string | null = null;
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader) {
+      const token = authHeader.replace("Bearer ", "");
+      try {
+        const { data: userData } = await supabaseAdmin.auth.getUser(token);
+        callerUserId = userData.user?.id || null;
+      } catch (_) { /* not authenticated, that's ok */ }
+    }
+
     const { sessionId } = await req.json();
-    logStep("Request parsed", { sessionId });
+    logStep("Request parsed", { sessionId, callerUserId });
 
     if (!sessionId) {
       return new Response(
@@ -38,25 +61,17 @@ serve(async (req) => {
       );
     }
 
-    // If Stripe didn't replace the placeholder (or it got URL-decoded), we'll receive "{CHECKOUT_SESSION_ID}".
-    // Fail fast with a clear message.
     if (typeof sessionId === "string" && sessionId.includes("CHECKOUT_SESSION_ID")) {
       logStep("Invalid session id placeholder received", { sessionId });
       return new Response(
         JSON.stringify({
-          error:
-            "Invalid session id. Stripe did not return a real Checkout Session ID (cs_...). Please retry the purchase from inside the app.",
+          error: "Invalid session id. Stripe did not return a real Checkout Session ID (cs_...). Please retry the purchase from inside the app.",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Initialize Stripe
-    const stripe = new Stripe(stripeKey, {
-      apiVersion: "2025-08-27.basil",
-    });
-
-    // Retrieve the checkout session
+    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     logStep("Session retrieved", { 
       status: session.status, 
@@ -65,12 +80,10 @@ serve(async (req) => {
       email: session.metadata?.email || session.customer_email
     });
 
-    // For subscriptions, check status "complete" or payment_status "paid"
     const isSubscription = session.mode === "subscription";
     const isPaid = session.payment_status === "paid";
     const isComplete = session.status === "complete";
     
-    // Verify payment was successful
     if (!isPaid && !(isSubscription && isComplete)) {
       logStep("Payment not completed", { paymentStatus: session.payment_status, status: session.status });
       return new Response(
@@ -79,9 +92,6 @@ serve(async (req) => {
       );
     }
 
-    // Get customer email and credits from session
-    // Prefer metadata.email (set by our app) so credits always go to the intended account
-    // even if the user edits the email field inside Stripe Checkout.
     const customerEmail = session.metadata?.email || session.customer_email;
     const credits = parseInt(session.metadata?.credits || "0", 10);
 
@@ -92,7 +102,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    // Check if this session was already processed (idempotency)
+
+    // Idempotency check
     const { data: existingEvent } = await supabaseAdmin
       .from("stripe_events")
       .select("id")
@@ -101,8 +112,6 @@ serve(async (req) => {
 
     if (existingEvent) {
       logStep("Session already processed, returning current credits", { sessionId });
-      
-      // Get current credits to return
       const { data: member } = await supabaseAdmin
         .from("vault_members")
         .select("credits")
@@ -110,16 +119,15 @@ serve(async (req) => {
         .maybeSingle();
       
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          alreadyProcessed: true, 
-          credits: member?.credits || 0 
-        }),
+        JSON.stringify({ success: true, alreadyProcessed: true, credits: member?.credits || 0 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Update credits in vault_members
+    // Determine user_id to write: prefer caller's auth uid, fallback to existing
+    const userId = callerUserId || await resolveAuthUserId(customerEmail);
+
+    // Update or create vault_members
     const { data: member, error: fetchError } = await supabaseAdmin
       .from("vault_members")
       .select("credits")
@@ -134,14 +142,13 @@ serve(async (req) => {
     let newCredits: number;
 
     if (member) {
-      // Update existing member
       newCredits = (member.credits || 0) + credits;
       const updateData: Record<string, unknown> = { 
         credits: newCredits,
         vault_access_active: true,
       };
+      if (userId) updateData.user_id = userId;
       
-      // If subscription, set superfan fields
       if (isSubscription) {
         updateData.membership_type = "superfan";
         updateData.superfan_active = true;
@@ -157,10 +164,8 @@ serve(async (req) => {
         logStep("Error updating credits", { error: updateError.message });
         throw new Error(updateError.message);
       }
-      
-      logStep("Credits updated", { email: customerEmail, previousCredits: member.credits, newCredits });
+      logStep("Credits updated", { email: customerEmail, previousCredits: member.credits, newCredits, userId });
     } else {
-      // Create new member
       newCredits = credits;
       const insertData: Record<string, unknown> = {
         email: customerEmail,
@@ -168,6 +173,7 @@ serve(async (req) => {
         credits: credits,
         vault_access_active: true,
       };
+      if (userId) insertData.user_id = userId;
       
       if (isSubscription) {
         insertData.membership_type = "superfan";
@@ -183,21 +189,17 @@ serve(async (req) => {
         logStep("Error creating member", { error: insertError.message });
         throw new Error(insertError.message);
       }
-      
-      logStep("New member created with credits", { email: customerEmail, credits });
+      logStep("New member created with credits", { email: customerEmail, credits, userId });
     }
 
-    // Create ledger entry - use appropriate type based on session mode
+    // Create ledger entry
     const usdAmount = credits * 0.20;
     const paymentIntentId = typeof session.payment_intent === 'string' 
       ? session.payment_intent 
       : session.payment_intent?.id;
-    
-    // For subscriptions, use the subscription ID as reference
     const subscriptionId = typeof session.subscription === 'string' 
       ? session.subscription 
       : session.subscription?.id;
-    
     const ledgerType = isSubscription ? "SUBSCRIPTION_CREDITS" : "CREDITS_PURCHASE";
     const ledgerReference = paymentIntentId || subscriptionId || sessionId;
 
@@ -213,12 +215,11 @@ serve(async (req) => {
 
     if (ledgerError) {
       logStep("Error creating ledger entry", { error: ledgerError.message });
-      // Don't throw - credits were already added
     } else {
       logStep("Ledger entry created", { email: customerEmail, credits_delta: credits });
     }
 
-    // Mark session as processed (idempotency)
+    // Mark session as processed
     await supabaseAdmin
       .from("stripe_events")
       .insert({
@@ -235,7 +236,6 @@ serve(async (req) => {
         const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
         const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
         
-        // Send welcome email (which now also generates the invite link internally)
         fetch(`${supabaseUrl}/functions/v1/send-superfan-welcome-email`, {
           method: "POST",
           headers: {
@@ -272,11 +272,7 @@ serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        credits: newCredits,
-        added: credits
-      }),
+      JSON.stringify({ success: true, credits: newCredits, added: credits }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: unknown) {
