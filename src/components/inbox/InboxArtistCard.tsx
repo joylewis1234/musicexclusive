@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
-import { User, ExternalLink } from "lucide-react";
+import { User, ExternalLink, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 interface InboxArtistCardProps {
@@ -16,6 +16,7 @@ interface InboxArtistCardProps {
   viewedAt: string | null;
   index: number;
   onView: () => void;
+  onDelete: () => void;
 }
 
 export const InboxArtistCard = ({
@@ -29,6 +30,7 @@ export const InboxArtistCard = ({
   viewedAt,
   index,
   onView,
+  onDelete,
 }: InboxArtistCardProps) => {
   const navigate = useNavigate();
 
@@ -125,6 +127,21 @@ export const InboxArtistCard = ({
             "{note}"
           </p>
         )}
+
+        {/* Delete */}
+        <div className="flex justify-end mt-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </GlowCard>
   );
