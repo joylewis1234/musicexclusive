@@ -17,7 +17,17 @@ interface SuperfanWelcomeRequest {
   appUrl?: string;
 }
 
-function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string, loginLink: string): string {
+const logStep = (step: string, details?: Record<string, unknown>) => {
+  console.log(`[SEND-SUPERFAN-WELCOME] ${step}${details ? ` - ${JSON.stringify(details)}` : ""}`);
+};
+
+function generateToken(): string {
+  const arr = new Uint8Array(32);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string, loginLink: string, inviteLink: string): string {
   return `
 <!DOCTYPE html>
 <html>
@@ -99,6 +109,11 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
                       ✅ <strong>Superfan Badge</strong> — Stand out as a premium member
                     </td>
                   </tr>
+                  <tr>
+                    <td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
+                      ✅ <strong>1 Monthly Invite</strong> — Share access with a friend each month
+                    </td>
+                  </tr>
                 </table>
               </div>
             </td>
@@ -149,7 +164,7 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
 
           <!-- Vault Access Details -->
           <tr>
-            <td style="padding-bottom: 32px;">
+            <td style="padding-bottom: 28px;">
               <p style="margin: 0 0 16px 0; color: #00d4ff; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">
                 🔐 Your Vault Access Details
               </p>
@@ -168,6 +183,26 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
                     </td>
                   </tr>
                 </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Invite Link Section -->
+          <tr>
+            <td style="padding-bottom: 28px;">
+              <p style="margin: 0 0 16px 0; color: #00d4ff; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">
+                🎟️ Your Exclusive Invite
+              </p>
+              <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 16px; padding: 24px;">
+                <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
+                  As a Superfan, you get <strong style="color: #fbbf24;">one exclusive invite</strong> each month. Share this link with a friend to give them direct access — no lottery needed!
+                </p>
+                <p style="margin: 12px 0 0 0; word-break: break-all;">
+                  <a href="${inviteLink}" style="color: #00d4ff; font-size: 14px; text-decoration: underline;">${inviteLink}</a>
+                </p>
+                <p style="margin: 12px 0 0 0; color: #888; font-size: 12px;">
+                  ⚠️ Single-use · Expires in 30 days · Your friend still needs to create an account and choose a membership.
+                </p>
               </div>
             </td>
           </tr>
@@ -226,6 +261,8 @@ serve(async (req) => {
       );
     }
 
+    logStep("Starting", { email });
+
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) {
       throw new Error("RESEND_API_KEY not configured");
@@ -250,10 +287,50 @@ serve(async (req) => {
     const baseUrl = appUrl || "https://musicexclusive.lovable.app";
     const loginLink = `${baseUrl}/auth/fan?email=${encodeURIComponent(email)}`;
 
-    const subject = "👑 Welcome, Superfan! Your Premium Membership Is Active";
-    const html = buildSuperfanWelcomeHtml(displayName, email, vaultCode, loginLink);
+    // Generate the Superfan invite token directly here
+    const inviteTokenBytes = new Uint8Array(32);
+    crypto.getRandomValues(inviteTokenBytes);
+    const inviteToken = Array.from(inviteTokenBytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const inviteLink = `${baseUrl}/invite?token=${inviteToken}&type=superfan`;
 
-    // Send via Resend
+    // Look up inviter_id (try vault_members first, then auth)
+    let inviterId = email; // fallback
+    const { data: vm } = await supabase
+      .from("vault_members")
+      .select("id")
+      .eq("email", email.toLowerCase())
+      .maybeSingle();
+    if (vm?.id) {
+      inviterId = vm.id;
+    } else {
+      // Try auth user
+      const { data: allUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      const matched = allUsers?.users?.find(u => u.email?.toLowerCase() === email.toLowerCase());
+      if (matched) inviterId = matched.id;
+    }
+
+    // Insert the invite into fan_invites
+    const { error: inviteErr } = await supabase
+      .from("fan_invites")
+      .insert({
+        token: inviteToken,
+        inviter_id: inviterId,
+        inviter_type: "superfan",
+        status: "unused",
+        expires_at: expiresAt,
+      });
+
+    if (inviteErr) {
+      logStep("Failed to create invite (non-fatal)", { error: inviteErr.message });
+    } else {
+      logStep("Invite created", { token: inviteToken.substring(0, 8) + "..." });
+    }
+
+    // Build and send the email with invite link included
+    const subject = "👑 Welcome, Superfan! Your Premium Membership Is Active";
+    const html = buildSuperfanWelcomeHtml(displayName, email, vaultCode, loginLink, inviteLink);
+
     const emailResponse = await fetch(RESEND_ENDPOINT, {
       method: "POST",
       headers: {
@@ -271,22 +348,22 @@ serve(async (req) => {
 
     if (!emailResponse.ok) {
       const errorText = await emailResponse.text();
-      console.error(`Superfan welcome email failed: ${errorText}`);
+      logStep("Email send failed", { error: errorText });
       return new Response(
         JSON.stringify({ success: false, warning: "Email failed to send", error: errorText }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log(`Superfan welcome email sent to ${email}`);
+    logStep("Superfan welcome email sent with invite link", { email });
 
     return new Response(
-      JSON.stringify({ success: true, message: "Superfan welcome email sent" }),
+      JSON.stringify({ success: true, message: "Superfan welcome email sent", inviteLink }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Superfan welcome email error:", message);
+    logStep("ERROR", { message });
     return new Response(
       JSON.stringify({ success: false, error: message }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
