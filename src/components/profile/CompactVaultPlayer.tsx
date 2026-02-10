@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Play, Pause, Square, Heart, Share2, Loader2, AlertCircle, Crown } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,8 @@ interface CompactVaultPlayerProps {
   autoPlay?: boolean;
   /** Called when autoPlay has been consumed */
   onAutoPlayConsumed?: () => void;
+  /** Called when the track finishes playing (song completed) */
+  onTrackEnded?: () => void;
 }
 
 export const CompactVaultPlayer = ({
@@ -39,6 +41,7 @@ export const CompactVaultPlayer = ({
   skipPlayConfirm = false,
   autoPlay = false,
   onAutoPlayConsumed,
+  onTrackEnded,
 }: CompactVaultPlayerProps) => {
   const [hasCalledOnPlay, setHasCalledOnPlay] = useState(false);
   
@@ -55,6 +58,8 @@ export const CompactVaultPlayer = ({
     loadTrack,
   } = useAudioPlayer();
 
+  const prevIsPlayingRef = useRef(isPlaying);
+
   // Load track when it changes
   useEffect(() => {
     if (track?.audioUrl) {
@@ -62,6 +67,16 @@ export const CompactVaultPlayer = ({
       setHasCalledOnPlay(false);
     }
   }, [track?.id, track?.audioUrl, loadTrack]);
+
+  // Detect song completion: was playing, now stopped, and currentTime is at/near end
+  useEffect(() => {
+    if (prevIsPlayingRef.current && !isPlaying && duration > 0 && currentTime >= duration - 0.5) {
+      // Song finished naturally
+      setHasCalledOnPlay(false);
+      onTrackEnded?.();
+    }
+    prevIsPlayingRef.current = isPlaying;
+  }, [isPlaying, currentTime, duration, onTrackEnded]);
 
   // Handle auto-play trigger from parent (after confirmation modal)
   useEffect(() => {
