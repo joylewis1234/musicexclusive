@@ -12,9 +12,10 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
 };
 
 function generateToken(): string {
-  const arr = new Uint8Array(32);
+  const arr = new Uint8Array(8);
   crypto.getRandomValues(arr);
-  return Array.from(arr, (b) => b.toString(16).padStart(2, "0")).join("");
+  const raw = String.fromCharCode(...arr);
+  return btoa(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 serve(async (req) => {
