@@ -9,11 +9,78 @@ interface VaultDoorAnimationProps {
   result: "winner" | "not_selected";
 }
 
-/** No-op sound hooks — sounds removed by design */
-const useVaultSounds = () => ({
-  playMetallicClicks: () => {},
-  playResultSound: (_isWinner: boolean) => {},
-});
+const SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`;
+
+const SOUND_PROMPTS = {
+  mechanism: "Heavy steel bank vault door mechanism turning, metallic gears grinding, deep mechanical clicks",
+  win: "Epic cinematic reveal sound, deep bass impact followed by ascending sparkle tones",
+  lose: "Steel deadbolt snapping closed, heavy mechanical lock engaging, somber low tone",
+} as const;
+
+const SOUND_DURATIONS = { mechanism: 5, win: 3, lose: 2 } as const;
+
+// Session-level audio cache so we only generate each sound once
+const audioCache: Record<string, HTMLAudioElement> = {};
+
+async function fetchSfx(key: keyof typeof SOUND_PROMPTS): Promise<HTMLAudioElement | null> {
+  if (audioCache[key]) return audioCache[key];
+  try {
+    const resp = await fetch(SFX_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ prompt: SOUND_PROMPTS[key], duration: SOUND_DURATIONS[key] }),
+    });
+    if (!resp.ok) {
+      console.warn(`SFX fetch failed for "${key}":`, resp.status);
+      return null;
+    }
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audioCache[key] = audio;
+    return audio;
+  } catch (e) {
+    console.warn(`SFX error for "${key}":`, e);
+    return null;
+  }
+}
+
+/** Preload & play vault sounds via ElevenLabs */
+const useVaultSounds = () => {
+  // Preload all three sounds on mount
+  const preloaded = useRef(false);
+  useEffect(() => {
+    if (preloaded.current) return;
+    preloaded.current = true;
+    // Fire-and-forget preload
+    fetchSfx("mechanism");
+    fetchSfx("win");
+    fetchSfx("lose");
+  }, []);
+
+  const playMetallicClicks = useCallback(async () => {
+    const audio = await fetchSfx("mechanism");
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
+  }, []);
+
+  const playResultSound = useCallback(async (isWinner: boolean) => {
+    const key = isWinner ? "win" : "lose";
+    const audio = await fetchSfx(key);
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
+  }, []);
+
+  return { playMetallicClicks, playResultSound };
+};
 
 export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
