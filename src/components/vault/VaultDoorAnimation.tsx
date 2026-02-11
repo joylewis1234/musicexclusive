@@ -11,11 +11,13 @@ interface VaultDoorAnimationProps {
 
 const DOOR_SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-door-open.mp3`;
 const WIN_SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-win-reveal.mp3`;
+const LOSE_SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-door-slam.mp3`;
 
 /** Preload & play vault sounds from static files */
 const useVaultSounds = () => {
   const doorAudioRef = useRef<HTMLAudioElement | null>(null);
   const winAudioRef = useRef<HTMLAudioElement | null>(null);
+  const loseAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     const door = new Audio(DOOR_SFX_URL);
@@ -28,6 +30,12 @@ const useVaultSounds = () => {
     win.preload = "auto";
     win.load();
     winAudioRef.current = win;
+
+    const lose = new Audio(LOSE_SFX_URL);
+    lose.preload = "auto";
+    lose.volume = 0.6;
+    lose.load();
+    loseAudioRef.current = lose;
   }, []);
 
   const playDoorSound = useCallback(() => {
@@ -44,7 +52,14 @@ const useVaultSounds = () => {
     }
   }, []);
 
-  return { playDoorSound, playWinSound };
+  const playLoseSound = useCallback(() => {
+    if (loseAudioRef.current) {
+      loseAudioRef.current.currentTime = 0;
+      loseAudioRef.current.play().catch(() => {});
+    }
+  }, []);
+
+  return { playDoorSound, playWinSound, playLoseSound };
 };
 
 export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationProps) => {
@@ -54,7 +69,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
   const [useFallback, setUseFallback] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [showSmoke, setShowSmoke] = useState(false);
-  const { playDoorSound, playWinSound } = useVaultSounds();
+  const { playDoorSound, playWinSound, playLoseSound } = useVaultSounds();
   const hasStartedRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -130,9 +145,11 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
     setPhase("result");
     setShowOverlay(true);
 
-    // Play win sound on victory
+    // Play result sound
     if (result === "winner") {
       playWinSound();
+    } else {
+      playLoseSound();
     }
 
     if (navigator.vibrate) {
@@ -143,7 +160,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
       setShowOverlay(false);
       setTimeout(() => onComplete(result), 400);
     }, 600);
-  }, [result, onComplete, playWinSound]);
+  }, [result, onComplete, playWinSound, playLoseSound]);
 
   const isWin = result === "winner";
 
