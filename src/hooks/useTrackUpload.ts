@@ -281,7 +281,10 @@ export function useTrackUpload() {
         let processedAudioFile = audioFile;
         let processedPreviewFile = previewFile;
         try {
-          const compResult = await compressAudio(audioFile);
+          const compResult = await compressAudio(audioFile, (compPct) => {
+            // Map compression progress (0-100) to overall progress (18-20)
+            setStep("cover_upload", 18 + Math.round(compPct * 0.02));
+          });
           if (compResult.wasCompressed) {
             processedAudioFile = compResult.file;
             const saved = ((1 - compResult.compressedSize / compResult.originalSize) * 100).toFixed(0);

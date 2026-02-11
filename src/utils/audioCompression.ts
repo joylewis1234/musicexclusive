@@ -45,7 +45,11 @@ async function decodeAudioFile(file: File): Promise<AudioBuffer> {
 /**
  * Encode PCM AudioBuffer to MP3 using lamejs.
  */
-function encodeToMp3(audioBuffer: AudioBuffer, bitrate: number): Blob {
+async function encodeToMp3(
+  audioBuffer: AudioBuffer,
+  bitrate: number,
+  onProgress?: (pct: number) => void,
+): Promise<Blob> {
   const numChannels = audioBuffer.numberOfChannels;
   const sampleRate = audioBuffer.sampleRate;
   const channels = numChannels >= 2 ? 2 : 1;
@@ -58,6 +62,9 @@ function encodeToMp3(audioBuffer: AudioBuffer, bitrate: number): Blob {
   const right = channels === 2
     ? convertFloat32ToInt16(audioBuffer.getChannelData(1))
     : left;
+
+  const totalBlocks = Math.ceil(left.length / sampleBlockSize);
+  let blocksDone = 0;
 
   for (let i = 0; i < left.length; i += sampleBlockSize) {
     const leftChunk = left.subarray(i, i + sampleBlockSize);
@@ -73,6 +80,14 @@ function encodeToMp3(audioBuffer: AudioBuffer, bitrate: number): Blob {
     if (mp3buf.length > 0) {
       mp3Data.push(new Uint8Array(mp3buf));
     }
+
+    blocksDone++;
+    // Yield to UI thread every 100 blocks so React can re-render
+    if (blocksDone % 100 === 0) {
+      const pct = Math.round((blocksDone / totalBlocks) * 100);
+      onProgress?.(pct);
+      await new Promise((r) => setTimeout(r, 0));
+    }
   }
 
   const finalBuf = mp3Encoder.flush() as Uint8Array;
@@ -80,6 +95,7 @@ function encodeToMp3(audioBuffer: AudioBuffer, bitrate: number): Blob {
     mp3Data.push(new Uint8Array(finalBuf));
   }
 
+  onProgress?.(100);
   return new Blob(mp3Data as unknown as BlobPart[], { type: "audio/mpeg" });
 }
 
@@ -167,9 +183,12 @@ export async function compressAudio(
 
   try {
     const audioBuffer = await decodeAudioFile(file);
-    onProgress?.(40);
+    onProgress?.(30);
 
-    const mp3Blob = encodeToMp3(audioBuffer, TARGET_BITRATE);
+    const mp3Blob = await encodeToMp3(audioBuffer, TARGET_BITRATE, (encodePct) => {
+      // Map encode progress (0-100) to overall progress (30-90)
+      onProgress?.(30 + Math.round(encodePct * 0.6));
+    });
     onProgress?.(90);
 
     const compressedFile = new File(
