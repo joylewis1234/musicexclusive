@@ -21,6 +21,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
   const [videoReady, setVideoReady] = useState(false);
   const [useFallback, setUseFallback] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
+  const [showSmoke, setShowSmoke] = useState(false);
   const { playMetallicClicks, playResultSound } = useVaultSounds();
   const hasStartedRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
@@ -61,6 +62,10 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
     if (!video || useFallback) return;
 
     const onTimeUpdate = () => {
+      // Show smoke at ~60% to cover the figure before it's fully visible
+      if (video.currentTime >= video.duration * 0.55 && !showSmoke) {
+        setShowSmoke(true);
+      }
       if (result === "not_selected" && video.currentTime >= video.duration * 0.5) {
         video.pause();
         finishSequence();
@@ -244,6 +249,47 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
                   />
                 </>
               )}
+            </div>
+          )}
+
+          {/* Pink & blue smoke overlay to cover the figure */}
+          {showSmoke && (
+            <div
+              className="absolute inset-0 z-10 pointer-events-none"
+              style={{
+                animation: "smokeIn 1.2s ease-out forwards",
+              }}
+            >
+              {/* Layered smoke clouds */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "radial-gradient(ellipse at 50% 80%, hsl(300 70% 60% / 0.8) 0%, hsl(280 60% 50% / 0.4) 40%, transparent 70%)",
+                  animation: "smokeRise 2s ease-out forwards",
+                }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "radial-gradient(ellipse at 40% 70%, hsl(220 70% 60% / 0.7) 0%, hsl(240 60% 50% / 0.3) 45%, transparent 75%)",
+                  animation: "smokeRise 2.2s ease-out 0.1s forwards",
+                }}
+              />
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "radial-gradient(ellipse at 60% 75%, hsl(320 80% 65% / 0.6) 0%, hsl(300 50% 45% / 0.3) 40%, transparent 70%)",
+                  animation: "smokeRise 1.8s ease-out 0.2s forwards",
+                }}
+              />
+              {/* Center dense fog to fully obscure the figure */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "radial-gradient(circle at 50% 60%, hsl(280 50% 30% / 0.9) 0%, hsl(260 40% 20% / 0.6) 30%, transparent 60%)",
+                  animation: "smokeRise 1.5s ease-out forwards",
+                }}
+              />
             </div>
           )}
 
