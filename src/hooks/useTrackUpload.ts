@@ -4,9 +4,10 @@ import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
 import { uploadToStorage } from "@/utils/storageUpload";
 import { getAudioDuration } from "@/utils/audioDuration";
+import { compressAudio } from "@/utils/audioCompression";
 
 // Version marker – update on every change to confirm code is running
-export const UPLOAD_HOOK_VERSION = "v7.0.0-2026-02-08";
+export const UPLOAD_HOOK_VERSION = "v8.0.0-2026-02-11";
 
 export type UploadStep =
   | "idle"
@@ -273,7 +274,44 @@ export function useTrackUpload() {
 
         if (!trackId) throw new Error("Failed to determine track ID for upload.");
 
-        // ── Step 4: PARALLEL upload of cover + audio (+ optional preview) ──
+        // ── Step 4: Compress audio client-side ──
+        setStep("cover_upload", 18);
+        addDiagnostic({ step: "cover_upload", status: "pending", message: "Compressing audio...", timestamp: new Date() });
+
+        let processedAudioFile = audioFile;
+        let processedPreviewFile = previewFile;
+        try {
+          const compResult = await compressAudio(audioFile);
+          if (compResult.wasCompressed) {
+            processedAudioFile = compResult.file;
+            const saved = ((1 - compResult.compressedSize / compResult.originalSize) * 100).toFixed(0);
+            addDiagnostic({
+              step: "cover_upload",
+              status: "success",
+              message: `Audio compressed: ${(compResult.originalSize / 1024 / 1024).toFixed(1)}MB → ${(compResult.compressedSize / 1024 / 1024).toFixed(1)}MB (${saved}% smaller)`,
+              timestamp: new Date(),
+            });
+          } else {
+            addDiagnostic({ step: "cover_upload", status: "success", message: "Audio already optimized, no compression needed", timestamp: new Date() });
+          }
+
+          // Also compress preview if it's a WAV
+          if (processedPreviewFile && processedPreviewFile instanceof File) {
+            const prevExt = (processedPreviewFile.name.split(".").pop() || "").toLowerCase();
+            const prevMime = (processedPreviewFile.type || "").toLowerCase();
+            if (prevExt === "wav" || prevMime.includes("wav")) {
+              const prevResult = await compressAudio(processedPreviewFile);
+              if (prevResult.wasCompressed) {
+                processedPreviewFile = prevResult.file;
+              }
+            }
+          }
+        } catch (compErr) {
+          console.warn("[Upload] Audio compression failed, using original:", compErr);
+          addDiagnostic({ step: "cover_upload", status: "success", message: "Compression skipped (non-critical)", timestamp: new Date() });
+        }
+
+        // ── Step 5: PARALLEL upload of cover + audio (+ optional preview) ──
         setStep("cover_upload", 20);
         addDiagnostic({ step: "cover_upload", status: "pending", message: "Uploading cover art + audio in parallel...", timestamp: new Date() });
 
@@ -281,7 +319,7 @@ export function useTrackUpload() {
         const coverExt = coverExtFromContentType(coverContentType);
         const coverPath = `artists/${artistId}/${trackId}.${coverExt}`;
 
-        const audioContentType = getAudioContentType(audioFile);
+        const audioContentType = getAudioContentType(processedAudioFile);
         const audioExt = audioExtFromContentType(audioContentType);
         const audioPath = `artists/${artistId}/${trackId}.${audioExt}`;
 
@@ -305,7 +343,7 @@ export function useTrackUpload() {
         const audioPromise = uploadToStorage({
           bucket: "track_audio",
           objectPath: audioPath,
-          file: audioFile,
+          file: processedAudioFile,
           contentType: audioContentType,
           onProgress: (pct) => { audioPct = pct; updateParallelProgress(); },
         });
@@ -313,14 +351,14 @@ export function useTrackUpload() {
         // Optional preview upload runs in parallel too
         let previewPath: string | null = null;
         let previewPromise: Promise<{ ok: boolean; status: number; responseText: string }> | null = null;
-        if (previewFile && previewFile instanceof File) {
-          const previewContentType = getAudioContentType(previewFile);
+        if (processedPreviewFile && processedPreviewFile instanceof File) {
+          const previewContentType = getAudioContentType(processedPreviewFile);
           const previewExt = audioExtFromContentType(previewContentType);
           previewPath = `artists/${artistId}/${trackId}_preview.${previewExt}`;
           previewPromise = uploadToStorage({
             bucket: "track_audio",
             objectPath: previewPath,
-            file: previewFile,
+            file: processedPreviewFile,
             contentType: previewContentType,
           });
         }
