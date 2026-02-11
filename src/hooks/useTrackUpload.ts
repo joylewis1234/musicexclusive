@@ -7,7 +7,10 @@ import { getAudioDuration } from "@/utils/audioDuration";
 import { compressAudio } from "@/utils/audioCompression";
 
 // Version marker – update on every change to confirm code is running
-export const UPLOAD_HOOK_VERSION = "v8.0.0-2026-02-11";
+export const UPLOAD_HOOK_VERSION = "v9.0.0-diag-2026-02-11";
+
+// ─── DIAGNOSTIC FLAG: set to true to skip compression entirely ───
+const SKIP_COMPRESSION = true;
 
 export type UploadStep =
   | "idle"
@@ -210,8 +213,14 @@ export function useTrackUpload() {
 
         let currentAccessToken: string;
         try {
+          console.time("[Upload:DIAG] getFreshToken");
+          console.log("[Upload:DIAG] calling getFreshToken...");
           currentAccessToken = await getFreshToken();
+          console.timeEnd("[Upload:DIAG] getFreshToken");
+          console.log("[Upload:DIAG] token obtained, length:", currentAccessToken.length);
         } catch (err) {
+          console.timeEnd("[Upload:DIAG] getFreshToken");
+          console.error("[Upload:DIAG] getFreshToken FAILED:", err);
           const msg = safeMsg("No active session. Please log in again.", err);
           addDiagnostic({ step: "session_check", status: "error", message: msg, timestamp: new Date(), details: safeStringify(err) });
           throw new Error(msg);
@@ -219,20 +228,27 @@ export function useTrackUpload() {
 
         addDiagnostic({ step: "session_check", status: "success", message: "Session valid", timestamp: new Date() });
         setStep("session_check", 10);
+        console.log("[Upload:DIAG] ✅ session_check complete, progress=10");
 
         // ── Step 2: Artist profile ──
         let artistId: string;
         try {
+          console.time("[Upload:DIAG] artistProfile query");
+          console.log("[Upload:DIAG] querying artist_profiles...");
           const { data: artistProfile, error: profileError } = await supabase
             .from("artist_profiles")
             .select("id")
             .eq("user_id", userId)
             .maybeSingle();
+          console.timeEnd("[Upload:DIAG] artistProfile query");
           if (profileError || !artistProfile?.id) {
             throw new Error(profileError ? safeMsg("Profile query failed", profileError) : "Artist profile not found.");
           }
           artistId = artistProfile.id;
+          console.log("[Upload:DIAG] ✅ artistId:", artistId.slice(0, 8));
         } catch (err) {
+          console.timeEnd("[Upload:DIAG] artistProfile query");
+          console.error("[Upload:DIAG] artistProfile FAILED:", err);
           const msg = safeMsg("Failed to get artist profile", err);
           addDiagnostic({ step: "session_check", status: "error", message: msg, timestamp: new Date(), details: safeStringify(err) });
           throw new Error(msg);
@@ -246,6 +262,8 @@ export function useTrackUpload() {
 
           if (!trackId) {
             try {
+              console.time("[Upload:DIAG] track draft insert");
+              console.log("[Upload:DIAG] inserting track draft...");
               const { data: trackRow, error: trackErr } = await supabase
                 .from("tracks")
                 .insert(({
@@ -259,11 +277,15 @@ export function useTrackUpload() {
                 .select("id")
                 .maybeSingle();
 
+              console.timeEnd("[Upload:DIAG] track draft insert");
               if (trackErr || !trackRow?.id) throw new Error(safeMsg("Failed to create track draft", trackErr ?? trackRow));
               trackId = trackRow.id;
               setState((prev) => ({ ...prev, trackId }));
+              console.log("[Upload:DIAG] ✅ track draft created, trackId:", trackId.slice(0, 8));
               addDiagnostic({ step: "db_insert", status: "success", message: "Track draft created", timestamp: new Date(), details: `trackId=${trackId}` });
             } catch (err) {
+              console.timeEnd("[Upload:DIAG] track draft insert");
+              console.error("[Upload:DIAG] track draft insert FAILED:", err);
               const msg = safeMsg("Failed to create track draft", err);
               addDiagnostic({ step: "db_insert", status: "error", message: msg, timestamp: new Date(), details: safeStringify(err) });
               setState((prev) => ({ ...prev, lastFailedStep: "db_insert" }));
@@ -276,46 +298,57 @@ export function useTrackUpload() {
 
         // ── Step 4: Compress audio client-side ──
         setStep("cover_upload", 18);
-        addDiagnostic({ step: "cover_upload", status: "pending", message: "Compressing audio...", timestamp: new Date() });
-
         let processedAudioFile = audioFile;
         let processedPreviewFile = previewFile;
-        try {
-          const compResult = await compressAudio(audioFile, (compPct) => {
-            // Map compression progress (0-100) to overall progress (18-20)
-            setStep("cover_upload", 18 + Math.round(compPct * 0.02));
-          });
-          if (compResult.wasCompressed) {
-            processedAudioFile = compResult.file;
-            const saved = ((1 - compResult.compressedSize / compResult.originalSize) * 100).toFixed(0);
-            addDiagnostic({
-              step: "cover_upload",
-              status: "success",
-              message: `Audio compressed: ${(compResult.originalSize / 1024 / 1024).toFixed(1)}MB → ${(compResult.compressedSize / 1024 / 1024).toFixed(1)}MB (${saved}% smaller)`,
-              timestamp: new Date(),
-            });
-          } else {
-            addDiagnostic({ step: "cover_upload", status: "success", message: "Audio already optimized, no compression needed", timestamp: new Date() });
-          }
 
-          // Also compress preview if it's a WAV
-          if (processedPreviewFile && processedPreviewFile instanceof File) {
-            const prevExt = (processedPreviewFile.name.split(".").pop() || "").toLowerCase();
-            const prevMime = (processedPreviewFile.type || "").toLowerCase();
-            if (prevExt === "wav" || prevMime.includes("wav")) {
-              const prevResult = await compressAudio(processedPreviewFile);
-              if (prevResult.wasCompressed) {
-                processedPreviewFile = prevResult.file;
+        if (SKIP_COMPRESSION) {
+          console.log("[Upload:DIAG] ⏭️ COMPRESSION SKIPPED (SKIP_COMPRESSION=true)");
+          addDiagnostic({ step: "cover_upload", status: "success", message: "Compression DISABLED for diagnostics", timestamp: new Date() });
+        } else {
+          addDiagnostic({ step: "cover_upload", status: "pending", message: "Compressing audio...", timestamp: new Date() });
+          try {
+            console.time("[Upload:DIAG] audio compression");
+            console.log("[Upload:DIAG] starting compression...");
+            const compResult = await compressAudio(audioFile, (compPct) => {
+              setStep("cover_upload", 18 + Math.round(compPct * 0.02));
+            });
+            console.timeEnd("[Upload:DIAG] audio compression");
+            if (compResult.wasCompressed) {
+              processedAudioFile = compResult.file;
+              const saved = ((1 - compResult.compressedSize / compResult.originalSize) * 100).toFixed(0);
+              console.log(`[Upload:DIAG] ✅ compressed: ${saved}% smaller`);
+              addDiagnostic({
+                step: "cover_upload",
+                status: "success",
+                message: `Audio compressed: ${(compResult.originalSize / 1024 / 1024).toFixed(1)}MB → ${(compResult.compressedSize / 1024 / 1024).toFixed(1)}MB (${saved}% smaller)`,
+                timestamp: new Date(),
+              });
+            } else {
+              addDiagnostic({ step: "cover_upload", status: "success", message: "Audio already optimized, no compression needed", timestamp: new Date() });
+            }
+
+            // Also compress preview if it's a WAV
+            if (processedPreviewFile && processedPreviewFile instanceof File) {
+              const prevExt = (processedPreviewFile.name.split(".").pop() || "").toLowerCase();
+              const prevMime = (processedPreviewFile.type || "").toLowerCase();
+              if (prevExt === "wav" || prevMime.includes("wav")) {
+                const prevResult = await compressAudio(processedPreviewFile);
+                if (prevResult.wasCompressed) {
+                  processedPreviewFile = prevResult.file;
+                }
               }
             }
+          } catch (compErr) {
+            console.timeEnd("[Upload:DIAG] audio compression");
+            console.warn("[Upload:DIAG] compression failed, using original:", compErr);
+            addDiagnostic({ step: "cover_upload", status: "success", message: "Compression skipped (non-critical)", timestamp: new Date() });
           }
-        } catch (compErr) {
-          console.warn("[Upload] Audio compression failed, using original:", compErr);
-          addDiagnostic({ step: "cover_upload", status: "success", message: "Compression skipped (non-critical)", timestamp: new Date() });
         }
 
         // ── Step 5: PARALLEL upload of cover + audio (+ optional preview) ──
         setStep("cover_upload", 20);
+        console.log(`[Upload:DIAG] starting parallel uploads — cover: ${(coverFile.size/1024/1024).toFixed(1)}MB, audio: ${(processedAudioFile.size/1024/1024).toFixed(1)}MB`);
+        console.time("[Upload:DIAG] parallel uploads");
         addDiagnostic({ step: "cover_upload", status: "pending", message: "Uploading cover art + audio in parallel...", timestamp: new Date() });
 
         const coverContentType = (coverFile?.type || getImageContentType(coverFile) || "image/jpeg").toLowerCase();
@@ -372,6 +405,9 @@ export function useTrackUpload() {
           audioPromise,
           previewPromise ?? Promise.resolve(null),
         ]);
+
+        console.timeEnd("[Upload:DIAG] parallel uploads");
+        console.log("[Upload:DIAG] upload results — cover:", coverRes.ok, coverRes.status, "| audio:", audioRes.ok, audioRes.status);
 
         // Check cover result
         if (!coverRes.ok) {
