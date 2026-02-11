@@ -282,11 +282,8 @@ const VaultStatus = () => {
             {renderContent()}
           </div>
         ) : (
-          // Result card with glow effects — emerges from vault
-          <div className={cn(
-            "w-full max-w-md",
-            !fromReturn && "animate-vault-emerge"
-          )}>
+          // Result card with glow effects
+          <div className="w-full max-w-md">
             <GlowCard
               className={cn(
                 "group",
