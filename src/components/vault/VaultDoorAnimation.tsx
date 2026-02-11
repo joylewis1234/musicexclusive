@@ -210,12 +210,10 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
       navigator.vibrate(result === "winner" ? 120 : 50);
     }
 
-    // Call onComplete immediately so result card overlays on top seamlessly
-    onComplete(result);
-
-    // Clear overlay after flash
+    // Transition to result screen after overlay flash
     setTimeout(() => {
       setShowOverlay(false);
+      setTimeout(() => onComplete(result), 400);
     }, 600);
   }, [result, onComplete, playResultSound]);
 
