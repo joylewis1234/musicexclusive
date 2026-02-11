@@ -290,27 +290,91 @@ export function useTrackUpload() {
         setStep("session_check", 10);
         console.log("[Upload:DIAG] ✅ session_check complete, progress=10");
 
-        // ── Step 2: Artist profile ──
+        // ── Step 2: Artist profile (with timeout + REST fallback) ──
         let artistId: string;
+        addDiagnostic({ step: "session_check", status: "pending", message: "Fetching artist profile...", timestamp: new Date() });
         try {
           console.time("[Upload:DIAG] artistProfile query");
           console.log("[Upload:DIAG] querying artist_profiles...");
-          const { data: artistProfile, error: profileError } = await supabase
+
+          // Try SDK with 10s timeout
+          const profilePromise = supabase
             .from("artist_profiles")
             .select("id")
             .eq("user_id", userId)
             .maybeSingle();
-          console.timeEnd("[Upload:DIAG] artistProfile query");
-          if (profileError || !artistProfile?.id) {
-            throw new Error(profileError ? safeMsg("Profile query failed", profileError) : "Artist profile not found.");
+
+          const profileTimeout = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Artist profile query timed out after 10s")), 10000)
+          );
+
+          let artistProfile: { id: string } | null = null;
+          let profileError: any = null;
+
+          try {
+            const result = await Promise.race([profilePromise, profileTimeout]);
+            artistProfile = result.data;
+            profileError = result.error;
+          } catch (sdkErr) {
+            console.warn("[Upload:DIAG] SDK profile query failed/timed out, trying REST fallback...", sdkErr);
+            addDiagnostic({ step: "session_check", status: "pending", message: "SDK timed out, trying REST...", timestamp: new Date() });
+
+            // REST fallback using fetch
+            const restUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/artist_profiles?select=id&user_id=eq.${userId}&limit=1`;
+            const controller = new AbortController();
+            const restTimer = setTimeout(() => controller.abort(), 10000);
+            try {
+              const resp = await fetch(restUrl, {
+                headers: {
+                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  Authorization: `Bearer ${currentAccessToken}`,
+                  Accept: "application/json",
+                },
+                signal: controller.signal,
+              });
+              clearTimeout(restTimer);
+              const rows = await resp.json();
+              console.log("[Upload:DIAG] REST profile response:", rows);
+              if (Array.isArray(rows) && rows.length > 0 && rows[0].id) {
+                artistProfile = rows[0];
+              } else {
+                throw new Error("REST returned no profile");
+              }
+            } catch (restErr) {
+              clearTimeout(restTimer);
+              console.error("[Upload:DIAG] REST profile fallback FAILED:", restErr);
+              throw restErr;
+            }
           }
+
+          console.timeEnd("[Upload:DIAG] artistProfile query");
+          console.log("[Upload:DIAG] profile result:", { data: artistProfile, error: profileError });
+
+          if (profileError) {
+            const msg = profileError.message || safeStringify(profileError);
+            console.error("[Upload:DIAG] PROFILE ERROR:", profileError);
+            addDiagnostic({ step: "session_check", status: "error", message: `Profile error: ${msg}`, timestamp: new Date(), details: safeStringify(profileError) });
+            setState((prev) => ({ ...prev, errorMessage: `Profile lookup failed: ${msg}` }));
+            throw new Error(msg);
+          }
+          if (!artistProfile?.id) {
+            console.error("[Upload:DIAG] PROFILE NOT FOUND for userId:", userId);
+            addDiagnostic({ step: "session_check", status: "error", message: "Artist profile not found", timestamp: new Date() });
+            setState((prev) => ({ ...prev, errorMessage: "Artist profile not found. Please contact support." }));
+            throw new Error("Artist profile not found.");
+          }
+
           artistId = artistProfile.id;
           console.log("[Upload:DIAG] ✅ artistId:", artistId.slice(0, 8));
+          addDiagnostic({ step: "session_check", status: "success", message: `Profile found: ${artistId.slice(0, 8)}…`, timestamp: new Date() });
         } catch (err) {
           console.timeEnd("[Upload:DIAG] artistProfile query");
           console.error("[Upload:DIAG] artistProfile FAILED:", err);
           const msg = safeMsg("Failed to get artist profile", err);
-          addDiagnostic({ step: "session_check", status: "error", message: msg, timestamp: new Date(), details: safeStringify(err) });
+          if (!state.errorMessage) {
+            addDiagnostic({ step: "session_check", status: "error", message: msg, timestamp: new Date(), details: safeStringify(err) });
+            setState((prev) => ({ ...prev, errorMessage: msg }));
+          }
           throw new Error(msg);
         }
 
