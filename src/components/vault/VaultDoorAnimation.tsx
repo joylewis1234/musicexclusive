@@ -20,6 +20,7 @@ const useVaultSounds = () => {
   useEffect(() => {
     const door = new Audio(DOOR_SFX_URL);
     door.preload = "auto";
+    door.volume = 0.45;
     door.load();
     doorAudioRef.current = door;
 
