@@ -276,17 +276,9 @@ const VaultStatus = () => {
       </header>
 
       <div className="flex-1 flex items-center justify-center">
-        {!fromReturn && revealPhase === "spinning" ? (
-          // Spin wheel takes full width, no card wrapper
+        {fromReturn ? (
+          // Returning fan — show result directly
           <div className="w-full max-w-md">
-            {renderContent()}
-          </div>
-        ) : (
-          // Result card with glow effects — emerges from vault
-          <div className={cn(
-            "w-full max-w-md",
-            !fromReturn && "animate-vault-emerge"
-          )}>
             <GlowCard
               className={cn(
                 "group",
@@ -297,6 +289,35 @@ const VaultStatus = () => {
             >
               <div className="p-8 md:p-10">{renderContent()}</div>
             </GlowCard>
+          </div>
+        ) : (
+          // Vault animation with result overlaying on top
+          <div className="relative w-full max-w-md">
+            {/* Vault animation layer (stays visible behind) */}
+            <div className={cn(
+              "transition-opacity duration-700",
+              revealPhase === "revealed" ? "opacity-0" : "opacity-100"
+            )}>
+              {revealPhase === "spinning" && renderContent()}
+            </div>
+
+            {/* Result card overlays on top, emerging from vault */}
+            {revealPhase === "revealed" && (
+              <div className="absolute inset-0 flex items-center justify-center animate-vault-emerge">
+                <div className="w-full">
+                  <GlowCard
+                    className={cn(
+                      "group",
+                      vaultState === "winner" && !hasAnimated && "animate-vault-unlock"
+                    )}
+                    glowColor={vaultState === "winner" ? "primary" : "secondary"}
+                    unlocking={vaultState === "winner" && isUnlocking}
+                  >
+                    <div className="p-8 md:p-10">{renderContent()}</div>
+                  </GlowCard>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
