@@ -132,8 +132,9 @@ export default {
         },
         // Result card emerging from vault door
         "vault-emerge": {
-          "0%": { opacity: "0", transform: "scale(0.3)", filter: "brightness(2) blur(8px)" },
-          "40%": { opacity: "0.7", transform: "scale(0.85)", filter: "brightness(1.3) blur(2px)" },
+          "0%": { opacity: "0", transform: "scale(0.15)", filter: "brightness(2.5) blur(12px)" },
+          "30%": { opacity: "0.5", transform: "scale(0.6)", filter: "brightness(1.5) blur(4px)" },
+          "70%": { opacity: "0.9", transform: "scale(0.95)", filter: "brightness(1.1) blur(1px)" },
           "100%": { opacity: "1", transform: "scale(1)", filter: "brightness(1) blur(0px)" },
         },
       },
@@ -148,7 +149,7 @@ export default {
         // Extra slow for ambient UI accents (Stream CTAs, headphones indicators)
         "pulse-slow": "slow-fade 10s ease-in-out infinite",
         // Result card emerging from vault
-        "vault-emerge": "vault-emerge 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "vault-emerge": "vault-emerge 1s cubic-bezier(0.16, 1, 0.3, 1) forwards",
       },
     },
   },
