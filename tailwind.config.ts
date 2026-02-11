@@ -130,6 +130,12 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.88" },
         },
+        // Result card emerging from vault door
+        "vault-emerge": {
+          "0%": { opacity: "0", transform: "scale(0.3)", filter: "brightness(2) blur(8px)" },
+          "40%": { opacity: "0.7", transform: "scale(0.85)", filter: "brightness(1.3) blur(2px)" },
+          "100%": { opacity: "1", transform: "scale(1)", filter: "brightness(1) blur(0px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -141,6 +147,8 @@ export default {
         "scroll-cards": "scroll-cards 40s linear infinite",
         // Extra slow for ambient UI accents (Stream CTAs, headphones indicators)
         "pulse-slow": "slow-fade 10s ease-in-out infinite",
+        // Result card emerging from vault
+        "vault-emerge": "vault-emerge 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards",
       },
     },
   },
