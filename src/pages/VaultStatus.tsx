@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Home } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUnlockFeedback } from "@/hooks/useUnlockFeedback";
-import { SpinWheel } from "@/components/vault/SpinWheel";
 import { VaultDoorAnimation } from "@/components/vault/VaultDoorAnimation";
 import { VaultLoseScreen } from "@/components/vault/VaultLoseScreen";
 import { VaultWinScreen } from "@/components/vault/VaultWinScreen";
@@ -35,8 +34,7 @@ const VaultStatus = () => {
 
   // Use local state for demo controls
   const [demoState, setDemoState] = useState<VaultState | null>(null);
-  // Animation style toggle (dev only)
-  const [animationStyle, setAnimationStyle] = useState<"wheel" | "vault-door">("vault-door");
+  // Reveal phase: animation first, then show result
   // Track reveal phase: spinning wheel first, then show result
   const [revealPhase, setRevealPhase] = useState<RevealPhase>("spinning");
   // Track if unlock animation has played
@@ -225,11 +223,10 @@ const VaultStatus = () => {
       return renderNotSelected();
     }
 
-    // Show spin wheel first (for first-time reveals)
+    // Show vault door animation first (for first-time reveals)
     if (revealPhase === "spinning") {
-      const AnimationComponent = animationStyle === "vault-door" ? VaultDoorAnimation : SpinWheel;
       return (
-        <AnimationComponent
+        <VaultDoorAnimation
           result={vaultState} 
           onComplete={handleSpinComplete} 
         />
@@ -305,25 +302,7 @@ const VaultStatus = () => {
             <p className="text-xs text-yellow-500 uppercase tracking-wider mb-3 text-center font-medium">
               Developer Test Controls (Dev Only)
             </p>
-            {/* Animation style toggle */}
-            <div className="flex gap-2 mb-3">
-              <Button
-                variant={animationStyle === "wheel" ? "default" : "outline"}
-                size="sm"
-                className="flex-1 text-xs"
-                onClick={() => { setAnimationStyle("wheel"); setRevealPhase("spinning"); setDemoState(null); }}
-              >
-                🎡 Wheel
-              </Button>
-              <Button
-                variant={animationStyle === "vault-door" ? "default" : "outline"}
-                size="sm"
-                className="flex-1 text-xs"
-                onClick={() => { setAnimationStyle("vault-door"); setRevealPhase("spinning"); setDemoState(null); }}
-              >
-                🔐 Vault Door
-              </Button>
-            </div>
+            {/* Result toggle */}
             <div className="flex gap-2">
               <Button
                 variant={vaultState === "winner" ? "default" : "outline"}
