@@ -58,28 +58,22 @@ function preloadMechanismSfx(): Promise<HTMLAudioElement | null> {
 
 /** Preload & play vault mechanism sound via ElevenLabs */
 const useVaultSounds = () => {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const readyRef = useRef(false);
+  const sfxPromiseRef = useRef<Promise<HTMLAudioElement | null> | null>(null);
 
-  // Preload immediately on mount
+  // Start preloading immediately on mount
   useEffect(() => {
-    preloadMechanismSfx().then((audio) => {
-      if (audio) {
-        audioRef.current = audio;
-        readyRef.current = true;
-      }
-    });
+    sfxPromiseRef.current = preloadMechanismSfx();
   }, []);
 
-  const playMechanismSound = useCallback(() => {
-    const audio = audioRef.current;
-    if (audio && readyRef.current) {
+  const playMechanismSound = useCallback(async () => {
+    const audio = await (sfxPromiseRef.current ?? preloadMechanismSfx());
+    if (audio) {
       audio.currentTime = 0;
       audio.play().catch(() => {});
     }
   }, []);
 
-  return { playMechanismSound, isReady: readyRef };
+  return { playMechanismSound };
 };
 
 export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationProps) => {
@@ -113,6 +107,8 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
     const delay = setTimeout(() => {
       hasStartedRef.current = true;
       setPhase("playing");
+
+      // Play sound — awaits preload if still loading, then plays immediately
       playMechanismSound();
 
       if (!useFallback && videoRef.current) {
