@@ -7,10 +7,11 @@ export type StorageUploadResult = {
 };
 
 const SINGLE_RETRY_DELAY_MS = 2000;
+const XHR_TIMEOUT_MS = 300_000; // 5 minutes
 
 /**
- * Lean upload: uses Supabase SDK with a single retry on 5xx/network errors.
- * No preflight, no XHR fallback, no multi-minute timeout chains.
+ * XHR-based upload to Supabase Storage with real-time progress tracking.
+ * Falls back to SDK if XHR fails with a non-server error.
  */
 export async function uploadToStorage(params: {
   bucket: string;
@@ -35,41 +36,34 @@ export async function uploadToStorage(params: {
 
   for (let attempt = 0; attempt <= 1; attempt++) {
     try {
-      // Force content type on the file
-      const blob = file.slice(0, file.size, contentType);
-      const typedFile = new File([blob], file.name || "file", { type: contentType });
+      const result = await xhrUpload({
+        bucket,
+        objectPath: safeObjectPath,
+        file,
+        contentType,
+        upsert,
+        cacheControl,
+        onProgress,
+      });
 
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .upload(safeObjectPath, typedFile, {
-          cacheControl,
-          upsert,
-          contentType,
-        });
-
-      if (error) {
-        const status = (error as any)?.statusCode || (error as any)?.status || 500;
-        const msg = error.message || "Upload error";
-
-        // Don't retry 4xx errors (bad request, auth issues, etc.)
-        if (status >= 400 && status < 500) {
-          console.warn(`[Storage] Non-retryable error: ${status} - ${msg}`);
-          return { ok: false, status, responseText: msg };
-        }
-
-        if (attempt === 1) {
-          console.error(`[Storage] Both attempts failed:`, msg);
-          return { ok: false, status, responseText: msg };
-        }
-
-        console.warn(`[Storage] Attempt 1 failed (${status}). Retrying in ${SINGLE_RETRY_DELAY_MS}ms...`);
-        await new Promise((r) => setTimeout(r, SINGLE_RETRY_DELAY_MS));
-        continue;
+      if (result.ok) {
+        onProgress?.(100);
+        return result;
       }
 
-      // Signal 100% on success
-      onProgress?.(100);
-      return { ok: true, status: 200, responseText: JSON.stringify(data) };
+      // Don't retry 4xx
+      if (result.status >= 400 && result.status < 500) {
+        console.warn(`[Storage] Non-retryable error: ${result.status}`);
+        return result;
+      }
+
+      if (attempt === 1) {
+        console.error(`[Storage] Both attempts failed: ${result.responseText}`);
+        return result;
+      }
+
+      console.warn(`[Storage] Attempt 1 failed (${result.status}). Retrying...`);
+      await new Promise((r) => setTimeout(r, SINGLE_RETRY_DELAY_MS));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
 
@@ -86,7 +80,79 @@ export async function uploadToStorage(params: {
   return { ok: false, status: 0, responseText: "No attempt made" };
 }
 
-// Legacy aliases so existing code that imports smartUpload still works
+/**
+ * Direct XHR upload to Supabase Storage REST API.
+ * Provides real upload.onprogress events for accurate tracking.
+ */
+async function xhrUpload(params: {
+  bucket: string;
+  objectPath: string;
+  file: File;
+  contentType: string;
+  upsert: boolean;
+  cacheControl: string;
+  onProgress?: (pct: number) => void;
+}): Promise<StorageUploadResult> {
+  const { bucket, objectPath, file, contentType, upsert, cacheControl, onProgress } = params;
+
+  // Get fresh auth token
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if (!token) {
+    return { ok: false, status: 401, responseText: "No auth session" };
+  }
+
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const url = `${supabaseUrl}/storage/v1/object/${bucket}/${objectPath}`;
+
+  return new Promise<StorageUploadResult>((resolve) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.timeout = XHR_TIMEOUT_MS;
+
+    // Headers
+    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+    xhr.setRequestHeader("apikey", anonKey);
+    xhr.setRequestHeader("Content-Type", contentType);
+    xhr.setRequestHeader("Cache-Control", cacheControl);
+    if (upsert) {
+      xhr.setRequestHeader("x-upsert", "true");
+    }
+
+    // Progress tracking
+    if (xhr.upload && onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable && e.total > 0) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          onProgress(Math.min(99, pct)); // Reserve 100 for completion
+        }
+      };
+    }
+
+    xhr.onload = () => {
+      const ok = xhr.status >= 200 && xhr.status < 300;
+      resolve({ ok, status: xhr.status, responseText: xhr.responseText || "" });
+    };
+
+    xhr.onerror = () => {
+      resolve({ ok: false, status: 0, responseText: "Network error during upload" });
+    };
+
+    xhr.ontimeout = () => {
+      resolve({ ok: false, status: 0, responseText: "Upload timed out (5 min)" });
+    };
+
+    xhr.onabort = () => {
+      resolve({ ok: false, status: 0, responseText: "Upload aborted" });
+    };
+
+    // Send the raw file (no FormData overhead)
+    xhr.send(file);
+  });
+}
+
+// Legacy aliases
 export type StorageXhrUploadResult = StorageUploadResult;
 
 export const uploadToStorageWithSdk = (params: {
