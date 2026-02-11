@@ -320,21 +320,34 @@ export function useTrackUpload() {
             addDiagnostic({ step: "session_check", status: "pending", message: "SDK timed out, trying REST...", timestamp: new Date() });
 
             // REST fallback using fetch
+            const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
             const restUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/artist_profiles?select=id&user_id=eq.${userId}&limit=1`;
             const controller = new AbortController();
             const restTimer = setTimeout(() => controller.abort(), 10000);
             try {
               const resp = await fetch(restUrl, {
                 headers: {
-                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  apikey: anonKey,
                   Authorization: `Bearer ${currentAccessToken}`,
                   Accept: "application/json",
                 },
                 signal: controller.signal,
               });
               clearTimeout(restTimer);
-              const rows = await resp.json();
-              console.log("[Upload:DIAG] REST profile response:", rows);
+
+              console.log("[Upload:DIAG] REST status:", resp.status, resp.statusText);
+              const rawText = await resp.text();
+              console.log("[Upload:DIAG] REST raw response:", rawText);
+
+              if (resp.status !== 200) {
+                const errMsg = `REST profile failed: ${resp.status} ${resp.statusText} – ${rawText.slice(0, 200)}`;
+                addDiagnostic({ step: "session_check", status: "error", message: errMsg, timestamp: new Date(), details: rawText.slice(0, 500) });
+                setState((prev) => ({ ...prev, errorMessage: errMsg }));
+                throw new Error(errMsg);
+              }
+
+              const rows = JSON.parse(rawText);
+              console.log("[Upload:DIAG] REST profile parsed:", rows);
               if (Array.isArray(rows) && rows.length > 0 && rows[0].id) {
                 artistProfile = rows[0];
               } else {
