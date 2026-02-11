@@ -138,12 +138,12 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
           }}
         >
           {phase === "idle" && "🔒 The Vault Awaits"}
-          {phase === "playing" && "⚙️ Determining Your Fate..."}
+          {phase === "playing" && "🎵 New Music Awaits..."}
           {phase === "result" && (isWin ? "🔓 The Vault Has Opened" : "🔒 Not This Time")}
         </h2>
         <p className="text-muted-foreground text-sm">
           {phase === "idle" && "Preparing the vault mechanism..."}
-          {phase === "playing" && "Tumblers falling into place..."}
+          {phase === "playing" && "Will you get inside?"}
           {phase === "result" &&
             (isWin ? "Welcome inside." : "But you're getting closer...")}
         </p>
