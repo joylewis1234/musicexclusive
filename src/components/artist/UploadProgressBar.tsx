@@ -12,7 +12,7 @@ interface UploadProgressBarProps {
 const STEPS: { key: UploadStep; label: string }[] = [
   { key: "session_check", label: "Verifying session" },
   { key: "db_insert", label: "Creating track" },
-  { key: "cover_upload", label: "Uploading cover art" },
+  { key: "cover_upload", label: "Compressing & uploading" },
   { key: "audio_upload", label: "Uploading audio" },
   { key: "preview_upload", label: "Uploading preview" },
   { key: "db_update", label: "Finalizing" },
