@@ -39,6 +39,7 @@ import RefundPolicy from "./pages/RefundPolicy";
 import FanAgreementStep from "./pages/FanAgreementStep";
 import PatentNotice from "./pages/PatentNotice";
 import InviteLanding from "./pages/InviteLanding";
+import TestSounds from "./pages/TestSounds";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -116,6 +117,7 @@ const App = () => (
                 <Route path="/patent-notice" element={<PatentNotice />} />
                 <Route path="/invite" element={<InviteLanding />} />
                 <Route path="/artist-agreement" element={<ArtistAgreement />} />
+                <Route path="/test-sounds" element={<TestSounds />} />
                 
                 {/* Login selector page */}
                 <Route path="/login" element={<Login />} />
