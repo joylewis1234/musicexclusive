@@ -191,23 +191,69 @@ export function useTrackUpload() {
         });
 
         const getFreshToken = async (): Promise<string> => {
-          // Try getSession first (instant, no network call if cached)
-          const { data } = await supabase.auth.getSession();
-          const session = data?.session;
+          // Try getSession first (should be instant if local session exists)
+          console.time("[Upload:DIAG] auth.getSession");
+          console.log("[Upload:DIAG] auth.getSession() START");
+          const getSessionStillPendingTimer = window.setTimeout(() => {
+            console.warn("[Upload:DIAG] auth.getSession() still pending after 3000ms");
+          }, 3000);
+
+          let session: Awaited<ReturnType<typeof supabase.auth.getSession>>["data"]["session"] | null = null;
+          try {
+            const { data, error } = await supabase.auth.getSession();
+            window.clearTimeout(getSessionStillPendingTimer);
+            console.timeEnd("[Upload:DIAG] auth.getSession");
+            if (error) console.warn("[Upload:DIAG] auth.getSession() returned error:", error);
+            session = data?.session ?? null;
+            console.log(
+              "[Upload:DIAG] auth.getSession() DONE; hasSession=",
+              !!session,
+              "expires_at=",
+              session?.expires_at ?? null
+            );
+          } catch (err) {
+            window.clearTimeout(getSessionStillPendingTimer);
+            console.timeEnd("[Upload:DIAG] auth.getSession");
+            console.error("[Upload:DIAG] auth.getSession() THROW:", err);
+            throw err;
+          }
+
           if (session?.access_token) {
             // Only refresh if token expires within 5 minutes
             const expiresAt = session.expires_at ?? 0;
             const fiveMinFromNow = Math.floor(Date.now() / 1000) + 300;
             if (expiresAt > fiveMinFromNow) {
+              console.log("[Upload:DIAG] access token fresh; tokenLen=", session.access_token.length);
               return session.access_token;
             }
+
             // Token expiring soon — try quick refresh
+            console.time("[Upload:DIAG] auth.refreshSession");
+            console.log("[Upload:DIAG] auth.refreshSession() START");
+            const refreshStillPendingTimer = window.setTimeout(() => {
+              console.warn("[Upload:DIAG] auth.refreshSession() still pending after 5000ms");
+            }, 5000);
+
             try {
-              const { data: refreshed } = await supabase.auth.refreshSession();
-              if (refreshed?.session?.access_token) return refreshed.session.access_token;
-            } catch { /* fall through to existing token */ }
+              const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+              window.clearTimeout(refreshStillPendingTimer);
+              console.timeEnd("[Upload:DIAG] auth.refreshSession");
+              if (refreshError) console.warn("[Upload:DIAG] auth.refreshSession() returned error:", refreshError);
+              if (refreshed?.session?.access_token) {
+                console.log("[Upload:DIAG] auth.refreshSession() DONE; tokenLen=", refreshed.session.access_token.length);
+                return refreshed.session.access_token;
+              }
+            } catch (err) {
+              window.clearTimeout(refreshStillPendingTimer);
+              console.timeEnd("[Upload:DIAG] auth.refreshSession");
+              console.warn("[Upload:DIAG] auth.refreshSession() THROW (falling back):", err);
+              // fall through to returning existing token
+            }
+
+            console.log("[Upload:DIAG] returning existing access token; tokenLen=", session.access_token.length);
             return session.access_token;
           }
+
           throw new Error("Session expired. Please log in again.");
         };
 
