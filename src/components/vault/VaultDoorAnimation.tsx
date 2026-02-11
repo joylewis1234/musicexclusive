@@ -9,77 +9,37 @@ interface VaultDoorAnimationProps {
   result: "winner" | "not_selected";
 }
 
-const SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`;
+const DOOR_SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-door-open.mp3`;
+const WIN_SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-win-reveal.mp3`;
 
-const DOOR_PROMPT = "Metal vault door slowly opens and creeks";
-const DOOR_DURATION = 5;
-const WIN_PROMPT = "Epic cinematic reveal sound, deep bass impact followed by ascending sparkle tones";
-const WIN_DURATION = 3;
-
-// Session-level audio caches
-const audioCache: Record<string, HTMLAudioElement> = {};
-const fetchPromises: Record<string, Promise<HTMLAudioElement | null>> = {};
-
-function preloadSfx(key: string, prompt: string, duration: number): Promise<HTMLAudioElement | null> {
-  if (audioCache[key]) return Promise.resolve(audioCache[key]);
-  if (fetchPromises[key]) return fetchPromises[key];
-
-  fetchPromises[key] = (async () => {
-    try {
-      const resp = await fetch(SFX_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-        body: JSON.stringify({ prompt, duration }),
-      });
-      if (!resp.ok) {
-        console.warn(`SFX fetch failed (${key}):`, resp.status);
-        return null;
-      }
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      await new Promise<void>((resolve) => {
-        audio.addEventListener("canplaythrough", () => resolve(), { once: true });
-        audio.load();
-      });
-      audioCache[key] = audio;
-      return audio;
-    } catch (e) {
-      console.warn(`SFX error (${key}):`, e);
-      return null;
-    }
-  })();
-
-  return fetchPromises[key];
-}
-
-/** Preload & play vault sounds */
+/** Preload & play vault sounds from static files */
 const useVaultSounds = () => {
-  const doorRef = useRef<Promise<HTMLAudioElement | null> | null>(null);
-  const winRef = useRef<Promise<HTMLAudioElement | null> | null>(null);
+  const doorAudioRef = useRef<HTMLAudioElement | null>(null);
+  const winAudioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    doorRef.current = preloadSfx("door", DOOR_PROMPT, DOOR_DURATION);
-    winRef.current = preloadSfx("win", WIN_PROMPT, WIN_DURATION);
+    const door = new Audio(DOOR_SFX_URL);
+    door.preload = "auto";
+    door.load();
+    doorAudioRef.current = door;
+
+    const win = new Audio(WIN_SFX_URL);
+    win.preload = "auto";
+    win.load();
+    winAudioRef.current = win;
   }, []);
 
-  const playDoorSound = useCallback(async () => {
-    const audio = await (doorRef.current ?? preloadSfx("door", DOOR_PROMPT, DOOR_DURATION));
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
+  const playDoorSound = useCallback(() => {
+    if (doorAudioRef.current) {
+      doorAudioRef.current.currentTime = 0;
+      doorAudioRef.current.play().catch(() => {});
     }
   }, []);
 
-  const playWinSound = useCallback(async () => {
-    const audio = await (winRef.current ?? preloadSfx("win", WIN_PROMPT, WIN_DURATION));
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
+  const playWinSound = useCallback(() => {
+    if (winAudioRef.current) {
+      winAudioRef.current.currentTime = 0;
+      winAudioRef.current.play().catch(() => {});
     }
   }, []);
 
