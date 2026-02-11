@@ -11,75 +11,75 @@ interface VaultDoorAnimationProps {
 
 const SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`;
 
-const SOUND_PROMPTS = {
-  mechanism: "Heavy steel bank vault door mechanism turning, metallic gears grinding, deep mechanical clicks",
-  win: "Epic cinematic reveal sound, deep bass impact followed by ascending sparkle tones",
-  lose: "Steel deadbolt snapping closed, heavy mechanical lock engaging, somber low tone",
-} as const;
+const MECHANISM_PROMPT = "Heavy steel bank vault door mechanism turning, metallic gears grinding, deep mechanical clicks";
+const MECHANISM_DURATION = 5;
 
-const SOUND_DURATIONS = { mechanism: 5, win: 3, lose: 2 } as const;
+// Session-level audio cache so we only generate the sound once
+let cachedAudio: HTMLAudioElement | null = null;
+let fetchPromise: Promise<HTMLAudioElement | null> | null = null;
 
-// Session-level audio cache so we only generate each sound once
-const audioCache: Record<string, HTMLAudioElement> = {};
+function preloadMechanismSfx(): Promise<HTMLAudioElement | null> {
+  if (cachedAudio) return Promise.resolve(cachedAudio);
+  if (fetchPromise) return fetchPromise;
 
-async function fetchSfx(key: keyof typeof SOUND_PROMPTS): Promise<HTMLAudioElement | null> {
-  if (audioCache[key]) return audioCache[key];
-  try {
-    const resp = await fetch(SFX_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
-      body: JSON.stringify({ prompt: SOUND_PROMPTS[key], duration: SOUND_DURATIONS[key] }),
-    });
-    if (!resp.ok) {
-      console.warn(`SFX fetch failed for "${key}":`, resp.status);
+  fetchPromise = (async () => {
+    try {
+      const resp = await fetch(SFX_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ prompt: MECHANISM_PROMPT, duration: MECHANISM_DURATION }),
+      });
+      if (!resp.ok) {
+        console.warn("SFX fetch failed:", resp.status);
+        return null;
+      }
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      // Wait for the audio to be fully decodable before resolving
+      await new Promise<void>((resolve) => {
+        audio.addEventListener("canplaythrough", () => resolve(), { once: true });
+        audio.load();
+      });
+      cachedAudio = audio;
+      return audio;
+    } catch (e) {
+      console.warn("SFX error:", e);
       return null;
     }
-    const blob = await resp.blob();
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    audioCache[key] = audio;
-    return audio;
-  } catch (e) {
-    console.warn(`SFX error for "${key}":`, e);
-    return null;
-  }
+  })();
+
+  return fetchPromise;
 }
 
-/** Preload & play vault sounds via ElevenLabs */
+/** Preload & play vault mechanism sound via ElevenLabs */
 const useVaultSounds = () => {
-  // Preload all three sounds on mount
-  const preloaded = useRef(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const readyRef = useRef(false);
+
+  // Preload immediately on mount
   useEffect(() => {
-    if (preloaded.current) return;
-    preloaded.current = true;
-    // Fire-and-forget preload
-    fetchSfx("mechanism");
-    fetchSfx("win");
-    fetchSfx("lose");
+    preloadMechanismSfx().then((audio) => {
+      if (audio) {
+        audioRef.current = audio;
+        readyRef.current = true;
+      }
+    });
   }, []);
 
-  const playMetallicClicks = useCallback(async () => {
-    const audio = await fetchSfx("mechanism");
-    if (audio) {
+  const playMechanismSound = useCallback(() => {
+    const audio = audioRef.current;
+    if (audio && readyRef.current) {
       audio.currentTime = 0;
       audio.play().catch(() => {});
     }
   }, []);
 
-  const playResultSound = useCallback(async (isWinner: boolean) => {
-    const key = isWinner ? "win" : "lose";
-    const audio = await fetchSfx(key);
-    if (audio) {
-      audio.currentTime = 0;
-      audio.play().catch(() => {});
-    }
-  }, []);
-
-  return { playMetallicClicks, playResultSound };
+  return { playMechanismSound, isReady: readyRef };
 };
 
 export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationProps) => {
@@ -89,7 +89,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
   const [useFallback, setUseFallback] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [showSmoke, setShowSmoke] = useState(false);
-  const { playMetallicClicks, playResultSound } = useVaultSounds();
+  const { playMechanismSound } = useVaultSounds();
   const hasStartedRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -113,7 +113,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
     const delay = setTimeout(() => {
       hasStartedRef.current = true;
       setPhase("playing");
-      playMetallicClicks();
+      playMechanismSound();
 
       if (!useFallback && videoRef.current) {
         videoRef.current.currentTime = 0;
@@ -121,7 +121,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
       }
     }, 1200);
     return () => clearTimeout(delay);
-  }, [useFallback, playMetallicClicks]);
+  }, [useFallback, playMechanismSound]);
 
   // Video timeupdate → freeze for lose, let play for win
   useEffect(() => {
@@ -163,7 +163,6 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
   const finishSequence = useCallback(() => {
     setPhase("result");
     setShowOverlay(true);
-    playResultSound(result === "winner");
 
     // Haptic
     if (navigator.vibrate) {
@@ -175,7 +174,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
       setShowOverlay(false);
       setTimeout(() => onComplete(result), 400);
     }, 600);
-  }, [result, onComplete, playResultSound]);
+  }, [result, onComplete]);
 
   const isWin = result === "winner";
 
