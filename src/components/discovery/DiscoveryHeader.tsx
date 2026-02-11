@@ -18,55 +18,39 @@ export const DiscoveryHeader = () => {
   };
 
   return (
-    <>
-      {/* Navigation */}
-      <header className="w-full max-w-2xl mx-auto mb-6 flex items-center justify-between">
+    <header className="w-full max-w-5xl mx-auto mb-6">
+      {/* Top nav row */}
+      <div className="flex items-center justify-between mb-6">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <ChevronLeft className="w-5 h-5" />
-          <span className="text-sm uppercase tracking-wider">Back</span>
+          <ChevronLeft className="w-4 h-4" />
+          <span className="text-xs uppercase tracking-wider">Back</span>
         </button>
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
         >
-          <LogOut className="w-5 h-5" />
-          <span className="text-sm uppercase tracking-wider">Log Out</span>
+          <LogOut className="w-4 h-4" />
+          <span className="text-xs uppercase tracking-wider">Log Out</span>
         </button>
-      </header>
+      </div>
 
-      {/* Page Title with Vault Glow */}
-      <section className="relative text-center mb-8 animate-fade-in">
-        {/* Vault glow background (static) */}
-        <div 
-          className="absolute inset-0 -z-10 opacity-60"
+      {/* Title */}
+      <div className="mb-2">
+        <h1
+          className="font-display text-xl md:text-2xl uppercase tracking-[0.08em] text-foreground font-bold"
           style={{
-            background: "radial-gradient(ellipse at center, hsl(var(--primary) / 0.15) 0%, transparent 60%)",
-            filter: "blur(40px)",
-          }}
-        />
-        <div 
-          className="absolute inset-0 -z-10 opacity-40"
-          style={{
-            background: "radial-gradient(ellipse at center, hsl(var(--accent) / 0.1) 0%, transparent 50%)",
-            filter: "blur(60px)",
-          }}
-        />
-
-        <h1 
-          className="font-display text-2xl md:text-3xl uppercase tracking-[0.1em] text-foreground font-bold mb-2"
-          style={{
-            textShadow: "0 0 30px hsl(var(--primary) / 0.4), 0 0 60px hsl(var(--primary) / 0.2)"
+            textShadow: "0 0 20px hsl(var(--primary) / 0.3)",
           }}
         >
-          Discover Exclusive Drops
+          Discover
         </h1>
-        <p className="text-muted-foreground font-display text-sm uppercase tracking-wider">
-          New music lives here first.
+        <p className="text-muted-foreground text-xs uppercase tracking-wider mt-1">
+          New music lives here first
         </p>
-      </section>
-    </>
+      </div>
+    </header>
   );
 };
