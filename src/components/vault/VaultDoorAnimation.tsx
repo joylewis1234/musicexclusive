@@ -11,18 +11,20 @@ interface VaultDoorAnimationProps {
 
 const SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`;
 
-const MECHANISM_PROMPT = "Heavy steel bank vault door mechanism turning, metallic gears grinding, deep mechanical clicks";
-const MECHANISM_DURATION = 5;
+const DOOR_PROMPT = "Metal vault door slowly opens and creeks";
+const DOOR_DURATION = 5;
+const WIN_PROMPT = "Epic cinematic reveal sound, deep bass impact followed by ascending sparkle tones";
+const WIN_DURATION = 3;
 
-// Session-level audio cache so we only generate the sound once
-let cachedAudio: HTMLAudioElement | null = null;
-let fetchPromise: Promise<HTMLAudioElement | null> | null = null;
+// Session-level audio caches
+const audioCache: Record<string, HTMLAudioElement> = {};
+const fetchPromises: Record<string, Promise<HTMLAudioElement | null>> = {};
 
-function preloadMechanismSfx(): Promise<HTMLAudioElement | null> {
-  if (cachedAudio) return Promise.resolve(cachedAudio);
-  if (fetchPromise) return fetchPromise;
+function preloadSfx(key: string, prompt: string, duration: number): Promise<HTMLAudioElement | null> {
+  if (audioCache[key]) return Promise.resolve(audioCache[key]);
+  if (fetchPromises[key]) return fetchPromises[key];
 
-  fetchPromise = (async () => {
+  fetchPromises[key] = (async () => {
     try {
       const resp = await fetch(SFX_URL, {
         method: "POST",
@@ -31,49 +33,57 @@ function preloadMechanismSfx(): Promise<HTMLAudioElement | null> {
           apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ prompt: MECHANISM_PROMPT, duration: MECHANISM_DURATION }),
+        body: JSON.stringify({ prompt, duration }),
       });
       if (!resp.ok) {
-        console.warn("SFX fetch failed:", resp.status);
+        console.warn(`SFX fetch failed (${key}):`, resp.status);
         return null;
       }
       const blob = await resp.blob();
       const url = URL.createObjectURL(blob);
       const audio = new Audio(url);
-      // Wait for the audio to be fully decodable before resolving
       await new Promise<void>((resolve) => {
         audio.addEventListener("canplaythrough", () => resolve(), { once: true });
         audio.load();
       });
-      cachedAudio = audio;
+      audioCache[key] = audio;
       return audio;
     } catch (e) {
-      console.warn("SFX error:", e);
+      console.warn(`SFX error (${key}):`, e);
       return null;
     }
   })();
 
-  return fetchPromise;
+  return fetchPromises[key];
 }
 
-/** Preload & play vault mechanism sound via ElevenLabs */
+/** Preload & play vault sounds */
 const useVaultSounds = () => {
-  const sfxPromiseRef = useRef<Promise<HTMLAudioElement | null> | null>(null);
+  const doorRef = useRef<Promise<HTMLAudioElement | null> | null>(null);
+  const winRef = useRef<Promise<HTMLAudioElement | null> | null>(null);
 
-  // Start preloading immediately on mount
   useEffect(() => {
-    sfxPromiseRef.current = preloadMechanismSfx();
+    doorRef.current = preloadSfx("door", DOOR_PROMPT, DOOR_DURATION);
+    winRef.current = preloadSfx("win", WIN_PROMPT, WIN_DURATION);
   }, []);
 
-  const playMechanismSound = useCallback(async () => {
-    const audio = await (sfxPromiseRef.current ?? preloadMechanismSfx());
+  const playDoorSound = useCallback(async () => {
+    const audio = await (doorRef.current ?? preloadSfx("door", DOOR_PROMPT, DOOR_DURATION));
     if (audio) {
       audio.currentTime = 0;
       audio.play().catch(() => {});
     }
   }, []);
 
-  return { playMechanismSound };
+  const playWinSound = useCallback(async () => {
+    const audio = await (winRef.current ?? preloadSfx("win", WIN_PROMPT, WIN_DURATION));
+    if (audio) {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    }
+  }, []);
+
+  return { playDoorSound, playWinSound };
 };
 
 export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationProps) => {
@@ -83,7 +93,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
   const [useFallback, setUseFallback] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const [showSmoke, setShowSmoke] = useState(false);
-  const { playMechanismSound } = useVaultSounds();
+  const { playDoorSound, playWinSound } = useVaultSounds();
   const hasStartedRef = useRef(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -108,8 +118,8 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
       hasStartedRef.current = true;
       setPhase("playing");
 
-      // Play sound — awaits preload if still loading, then plays immediately
-      playMechanismSound();
+      // Play door creak sound immediately when animation starts
+      playDoorSound();
 
       if (!useFallback && videoRef.current) {
         videoRef.current.currentTime = 0;
@@ -117,7 +127,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
       }
     }, 1200);
     return () => clearTimeout(delay);
-  }, [useFallback, playMechanismSound]);
+  }, [useFallback, playDoorSound]);
 
   // Video timeupdate → freeze for lose, let play for win
   useEffect(() => {
@@ -125,7 +135,6 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
     if (!video || useFallback) return;
 
     const onTimeUpdate = () => {
-      // Show smoke at ~60% to cover the figure before it's fully visible
       if (video.currentTime >= video.duration * 0.55 && !showSmoke) {
         setShowSmoke(true);
       }
@@ -148,7 +157,7 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [result, useFallback]);
 
-  // Fallback animation timer (matches ~3.5s total)
+  // Fallback animation timer
   useEffect(() => {
     if (!useFallback || phase !== "playing") return;
     const timer = setTimeout(() => finishSequence(), 3500);
@@ -160,17 +169,20 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
     setPhase("result");
     setShowOverlay(true);
 
-    // Haptic
+    // Play win sound on victory
+    if (result === "winner") {
+      playWinSound();
+    }
+
     if (navigator.vibrate) {
       navigator.vibrate(result === "winner" ? 120 : 50);
     }
 
-    // Transition to result screen after overlay flash
     setTimeout(() => {
       setShowOverlay(false);
       setTimeout(() => onComplete(result), 400);
     }, 600);
-  }, [result, onComplete]);
+  }, [result, onComplete, playWinSound]);
 
   const isWin = result === "winner";
 
@@ -213,7 +225,6 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
 
       {/* Vault door container */}
       <div className="relative z-10">
-        {/* Outer glow */}
         <div
           className={cn(
             "absolute -inset-8 rounded-2xl transition-all duration-700",
@@ -230,7 +241,6 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
           }}
         />
 
-        {/* Video / fallback frame */}
         <div
           className="relative w-72 h-72 md:w-80 md:h-80 rounded-2xl overflow-hidden"
           style={{
@@ -261,7 +271,6 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
               }}
             />
           ) : (
-            /* CSS-only fallback */
             <div className="w-full h-full bg-background flex items-center justify-center relative">
               <img
                 src={vaultPortal}
@@ -271,7 +280,6 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
                   filter: "drop-shadow(0 0 15px hsl(280 80% 60% / 0.6))",
                 }}
               />
-              {/* Rotating lock icon */}
               <div
                 className="absolute inset-0 flex items-center justify-center"
                 style={{
@@ -295,7 +303,6 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
                   }}
                 />
               </div>
-              {/* Pulsing glow rings */}
               {phase === "playing" && (
                 <>
                   <div
@@ -314,15 +321,12 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
             </div>
           )}
 
-          {/* Pink & blue smoke overlay to cover the figure */}
+          {/* Pink & blue smoke overlay */}
           {showSmoke && (
             <div
               className="absolute inset-0 z-10 pointer-events-none"
-              style={{
-                animation: "smokeIn 1.2s ease-out forwards",
-              }}
+              style={{ animation: "smokeIn 1.2s ease-out forwards" }}
             >
-              {/* Layered smoke clouds */}
               <div
                 className="absolute inset-0"
                 style={{
@@ -344,7 +348,6 @@ export const VaultDoorAnimation = ({ onComplete, result }: VaultDoorAnimationPro
                   animation: "smokeRise 1.8s ease-out 0.2s forwards",
                 }}
               />
-              {/* Center dense fog to fully obscure the figure */}
               <div
                 className="absolute inset-0"
                 style={{
