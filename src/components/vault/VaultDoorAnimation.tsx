@@ -31,50 +31,86 @@ const useVaultSounds = () => {
 
       const now = ctx.currentTime;
 
-      // Sequence of metallic tumbler clicks over ~3s
-      const clickTimes = [0.3, 0.7, 1.1, 1.6, 2.0, 2.4, 2.7];
-      clickTimes.forEach((t) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const filter = ctx.createBiquadFilter();
+      // Heavy vault bolt slides — deep, chunky metallic thuds
+      const boltTimes = [0.2, 0.8, 1.5, 2.1, 2.6];
+      boltTimes.forEach((t) => {
+        // Impact thud (low freq burst)
+        const thud = ctx.createOscillator();
+        const thudGain = ctx.createGain();
+        const thudFilter = ctx.createBiquadFilter();
+        thud.type = "triangle";
+        thud.frequency.setValueAtTime(120, now + t);
+        thud.frequency.exponentialRampToValueAtTime(45, now + t + 0.12);
+        thudFilter.type = "lowpass";
+        thudFilter.frequency.setValueAtTime(200, now + t);
+        thudGain.gain.setValueAtTime(0, now + t);
+        thudGain.gain.linearRampToValueAtTime(0.1, now + t + 0.005);
+        thudGain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.15);
+        thud.connect(thudFilter);
+        thudFilter.connect(thudGain);
+        thudGain.connect(ctx.destination);
+        thud.start(now + t);
+        thud.stop(now + t + 0.2);
 
-        osc.type = "square";
-        osc.frequency.setValueAtTime(1200 + Math.random() * 400, now + t);
-        osc.frequency.exponentialRampToValueAtTime(300, now + t + 0.05);
-
-        filter.type = "bandpass";
-        filter.frequency.setValueAtTime(900, now + t);
-        filter.Q.setValueAtTime(3, now + t);
-
-        gain.gain.setValueAtTime(0, now + t);
-        gain.gain.linearRampToValueAtTime(0.07, now + t + 0.003);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.06);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + t);
-        osc.stop(now + t + 0.08);
+        // Metal-on-metal scrape overtone
+        const scrape = ctx.createOscillator();
+        const scrapeGain = ctx.createGain();
+        const scrapeFilter = ctx.createBiquadFilter();
+        scrape.type = "sawtooth";
+        scrape.frequency.setValueAtTime(600 + Math.random() * 200, now + t);
+        scrape.frequency.exponentialRampToValueAtTime(200, now + t + 0.08);
+        scrapeFilter.type = "bandpass";
+        scrapeFilter.frequency.setValueAtTime(500, now + t);
+        scrapeFilter.Q.setValueAtTime(5, now + t);
+        scrapeGain.gain.setValueAtTime(0, now + t);
+        scrapeGain.gain.linearRampToValueAtTime(0.025, now + t + 0.003);
+        scrapeGain.gain.exponentialRampToValueAtTime(0.001, now + t + 0.07);
+        scrape.connect(scrapeFilter);
+        scrapeFilter.connect(scrapeGain);
+        scrapeGain.connect(ctx.destination);
+        scrape.start(now + t);
+        scrape.stop(now + t + 0.1);
       });
 
-      // Low rumble undertone
+      // Deep vault rumble — massive steel door vibration
       const rumble = ctx.createOscillator();
       const rumbleGain = ctx.createGain();
       const rumbleFilter = ctx.createBiquadFilter();
       rumble.type = "sawtooth";
-      rumble.frequency.setValueAtTime(40, now);
-      rumble.frequency.linearRampToValueAtTime(60, now + 1.5);
-      rumble.frequency.exponentialRampToValueAtTime(30, now + 3);
+      rumble.frequency.setValueAtTime(28, now);
+      rumble.frequency.linearRampToValueAtTime(35, now + 1.5);
+      rumble.frequency.exponentialRampToValueAtTime(22, now + 3.2);
       rumbleFilter.type = "lowpass";
-      rumbleFilter.frequency.setValueAtTime(100, now);
+      rumbleFilter.frequency.setValueAtTime(60, now);
       rumbleGain.gain.setValueAtTime(0.001, now);
-      rumbleGain.gain.linearRampToValueAtTime(0.02, now + 0.5);
-      rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 3);
+      rumbleGain.gain.linearRampToValueAtTime(0.035, now + 0.8);
+      rumbleGain.gain.setValueAtTime(0.035, now + 2.0);
+      rumbleGain.gain.exponentialRampToValueAtTime(0.001, now + 3.5);
       rumble.connect(rumbleFilter);
       rumbleFilter.connect(rumbleGain);
       rumbleGain.connect(ctx.destination);
       rumble.start(now);
-      rumble.stop(now + 3.5);
+      rumble.stop(now + 3.8);
+
+      // Dial spin whirr — mechanical rotation
+      const whirr = ctx.createOscillator();
+      const whirrGain = ctx.createGain();
+      const whirrFilter = ctx.createBiquadFilter();
+      whirr.type = "square";
+      whirr.frequency.setValueAtTime(80, now + 0.3);
+      whirr.frequency.linearRampToValueAtTime(160, now + 1.5);
+      whirr.frequency.exponentialRampToValueAtTime(60, now + 2.8);
+      whirrFilter.type = "bandpass";
+      whirrFilter.frequency.setValueAtTime(120, now);
+      whirrFilter.Q.setValueAtTime(8, now);
+      whirrGain.gain.setValueAtTime(0.001, now + 0.3);
+      whirrGain.gain.linearRampToValueAtTime(0.015, now + 0.8);
+      whirrGain.gain.exponentialRampToValueAtTime(0.001, now + 3.0);
+      whirr.connect(whirrFilter);
+      whirrFilter.connect(whirrGain);
+      whirrGain.connect(ctx.destination);
+      whirr.start(now + 0.3);
+      whirr.stop(now + 3.2);
     } catch {
       console.warn("Web Audio not supported");
     }
@@ -86,38 +122,70 @@ const useVaultSounds = () => {
       const now = ctx.currentTime;
 
       if (isWinner) {
-        // Triumphant chord
-        [261.63, 329.63, 392.0, 523.25].forEach((freq, i) => {
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
-          osc.type = "sine";
-          osc.frequency.setValueAtTime(freq, now);
-          gain.gain.setValueAtTime(0.001, now);
-          gain.gain.exponentialRampToValueAtTime(0.08 / (i + 1), now + 0.05);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-          osc.start(now + i * 0.05);
-          osc.stop(now + 1);
-        });
+        // Massive vault door swing open — deep resonant boom + metallic echo
+        const boom = ctx.createOscillator();
+        const boomGain = ctx.createGain();
+        const boomFilter = ctx.createBiquadFilter();
+        boom.type = "sine";
+        boom.frequency.setValueAtTime(60, now);
+        boom.frequency.exponentialRampToValueAtTime(35, now + 0.6);
+        boomFilter.type = "lowpass";
+        boomFilter.frequency.setValueAtTime(80, now);
+        boomGain.gain.setValueAtTime(0.001, now);
+        boomGain.gain.linearRampToValueAtTime(0.12, now + 0.01);
+        boomGain.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        boom.connect(boomFilter);
+        boomFilter.connect(boomGain);
+        boomGain.connect(ctx.destination);
+        boom.start(now);
+        boom.stop(now + 1.0);
+
+        // Shimmering release — airy high tone (vault interior revealed)
+        const shimmer = ctx.createOscillator();
+        const shimmerGain = ctx.createGain();
+        shimmer.type = "sine";
+        shimmer.frequency.setValueAtTime(880, now + 0.15);
+        shimmer.frequency.linearRampToValueAtTime(1320, now + 0.8);
+        shimmerGain.gain.setValueAtTime(0.001, now + 0.15);
+        shimmerGain.gain.linearRampToValueAtTime(0.04, now + 0.3);
+        shimmerGain.gain.exponentialRampToValueAtTime(0.001, now + 1.0);
+        shimmer.connect(shimmerGain);
+        shimmerGain.connect(ctx.destination);
+        shimmer.start(now + 0.15);
+        shimmer.stop(now + 1.2);
       } else {
-        // Metallic clank + descending tone
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(300, now);
-        osc.frequency.exponentialRampToValueAtTime(80, now + 0.5);
-        gain.gain.setValueAtTime(0.001, now);
-        gain.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
-        const filter = ctx.createBiquadFilter();
-        filter.type = "lowpass";
-        filter.frequency.setValueAtTime(600, now);
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + 0.7);
+        // Heavy bolt lock snap — sharp impact + deadbolt thud
+        const snap = ctx.createOscillator();
+        const snapGain = ctx.createGain();
+        const snapFilter = ctx.createBiquadFilter();
+        snap.type = "square";
+        snap.frequency.setValueAtTime(400, now);
+        snap.frequency.exponentialRampToValueAtTime(60, now + 0.15);
+        snapFilter.type = "lowpass";
+        snapFilter.frequency.setValueAtTime(300, now);
+        snapFilter.frequency.exponentialRampToValueAtTime(80, now + 0.15);
+        snapGain.gain.setValueAtTime(0.001, now);
+        snapGain.gain.linearRampToValueAtTime(0.1, now + 0.005);
+        snapGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        snap.connect(snapFilter);
+        snapFilter.connect(snapGain);
+        snapGain.connect(ctx.destination);
+        snap.start(now);
+        snap.stop(now + 0.4);
+
+        // Deadbolt resonance
+        const dead = ctx.createOscillator();
+        const deadGain = ctx.createGain();
+        dead.type = "sine";
+        dead.frequency.setValueAtTime(45, now + 0.05);
+        dead.frequency.exponentialRampToValueAtTime(30, now + 0.4);
+        deadGain.gain.setValueAtTime(0.001, now + 0.05);
+        deadGain.gain.linearRampToValueAtTime(0.06, now + 0.08);
+        deadGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        dead.connect(deadGain);
+        deadGain.connect(ctx.destination);
+        dead.start(now + 0.05);
+        dead.stop(now + 0.6);
       }
     } catch {
       console.warn("Web Audio not supported");
