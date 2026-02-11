@@ -29,68 +29,62 @@ const Discovery = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [selectedTrackForShare, setSelectedTrackForShare] = useState<Track | null>(null);
 
-  const { 
-    currentPreviewId, 
-    previewProgress, 
+  const {
+    currentPreviewId,
+    previewProgress,
     isPlaying,
     isLoading: isPreviewLoading,
     error: previewError,
-    startPreview, 
-    stopPreview 
+    startPreview,
+    stopPreview,
   } = useAudioPreview();
 
-  // Fetch tracks from database
   const { tracks, isLoading: isLoadingTracks } = useTracks();
 
-  // Batch fetch like counts for all tracks (no fanId needed for Discovery - read-only display)
-  const trackIds = useMemo(() => tracks.map(t => t.id), [tracks]);
+  const trackIds = useMemo(() => tracks.map((t) => t.id), [tracks]);
   const { getLikeState } = useTrackLikesBatch(trackIds, null);
 
-  // Featured tracks (first 5 for hot section)
   const [featuredTrackIds, setFeaturedTrackIds] = useState<string[]>([]);
 
-  // Initialize featured tracks when tracks load
   useEffect(() => {
     if (tracks.length > 0 && featuredTrackIds.length === 0) {
-      setFeaturedTrackIds(tracks.slice(0, 5).map(t => t.id));
+      setFeaturedTrackIds(tracks.slice(0, 5).map((t) => t.id));
     }
   }, [tracks, featuredTrackIds.length]);
 
   const featuredTracks = useMemo(() => {
     return featuredTrackIds
-      .map(id => tracks.find(t => t.id === id))
+      .map((id) => tracks.find((t) => t.id === id))
       .filter((t): t is DbTrack => t !== undefined);
   }, [tracks, featuredTrackIds]);
 
-  // Filter tracks based on search and genre
   const filteredTracks = useMemo(() => {
     return tracks.filter((track) => {
       const artistName = getArtistName(track);
-      const matchesSearch = 
+      const matchesSearch =
         track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (track.genre?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-      
-      const matchesGenre = 
-        selectedGenre === "All Genres" || 
+
+      const matchesGenre =
+        selectedGenre === "All Genres" ||
         track.genre?.toLowerCase() === selectedGenre.toLowerCase();
 
       return matchesSearch && matchesGenre;
     });
   }, [tracks, searchQuery, selectedGenre]);
 
-  // Filtered featured tracks
   const displayedFeaturedTracks = useMemo(() => {
     if (searchQuery || selectedGenre !== "All Genres") {
       return featuredTracks.filter((track) => {
         const artistName = getArtistName(track);
-        const matchesSearch = 
+        const matchesSearch =
           track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (track.genre?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-        
-        const matchesGenre = 
-          selectedGenre === "All Genres" || 
+
+        const matchesGenre =
+          selectedGenre === "All Genres" ||
           track.genre?.toLowerCase() === selectedGenre.toLowerCase();
 
         return matchesSearch && matchesGenre;
@@ -101,8 +95,6 @@ const Discovery = () => {
 
   const handleRefreshFeatured = useCallback(() => {
     setIsRefreshing(true);
-    
-    // Rotate featured tracks
     setTimeout(() => {
       setFeaturedTrackIds((prev) => {
         const rotated = [...prev];
@@ -114,13 +106,11 @@ const Discovery = () => {
     }, 500);
   }, []);
 
-  // artist_id IS the profile ID, so navigation is direct
   const handleArtistClick = (artistId: string) => {
     navigate(`/artist/${artistId}`);
   };
 
   const handleStreamTrack = (track: DbTrack) => {
-    // Navigate to artist profile with track parameter
     navigate(`/artist/${track.artist_id}?track=${track.id}`);
   };
 
@@ -132,7 +122,6 @@ const Discovery = () => {
     if (currentPreviewId === track.id && isPlaying) {
       stopPreview();
     } else {
-      // Use preview_audio_url if available, otherwise use full_audio_url with start offset
       const audioUrl = track.preview_audio_url || track.full_audio_url;
       const startSeconds = track.preview_start_seconds || 0;
       startPreview(track.id, audioUrl, startSeconds);
@@ -144,7 +133,6 @@ const Discovery = () => {
     setIsShareModalOpen(true);
   };
 
-  // Stop preview when navigating away
   useEffect(() => {
     return () => {
       stopPreview();
@@ -153,7 +141,7 @@ const Discovery = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">
-      <div className="flex-1 w-full max-w-2xl mx-auto">
+      <div className="flex-1 w-full max-w-5xl mx-auto">
         <DiscoveryHeader />
 
         <SearchFilterBar
@@ -172,34 +160,28 @@ const Discovery = () => {
           isRefreshing={isRefreshing}
         />
 
-        {/* All Tracks Section Header */}
+        {/* All Tracks */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display text-lg uppercase tracking-wider text-foreground font-semibold">
+          <h2 className="font-display text-base uppercase tracking-wider text-foreground font-semibold">
             All Tracks
           </h2>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
             {filteredTracks.length} tracks
           </span>
         </div>
 
-        {/* Loading State */}
         {isLoadingTracks ? (
-          <div className="text-center py-12">
-             <p className="text-muted-foreground font-display">
-              Loading tracks...
-            </p>
+          <div className="text-center py-16">
+            <p className="text-muted-foreground font-display text-sm">Loading tracks…</p>
           </div>
         ) : filteredTracks.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground font-display">
+          <div className="text-center py-16">
+            <p className="text-muted-foreground font-display text-sm">
               No tracks found matching your search.
             </p>
           </div>
         ) : (
-          <div 
-            className="grid grid-cols-2 gap-4 animate-fade-in"
-            style={{ animationDelay: "100ms" }}
-          >
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 animate-fade-in">
             {filteredTracks.map((track) => (
               <DiscoveryTrackCard
                 key={track.id}
@@ -218,8 +200,6 @@ const Discovery = () => {
           </div>
         )}
       </div>
-
-      {/* Bottom spacing handled by FanLayout */}
 
       {/* Share Modal */}
       <ShareTrackModal

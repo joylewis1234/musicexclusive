@@ -1,8 +1,5 @@
-import { Play, Pause, Share2, Headphones, Loader2, AlertCircle, User, Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/StatusBadge";
+import { Play, Pause, Share2, Headphones, Loader2, AlertCircle, Heart } from "lucide-react";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
-
 import artist1 from "@/assets/artist-1.jpg";
 
 interface DiscoveryTrackCardProps {
@@ -32,212 +29,144 @@ export const DiscoveryTrackCard = ({
 }: DiscoveryTrackCardProps) => {
   const artistName = getArtistName(track);
   const coverImage = track.artwork_url || track.artist_avatar_url || artist1;
-  // Preview is available if there's a dedicated preview_audio_url OR a full_audio_url (we can seek into it)
   const hasPreviewAudio = !!track.preview_audio_url || !!track.full_audio_url;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
 
   return (
-    <div 
-      className="relative rounded-2xl overflow-hidden bg-card/50 border border-border/50 group transition-all duration-300 hover:border-primary/30"
+    <div
+      className="group relative rounded-xl overflow-hidden bg-card/40 border border-border/30 transition-all duration-300 hover:border-primary/40"
       style={{
-        boxShadow: isPreviewPlaying 
-          ? "0 0 30px hsl(var(--primary) / 0.3), inset 0 0 20px hsl(var(--primary) / 0.05)" 
-          : undefined,
+        boxShadow: isPreviewPlaying
+          ? "0 0 24px hsl(var(--primary) / 0.25), inset 0 0 12px hsl(var(--primary) / 0.05)"
+          : "0 0 8px hsl(var(--primary) / 0.06)",
       }}
     >
-      {/* Preview Progress Bar */}
-      {(isPreviewPlaying || isPreviewLoading) && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-muted/30 z-20">
-          <div 
-            className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-100"
-            style={{ width: `${previewProgress}%` }}
-          />
-        </div>
-      )}
-
-      {/* Cover Art Section */}
-      <div className="relative aspect-square overflow-hidden">
+      {/* Artwork */}
+      <div
+        className="relative aspect-square overflow-hidden cursor-pointer"
+        onClick={hasPreviewAudio && !isPreviewDisabled ? onPreview : onStream}
+      >
         <img
           src={coverImage}
           alt={track.title}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
-        
-        {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-card via-card/40 to-transparent" />
-        
-        {/* Genre Badge */}
-        {track.genre && (
-          <div className="absolute top-3 left-3">
-            <StatusBadge variant="exclusive" size="sm">
-              {track.genre}
-            </StatusBadge>
+
+        {/* Hover overlay with play button */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+          {isPreviewLoading ? (
+            <div
+              className="w-12 h-12 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center opacity-100"
+              style={{ boxShadow: "0 0 30px hsl(var(--primary) / 0.5)" }}
+            >
+              <Loader2 className="w-6 h-6 text-primary animate-spin" />
+            </div>
+          ) : isPreviewPlaying ? (
+            <div
+              className="w-12 h-12 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center opacity-100"
+              style={{ boxShadow: "0 0 30px hsl(var(--primary) / 0.5)" }}
+            >
+              <Pause className="w-6 h-6 text-primary" />
+            </div>
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <Play className="w-6 h-6 text-white ml-0.5" />
+            </div>
+          )}
+        </div>
+
+        {/* Progress bar at bottom of image */}
+        {(isPreviewPlaying || isPreviewLoading) && (
+          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/30">
+            <div
+              className="h-full bg-primary transition-all duration-100"
+              style={{ width: `${previewProgress}%` }}
+            />
           </div>
         )}
 
-        {/* Top Right Actions: Like Count + Share */}
-        <div className="absolute top-3 right-3 flex items-center gap-2">
-          {/* Like Count (Social Proof) */}
-          <div className="flex items-center gap-1 px-2 py-1 bg-background/60 backdrop-blur-sm rounded-full">
-            <Heart className="w-3.5 h-3.5 text-pink-400 fill-pink-400/50" />
-            <span className="text-xs font-medium text-foreground/90">{likeCount}</span>
-          </div>
-          
-          {/* Share Button */}
+        {/* Top-right actions: share + like */}
+        <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
           <button
             onClick={(e) => {
               e.stopPropagation();
               onShare();
             }}
-            className="p-2 bg-background/60 backdrop-blur-sm rounded-full text-muted-foreground hover:text-primary hover:bg-background/80 transition-all duration-200"
+            className="p-1.5 bg-black/50 backdrop-blur-sm rounded-full text-white/80 hover:text-white transition-colors"
             aria-label="Share track"
           >
-            <Share2 className="w-4 h-4" />
+            <Share2 className="w-3.5 h-3.5" />
           </button>
         </div>
 
-        {/* Playing/Loading Indicator */}
-        {(isPreviewPlaying || isPreviewLoading) && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div 
-              className="w-16 h-16 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center ring-1 ring-primary/30"
-              style={{
-                boxShadow: "0 0 40px hsl(var(--primary) / 0.5)",
-              }}
-            >
-              {isPreviewLoading ? (
-                <Loader2 className="w-8 h-8 text-primary animate-spin" />
-              ) : (
-                <Headphones className="w-8 h-8 text-primary" />
-              )}
-            </div>
+        {/* Genre tag - top left */}
+        {track.genre && (
+          <div className="absolute top-2 left-2">
+            <span className="px-2 py-0.5 rounded-full text-[9px] font-display uppercase tracking-wider bg-black/50 backdrop-blur-sm text-white/90 border border-white/10">
+              {track.genre}
+            </span>
           </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Track Title */}
-        <h3 className="font-display text-lg font-bold text-foreground tracking-wide mb-1 line-clamp-1">
+      {/* Info below artwork - Bandcamp style */}
+      <div className="p-3">
+        {/* Title */}
+        <h3 className="font-display text-sm font-bold text-foreground tracking-wide line-clamp-1 mb-0.5">
           {track.title}
         </h3>
-        
-        {/* Artist Name (Clickable) */}
+
+        {/* Artist name */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onArtistClick();
           }}
-          className="flex items-center gap-1.5 text-primary text-sm font-display uppercase tracking-wider mb-2 hover:underline transition-all"
+          className="text-xs text-muted-foreground hover:text-primary transition-colors font-display tracking-wide truncate block w-full text-left"
         >
-          <User className="w-3 h-3" />
           {artistName}
         </button>
 
-        {/* Stream Now CTA - navigates to artist profile */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onStream();
-          }}
-          className="w-full flex items-center justify-center gap-2 py-2 mb-3 rounded-lg border transition-all duration-300 group hover:brightness-110"
-          style={{
-            background: "hsla(280, 80%, 70%, 0.15)",
-            borderColor: "hsla(280, 80%, 70%, 0.4)",
-            boxShadow: "0 0 16px hsla(280, 80%, 70%, 0.25), inset 0 0 8px hsla(280, 80%, 70%, 0.1)",
-          }}
-        >
-          <Play className="w-3.5 h-3.5 transition-all" style={{ color: "hsl(280, 80%, 70%)", fill: "hsla(280, 80%, 70%, 0.5)" }} />
-          <span className="text-xs font-display uppercase tracking-wider font-semibold" style={{ color: "hsl(280, 80%, 70%)" }}>
-            Stream Now <span style={{ color: "hsla(280, 80%, 70%, 0.7)" }}>(1 credit = $0.20)</span>
-          </span>
-        </button>
-
-        {/* Error / No Preview Message */}
-        {(showError || isPreviewDisabled) && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3 p-2 rounded-lg bg-muted/20 border border-border/50">
-            <AlertCircle className="w-4 h-4 text-accent flex-shrink-0" />
-            <span>
-              {previewError || "Hook preview not available. Tap STREAM to listen."}
-            </span>
+        {/* Bottom row: likes + stream CTA */}
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <Heart className="w-3 h-3 text-pink-400/70" />
+            <span className="text-[10px]">{likeCount}</span>
           </div>
-        )}
 
-        {/* Hook Preview Badge */}
-        {hasPreviewAudio && !showError && (
-          <div className="mb-3 flex items-center gap-2">
-            <span 
-              className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-display uppercase tracking-wider text-primary border border-primary/40 bg-primary/10"
-              style={{
-                boxShadow: "0 0 8px hsl(var(--primary) / 0.2)",
-              }}
-            >
-              Hook Preview • 15s
-            </span>
-          </div>
-        )}
-
-        {/* Playing Label */}
-        {isPreviewPlaying && (
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-xs text-primary font-display uppercase tracking-wider">
-              ▶ Playing Hook Preview
-            </span>
-          </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onPreview}
-            disabled={isPreviewLoading || isPreviewDisabled}
-            className={`flex-1 gap-1.5 text-xs uppercase tracking-wider border-border/50 hover:border-primary/50 hover:bg-primary/10 transition-all duration-300 ${
-              isPreviewDisabled ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStream();
+            }}
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-display uppercase tracking-wider font-semibold text-primary border border-primary/40 bg-primary/10 hover:bg-primary/20 transition-all"
             style={{
-              boxShadow: isPreviewPlaying ? "0 0 15px hsl(var(--primary) / 0.3)" : undefined,
+              boxShadow: "0 0 8px hsl(var(--primary) / 0.15)",
             }}
           >
-            {isPreviewLoading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                Loading
-              </>
-            ) : isPreviewPlaying ? (
-              <>
-                <Pause className="w-3.5 h-3.5" />
-                Stop
-              </>
-            ) : (
-              <>
-                <Play className="w-3.5 h-3.5" />
-                Preview
-              </>
-            )}
-          </Button>
-          <Button
-            variant="accent"
-            size="sm"
-            onClick={onStream}
-            className={`flex-1 gap-1.5 text-[10px] uppercase tracking-wider font-semibold ${
-              isPreviewDisabled || showError ? "ring-2 ring-accent/50" : ""
-            }`}
-          >
-            <Headphones className="w-3.5 h-3.5" />
-            Stream (1 Credit)
-          </Button>
+            <Headphones className="w-3 h-3" />
+            Stream
+          </button>
         </div>
+
+        {/* Error state */}
+        {(showError || isPreviewDisabled) && (
+          <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-2 p-1.5 rounded bg-muted/20 border border-border/30">
+            <AlertCircle className="w-3 h-3 text-accent flex-shrink-0" />
+            <span className="line-clamp-1">
+              {previewError || "Tap Stream to listen"}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Hover glow border */}
-      <div 
-        className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+      {/* Thin neon glow border on hover */}
+      <div
+        className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         style={{
-          background: "linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--accent) / 0.1))",
-          boxShadow: "inset 0 0 0 1px hsl(var(--primary) / 0.2)",
+          boxShadow:
+            "inset 0 0 0 1px hsl(var(--primary) / 0.25), 0 0 12px hsl(var(--primary) / 0.1)",
         }}
       />
     </div>
