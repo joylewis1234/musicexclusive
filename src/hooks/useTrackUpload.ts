@@ -705,6 +705,17 @@ export function useTrackUpload() {
         if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null; }
         const errorMsg = safeMsg("An unexpected error occurred", err);
         console.error("[Upload] Upload failed:", err);
+
+        // Clean up orphaned track draft so it doesn't appear as a ghost on the dashboard
+        if (state.trackId) {
+          try {
+            await supabase.from("tracks").delete().eq("id", state.trackId).eq("status", "uploading");
+            console.log("[Upload] Cleaned up orphaned track draft:", state.trackId);
+          } catch (cleanupErr) {
+            console.warn("[Upload] Failed to clean up draft:", cleanupErr);
+          }
+        }
+
         setState((prev) => ({ ...prev, step: "error", errorMessage: errorMsg }));
         return false;
       }
