@@ -545,26 +545,28 @@ export function useTrackUpload() {
           setStep(audioPct < 100 ? "audio_upload" : "cover_upload", Math.min(90, Math.round(combined)));
         };
 
-        // ── 45s Watchdog timer ──
+        // ── Upload safety timeout (5 min) ──
+        // TUS has its own retry logic, so we use a generous timeout instead of the old 45s watchdog.
         let watchdogFired = false;
+        const TUS_SAFETY_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
         const watchdogTimer = setTimeout(() => {
           if (!anyProgressFired) {
             watchdogFired = true;
-            console.error("[Upload:DIAG] ❌ WATCHDOG: No XHR progress in 45s!");
+            console.error("[Upload:DIAG] ❌ SAFETY TIMEOUT: No upload progress in 5 minutes");
             addDiagnostic({
               step: "audio_upload",
               status: "error",
-              message: "Upload did not start on this device/network. No progress received in 45s.",
+              message: "Upload timed out — no progress in 5 minutes. Please check your connection and try again.",
               timestamp: new Date(),
               details: `coverPct=${coverPct}, audioPct=${audioPct}, anyProgress=${anyProgressFired}`,
             });
             setState((prev) => ({
               ...prev,
-              errorMessage: "Upload did not start on this device/network. Try a different browser or Wi-Fi.",
+              errorMessage: "Upload timed out after 5 minutes. Please check your connection and try again.",
               isTimedOut: true,
             }));
           }
-        }, STORAGE_WATCHDOG_MS);
+        }, TUS_SAFETY_TIMEOUT_MS);
 
         // Cover upload (or skip)
         const coverPromise = SKIP_COVER_UPLOAD
