@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { debugLog } from "@/utils/debugLog";
+import * as tus from "tus-js-client";
 
 export type StorageUploadResult = {
   ok: boolean;
@@ -337,6 +338,120 @@ async function fetchUpload(params: {
     console.error(ftag, "FETCH failed:", msg);
     return { ok: false, status: 0, responseText: `Fetch fallback failed: ${msg}` };
   }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TUS Resumable Upload (for audio files on mobile)
+// ═══════════════════════════════════════════════════════════════
+
+const TUS_CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
+const TUS_RETRY_DELAYS = [0, 1000, 3000, 5000, 10000];
+
+/**
+ * TUS-based resumable upload to Supabase Storage.
+ * Provides chunk-based uploading with automatic resume on failure.
+ * Returns { promise, abort } so the caller can cancel if needed.
+ */
+export function tusUploadToStorage(params: {
+  bucket: string;
+  objectPath: string;
+  file: File;
+  contentType: string;
+  upsert?: boolean;
+  cacheControl?: string;
+  onProgress?: (pct: number) => void;
+}): { promise: Promise<StorageUploadResult>; abort: () => void } {
+  const {
+    bucket,
+    objectPath,
+    file,
+    contentType,
+    upsert = true,
+    cacheControl = "3600",
+    onProgress,
+  } = params;
+
+  const safeObjectPath = objectPath.replace(/^\/+/, "");
+  const tag = `[Storage:TUS ${bucket}/${safeObjectPath.split("/").pop()}]`;
+
+  let tusUpload: tus.Upload | null = null;
+
+  const promise = new Promise<StorageUploadResult>(async (resolve) => {
+    // Get fresh auth token
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) {
+      debugLog(`${tag} ❌ No auth session`);
+      console.error(tag, "No auth session");
+      resolve({ ok: false, status: 401, responseText: "No auth session" });
+      return;
+    }
+
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const endpoint = `${supabaseUrl}/storage/v1/upload/resumable`;
+
+    debugLog(`${tag} 🚀 TUS start — endpoint=${endpoint}`);
+    debugLog(`${tag} file: ${(file.size / 1024 / 1024).toFixed(2)}MB, type=${contentType}`);
+    debugLog(`${tag} chunkSize=${TUS_CHUNK_SIZE}, retryDelays=${JSON.stringify(TUS_RETRY_DELAYS)}`);
+    console.log(tag, "TUS start — endpoint:", endpoint);
+    console.log(tag, `file: ${(file.size / 1024 / 1024).toFixed(2)}MB, type: ${contentType}`);
+    console.log(tag, `chunkSize: ${TUS_CHUNK_SIZE}, retryDelays:`, TUS_RETRY_DELAYS);
+
+    tusUpload = new tus.Upload(file, {
+      endpoint,
+      retryDelays: TUS_RETRY_DELAYS,
+      chunkSize: TUS_CHUNK_SIZE,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: anonKey,
+      },
+      metadata: {
+        bucketName: bucket,
+        objectName: safeObjectPath,
+        contentType: contentType,
+        cacheControl: cacheControl,
+      },
+      removeFingerprintOnSuccess: true,
+      onError: (error) => {
+        const msg = error?.message || String(error);
+        debugLog(`${tag} ❌ TUS error: ${msg}`);
+        console.error(tag, "TUS error:", msg);
+        resolve({ ok: false, status: 0, responseText: `TUS upload failed: ${msg}` });
+      },
+      onProgress: (bytesUploaded, bytesTotal) => {
+        const pct = Math.round((bytesUploaded / bytesTotal) * 100);
+        debugLog(`${tag} 📤 TUS progress: ${bytesUploaded}/${bytesTotal} (${pct}%)`);
+        console.log(tag, `TUS progress: ${bytesUploaded}/${bytesTotal} (${pct}%)`);
+        onProgress?.(Math.min(99, pct));
+      },
+      onSuccess: () => {
+        debugLog(`${tag} ✅ TUS success — path=${safeObjectPath}`);
+        console.log(tag, "TUS success — path:", safeObjectPath);
+        onProgress?.(100);
+        resolve({ ok: true, status: 200, responseText: `TUS upload complete: ${safeObjectPath}` });
+      },
+    });
+
+    // Add upsert header if needed
+    if (upsert) {
+      (tusUpload.options.headers as Record<string, string>)["x-upsert"] = "true";
+    }
+
+    debugLog(`${tag} calling tusUpload.start()...`);
+    console.log(tag, "calling tusUpload.start()...");
+    tusUpload.start();
+  });
+
+  const abort = () => {
+    if (tusUpload) {
+      debugLog(`${tag} ⛔ TUS abort requested`);
+      console.warn(tag, "TUS abort requested");
+      tusUpload.abort();
+    }
+  };
+
+  return { promise, abort };
 }
 
 // Legacy aliases
