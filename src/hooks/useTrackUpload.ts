@@ -5,6 +5,7 @@ import { safeStringify } from "@/utils/safeStringify";
 import { uploadToStorage } from "@/utils/storageUpload";
 import { getAudioDuration } from "@/utils/audioDuration";
 import { compressAudio } from "@/utils/audioCompression";
+import { debugLog } from "@/utils/debugLog";
 
 // Version marker – update on every change to confirm code is running
 export const UPLOAD_HOOK_VERSION = "v11.0.0-storage-diag-2026-02-12";
@@ -100,7 +101,9 @@ export function useTrackUpload() {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const addDiagnostic = useCallback((log: DiagnosticLog) => {
-    console.log(`[Upload] ${log.step}: ${log.status} - ${log.message}`, log.details || "");
+    const msg = `[Upload] ${log.step}: ${log.status} - ${log.message}`;
+    debugLog(msg);
+    console.log(msg, log.details || "");
     setState(prev => ({
       ...prev,
       diagnostics: [...prev.diagnostics, log],
@@ -184,6 +187,7 @@ export function useTrackUpload() {
         if (audioFile.size > MAX_AUDIO_BYTES) throw new Error("Audio file too large. Please upload a file under 50MB.");
 
         // ── Step 1: Session ──
+        debugLog(`[Upload ${UPLOAD_HOOK_VERSION}] Starting upload for "${title}"`);
         console.log(`[Upload ${UPLOAD_HOOK_VERSION}] Starting upload for "${title}"`);
         addDiagnostic({
           step: "session_check",
