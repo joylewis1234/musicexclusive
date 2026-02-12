@@ -84,6 +84,7 @@ const EnterVault = () => {
   });
 
   // Check if email already has a valid code via edge function
+  // Only shows a helpful inline message — does NOT hijack the form
   const checkExistingCode = async (email: string) => {
     if (!email || !z.string().email().safeParse(email).success) return;
     
@@ -94,14 +95,8 @@ const EnterVault = () => {
       });
       
       if (!error && data?.existing && data?.code) {
+        // Just flag it — don't auto-switch screens
         setHasExistingCode(true);
-        setVaultCode(data.code);
-        setSubmittedData({ name: data.name, email });
-        setIsSubmitted(true);
-        sessionStorage.setItem("vaultCode", data.code);
-        sessionStorage.setItem("vaultEmail", email);
-        sessionStorage.setItem("vaultName", data.name);
-        window.scrollTo({ top: 0, behavior: "instant" });
       } else {
         setHasExistingCode(false);
       }
@@ -493,6 +488,18 @@ const EnterVault = () => {
                         )}
                       />
 
+                      {/* Existing code warning */}
+                      {hasExistingCode && (
+                        <div className="p-4 rounded-xl bg-primary/10 border border-primary/30">
+                          <p className="text-sm text-foreground font-display mb-1">
+                            You already have a Vault Code!
+                          </p>
+                          <p className="text-xs text-muted-foreground font-body">
+                            Scroll down to the <strong>"Return to the Vault"</strong> section below to check your status or resend your code.
+                          </p>
+                        </div>
+                      )}
+
                       {/* Terms Checkbox */}
                       <label className="flex items-start gap-3 cursor-pointer group">
                         <Checkbox
@@ -518,7 +525,7 @@ const EnterVault = () => {
                         type="submit"
                         size="lg"
                         className="w-full"
-                        disabled={isSubmitting || isCheckingExisting || !termsAccepted}
+                        disabled={isSubmitting || isCheckingExisting || !termsAccepted || hasExistingCode}
                       >
                         {isSubmitting ? (
                           <>
