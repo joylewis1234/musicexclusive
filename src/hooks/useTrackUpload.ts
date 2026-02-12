@@ -585,7 +585,7 @@ export function useTrackUpload() {
               objectPath: audioPath,
               file: processedAudioFile,
               contentType: audioContentType,
-              onProgress: (pct) => { audioPct = pct; updateParallelProgress(); },
+              onProgress: (pct) => { audioPct = pct; anyProgressFired = true; updateParallelProgress(); },
             }).promise;
 
         // Optional preview upload runs in parallel too
