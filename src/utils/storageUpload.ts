@@ -10,6 +10,11 @@ export type StorageUploadResult = {
 const SINGLE_RETRY_DELAY_MS = 2000;
 const XHR_TIMEOUT_MS = 300_000; // 5 minutes
 
+// ── PREVIEW-ONLY TOGGLE: fetch fallback for Android Chrome stalls ──
+const USE_FETCH_UPLOAD = true;
+const XHR_STALL_NO_START_MS = 5_000;   // 5s – if upload.onloadstart hasn't fired
+const XHR_STALL_NO_PROGRESS_MS = 15_000; // 15s – if onloadstart fired but no onprogress
+
 /**
  * XHR-based upload to Supabase Storage with real-time progress tracking.
  * Falls back to SDK if XHR fails with a non-server error.
@@ -120,9 +125,19 @@ async function xhrUpload(params: {
   debugLog(`${tag} URL: ${url}`);
   debugLog(`${tag} file: ${(file.size / 1024 / 1024).toFixed(2)}MB, type: ${contentType}`);
   debugLog(`${tag} headers: apikey=${!!anonKey}, Authorization=${!!token}, Content-Type=${contentType}`);
+  debugLog(`${tag} Transport: XHR (USE_FETCH_UPLOAD=${USE_FETCH_UPLOAD})`);
   console.log(tag, "URL:", url);
   console.log(tag, `file: ${(file.size / 1024 / 1024).toFixed(2)}MB, type: ${contentType}`);
   console.log(tag, "headers set: apikey=true, Authorization=true, Content-Type=", contentType);
+
+  // Build headers object for potential fetch fallback
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    apikey: anonKey,
+    "Content-Type": contentType,
+    "Cache-Control": cacheControl,
+  };
+  if (upsert) headers["x-upsert"] = "true";
 
   return new Promise<StorageUploadResult>((resolve) => {
     const xhr = new XMLHttpRequest();
@@ -130,13 +145,32 @@ async function xhrUpload(params: {
     xhr.timeout = XHR_TIMEOUT_MS;
 
     // Headers
-    xhr.setRequestHeader("Authorization", `Bearer ${token}`);
-    xhr.setRequestHeader("apikey", anonKey);
-    xhr.setRequestHeader("Content-Type", contentType);
-    xhr.setRequestHeader("Cache-Control", cacheControl);
-    if (upsert) {
-      xhr.setRequestHeader("x-upsert", "true");
-    }
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+
+    // ── Stall detection state ──
+    let uploadStartFired = false;
+    let progressFired = false;
+    let xhrAbortedForFallback = false;
+    let stallTimer: ReturnType<typeof setTimeout> | null = null;
+    let progressStallTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const clearStallTimers = () => {
+      if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+      if (progressStallTimer) { clearTimeout(progressStallTimer); progressStallTimer = null; }
+    };
+
+    const triggerFetchFallback = (reason: string) => {
+      if (xhrAbortedForFallback) return;
+      xhrAbortedForFallback = true;
+      clearStallTimers();
+      debugLog(`${tag} ⚠️ XHR stalled: ${reason}. Aborting XHR, trying FETCH fallback...`);
+      console.warn(tag, `XHR stalled: ${reason}. Trying FETCH fallback...`);
+      try { xhr.abort(); } catch {}
+      // Do fetch fallback
+      fetchUpload({ url, headers, file, tag, onProgress })
+        .then(resolve)
+        .catch(() => resolve({ ok: false, status: 0, responseText: `XHR stalled (${reason}) and fetch fallback also failed` }));
+    };
 
     // ── Diagnostic lifecycle events ──
 
@@ -156,11 +190,23 @@ async function xhrUpload(params: {
     // Progress tracking (upload direction)
     if (xhr.upload) {
       xhr.upload.onloadstart = () => {
+        uploadStartFired = true;
         debugLog(`${tag} EVENT upload.onloadstart — bytes starting to send`);
         console.log(tag, "EVENT upload.onloadstart — bytes starting to send");
+        // Clear the 5s no-start timer, start 15s no-progress timer
+        if (stallTimer) { clearTimeout(stallTimer); stallTimer = null; }
+        if (USE_FETCH_UPLOAD && !progressFired) {
+          progressStallTimer = setTimeout(() => {
+            if (!progressFired && !xhrAbortedForFallback) {
+              triggerFetchFallback("upload.onloadstart fired but no onprogress in 15s");
+            }
+          }, XHR_STALL_NO_PROGRESS_MS);
+        }
       };
 
       xhr.upload.onprogress = (e) => {
+        progressFired = true;
+        clearStallTimers(); // All good — progress is flowing
         if (e.lengthComputable && e.total > 0) {
           const pct = Math.round((e.loaded / e.total) * 100);
           debugLog(`${tag} EVENT upload.onprogress — ${e.loaded}/${e.total} (${pct}%)`);
@@ -195,6 +241,8 @@ async function xhrUpload(params: {
     };
 
     xhr.onload = () => {
+      if (xhrAbortedForFallback) return; // fetch fallback is handling it
+      clearStallTimers();
       const ok = xhr.status >= 200 && xhr.status < 300;
       const snippet = (xhr.responseText || "").slice(0, 200);
       debugLog(`${tag} EVENT onload — status=${xhr.status}, ok=${ok}, response=${snippet}`);
@@ -203,18 +251,29 @@ async function xhrUpload(params: {
     };
 
     xhr.onerror = () => {
+      if (xhrAbortedForFallback) return;
+      clearStallTimers();
       debugLog(`${tag} EVENT onerror — status=${xhr.status}, statusText=${xhr.statusText || "(empty)"}`);
       console.error(tag, `EVENT onerror — status=${xhr.status}, statusText=${xhr.statusText || "(empty)"}`);
-      resolve({ ok: false, status: 0, responseText: "Network error during upload" });
+      // If USE_FETCH_UPLOAD, try fallback on network error too
+      if (USE_FETCH_UPLOAD) {
+        triggerFetchFallback("xhr.onerror fired");
+      } else {
+        resolve({ ok: false, status: 0, responseText: "Network error during upload" });
+      }
     };
 
     xhr.ontimeout = () => {
+      if (xhrAbortedForFallback) return;
+      clearStallTimers();
       debugLog(`${tag} EVENT ontimeout — exceeded ${XHR_TIMEOUT_MS}ms`);
       console.error(tag, `EVENT ontimeout — exceeded ${XHR_TIMEOUT_MS}ms`);
       resolve({ ok: false, status: 0, responseText: "Upload timed out (5 min)" });
     };
 
     xhr.onabort = () => {
+      if (xhrAbortedForFallback) return; // expected abort
+      clearStallTimers();
       debugLog(`${tag} EVENT onabort — upload was aborted`);
       console.warn(tag, "EVENT onabort — upload was aborted");
       resolve({ ok: false, status: 0, responseText: "Upload aborted" });
@@ -224,7 +283,60 @@ async function xhrUpload(params: {
     debugLog(`${tag} calling xhr.send()...`);
     console.log(tag, "calling xhr.send()...");
     xhr.send(file);
+
+    // ── Start 5s stall timer AFTER xhr.send() ──
+    if (USE_FETCH_UPLOAD) {
+      stallTimer = setTimeout(() => {
+        if (!uploadStartFired && !xhrAbortedForFallback) {
+          triggerFetchFallback("upload.onloadstart did NOT fire within 5s");
+        }
+      }, XHR_STALL_NO_START_MS);
+    }
   });
+}
+
+/**
+ * Fetch-based upload fallback for environments where XHR stalls (Android Chrome).
+ * No progress events available, but reliably sends the payload.
+ */
+async function fetchUpload(params: {
+  url: string;
+  headers: Record<string, string>;
+  file: File;
+  tag: string;
+  onProgress?: (pct: number) => void;
+}): Promise<StorageUploadResult> {
+  const { url, headers, file, tag, onProgress } = params;
+  const ftag = tag.replace("XHR", "FETCH");
+
+  debugLog(`${ftag} Transport: FETCH fallback — starting upload to ${url}`);
+  console.log(ftag, "Transport: FETCH fallback — starting upload");
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers,
+      body: file,
+    });
+
+    const responseText = await resp.text();
+    const ok = resp.ok;
+    const snippet = responseText.slice(0, 200);
+
+    debugLog(`${ftag} ✅ FETCH complete — status=${resp.status}, ok=${ok}, response=${snippet}`);
+    console.log(ftag, `FETCH complete — status=${resp.status}, ok=${ok}, response=${snippet}`);
+
+    if (ok) {
+      onProgress?.(100);
+    }
+
+    return { ok, status: resp.status, responseText };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    debugLog(`${ftag} ❌ FETCH failed: ${msg}`);
+    console.error(ftag, "FETCH failed:", msg);
+    return { ok: false, status: 0, responseText: `Fetch fallback failed: ${msg}` };
+  }
 }
 
 // Legacy aliases
