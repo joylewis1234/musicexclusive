@@ -691,15 +691,39 @@ export function useTrackUpload() {
           };
           if (previewPublicUrl) updatePayload.preview_audio_url = previewPublicUrl;
 
-          const { error: updateErr } = await supabase
-            .from("tracks")
-            .update(updatePayload as any)
-            .eq("id", trackId);
+          // Use direct REST to avoid Supabase SDK hanging on Android Chrome
+          const restUpdateUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`;
+          const updateController = new AbortController();
+          const updateTimer = setTimeout(() => updateController.abort(), 15000);
 
-          if (updateErr) throw new Error(safeMsg("Failed to finalize track", updateErr));
+          console.log("[Upload:DIAG] db_update via REST START");
+          const updateResp = await fetch(restUpdateUrl, {
+            method: "PATCH",
+            headers: {
+              "Content-Type": "application/json",
+              Prefer: "return=minimal",
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${currentAccessToken}`,
+            },
+            body: JSON.stringify(updatePayload),
+            signal: updateController.signal,
+          });
+          clearTimeout(updateTimer);
+
+          console.log("[Upload:DIAG] db_update REST status:", updateResp.status);
+          if (!updateResp.ok) {
+            const errText = await updateResp.text().catch(() => "");
+            throw new Error(`Finalize failed (${updateResp.status}): ${errText.slice(0, 200)}`);
+          }
 
           addDiagnostic({ step: "db_update", status: "success", message: "Track finalized", timestamp: new Date() });
-        } catch (err) {
+        } catch (err: any) {
+          if (err?.name === "AbortError") {
+            const msg = "Finalize timed out after 15s. Please try again.";
+            addDiagnostic({ step: "db_update", status: "error", message: msg, timestamp: new Date() });
+            setState((prev) => ({ ...prev, lastFailedStep: "db_update" }));
+            throw new Error(msg);
+          }
           const msg = safeMsg("Failed to finalize track", err);
           addDiagnostic({ step: "db_update", status: "error", message: msg, timestamp: new Date(), details: safeStringify(err) });
           setState((prev) => ({ ...prev, lastFailedStep: "db_update" }));
