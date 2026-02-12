@@ -48,6 +48,7 @@ import { useUploadDraft } from "@/hooks/useUploadDraft";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
 import { UploadDiagnosticsPanel } from "@/components/artist/UploadDiagnosticsPanel";
 import { UploadProgressBar } from "@/components/artist/UploadProgressBar";
+import { UploadDebugConsole } from "@/components/artist/UploadDebugConsole";
 import { UploadErrorBoundary } from "@/components/artist/UploadErrorBoundary";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDuration } from "@/utils/audioDuration";
@@ -840,6 +841,9 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
           isVisible={showDiagnostics}
           isTimedOut={uploadState?.isTimedOut ?? false}
         />
+
+        {/* Upload Debug Console */}
+        <UploadDebugConsole />
 
         {/* Publish Button */}
         <Button
