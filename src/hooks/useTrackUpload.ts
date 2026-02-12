@@ -7,10 +7,13 @@ import { getAudioDuration } from "@/utils/audioDuration";
 import { compressAudio } from "@/utils/audioCompression";
 
 // Version marker – update on every change to confirm code is running
-export const UPLOAD_HOOK_VERSION = "v10.0.0-edgefn-2026-02-12";
+export const UPLOAD_HOOK_VERSION = "v11.0.0-storage-diag-2026-02-12";
 
-// ─── DIAGNOSTIC FLAG: set to true to skip compression entirely ───
+// ─── DIAGNOSTIC FLAGS ───
 const SKIP_COMPRESSION = true;
+const SKIP_COVER_UPLOAD = true;   // isolate audio upload first
+const SKIP_AUDIO_UPLOAD = false;
+const STORAGE_WATCHDOG_MS = 45_000; // 45s – if no XHR progress fires, surface error
 
 export type UploadStep =
   | "idle"
@@ -454,6 +457,15 @@ export function useTrackUpload() {
 
         if (!trackId) throw new Error("Failed to determine track ID for upload.");
 
+        // ── Post-draft diagnostic entry ──
+        setStep("cover_upload", 20);
+        addDiagnostic({
+          step: "audio_upload",
+          status: "pending",
+          message: `Starting storage upload… (audio size: ${(audioFile.size / 1024 / 1024).toFixed(2)} MB, type: ${audioFile.type || "unknown"}, filename: ${audioFile.name})`,
+          timestamp: new Date(),
+          details: `SKIP_COVER_UPLOAD=${SKIP_COVER_UPLOAD}, SKIP_AUDIO_UPLOAD=${SKIP_AUDIO_UPLOAD}`,
+        });
         // ── Step 4: Compress audio client-side ──
         setStep("cover_upload", 18);
         let processedAudioFile = audioFile;
@@ -504,10 +516,10 @@ export function useTrackUpload() {
         }
 
         // ── Step 5: PARALLEL upload of cover + audio (+ optional preview) ──
-        setStep("cover_upload", 20);
-        console.log(`[Upload:DIAG] starting parallel uploads — cover: ${(coverFile.size/1024/1024).toFixed(1)}MB, audio: ${(processedAudioFile.size/1024/1024).toFixed(1)}MB`);
-        console.time("[Upload:DIAG] parallel uploads");
-        addDiagnostic({ step: "cover_upload", status: "pending", message: "Uploading cover art + audio in parallel...", timestamp: new Date() });
+        setStep("cover_upload", 22);
+        console.log(`[Upload:DIAG] starting uploads — cover: ${(coverFile.size/1024/1024).toFixed(1)}MB (skip=${SKIP_COVER_UPLOAD}), audio: ${(processedAudioFile.size/1024/1024).toFixed(1)}MB (skip=${SKIP_AUDIO_UPLOAD})`);
+        console.time("[Upload:DIAG] storage uploads");
+        addDiagnostic({ step: "cover_upload", status: "pending", message: `Uploading files... (cover skip=${SKIP_COVER_UPLOAD}, audio skip=${SKIP_AUDIO_UPLOAD})`, timestamp: new Date() });
 
         const coverContentType = (coverFile?.type || getImageContentType(coverFile) || "image/jpeg").toLowerCase();
         const coverExt = coverExtFromContentType(coverContentType);
@@ -518,29 +530,59 @@ export function useTrackUpload() {
         const audioPath = `artists/${artistId}/${trackId}.${audioExt}`;
 
         // Track progress for both uploads simultaneously
-        let coverPct = 0;
-        let audioPct = 0;
+        let coverPct = SKIP_COVER_UPLOAD ? 100 : 0;
+        let audioPct = SKIP_AUDIO_UPLOAD ? 100 : 0;
+        let anyProgressFired: boolean = SKIP_COVER_UPLOAD && SKIP_AUDIO_UPLOAD;
+
         const updateParallelProgress = () => {
+          anyProgressFired = true;
           // Cover is ~20% of total weight, audio is ~60%
-          const combined = 20 + (coverPct * 0.2) + (audioPct * 0.6);
+          const combined = 22 + (coverPct * 0.18) + (audioPct * 0.6);
           setStep(audioPct < 100 ? "audio_upload" : "cover_upload", Math.min(90, Math.round(combined)));
         };
 
-        const coverPromise = uploadToStorage({
-          bucket: "track_covers",
-          objectPath: coverPath,
-          file: coverFile,
-          contentType: coverContentType,
-          onProgress: (pct) => { coverPct = pct; updateParallelProgress(); },
-        });
+        // ── 45s Watchdog timer ──
+        let watchdogFired = false;
+        const watchdogTimer = setTimeout(() => {
+          if (!anyProgressFired) {
+            watchdogFired = true;
+            console.error("[Upload:DIAG] ❌ WATCHDOG: No XHR progress in 45s!");
+            addDiagnostic({
+              step: "audio_upload",
+              status: "error",
+              message: "Upload did not start on this device/network. No progress received in 45s.",
+              timestamp: new Date(),
+              details: `coverPct=${coverPct}, audioPct=${audioPct}, anyProgress=${anyProgressFired}`,
+            });
+            setState((prev) => ({
+              ...prev,
+              errorMessage: "Upload did not start on this device/network. Try a different browser or Wi-Fi.",
+              isTimedOut: true,
+            }));
+          }
+        }, STORAGE_WATCHDOG_MS);
 
-        const audioPromise = uploadToStorage({
-          bucket: "track_audio",
-          objectPath: audioPath,
-          file: processedAudioFile,
-          contentType: audioContentType,
-          onProgress: (pct) => { audioPct = pct; updateParallelProgress(); },
-        });
+        // Cover upload (or skip)
+        const coverPromise = SKIP_COVER_UPLOAD
+          ? Promise.resolve({ ok: true, status: 200, responseText: "SKIPPED" } as { ok: boolean; status: number; responseText: string })
+          : uploadToStorage({
+              bucket: "track_covers",
+              objectPath: coverPath,
+              file: coverFile,
+              contentType: coverContentType,
+              onProgress: (pct) => { coverPct = pct; updateParallelProgress(); },
+            });
+
+        // Audio upload (or skip)
+        const audioPromise = SKIP_AUDIO_UPLOAD
+          ? Promise.resolve({ ok: true, status: 200, responseText: "SKIPPED" } as { ok: boolean; status: number; responseText: string })
+          : uploadToStorage({
+              bucket: "track_audio",
+              objectPath: audioPath,
+              file: processedAudioFile,
+              contentType: audioContentType,
+              onProgress: (pct) => { audioPct = pct; updateParallelProgress(); },
+            });
 
         // Optional preview upload runs in parallel too
         let previewPath: string | null = null;
@@ -564,8 +606,14 @@ export function useTrackUpload() {
           previewPromise ?? Promise.resolve(null),
         ]);
 
-        console.timeEnd("[Upload:DIAG] parallel uploads");
+        clearTimeout(watchdogTimer);
+        console.timeEnd("[Upload:DIAG] storage uploads");
         console.log("[Upload:DIAG] upload results — cover:", coverRes.ok, coverRes.status, "| audio:", audioRes.ok, audioRes.status);
+
+        if (watchdogFired) {
+          // Even if uploads eventually resolved, the watchdog fired — treat as failure for diagnostics
+          addDiagnostic({ step: "audio_upload", status: "error", message: "Watchdog had fired. Upload may be unreliable.", timestamp: new Date() });
+        }
 
         // Check cover result
         if (!coverRes.ok) {
