@@ -138,15 +138,20 @@ Deno.serve(async (req) => {
 
     // ── Build XML ──
     stage = "xml";
-    const sortedParts = parts
-      .sort((a: any, b: any) => a.partNumber - b.partNumber);
+    const sortedParts = [...parts].sort((a: any, b: any) => a.partNumber - b.partNumber);
 
-    let xmlBody = '<?xml version="1.0" encoding="UTF-8"?>\n<CompleteMultipartUpload>\n';
-    for (const p of sortedParts) {
-      const etag = p.etag.startsWith('"') ? p.etag : `"${p.etag}"`;
-      xmlBody += `  <Part>\n    <PartNumber>${p.partNumber}</PartNumber>\n    <ETag>${etag}</ETag>\n  </Part>\n`;
-    }
-    xmlBody += '</CompleteMultipartUpload>';
+    const xmlBody =
+      `<CompleteMultipartUpload>` +
+      sortedParts.map((p: any) => {
+        const etagClean = String(p.etag ?? "").replace(/^"+|"+$/g, "");
+        return (
+          `<Part>` +
+          `<PartNumber>${p.partNumber}</PartNumber>` +
+          `<ETag>${etagClean}</ETag>` +
+          `</Part>`
+        );
+      }).join("") +
+      `</CompleteMultipartUpload>`;
     console.log("COMPLETE: xml built", `parts=${sortedParts.length}`);
 
     // ── Sign & fetch ──
