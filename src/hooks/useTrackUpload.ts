@@ -7,7 +7,7 @@ import { getAudioDuration } from "@/utils/audioDuration";
 import { compressAudio } from "@/utils/audioCompression";
 
 // Version marker – update on every change to confirm code is running
-export const UPLOAD_HOOK_VERSION = "v9.0.0-diag-2026-02-11";
+export const UPLOAD_HOOK_VERSION = "v10.0.0-edgefn-2026-02-12";
 
 // ─── DIAGNOSTIC FLAG: set to true to skip compression entirely ───
 const SKIP_COMPRESSION = true;
@@ -363,71 +363,90 @@ export function useTrackUpload() {
           throw new Error(msg);
         }
 
-        // ── Step 3: Create track draft ──
+        // ── Step 3: Create track draft via Edge Function ──
         let trackId = state.trackId;
         if (!trackId || !resumeFrom || resumeFrom === "session_check" || resumeFrom === "db_insert") {
           setStep("db_insert", 15);
-          addDiagnostic({ step: "db_insert", status: "pending", message: trackId ? "Re-using existing track draft" : "Creating track draft...", timestamp: new Date() });
+          addDiagnostic({ step: "db_insert", status: "pending", message: trackId ? "Re-using existing track draft" : "Creating track draft via edge function...", timestamp: new Date() });
 
           if (!trackId) {
-            const insertPayload = {
-              artist_id: artistId,
+            const edgeFnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-track-draft`;
+            const edgeBody = JSON.stringify({
               title: title?.trim() || "Untitled",
               genre: genre || null,
-              artwork_url: null,
-              full_audio_url: null,
-              status: "uploading",
+            });
+
+            console.log("[Upload:DIAG] create-track-draft START", edgeBody);
+            addDiagnostic({ step: "db_insert", status: "pending", message: "Calling create-track-draft...", timestamp: new Date(), details: edgeBody });
+
+            const callEdgeFn = async (attempt: number): Promise<{ trackId: string; artistId: string }> => {
+              const controller = new AbortController();
+              const timer = setTimeout(() => controller.abort(), 30000);
+
+              try {
+                console.log(`[Upload:DIAG] create-track-draft attempt ${attempt}`);
+                const resp = await fetch(edgeFnUrl, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${currentAccessToken}`,
+                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  },
+                  body: edgeBody,
+                  signal: controller.signal,
+                });
+                clearTimeout(timer);
+
+                console.log("[Upload:DIAG] create-track-draft status:", resp.status, resp.statusText);
+                const rawText = await resp.text();
+                console.log("[Upload:DIAG] create-track-draft raw:", rawText);
+
+                if (!resp.ok) {
+                  let detail = rawText.slice(0, 300);
+                  try { detail = JSON.parse(rawText)?.error || detail; } catch {}
+                  throw new Error(`Edge fn failed (${resp.status}): ${detail}`);
+                }
+
+                const result = JSON.parse(rawText);
+                if (!result?.trackId) throw new Error("Edge fn returned no trackId");
+                return result;
+              } catch (err: any) {
+                clearTimeout(timer);
+                if (err?.name === "AbortError") {
+                  throw new Error(`create-track-draft timed out after 30s (attempt ${attempt})`);
+                }
+                throw err;
+              }
             };
-            console.log("[Upload:DIAG] INSERT START", JSON.stringify(insertPayload));
-            addDiagnostic({ step: "db_insert", status: "pending", message: "Inserting track draft...", timestamp: new Date(), details: JSON.stringify(insertPayload) });
 
             try {
-              console.time("[Upload:DIAG] track draft insert");
-
-              const insertPromise = supabase
-                .from("tracks")
-                .insert((insertPayload as any))
-                .select("id")
-                .maybeSingle();
-
-              const timeoutPromise = new Promise<never>((_, reject) =>
-                setTimeout(() => reject(new Error("Track draft insert timed out after 15s")), 15000)
-              );
-
-              const { data: trackRow, error: trackErr } = await Promise.race([insertPromise, timeoutPromise]);
-
-              console.timeEnd("[Upload:DIAG] track draft insert");
-              console.log("[Upload:DIAG] INSERT RESPONSE", { data: trackRow, error: trackErr });
-
-              if (trackErr) {
-                console.error("[Upload:DIAG] INSERT ERROR", trackErr);
-                const errDetail = safeStringify(trackErr);
-                const msg = trackErr.message || trackErr.details || trackErr.hint || "Unknown insert error";
-                addDiagnostic({ step: "db_insert", status: "error", message: msg, timestamp: new Date(), details: errDetail });
-                setState((prev) => ({ ...prev, lastFailedStep: "db_insert", errorMessage: `DB insert failed: ${msg}` }));
-                throw new Error(msg);
+              console.time("[Upload:DIAG] create-track-draft total");
+              let result: { trackId: string; artistId: string };
+              try {
+                result = await callEdgeFn(1);
+              } catch (firstErr) {
+                console.warn("[Upload:DIAG] create-track-draft attempt 1 failed:", firstErr);
+                addDiagnostic({ step: "db_insert", status: "pending", message: `Attempt 1 failed, retrying...`, timestamp: new Date(), details: safeStringify(firstErr) });
+                // Wait 2s then retry once
+                await new Promise(r => setTimeout(r, 2000));
+                result = await callEdgeFn(2);
               }
+              console.timeEnd("[Upload:DIAG] create-track-draft total");
 
-              if (!trackRow?.id) {
-                const msg = "Insert returned no row ID";
-                console.error("[Upload:DIAG] INSERT ERROR – no id returned", trackRow);
-                addDiagnostic({ step: "db_insert", status: "error", message: msg, timestamp: new Date(), details: safeStringify(trackRow) });
-                setState((prev) => ({ ...prev, lastFailedStep: "db_insert", errorMessage: `DB insert failed: ${msg}` }));
-                throw new Error(msg);
+              trackId = result.trackId;
+              // Also update artistId from edge function response for consistency
+              if (result.artistId) {
+                artistId = result.artistId;
               }
-
-              trackId = trackRow.id;
               setState((prev) => ({ ...prev, trackId }));
-              console.log("[Upload:DIAG] ✅ track draft created, trackId:", trackId.slice(0, 8));
+              console.log("[Upload:DIAG] ✅ track draft created via edge fn, trackId:", trackId.slice(0, 8));
               addDiagnostic({ step: "db_insert", status: "success", message: "Track draft created", timestamp: new Date(), details: `trackId=${trackId}` });
             } catch (err) {
-              console.timeEnd("[Upload:DIAG] track draft insert");
-              console.error("[Upload:DIAG] INSERT CATCH:", err);
+              console.timeEnd("[Upload:DIAG] create-track-draft total");
+              console.error("[Upload:DIAG] create-track-draft FAILED:", err);
               const msg = safeMsg("Failed to create track draft", err);
-              if (!state.errorMessage) {
-                addDiagnostic({ step: "db_insert", status: "error", message: msg, timestamp: new Date(), details: safeStringify(err) });
-                setState((prev) => ({ ...prev, lastFailedStep: "db_insert", errorMessage: `DB insert failed: ${msg}` }));
-              }
+              addDiagnostic({ step: "db_insert", status: "error", message: msg, timestamp: new Date(), details: safeStringify(err) });
+              setState((prev) => ({ ...prev, lastFailedStep: "db_insert", errorMessage: `Track draft failed: ${msg}` }));
               throw new Error(msg);
             }
           }
