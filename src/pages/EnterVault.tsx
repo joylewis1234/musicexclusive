@@ -128,9 +128,17 @@ const EnterVault = () => {
         return;
       }
       
-      // If the code already exists, prompt them to log in
+      // If the code already exists, show it and let them proceed
       if (codeResult.existing) {
-        toast.info("You already have a vault code! Please log in below to continue.");
+        setVaultCode(codeResult.code);
+        setSubmittedData({ name: codeResult.name || values.name, email: values.email });
+        setHasExistingCode(true);
+        setIsSubmitted(true);
+        sessionStorage.setItem("vaultCode", codeResult.code);
+        sessionStorage.setItem("vaultEmail", values.email);
+        sessionStorage.setItem("vaultName", codeResult.name || values.name);
+        window.scrollTo({ top: 0, behavior: "instant" });
+        toast.info("You already have a vault code! Use it to submit below.");
         setIsSubmitting(false);
         return;
       }
@@ -139,9 +147,14 @@ const EnterVault = () => {
       const { error: signUpError } = await signUp(values.email, values.password, "fan", values.name);
       
       if (signUpError) {
-        if (signUpError.message.includes("already registered")) {
-          // Account already exists but no vault code before - they now have one
-          // Show the code and let them log in
+        const errMsg = (signUpError.message || "").toLowerCase();
+        const isExistingUser = errMsg.includes("already registered") || 
+                               errMsg.includes("already been registered") || 
+                               errMsg.includes("already exists") ||
+                               errMsg.includes("user already");
+        
+        if (isExistingUser) {
+          // Account already exists — still show their vault code so they're not stuck
           setVaultCode(codeResult.code);
           setSubmittedData({ name: values.name, email: values.email });
           setIsSubmitted(true);
@@ -149,7 +162,7 @@ const EnterVault = () => {
           sessionStorage.setItem("vaultEmail", values.email);
           sessionStorage.setItem("vaultName", values.name);
           window.scrollTo({ top: 0, behavior: "instant" });
-          toast.success("Your vault code is ready! Log in below to continue.");
+          toast.success("Your vault code is ready! If you already have an account, log in below to continue. Otherwise, try resetting your password.");
           setIsSubmitting(false);
           return;
         } else {
