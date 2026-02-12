@@ -53,8 +53,8 @@ async function signRequest(
 
   const signedHeadersList = ["content-type", "host", "x-amz-content-sha256", "x-amz-date"];
   const allHeaders: Record<string, string> = {
-    ...headers,
-    host,
+    "content-type": headers["content-type"],
+    "host": host,
     "x-amz-date": amzDate,
     "x-amz-content-sha256": payloadHash,
   };
