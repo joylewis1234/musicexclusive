@@ -778,6 +778,12 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
               progress={uploadState.progress}
               isTimedOut={uploadState.isTimedOut}
             />
+            {/* Keep-awake warning for mobile */}
+            <div className="mt-3 p-2 rounded bg-amber-500/10 border border-amber-500/30">
+              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                📱 Keep your screen awake during upload. Don't switch apps or lock your device.
+              </p>
+            </div>
           </GlowCard>
         )}
 
