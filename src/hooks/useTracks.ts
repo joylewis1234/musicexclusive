@@ -33,7 +33,8 @@ export const useTracks = (artistId?: string) => {
       // NOTE: We cannot join tracks -> public_artist_profiles directly because there's no FK
       // relationship in the schema cache. Instead, fetch tracks first, then fetch the artist
       // profiles in a second query using an `in()` filter.
-      let query = supabase.from("tracks").select("*");
+      let query = supabase.from("tracks").select("*")
+        .not("status", "in", '("uploading","disabled")');
       if (artistId) query = query.eq("artist_id", artistId);
 
       const { data, error: fetchError } = await query.order("created_at", { ascending: false });
