@@ -38,7 +38,10 @@ async function signRequest(
   const parsedUrl = new URL(url);
   const host = parsedUrl.host;
   const path = parsedUrl.pathname;
-  const queryString = parsedUrl.search.slice(1); // remove leading ?
+  const queryString = [...parsedUrl.searchParams.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+    .join("&");
 
   const now = new Date();
   const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
