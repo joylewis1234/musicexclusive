@@ -2,7 +2,8 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
-import { uploadToStorage, tusUploadToStorage } from "@/utils/storageUpload";
+import { uploadToStorage } from "@/utils/storageUpload";
+import { r2MultipartUpload } from "@/utils/r2MultipartUpload";
 import { getAudioDuration } from "@/utils/audioDuration";
 import { compressAudio } from "@/utils/audioCompression";
 import { debugLog } from "@/utils/debugLog";
@@ -579,16 +580,24 @@ export function useTrackUpload() {
               onProgress: (pct) => { coverPct = pct; updateParallelProgress(); },
             });
 
-        // Audio upload via TUS resumable protocol (or skip)
+        // Audio upload via R2 multipart (or skip)
+        let r2AudioPublicUrl: string | null = null;
         const audioPromise = SKIP_AUDIO_UPLOAD
           ? Promise.resolve({ ok: true, status: 200, responseText: "SKIPPED" } as { ok: boolean; status: number; responseText: string })
-          : tusUploadToStorage({
-              bucket: "track_audio",
-              objectPath: audioPath,
-              file: processedAudioFile,
-              contentType: audioContentType,
-              onProgress: (pct) => { audioPct = pct; anyProgressFired = true; updateParallelProgress(); },
-            }).promise;
+          : (async () => {
+              const result = await r2MultipartUpload({
+                trackId: trackId!,
+                file: processedAudioFile,
+                contentType: audioContentType,
+                accessToken: currentAccessToken,
+                onProgress: (pct) => { audioPct = pct; anyProgressFired = true; updateParallelProgress(); },
+              });
+              if (result.ok) {
+                r2AudioPublicUrl = result.publicUrl || null;
+                return { ok: true, status: 200, responseText: "R2 OK" };
+              }
+              return { ok: false, status: 0, responseText: result.error || "R2 upload failed" };
+            })();
 
         // Optional preview upload runs in parallel too
         let previewPath: string | null = null;
@@ -658,7 +667,8 @@ export function useTrackUpload() {
         addDiagnostic({ step: "db_update", status: "pending", message: "Finalizing track...", timestamp: new Date() });
 
         const coverPublicUrl = supabase.storage.from("track_covers").getPublicUrl(coverPath).data?.publicUrl || "";
-        const audioPublicUrl = supabase.storage.from("track_audio").getPublicUrl(audioPath).data?.publicUrl || "";
+        // Audio URL comes from R2 if available, otherwise fall back to Supabase Storage
+        const audioPublicUrl = r2AudioPublicUrl || supabase.storage.from("track_audio").getPublicUrl(audioPath).data?.publicUrl || "";
         const previewPublicUrl = previewPath
           ? supabase.storage.from("track_audio").getPublicUrl(previewPath).data?.publicUrl || null
           : null;
