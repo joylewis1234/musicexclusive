@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
-import { uploadToStorage } from "@/utils/storageUpload";
+import { uploadToStorage, tusUploadToStorage } from "@/utils/storageUpload";
 import { getAudioDuration } from "@/utils/audioDuration";
 import { compressAudio } from "@/utils/audioCompression";
 import { debugLog } from "@/utils/debugLog";
@@ -577,16 +577,16 @@ export function useTrackUpload() {
               onProgress: (pct) => { coverPct = pct; updateParallelProgress(); },
             });
 
-        // Audio upload (or skip)
+        // Audio upload via TUS resumable protocol (or skip)
         const audioPromise = SKIP_AUDIO_UPLOAD
           ? Promise.resolve({ ok: true, status: 200, responseText: "SKIPPED" } as { ok: boolean; status: number; responseText: string })
-          : uploadToStorage({
+          : tusUploadToStorage({
               bucket: "track_audio",
               objectPath: audioPath,
               file: processedAudioFile,
               contentType: audioContentType,
               onProgress: (pct) => { audioPct = pct; updateParallelProgress(); },
-            });
+            }).promise;
 
         // Optional preview upload runs in parallel too
         let previewPath: string | null = null;
