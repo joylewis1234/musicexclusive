@@ -92,3 +92,12 @@ verify_jwt = false
 
 [functions.create-track-draft]
 verify_jwt = false
+
+[functions.initiate-multipart-upload]
+verify_jwt = false
+
+[functions.sign-upload-part]
+verify_jwt = false
+
+[functions.complete-multipart-upload]
+verify_jwt = false
