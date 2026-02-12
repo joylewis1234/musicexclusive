@@ -54,26 +54,40 @@ function clearState(trackId: string) {
 async function callEdgeFn(
   fnName: string,
   body: Record<string, unknown>,
-  token: string
+  token: string,
+  timeoutMs = 30_000
 ): Promise<any> {
   const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`;
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-    },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
-  const text = await resp.text();
-  if (!resp.ok) {
-    let detail = text.slice(0, 300);
-    try { detail = JSON.parse(text)?.error || detail; } catch { /* ignore */ }
-    throw new Error(`${fnName} failed (${resp.status}): ${detail}`);
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timer);
+
+    const text = await resp.text();
+    if (!resp.ok) {
+      let detail = text.slice(0, 300);
+      try { detail = JSON.parse(text)?.error || detail; } catch { /* ignore */ }
+      throw new Error(`${fnName} failed (${resp.status}): ${detail}`);
+    }
+    return JSON.parse(text);
+  } catch (err: any) {
+    clearTimeout(timer);
+    if (err?.name === "AbortError") {
+      throw new Error(`${fnName} timed out after ${timeoutMs / 1000}s`);
+    }
+    throw err;
   }
-  return JSON.parse(text);
 }
 
 async function uploadPartWithRetry(
