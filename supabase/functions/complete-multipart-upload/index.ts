@@ -192,9 +192,9 @@ Deno.serve(async (req) => {
     const respText = await resp.text();
 
     if (!resp.ok) {
-      console.error("COMPLETE: R2 error body:", respText);
+      console.error(`COMPLETE: ERROR stage=${stage} status=${resp.status} body=${respText.slice(0, 300)}`);
       return new Response(
-        JSON.stringify({ error: `R2 returned ${resp.status}`, stage, detail: respText }),
+        JSON.stringify({ error: `R2 returned ${resp.status}`, stage, detail: respText.slice(0, 300) }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
