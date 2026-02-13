@@ -500,7 +500,7 @@ const ArtistDashboard = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <h2 className="font-display text-lg font-semibold text-foreground">
-                  Your Songs
+                  Your Uploads
                 </h2>
                 {/* Exclusive badge */}
                 <div 
