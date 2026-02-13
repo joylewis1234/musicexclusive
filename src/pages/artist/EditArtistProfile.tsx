@@ -26,7 +26,7 @@ import {
   User,
   RefreshCw,
   AlertCircle,
-  Eye,
+  
   Crown,
   LogOut,
 } from "lucide-react";
@@ -634,19 +634,6 @@ const EditArtistProfile = () => {
             </div>
           </section>
 
-          {/* View My Profile Button */}
-          {artistProfileId && (
-            <Button
-              variant="outline"
-              size="lg"
-              className="w-full h-12 gap-2 rounded-full animate-fade-in"
-              style={{ animationDelay: '100ms' }}
-              onClick={() => navigate(`/artist/view/${artistProfileId}?view=fan`)}
-            >
-              <Eye className="w-5 h-5" />
-              View My Profile (Fan View)
-            </Button>
-          )}
 
           {/* Save Button */}
           <Button
