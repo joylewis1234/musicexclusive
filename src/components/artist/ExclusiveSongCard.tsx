@@ -22,7 +22,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Trash2, Lock, Loader2, Music, Clock, Share2, Play, Square } from "lucide-react";
+import { Trash2, Lock, Loader2, Music, Clock, Share2, Play, Square, ChevronDown, ChevronUp } from "lucide-react";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDurationFromUrl } from "@/utils/audioDuration";
 
@@ -33,8 +33,10 @@ export interface ExclusiveSong {
   full_audio_url: string | null;
   genre: string | null;
   created_at: string;
+  updated_at?: string;
   preview_start_seconds?: number;
   duration?: number;
+  status?: string;
 }
 
 interface ExclusiveSongCardProps {
@@ -51,12 +53,49 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   const [previewStartSeconds, setPreviewStartSeconds] = useState(song.preview_start_seconds || 0);
   const [isSavingPreview, setIsSavingPreview] = useState(false);
   const [detectedDuration, setDetectedDuration] = useState<number>(song.duration || 180);
+  const [showDebug, setShowDebug] = useState(false);
+
+  // Audio readiness state
+  const [audioReady, setAudioReady] = useState<boolean | null>(null); // null = not checked
+  const [audioChecking, setAudioChecking] = useState(false);
+
+  const isFinalizing = song.status !== "ready" || !song.full_audio_url || !song.artwork_url;
 
   // --- Local playback state ---
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hookTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isPlayingFull, setIsPlayingFull] = useState(false);
   const [isPlayingHook, setIsPlayingHook] = useState(false);
+
+  // HEAD check for audio readiness when URL exists
+  useEffect(() => {
+    if (!song.full_audio_url || isFinalizing) {
+      setAudioReady(false);
+      return;
+    }
+    let cancelled = false;
+    setAudioChecking(true);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 5000);
+
+    fetch(song.full_audio_url, { method: "HEAD", signal: controller.signal })
+      .then(resp => {
+        clearTimeout(timer);
+        if (!cancelled) {
+          setAudioReady(resp.ok);
+          setAudioChecking(false);
+        }
+      })
+      .catch(() => {
+        clearTimeout(timer);
+        if (!cancelled) {
+          setAudioReady(false);
+          setAudioChecking(false);
+        }
+      });
+
+    return () => { cancelled = true; controller.abort(); };
+  }, [song.full_audio_url, isFinalizing]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -82,15 +121,21 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     setIsPlayingHook(false);
   }, []);
 
+  const canPlay = !!song.full_audio_url && audioReady === true && !isFinalizing;
+
   const handlePlayFull = () => {
     if (isPlayingFull) {
       stopPlayback();
       return;
     }
-    if (!song.full_audio_url) return;
+    if (!canPlay) {
+      if (isFinalizing) toast.info("Track still finalizing…");
+      else toast.error("Audio not ready — retry in a moment.");
+      return;
+    }
     stopPlayback();
 
-    const audio = new Audio(song.full_audio_url);
+    const audio = new Audio(song.full_audio_url!);
     audioRef.current = audio;
     audio.onended = () => {
       setIsPlayingFull(false);
@@ -109,11 +154,15 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
       stopPlayback();
       return;
     }
-    if (!song.full_audio_url) return;
+    if (!canPlay) {
+      if (isFinalizing) toast.info("Track still finalizing…");
+      else toast.error("Audio not ready — retry in a moment.");
+      return;
+    }
     stopPlayback();
 
     const start = song.preview_start_seconds || 0;
-    const audio = new Audio(song.full_audio_url);
+    const audio = new Audio(song.full_audio_url!);
     audioRef.current = audio;
 
     audio.onloadedmetadata = () => {
@@ -125,7 +174,6 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     };
     audio.play().then(() => {
       setIsPlayingHook(true);
-      // Stop after 15 seconds
       hookTimerRef.current = setTimeout(() => {
         audio.pause();
         setIsPlayingHook(false);
@@ -251,7 +299,7 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
               <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden bg-muted/20 border border-white/[0.08] shadow-lg">
                 {song.artwork_url ? (
                   <img
-                    src={song.artwork_url}
+                    src={`${song.artwork_url}${song.artwork_url.includes('?') ? '&' : '?'}v=${encodeURIComponent(song.updated_at || song.created_at)}`}
                     alt={song.title}
                     className="w-full h-full object-cover"
                   />
@@ -278,46 +326,55 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                Uploaded {format(new Date(song.created_at), "MMM d, yyyy")}
+                {isFinalizing ? (
+                  <span className="text-amber-400 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Processing…
+                  </span>
+                ) : (
+                  <>Uploaded {format(new Date(song.created_at), "MMM d, yyyy")}</>
+                )}
               </p>
             </div>
 
             {/* Actions */}
             <div className="flex flex-col gap-1.5 flex-shrink-0 justify-center">
               {/* Play Full Track */}
-              {song.full_audio_url && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePlayFull}
-                  className={cn(
-                    "h-7 px-2.5 text-[11px] rounded-lg border border-white/[0.06] transition-colors",
-                    isPlayingFull
-                      ? "bg-primary/20 text-primary hover:bg-primary/25"
-                      : "bg-white/[0.04] hover:bg-primary/15 hover:text-primary"
-                  )}
-                >
-                  {isPlayingFull ? <Square className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
-                  {isPlayingFull ? "Stop" : "Play"}
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePlayFull}
+                disabled={!canPlay && !isPlayingFull}
+                className={cn(
+                  "h-7 px-2.5 text-[11px] rounded-lg border border-white/[0.06] transition-colors",
+                  isPlayingFull
+                    ? "bg-primary/20 text-primary hover:bg-primary/25"
+                    : canPlay
+                    ? "bg-white/[0.04] hover:bg-primary/15 hover:text-primary"
+                    : "bg-white/[0.02] text-muted-foreground/40 cursor-not-allowed"
+                )}
+              >
+                {isPlayingFull ? <Square className="w-3 h-3 mr-1" /> : audioChecking ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Play className="w-3 h-3 mr-1" />}
+                {isPlayingFull ? "Stop" : isFinalizing ? "Finalizing…" : audioChecking ? "Checking…" : audioReady === false ? "Retry" : "Play"}
+              </Button>
               {/* Play Hook */}
-              {song.full_audio_url && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handlePlayHook}
-                  className={cn(
-                    "h-7 px-2.5 text-[11px] rounded-lg border border-white/[0.06] transition-colors",
-                    isPlayingHook
-                      ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/25"
-                      : "bg-white/[0.04] hover:bg-purple-500/15 hover:text-purple-400"
-                  )}
-                >
-                  {isPlayingHook ? <Square className="w-3 h-3 mr-1" /> : <Music className="w-3 h-3 mr-1" />}
-                  {isPlayingHook ? "Stop" : "Hook"}
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePlayHook}
+                disabled={!canPlay && !isPlayingHook}
+                className={cn(
+                  "h-7 px-2.5 text-[11px] rounded-lg border border-white/[0.06] transition-colors",
+                  isPlayingHook
+                    ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/25"
+                    : canPlay
+                    ? "bg-white/[0.04] hover:bg-purple-500/15 hover:text-purple-400"
+                    : "bg-white/[0.02] text-muted-foreground/40 cursor-not-allowed"
+                )}
+              >
+                {isPlayingHook ? <Square className="w-3 h-3 mr-1" /> : <Music className="w-3 h-3 mr-1" />}
+                {isPlayingHook ? "Stop" : "Hook"}
+              </Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -327,7 +384,7 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
                 <Share2 className="w-3 h-3 mr-1" />
                 Share
               </Button>
-              {song.full_audio_url && (song.duration ?? 0) > 0 && (
+              {canPlay && (song.duration ?? 0) > 0 && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -348,6 +405,27 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
                 Delete
               </Button>
             </div>
+          </div>
+
+          {/* Debug details (temporary) */}
+          <div className="px-4 pb-2">
+            <button
+              onClick={() => setShowDebug(!showDebug)}
+              className="text-[9px] text-muted-foreground/40 hover:text-muted-foreground/60 flex items-center gap-1"
+            >
+              {showDebug ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+              Debug
+            </button>
+            {showDebug && (
+              <div className="mt-1 p-2 rounded-lg bg-black/30 text-[9px] text-muted-foreground/60 font-mono space-y-0.5 break-all">
+                <p>trackId: {song.id}</p>
+                <p>status: {song.status || "unknown"}</p>
+                <p>artwork_url: {song.artwork_url || "null"}</p>
+                <p>full_audio_url: {song.full_audio_url ? song.full_audio_url.slice(0, 60) + "…" : "null"}</p>
+                <p>audioReady: {String(audioReady)} | checking: {String(audioChecking)}</p>
+                <p>isFinalizing: {String(isFinalizing)}</p>
+              </div>
+            )}
           </div>
         </div>
       </div>

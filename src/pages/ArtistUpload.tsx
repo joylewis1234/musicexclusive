@@ -299,8 +299,8 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   useEffect(() => {
     if (uploadState.step === "success") {
       toast({
-        title: "Track published successfully!",
-        description: "Redirecting to your dashboard…",
+        title: "Upload complete — finalizing…",
+        description: "Your track will appear on your dashboard momentarily.",
       });
       resetUploadForm({ clearDraft: true });
       navigate("/artist/dashboard");
