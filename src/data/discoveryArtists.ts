@@ -2,6 +2,10 @@ import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
 import artist3 from "@/assets/artist-3.jpg";
 
+// Re-export genre constants from the single source of truth
+export { DISCOVERY_GENRES as genres } from "@/data/genres";
+export type { DiscoveryGenre as Genre } from "@/data/genres";
+
 export interface DiscoveryArtist {
   id: string;
   name: string;
@@ -11,40 +15,6 @@ export interface DiscoveryArtist {
   badge?: "New Drop" | "Trending" | "Exclusive";
   previewUrl?: string; // Mock preview URL
 }
-
-export const genres = [
-  "All Genres",
-  "R&B",
-  "Pop",
-  "Hip-Hop",
-  "Electronic",
-  "Rock",
-  "Metal",
-  "Alternative",
-  "Punk",
-  "Indie",
-  "Folk",
-  "Acoustic",
-  "Country",
-  "Jazz",
-  "Soul",
-  "Funk",
-  "Gospel/Christian",
-  "Latin",
-  "Reggae",
-  "Afrobeats",
-  "World",
-  "Classical",
-  "Ambient",
-  "Experimental",
-  "Soundtrack",
-  "Lo-Fi",
-  "Blues",
-  "Dancehall",
-  "Other",
-] as const;
-
-export type Genre = (typeof genres)[number];
 
 export const discoveryArtists: DiscoveryArtist[] = [
   {
