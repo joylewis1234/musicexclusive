@@ -142,6 +142,16 @@ const ArtistDashboard = () => {
   // Cleanup polling on unmount
   useEffect(() => () => stopPolling(), [stopPolling]);
 
+  const waitForSessionReady = useCallback(async () => {
+    const start = Date.now();
+    while (Date.now() - start < 6000) {
+      const { data } = await supabase.auth.getSession();
+      if (data?.session?.access_token) return data.session;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    return null;
+  }, []);
+
   const fetchArtistData = useCallback(async () => {
     if (abortRef.current) {
       abortRef.current.abort();
@@ -155,6 +165,15 @@ const ArtistDashboard = () => {
     setSongsError(null);
 
     try {
+      // Early session guard: if no session yet, set soft error so auto-retry keeps trying
+      const { data: preCheck } = await supabase.auth.getSession();
+      if (!preCheck?.session) {
+        setLoadError("Connection slow — retrying…");
+        setIsLoading(false);
+        setSongsLoading(false);
+        return;
+      }
+
       // Auth check — no hard 10s timeout that blocks the page. 
       // Use 30s timeout; on failure show retry, don't block.
       let authResult: { ok: true; session: any; user: any } | { ok: false; error: string };
@@ -364,15 +383,28 @@ const ArtistDashboard = () => {
   // Clear fromUpload flag and force a fresh fetch after upload redirect
   useEffect(() => {
     if (searchParams.get("fromUpload") === "1") {
-      setSearchParams({}, { replace: true });
+      let cancelled = false;
 
-      const t = window.setTimeout(() => {
-        fetchArtistData();
-      }, 300);
+      (async () => {
+        setIsLoading(true);
+        const session = await waitForSessionReady();
+        if (cancelled) return;
 
-      return () => window.clearTimeout(t);
+        if (!session) {
+          setLoadError("Could not connect. Please check your network and refresh.");
+          setIsLoading(false);
+          return;
+        }
+
+        await fetchArtistData();
+        if (!cancelled) {
+          setSearchParams({}, { replace: true });
+        }
+      })();
+
+      return () => { cancelled = true; };
     }
-  }, [searchParams, setSearchParams, fetchArtistData]);
+  }, [searchParams, setSearchParams, fetchArtistData, waitForSessionReady]);
 
   useEffect(() => {
     if (isLoading) return;
