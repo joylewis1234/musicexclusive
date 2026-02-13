@@ -23,6 +23,9 @@ import {
 
 type PayoutStatus = "not_connected" | "pending" | "connected";
 
+const MAX_RETRY_DURATION = 60_000;
+const RETRY_INTERVAL = 2_000;
+
 const ArtistDashboard = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,6 +44,11 @@ const ArtistDashboard = () => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // Retry state
+  const retryCountRef = useRef(0);
+  const retryTimerRef = useRef<number | null>(null);
+  const retryStartRef = useRef<number>(0);
+  const [retryExpired, setRetryExpired] = useState(false);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -74,7 +82,7 @@ const ArtistDashboard = () => {
   }, [userId, navigate]);
 
   // Poll for finalizing tracks (status !== "ready" or missing URLs)
-  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollIntervalRef = useRef<number | null>(null);
   const pollStartRef = useRef<number>(0);
 
   const stopPolling = useCallback(() => {
@@ -93,7 +101,7 @@ const ArtistDashboard = () => {
     stopPolling();
     pollStartRef.current = Date.now();
 
-    pollIntervalRef.current = setInterval(async () => {
+    pollIntervalRef.current = window.setInterval(async () => {
       if (Date.now() - pollStartRef.current > 60000) {
         stopPolling();
         return;
@@ -104,7 +112,7 @@ const ArtistDashboard = () => {
         if (!session) return;
 
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 8000);
+        const timer = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profileId}&status=neq.disabled&order=created_at.desc`,
           {
@@ -149,11 +157,11 @@ const ArtistDashboard = () => {
     try {
       // Auth check — no hard 10s timeout that blocks the page. 
       // Use 30s timeout; on failure show retry, don't block.
-      let authResult: Awaited<ReturnType<typeof getAuthedUserOrFail>>;
+      let authResult: { ok: true; session: any; user: any } | { ok: false; error: string };
       try {
         authResult = await withTimeout(getAuthedUserOrFail(signal), 30000);
       } catch (timeoutErr: any) {
-        setLoadError("Connection slow — please retry.");
+        setLoadError("Connection slow — retrying…");
         setIsLoading(false);
         setSongsLoading(false);
         return;
@@ -203,6 +211,10 @@ const ArtistDashboard = () => {
         setPayoutStatus(profile.payout_status as PayoutStatus);
       }
 
+      // Success — reset retry state
+      retryCountRef.current = 0;
+      setRetryExpired(false);
+
       setIsLoading(false);
 
       if (signal.aborted) return;
@@ -212,7 +224,7 @@ const ArtistDashboard = () => {
         const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
         const token = authResult.ok ? authResult.session.access_token : "";
         const trackController = new AbortController();
-        const trackTimer = setTimeout(() => trackController.abort(), 15000);
+        const trackTimer = setTimeout(() => trackController.abort(), 30000);
 
         const resp = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profile.id}&status=neq.disabled&order=created_at.desc`,
@@ -269,6 +281,51 @@ const ArtistDashboard = () => {
       }
     }
   }, [startPollingForFinalizingTracks]);
+
+  // Auto-retry effect: retries every 2s for up to 60s when loadError is set
+  useEffect(() => {
+    if (retryTimerRef.current) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+
+    // Don't retry auth errors
+    if (!loadError || loadError === "Please sign in again") return;
+
+    // Set retry start time only on first retry
+    if (retryCountRef.current === 0) {
+      retryStartRef.current = Date.now();
+      setRetryExpired(false);
+    }
+
+    const elapsed = Date.now() - retryStartRef.current;
+    if (elapsed >= MAX_RETRY_DURATION) {
+      setRetryExpired(true);
+      return;
+    }
+
+    retryTimerRef.current = window.setTimeout(() => {
+      retryCountRef.current += 1;
+      fetchArtistData();
+    }, RETRY_INTERVAL);
+
+    return () => {
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, [loadError, fetchArtistData]);
+
+  // Cleanup retry timer on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const hasFetchedRef = useRef(false);
   const isStripeReturnRef = useRef(false);
@@ -365,41 +422,42 @@ const ArtistDashboard = () => {
     }
   };
 
-  if (loadError && !isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center px-4 pb-24">
-        <div className="p-8 max-w-sm w-full text-center rounded-2xl bg-card/50 border border-border/30">
-          <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-4" />
-          <h2 className="font-display text-lg font-semibold mb-2">
-            {loadError === "Please sign in again" ? "Session Expired" : "Load Error"}
-          </h2>
-          <p className="text-muted-foreground text-sm mb-6">{loadError}</p>
-
-          {loadError === "Please sign in again" ? (
-            <Button onClick={() => navigate("/artist/login")} className="w-full rounded-full">
-              Go to Login
-            </Button>
-          ) : (
-            <Button onClick={fetchArtistData} className="w-full gap-2 rounded-full">
-              <RefreshCw className="w-4 h-4" />
-              Retry
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center pb-24">
-        <Loader2 className="w-8 h-8 animate-spin" style={{ color: 'hsl(280, 80%, 70%)' }} />
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background pb-24">
+      {/* Non-blocking banner — network error with auto-retry */}
+      {loadError && loadError !== "Please sign in again" && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/80 text-white text-sm flex items-center gap-2">
+          <span>⚠️</span>
+          <span>
+            {retryExpired
+              ? "Could not connect. Please check your network and refresh."
+              : "Connection slow — retrying…"}
+          </span>
+        </div>
+      )}
+
+      {/* Non-blocking banner — auth/session expired */}
+      {loadError === "Please sign in again" && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/80 text-white text-sm flex items-center gap-2">
+          <span>⚠️</span>
+          <span>Session expired —</span>
+          <button
+            onClick={() => navigate("/artist/login")}
+            className="underline font-bold"
+          >
+            Log in again
+          </button>
+        </div>
+      )}
+
+      {/* Non-blocking loading indicator */}
+      {isLoading && !loadError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/80 text-white text-sm flex items-center gap-2">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>Connecting…</span>
+        </div>
+      )}
+
       {/* Tutorial System */}
       <ArtistTutorial userId={userId} />
       
