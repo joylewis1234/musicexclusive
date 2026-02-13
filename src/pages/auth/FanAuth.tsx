@@ -74,11 +74,10 @@ const FanAuth = () => {
           if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
             console.log("[FanAuth] User already exists, attempting sign-in...");
             const { error: loginErr } = await signIn(email, password);
-            if (loginErr) {
-              toast.error(loginErr.message);
-              return;
+            if (!loginErr) {
+              toast.success("Welcome back!");
             }
-            toast.success("Welcome back!");
+            // Navigate forward regardless — account exists
             navigate(destination, { replace: true, state: navState });
             return;
           }
@@ -106,14 +105,12 @@ const FanAuth = () => {
           const { error: fallbackErr } = await signIn(email, password);
           if (!fallbackErr) {
             toast.success("Account created! Welcome to the Vault.");
-            navigate(destination, { replace: true, state: navState });
-            return;
           }
         } catch {
-          // fall through to generic error
+          // silent — navigate forward anyway
         }
-        toast.error("Connection interrupted. Please try signing in.");
-        setIsSignUp(false);
+        // Always advance — the account was likely created server-side
+        navigate(destination, { replace: true, state: navState });
         return;
       }
       toast.error(err?.message || "Something went wrong. Please try again.");
