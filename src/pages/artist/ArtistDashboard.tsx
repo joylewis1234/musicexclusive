@@ -436,21 +436,23 @@ const ArtistDashboard = () => {
     <div className="min-h-screen bg-background pb-24">
       {/* Non-blocking banners */}
       {loadError && loadError !== "Please sign in again" && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-background/95 border border-border shadow flex items-center gap-2 text-sm">
-          <span aria-hidden>⚠️</span>
-          <span>
-            {retryExpired
-              ? "Could not connect. Please check your network and refresh."
-              : "Connection slow — retrying…"}
-          </span>
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4">
+          <div className="flex items-center gap-2 rounded-full bg-background/95 border border-border shadow px-4 py-2 text-sm">
+            <span aria-hidden="true">⚠️</span>
+            <span>
+              {retryExpired
+                ? "Could not connect. Please check your network and refresh."
+                : "Connection slow — retrying…"}
+            </span>
+          </div>
         </div>
       )}
 
       {loadError === "Please sign in again" && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-background/95 border border-border shadow flex items-center gap-2 text-sm">
-          <span aria-hidden>⚠️</span>
-          <span>
-            Session expired —{" "}
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4">
+          <div className="flex items-center gap-2 rounded-full bg-background/95 border border-border shadow px-4 py-2 text-sm">
+            <span aria-hidden="true">⚠️</span>
+            <span>Session expired —</span>
             <button
               type="button"
               onClick={() => navigate("/artist/login")}
@@ -458,14 +460,16 @@ const ArtistDashboard = () => {
             >
               Log in again
             </button>
-          </span>
+          </div>
         </div>
       )}
 
       {isLoading && !loadError && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-background/95 border border-border shadow flex items-center gap-2 text-sm">
-          <span aria-hidden>⏳</span>
-          <span>Connecting…</span>
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4">
+          <div className="flex items-center gap-2 rounded-full bg-background/95 border border-border shadow px-4 py-2 text-sm">
+            <span aria-hidden="true">⏳</span>
+            <span>Connecting…</span>
+          </div>
         </div>
       )}
 
