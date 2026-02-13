@@ -166,8 +166,8 @@ const ArtistDashboard = () => {
 
     try {
       // Early session guard: if no session yet, set soft error so auto-retry keeps trying
-      const { data: preCheck } = await supabase.auth.getSession();
-      if (!preCheck?.session) {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.access_token) {
         setLoadError("Connection slow — retrying…");
         setIsLoading(false);
         setSongsLoading(false);
