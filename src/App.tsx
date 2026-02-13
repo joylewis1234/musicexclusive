@@ -69,7 +69,7 @@ import ArtistInvites from "./pages/artist/ArtistInvites";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
 import ArtistAgreementAccept from "./pages/artist/ArtistAgreementAccept";
 import EditArtistProfile from "./pages/artist/EditArtistProfile";
-import { ArtistProfilePreviewWrapper } from "./components/artist/ArtistProfilePreviewWrapper";
+
 
 // Admin pages
 import AdminDashboard from "./pages/admin/AdminDashboard";
@@ -179,16 +179,6 @@ const App = () => (
                 </Route>
                 
                 {/* Artist routes without bottom nav */}
-                <Route path="/artist/profile" element={
-                  <ArtistProtectedRoute>
-                    <ArtistProfilePreviewWrapper />
-                  </ArtistProtectedRoute>
-                } />
-                <Route path="/artist/view/:artistId" element={
-                  <ArtistProtectedRoute>
-                    <ArtistProfilePage />
-                  </ArtistProtectedRoute>
-                } />
                 <Route path="/artist/upload" element={
                   <ArtistProtectedRoute>
                     <ArtistUpload />

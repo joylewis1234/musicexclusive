@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +22,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Eye, Trash2, Lock, Loader2, Music, Clock, Share2 } from "lucide-react";
+import { Trash2, Lock, Loader2, Music, Clock, Share2, Play, Square } from "lucide-react";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDurationFromUrl } from "@/utils/audioDuration";
 
@@ -38,21 +37,6 @@ export interface ExclusiveSong {
   duration?: number;
 }
 
-// Helper to extract storage path and bucket from Supabase URL
-const getStorageInfoFromUrl = (url: string | null): { bucket: string; path: string } | null => {
-  if (!url) return null;
-  try {
-    // URLs look like: https://xyz.supabase.co/storage/v1/object/public/{bucket}/{path}
-    const match = url.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
-    if (match) {
-      return { bucket: match[1], path: match[2] };
-    }
-    return null;
-  } catch {
-    return null;
-  }
-};
-
 interface ExclusiveSongCardProps {
   song: ExclusiveSong;
   artistId: string;
@@ -61,7 +45,6 @@ interface ExclusiveSongCardProps {
 }
 
 export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: ExclusiveSongCardProps) => {
-  const navigate = useNavigate();
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPreviewEditOpen, setIsPreviewEditOpen] = useState(false);
@@ -69,8 +52,90 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   const [isSavingPreview, setIsSavingPreview] = useState(false);
   const [detectedDuration, setDetectedDuration] = useState<number>(song.duration || 180);
 
+  // --- Local playback state ---
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hookTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isPlayingFull, setIsPlayingFull] = useState(false);
+  const [isPlayingHook, setIsPlayingHook] = useState(false);
+
+  // Cleanup audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (hookTimerRef.current) clearTimeout(hookTimerRef.current);
+    };
+  }, []);
+
+  const stopPlayback = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    if (hookTimerRef.current) {
+      clearTimeout(hookTimerRef.current);
+      hookTimerRef.current = null;
+    }
+    setIsPlayingFull(false);
+    setIsPlayingHook(false);
+  }, []);
+
+  const handlePlayFull = () => {
+    if (isPlayingFull) {
+      stopPlayback();
+      return;
+    }
+    if (!song.full_audio_url) return;
+    stopPlayback();
+
+    const audio = new Audio(song.full_audio_url);
+    audioRef.current = audio;
+    audio.onended = () => {
+      setIsPlayingFull(false);
+    };
+    audio.onerror = () => {
+      toast.error("Failed to load audio");
+      setIsPlayingFull(false);
+    };
+    audio.play().then(() => setIsPlayingFull(true)).catch(() => {
+      toast.error("Playback failed");
+    });
+  };
+
+  const handlePlayHook = () => {
+    if (isPlayingHook) {
+      stopPlayback();
+      return;
+    }
+    if (!song.full_audio_url) return;
+    stopPlayback();
+
+    const start = song.preview_start_seconds || 0;
+    const audio = new Audio(song.full_audio_url);
+    audioRef.current = audio;
+
+    audio.onloadedmetadata = () => {
+      audio.currentTime = start;
+    };
+    audio.onerror = () => {
+      toast.error("Failed to load audio");
+      setIsPlayingHook(false);
+    };
+    audio.play().then(() => {
+      setIsPlayingHook(true);
+      // Stop after 15 seconds
+      hookTimerRef.current = setTimeout(() => {
+        audio.pause();
+        setIsPlayingHook(false);
+      }, 15000);
+    }).catch(() => {
+      toast.error("Playback failed");
+    });
+  };
+
   // When the Hook dialog opens, detect actual audio duration from the URL
-  // This fixes tracks that have the default 180s duration
   useEffect(() => {
     if (!isPreviewEditOpen || !song.full_audio_url) return;
 
@@ -78,7 +143,6 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     getAudioDurationFromUrl(song.full_audio_url, song.duration || 180).then((dur) => {
       if (!cancelled && dur > 0) {
         setDetectedDuration(dur);
-        // Also update the DB if it differs from stored value
         if (dur !== (song.duration || 180)) {
           supabase
             .from("tracks")
@@ -86,7 +150,6 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
             .eq("id", song.id)
             .then(({ error }) => {
               if (error) console.warn("[Hook] Failed to update duration:", error);
-              else console.log("[Hook] Updated track duration to", dur);
             });
         }
       }
@@ -95,34 +158,26 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   }, [isPreviewEditOpen, song.full_audio_url, song.duration, song.id]);
 
   const handleShare = async () => {
-    // Build the shareable URL to the artist profile with track highlighted
     const shareUrl = `${window.location.origin}/artist/${encodeURIComponent(artistId)}?track=${song.id}`;
     const shareTitle = `${song.title} by ${artistName || "Exclusive Artist"}`;
     const shareText = `Check out this exclusive track on Music Exclusive™`;
 
-    // Try native share API first (mobile)
     if (navigator.share) {
       try {
-        await navigator.share({
-          title: shareTitle,
-          text: shareText,
-          url: shareUrl,
-        });
+        await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
         toast.success("Shared successfully!");
         return;
       } catch (err) {
-        // User cancelled or share failed, fall back to clipboard
         if ((err as Error).name !== "AbortError") {
           console.log("Share API failed, falling back to clipboard");
         }
       }
     }
 
-    // Fallback: copy to clipboard
     try {
       await navigator.clipboard.writeText(shareUrl);
       toast.success("Link copied to clipboard!");
-    } catch (err) {
+    } catch {
       toast.error("Failed to copy link");
     }
   };
@@ -130,8 +185,6 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      // Soft delete: Update status to 'disabled' instead of hard delete
-      // This hides the track from the artist's page but preserves it for ledger/audit purposes
       const { error: updateError } = await supabase
         .from("tracks")
         .update({ status: "disabled" })
@@ -148,11 +201,6 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     } finally {
       setIsDeleting(false);
     }
-  };
-
-  const handleView = () => {
-    // Navigate to artist's public profile in fan view mode with this track highlighted
-    navigate(`/artist/view/${encodeURIComponent(artistId)}?view=fan&track=${song.id}`);
   };
 
   const handleSavePreviewTime = async () => {
@@ -175,6 +223,8 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
       setIsSavingPreview(false);
     }
   };
+
+  const isPlaying = isPlayingFull || isPlayingHook;
 
   return (
     <>
@@ -234,15 +284,40 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
 
             {/* Actions */}
             <div className="flex flex-col gap-1.5 flex-shrink-0 justify-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleView}
-                className="h-7 px-2.5 text-[11px] rounded-lg bg-white/[0.04] hover:bg-primary/15 hover:text-primary border border-white/[0.06] transition-colors"
-              >
-                <Eye className="w-3 h-3 mr-1" />
-                View
-              </Button>
+              {/* Play Full Track */}
+              {song.full_audio_url && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePlayFull}
+                  className={cn(
+                    "h-7 px-2.5 text-[11px] rounded-lg border border-white/[0.06] transition-colors",
+                    isPlayingFull
+                      ? "bg-primary/20 text-primary hover:bg-primary/25"
+                      : "bg-white/[0.04] hover:bg-primary/15 hover:text-primary"
+                  )}
+                >
+                  {isPlayingFull ? <Square className="w-3 h-3 mr-1" /> : <Play className="w-3 h-3 mr-1" />}
+                  {isPlayingFull ? "Stop" : "Play"}
+                </Button>
+              )}
+              {/* Play Hook */}
+              {song.full_audio_url && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handlePlayHook}
+                  className={cn(
+                    "h-7 px-2.5 text-[11px] rounded-lg border border-white/[0.06] transition-colors",
+                    isPlayingHook
+                      ? "bg-purple-500/20 text-purple-400 hover:bg-purple-500/25"
+                      : "bg-white/[0.04] hover:bg-purple-500/15 hover:text-purple-400"
+                  )}
+                >
+                  {isPlayingHook ? <Square className="w-3 h-3 mr-1" /> : <Music className="w-3 h-3 mr-1" />}
+                  {isPlayingHook ? "Stop" : "Hook"}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -256,17 +331,17 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setIsPreviewEditOpen(true)}
+                  onClick={() => { stopPlayback(); setIsPreviewEditOpen(true); }}
                   className="h-7 px-2.5 text-[11px] rounded-lg bg-white/[0.04] hover:bg-purple-500/15 hover:text-purple-400 border border-white/[0.06] transition-colors"
                 >
                   <Clock className="w-3 h-3 mr-1" />
-                  Hook
+                  Edit Hook
                 </Button>
               )}
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsDeleteOpen(true)}
+                onClick={() => { stopPlayback(); setIsDeleteOpen(true); }}
                 className="h-7 px-2.5 text-[11px] rounded-lg bg-white/[0.04] text-muted-foreground/70 hover:bg-destructive/15 hover:text-destructive border border-white/[0.06] transition-colors"
               >
                 <Trash2 className="w-3 h-3 mr-1" />
