@@ -6,6 +6,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Loader2, Music, Sparkles, Crown } from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
 
@@ -173,8 +174,7 @@ const FanAuth = () => {
               <label className="text-sm text-muted-foreground mb-1.5 block">
                 Password
               </label>
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
