@@ -73,6 +73,67 @@ const ArtistDashboard = () => {
     }
   }, [userId, navigate]);
 
+  // Poll for finalizing tracks (status !== "ready" or missing URLs)
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollStartRef = useRef<number>(0);
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
+
+  const startPollingForFinalizingTracks = useCallback((profileId: string, currentSongs: ExclusiveSong[]) => {
+    const hasFinalizing = currentSongs.some(
+      s => s.status !== "ready" || !s.full_audio_url || !s.artwork_url
+    );
+    if (!hasFinalizing) return;
+
+    stopPolling();
+    pollStartRef.current = Date.now();
+
+    pollIntervalRef.current = setInterval(async () => {
+      if (Date.now() - pollStartRef.current > 60000) {
+        stopPolling();
+        return;
+      }
+      try {
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 8000);
+        const resp = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profileId}&status=neq.disabled&order=created_at.desc`,
+          {
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${session.access_token}`,
+              Accept: "application/json",
+            },
+            signal: controller.signal,
+          }
+        );
+        clearTimeout(timer);
+        if (!resp.ok) return;
+        const rows = await resp.json();
+        if (Array.isArray(rows)) {
+          const filtered = rows.filter((r: any) => r.status !== "uploading");
+          setSongs(filtered);
+          const stillFinalizing = filtered.some(
+            (s: any) => s.status !== "ready" || !s.full_audio_url || !s.artwork_url
+          );
+          if (!stillFinalizing) stopPolling();
+        }
+      } catch { /* ignore poll errors */ }
+    }, 2000);
+  }, [stopPolling]);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => stopPolling(), [stopPolling]);
+
   const fetchArtistData = useCallback(async () => {
     if (abortRef.current) {
       abortRef.current.abort();
@@ -86,7 +147,17 @@ const ArtistDashboard = () => {
     setSongsError(null);
 
     try {
-      const authResult = await withTimeout(getAuthedUserOrFail(signal), 10000);
+      // Auth check — no hard 10s timeout that blocks the page. 
+      // Use 30s timeout; on failure show retry, don't block.
+      let authResult: Awaited<ReturnType<typeof getAuthedUserOrFail>>;
+      try {
+        authResult = await withTimeout(getAuthedUserOrFail(signal), 30000);
+      } catch (timeoutErr: any) {
+        setLoadError("Connection slow — please retry.");
+        setIsLoading(false);
+        setSongsLoading(false);
+        return;
+      }
 
       if (authResult.ok === false) {
         setLoadError(authResult.error);
@@ -136,24 +207,46 @@ const ArtistDashboard = () => {
 
       if (signal.aborted) return;
 
-      const { data: songData, error: songsError } = await supabase
-        .from("tracks")
-        .select("id, title, artwork_url, full_audio_url, genre, created_at, preview_start_seconds, duration, status")
-        .eq("artist_id", profile.id)
-        .neq("status", "disabled")
-        .order("created_at", { ascending: false });
+      // Fetch tracks via REST with AbortController for Android Chrome resilience
+      try {
+        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const token = authResult.ok ? authResult.session.access_token : "";
+        const trackController = new AbortController();
+        const trackTimer = setTimeout(() => trackController.abort(), 15000);
 
-      if (signal.aborted) return;
+        const resp = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profile.id}&status=neq.disabled&order=created_at.desc`,
+          {
+            headers: {
+              apikey: anonKey,
+              Authorization: `Bearer ${token}`,
+              Accept: "application/json",
+            },
+            signal: trackController.signal,
+          }
+        );
+        clearTimeout(trackTimer);
 
-      if (songsError) {
-        console.error("[Dashboard] Error fetching songs:", songsError);
-        setSongsError(songsError.message);
-        toast.error("Could not load songs: " + songsError.message);
-      } else {
-        setSongs(songData || []);
+        if (!resp.ok) {
+          throw new Error(`Tracks fetch failed (${resp.status})`);
+        }
+
+        const rows = await resp.json();
+        // Filter out uploading status on client side
+        const songData = (rows || []).filter((r: any) => r.status !== "uploading");
+        setSongs(songData);
+
+        // Start polling if any tracks are still finalizing
+        startPollingForFinalizingTracks(profile.id, songData);
+      } catch (trackErr: any) {
+        if (trackErr?.name === "AbortError") {
+          setSongsError("Track list request timed out. Tap Retry.");
+        } else {
+          console.error("[Dashboard] Error fetching songs:", trackErr);
+          setSongsError(trackErr?.message || "Could not load songs");
+        }
       }
     } catch (err: any) {
-      // Check for abort-related errors (component unmount, navigation, etc.)
       const isAbortError = 
         err?.name === "AbortError" || 
         signal?.aborted ||
@@ -169,14 +262,13 @@ const ArtistDashboard = () => {
       console.error("[Dashboard] Fetch error:", err);
       const msg = err?.message || "Could not load dashboard data";
       setLoadError(msg);
-      toast.error(msg);
     } finally {
       if (!abortRef.current?.signal.aborted) {
         setIsLoading(false);
         setSongsLoading(false);
       }
     }
-  }, []);
+  }, [startPollingForFinalizingTracks]);
 
   const hasFetchedRef = useRef(false);
   const isStripeReturnRef = useRef(false);
