@@ -295,6 +295,16 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     }
   }, [uploadState.step]);
 
+  // --- Forced-redirect fallback ref (mobile hang prevention) ---
+  const redirectTimerRef = useRef<number | null>(null);
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current !== null) {
+        window.clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
+
   // --- On success: full reset + redirect to dashboard ---
   useEffect(() => {
     if (uploadState.step === "success") {
@@ -303,7 +313,11 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
         description: "Your track will appear on your dashboard momentarily.",
       });
       resetUploadForm({ clearDraft: true });
-      navigate("/artist/dashboard");
+      navigate("/artist/dashboard?fromUpload=1", { replace: true });
+      // Fallback: retry navigation after 1200ms in case mobile browser stalls
+      redirectTimerRef.current = window.setTimeout(() => {
+        navigate("/artist/dashboard?fromUpload=1", { replace: true });
+      }, 1200);
     }
   }, [uploadState.step, navigate, toast, resetUploadForm]);
 

@@ -361,6 +361,14 @@ const ArtistDashboard = () => {
     };
   }, [fetchArtistData]);
 
+  // Clear fromUpload flag and force a fresh fetch after upload redirect
+  useEffect(() => {
+    if (searchParams.get("fromUpload") === "1") {
+      setSearchParams({}, { replace: true });
+      fetchArtistData();
+    }
+  }, [searchParams, setSearchParams, fetchArtistData]);
+
   useEffect(() => {
     if (isLoading) return;
     
