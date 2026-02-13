@@ -49,6 +49,8 @@ const ArtistDashboard = () => {
   const retryTimerRef = useRef<number | null>(null);
   const retryStartRef = useRef<number>(0);
   const [retryExpired, setRetryExpired] = useState(false);
+  const [showForceRefresh, setShowForceRefresh] = useState(false);
+  const loadingStartRef = useRef<number | null>(null);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -348,6 +350,32 @@ const ArtistDashboard = () => {
     };
   }, []);
 
+  // Force-refresh banner: show after 10s of loading or when loadError/fromUpload
+  useEffect(() => {
+    if (isLoading && !loadingStartRef.current) {
+      loadingStartRef.current = Date.now();
+    }
+    if (!isLoading) {
+      loadingStartRef.current = null;
+      setShowForceRefresh(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setShowForceRefresh(true);
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (loadError || searchParams.get("fromUpload") === "1") {
+      const timer = setTimeout(() => setShowForceRefresh(true), 10000);
+      if (loadError) setShowForceRefresh(true);
+      return () => clearTimeout(timer);
+    }
+  }, [loadError, searchParams]);
+
   const hasFetchedRef = useRef(false);
   const isStripeReturnRef = useRef(false);
 
@@ -506,6 +534,25 @@ const ArtistDashboard = () => {
           <div className="flex items-center gap-2 rounded-full bg-background/95 border border-border shadow px-4 py-2 text-sm">
             <span aria-hidden="true">⏳</span>
             <span>Connecting…</span>
+          </div>
+        </div>
+      )}
+
+      {showForceRefresh && (
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4">
+          <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/30 shadow-lg px-4 py-3 text-sm">
+            <RefreshCw className="w-4 h-4 text-primary animate-spin" />
+            <span className="text-foreground font-medium">Upload complete?</span>
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href =
+                  window.location.pathname + "?_t=" + Date.now();
+              }}
+              className="ml-1 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold"
+            >
+              Refresh to see your upload
+            </button>
           </div>
         </div>
       )}
