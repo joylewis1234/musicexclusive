@@ -43,7 +43,6 @@ import { toast } from "sonner";
 import { format, addWeeks } from "date-fns";
 import {
   MoreVertical,
-  Eye,
   Pencil,
   Headphones,
   EyeOff,
@@ -288,10 +287,6 @@ export const TrackManagementCard = ({ track, onTrackUpdated }: TrackManagementCa
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-card border-border z-50">
-                  <DropdownMenuItem onClick={() => navigate("/artist/profile")}>
-                    <Eye className="w-4 h-4 mr-2" />
-                    View Track
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setIsEditOpen(true)}>
                     <Pencil className="w-4 h-4 mr-2" />
                     Edit Track Details
