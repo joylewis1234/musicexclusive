@@ -81,11 +81,8 @@ function legacyValidateAudio(file: File): string | null {
 /*  Constants                                                           */
 /* ------------------------------------------------------------------ */
 
-const GENRES = [
-  "Hip-Hop", "R&B", "Pop", "Rock", "Electronic", "Country",
-  "Latin", "Jazz", "Classical", "Indie", "Alternative", "Soul",
-  "Funk", "Reggae", "Other",
-];
+import { ARTIST_GENRES } from "@/data/genres";
+const GENRES = ARTIST_GENRES;
 
 /* ------------------------------------------------------------------ */
 /*  Inner form component (wrapped by error boundary)                    */
