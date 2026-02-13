@@ -28,7 +28,7 @@ const LoadCredits = () => {
   const [searchParams] = useSearchParams();
   const state = location.state as LocationState | null;
   const { credits: currentBalance, refetch } = useCredits();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
   const initialCredits = state?.topUpCredits || DEFAULT_CREDITS;
   const [credits, setCredits] = useState<number>(initialCredits);
@@ -350,7 +350,7 @@ const LoadCredits = () => {
         {/* CTA Button */}
         <Button
           onClick={handlePayment}
-          disabled={isProcessing || credits < MIN_CREDITS || !user}
+          disabled={isProcessing || credits < MIN_CREDITS || authLoading || !user}
           className="w-full"
           variant="primary"
           size="lg"
@@ -359,6 +359,11 @@ const LoadCredits = () => {
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Redirecting to Checkout...
+            </>
+          ) : authLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Loading...
             </>
           ) : (
             <>
