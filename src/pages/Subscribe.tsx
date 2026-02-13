@@ -22,7 +22,7 @@ const Subscribe = () => {
   const [searchParams] = useSearchParams();
   const state = location.state as LocationState | null;
   const { addCredits, refetch } = useCredits();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -36,19 +36,6 @@ const Subscribe = () => {
     { icon: Users, text: "Monthly friend bypass" },
     { icon: Gift, text: "Priority access to new drops" },
   ];
-
-  // Wait for auth loading before redirecting - the user might be coming back from Stripe
-  const [authLoading, setAuthLoading] = useState(true);
-
-  // Check auth status with a short delay to allow session recovery
-  useEffect(() => {
-    const checkAuth = async () => {
-      // Wait a moment for session to restore
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setAuthLoading(false);
-    };
-    checkAuth();
-  }, []);
 
   // Redirect to auth if not logged in (but only after auth check is complete)
   useEffect(() => {
@@ -83,6 +70,7 @@ const Subscribe = () => {
       const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
         body: {
           email,
+          successUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25`,
           cancelUrl: `${window.location.origin}/subscribe?payment=cancelled`,
         },
       });
@@ -318,7 +306,7 @@ const Subscribe = () => {
         {/* CTA Button */}
         <Button
           onClick={handleSubscribe}
-          disabled={isProcessing || !termsAccepted}
+          disabled={isProcessing || !termsAccepted || authLoading || !user}
           className="w-full"
           variant="primary"
           size="lg"
@@ -327,6 +315,11 @@ const Subscribe = () => {
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
               Redirecting to Checkout...
+            </>
+          ) : authLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Loading...
             </>
           ) : (
             <>
