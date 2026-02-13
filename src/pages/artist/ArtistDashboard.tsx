@@ -86,8 +86,8 @@ const ArtistDashboard = () => {
   const pollStartRef = useRef<number>(0);
 
   const stopPolling = useCallback(() => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
+    if (pollIntervalRef.current !== null) {
+      window.clearInterval(pollIntervalRef.current);
       pollIntervalRef.current = null;
     }
   }, []);
@@ -247,6 +247,7 @@ const ArtistDashboard = () => {
         // Filter out uploading status on client side
         const songData = (rows || []).filter((r: any) => r.status !== "uploading");
         setSongs(songData);
+        setSongsLoading(false);
 
         // Start polling if any tracks are still finalizing
         startPollingForFinalizingTracks(profile.id, songData);
@@ -257,6 +258,7 @@ const ArtistDashboard = () => {
           console.error("[Dashboard] Error fetching songs:", trackErr);
           setSongsError(trackErr?.message || "Could not load songs");
         }
+        setSongsLoading(false);
       }
     } catch (err: any) {
       const isAbortError = 
@@ -426,25 +428,20 @@ const ArtistDashboard = () => {
     <div className="min-h-screen bg-background pb-24">
       {/* Non-blocking banner — network error with auto-retry */}
       {loadError && loadError !== "Please sign in again" && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/80 text-white text-sm flex items-center gap-2">
-          <span>⚠️</span>
-          <span>
-            {retryExpired
-              ? "Could not connect. Please check your network and refresh."
-              : "Connection slow — retrying…"}
-          </span>
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full border border-border bg-background/95 px-4 py-2 text-sm shadow">
+          <span className="mr-2">⚠️</span>
+          {retryExpired
+            ? "Could not connect. Please check your network and refresh."
+            : "Connection slow — retrying…"}
         </div>
       )}
 
       {/* Non-blocking banner — auth/session expired */}
       {loadError === "Please sign in again" && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/80 text-white text-sm flex items-center gap-2">
-          <span>⚠️</span>
-          <span>Session expired —</span>
-          <button
-            onClick={() => navigate("/artist/login")}
-            className="underline font-bold"
-          >
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full border border-border bg-background/95 px-4 py-2 text-sm shadow">
+          <span className="mr-2">⚠️</span>
+          Session expired —{" "}
+          <button onClick={() => navigate("/artist/login")} className="underline font-bold">
             Log in again
           </button>
         </div>
@@ -452,9 +449,9 @@ const ArtistDashboard = () => {
 
       {/* Non-blocking loading indicator */}
       {isLoading && !loadError && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-black/80 text-white text-sm flex items-center gap-2">
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span>Connecting…</span>
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full border border-border bg-background/95 px-4 py-2 text-sm shadow">
+          <span className="mr-2">⏳</span>
+          Connecting…
         </div>
       )}
 
