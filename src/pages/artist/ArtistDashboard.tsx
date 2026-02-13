@@ -426,32 +426,38 @@ const ArtistDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background pb-24">
-      {/* Non-blocking banner — network error with auto-retry */}
+      {/* Non-blocking banners */}
       {loadError && loadError !== "Please sign in again" && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full border border-border bg-background/95 px-4 py-2 text-sm shadow">
-          <span className="mr-2">⚠️</span>
-          {retryExpired
-            ? "Could not connect. Please check your network and refresh."
-            : "Connection slow — retrying…"}
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-background/95 border border-border shadow flex items-center gap-2 text-sm">
+          <span aria-hidden>⚠️</span>
+          <span>
+            {retryExpired
+              ? "Could not connect. Please check your network and refresh."
+              : "Connection slow — retrying…"}
+          </span>
         </div>
       )}
 
-      {/* Non-blocking banner — auth/session expired */}
       {loadError === "Please sign in again" && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full border border-border bg-background/95 px-4 py-2 text-sm shadow">
-          <span className="mr-2">⚠️</span>
-          Session expired —{" "}
-          <button onClick={() => navigate("/artist/login")} className="underline font-bold">
-            Log in again
-          </button>
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-background/95 border border-border shadow flex items-center gap-2 text-sm">
+          <span aria-hidden>⚠️</span>
+          <span>
+            Session expired —{" "}
+            <button
+              type="button"
+              onClick={() => navigate("/artist/login")}
+              className="underline font-bold"
+            >
+              Log in again
+            </button>
+          </span>
         </div>
       )}
 
-      {/* Non-blocking loading indicator */}
       {isLoading && !loadError && (
-        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 rounded-full border border-border bg-background/95 px-4 py-2 text-sm shadow">
-          <span className="mr-2">⏳</span>
-          Connecting…
+        <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-full bg-background/95 border border-border shadow flex items-center gap-2 text-sm">
+          <span aria-hidden>⏳</span>
+          <span>Connecting…</span>
         </div>
       )}
 
