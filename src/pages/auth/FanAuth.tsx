@@ -62,15 +62,31 @@ const FanAuth = () => {
     e.preventDefault();
     setIsLoading(true);
 
+    const destination = getDestination();
+    const navState = { flow, email, name: displayName, invite_token: inviteToken, invite_type: inviteType };
+
     try {
       if (isSignUp) {
         const { error } = await signUp(email, password, "fan", displayName);
         if (error) {
+          // If user already exists, auto-switch to sign-in
+          const msg = (error.message || "").toLowerCase();
+          if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
+            console.log("[FanAuth] User already exists, attempting sign-in...");
+            const { error: loginErr } = await signIn(email, password);
+            if (loginErr) {
+              toast.error(loginErr.message);
+              return;
+            }
+            toast.success("Welcome back!");
+            navigate(destination, { replace: true, state: navState });
+            return;
+          }
           toast.error(error.message);
           return;
         }
         toast.success("Account created! Welcome to the Vault.");
-        navigate(getDestination(), { replace: true, state: { flow, email, name: displayName, invite_token: inviteToken, invite_type: inviteType } });
+        navigate(destination, { replace: true, state: navState });
       } else {
         const { error } = await signIn(email, password);
         if (error) {
@@ -78,8 +94,29 @@ const FanAuth = () => {
           return;
         }
         toast.success("Welcome back!");
-        navigate(getDestination(), { replace: true, state: { flow, email, invite_token: inviteToken, invite_type: inviteType } });
+        navigate(destination, { replace: true, state: navState });
       }
+    } catch (err: any) {
+      // AbortError means the request may have succeeded server-side
+      const errName = err?.name || "";
+      const errMsg = (err?.message || "").toLowerCase();
+      if (errName === "AbortError" || errMsg.includes("abort") || errMsg.includes("signal")) {
+        console.warn("[FanAuth] Caught AbortError during signup, attempting sign-in fallback...");
+        try {
+          const { error: fallbackErr } = await signIn(email, password);
+          if (!fallbackErr) {
+            toast.success("Account created! Welcome to the Vault.");
+            navigate(destination, { replace: true, state: navState });
+            return;
+          }
+        } catch {
+          // fall through to generic error
+        }
+        toast.error("Connection interrupted. Please try signing in.");
+        setIsSignUp(false);
+        return;
+      }
+      toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
