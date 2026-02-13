@@ -7,6 +7,7 @@ import { GlowCard } from "@/components/ui/GlowCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Loader2, Mic2, AlertCircle, FileText } from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
 
 const normalizeEmail = (e: string) => e.trim().toLowerCase();
@@ -344,8 +345,7 @@ const ArtistLogin = () => {
               <label className="text-sm text-muted-foreground mb-1.5 block">
                 Password
               </label>
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
