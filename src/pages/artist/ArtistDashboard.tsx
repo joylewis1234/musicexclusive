@@ -365,7 +365,12 @@ const ArtistDashboard = () => {
   useEffect(() => {
     if (searchParams.get("fromUpload") === "1") {
       setSearchParams({}, { replace: true });
-      fetchArtistData();
+
+      const t = window.setTimeout(() => {
+        fetchArtistData();
+      }, 300);
+
+      return () => window.clearTimeout(t);
     }
   }, [searchParams, setSearchParams, fetchArtistData]);
 
@@ -723,7 +728,7 @@ const ArtistDashboard = () => {
                   Retry
                 </Button>
               </div>
-            ) : songs.length === 0 ? (
+            ) : songs.length === 0 && !loadError ? (
               <div className="p-8 text-center rounded-xl bg-muted/20 border border-border/30">
                 <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                 <p className="text-muted-foreground text-sm mb-4">
