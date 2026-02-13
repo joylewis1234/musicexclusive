@@ -31,24 +31,8 @@ import {
   LogOut,
 } from "lucide-react";
 
-const GENRES = [
-  "Hip-Hop",
-  "R&B",
-  "Pop",
-  "Rock",
-  "Electronic",
-  "Country",
-  "Latin",
-  "Jazz",
-  "Classical",
-  "Indie",
-  "Alternative",
-  "Soul",
-  "Funk",
-  "Reggae",
-  "Christian",
-  "Other",
-];
+import { ARTIST_GENRES } from "@/data/genres";
+const GENRES = ARTIST_GENRES;
 
 // TikTok icon component
 const TikTokIcon = ({ className }: { className?: string }) => (
