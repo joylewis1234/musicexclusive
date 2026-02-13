@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Loader2, Music, Sparkles, Crown } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 
 interface LocationState {
@@ -58,6 +59,30 @@ const FanAuth = () => {
     return state?.from?.pathname || "/fan/profile";
   };
 
+  // Ensure the fan role exists for the current user after sign-in
+  const ensureFanRole = async () => {
+    try {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (!currentUser) return;
+
+      // Check if a fan role already exists
+      const { data: existingRoles } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", currentUser.id)
+        .eq("role", "fan");
+
+      if (!existingRoles || existingRoles.length === 0) {
+        console.log("[FanAuth] No fan role found, inserting...");
+        await supabase
+          .from("user_roles")
+          .insert({ user_id: currentUser.id, role: "fan" });
+      }
+    } catch (err) {
+      console.warn("[FanAuth] ensureFanRole error (non-fatal):", err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -75,6 +100,7 @@ const FanAuth = () => {
             console.log("[FanAuth] User already exists, attempting sign-in...");
             const { error: loginErr } = await signIn(email, password);
             if (!loginErr) {
+              await ensureFanRole();
               toast.success("Welcome back!");
             }
             // Navigate forward regardless — account exists
@@ -92,6 +118,7 @@ const FanAuth = () => {
           toast.error(error.message);
           return;
         }
+        await ensureFanRole();
         toast.success("Welcome back!");
         navigate(destination, { replace: true, state: navState });
       }
@@ -104,6 +131,7 @@ const FanAuth = () => {
         try {
           const { error: fallbackErr } = await signIn(email, password);
           if (!fallbackErr) {
+            await ensureFanRole();
             toast.success("Account created! Welcome to the Vault.");
           }
         } catch {
