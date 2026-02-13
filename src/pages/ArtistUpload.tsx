@@ -313,8 +313,15 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
         description: "Your track will appear on your dashboard momentarily.",
       });
       resetUploadForm({ clearDraft: true });
+
+      // main redirect
       navigate("/artist/dashboard?fromUpload=1", { replace: true });
-      // Fallback: retry navigation after 1200ms in case mobile browser stalls
+
+      // fallback: retry redirect in case mobile stalls
+      if (redirectTimerRef.current !== null) {
+        window.clearTimeout(redirectTimerRef.current);
+        redirectTimerRef.current = null;
+      }
       redirectTimerRef.current = window.setTimeout(() => {
         navigate("/artist/dashboard?fromUpload=1", { replace: true });
       }, 1200);
