@@ -2,7 +2,6 @@ import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
-import { uploadToStorage } from "@/utils/storageUpload";
 import { r2MultipartUpload } from "@/utils/r2MultipartUpload";
 import { getAudioDuration } from "@/utils/audioDuration";
 import { compressAudio } from "@/utils/audioCompression";
@@ -13,7 +12,7 @@ export const UPLOAD_HOOK_VERSION = "v11.0.0-storage-diag-2026-02-12";
 
 // ─── DIAGNOSTIC FLAGS ───
 const SKIP_COMPRESSION = true;
-const SKIP_COVER_UPLOAD = true;   // isolate audio upload first
+const SKIP_COVER_UPLOAD = false;   // covers now go to R2
 const SKIP_AUDIO_UPLOAD = false;
 const STORAGE_WATCHDOG_MS = 45_000; // 45s – if no XHR progress fires, surface error
 
@@ -135,14 +134,9 @@ export function useTrackUpload() {
     });
   }, []);
 
-  const cleanup = useCallback(async (coverPath: string | null): Promise<boolean> => {
-    if (!coverPath) return false;
-    try {
-      const { error } = await supabase.storage.from("track_covers").remove([coverPath]);
-      return !error;
-    } catch {
-      return false;
-    }
+  const cleanup = useCallback(async (_coverPath: string | null): Promise<boolean> => {
+    // No-op: covers are now on R2, no Supabase Storage cleanup needed
+    return false;
   }, []);
 
   // Kept for backward compat but now a no-op that always succeeds
@@ -569,16 +563,25 @@ export function useTrackUpload() {
           }
         }, TUS_SAFETY_TIMEOUT_MS);
 
-        // Cover upload (or skip)
+        // Cover upload via R2 multipart (or skip)
+        let r2CoverPublicUrl: string | null = null;
         const coverPromise = SKIP_COVER_UPLOAD
           ? Promise.resolve({ ok: true, status: 200, responseText: "SKIPPED" } as { ok: boolean; status: number; responseText: string })
-          : uploadToStorage({
-              bucket: "track_covers",
-              objectPath: coverPath,
-              file: coverFile,
-              contentType: coverContentType,
-              onProgress: (pct) => { coverPct = pct; updateParallelProgress(); },
-            });
+          : (async () => {
+              const result = await r2MultipartUpload({
+                trackId: trackId!,
+                file: coverFile,
+                contentType: coverContentType,
+                accessToken: currentAccessToken,
+                fileType: "cover",
+                onProgress: (pct) => { coverPct = pct; updateParallelProgress(); },
+              });
+              if (result.ok) {
+                r2CoverPublicUrl = result.publicUrl || null;
+                return { ok: true, status: 200, responseText: "R2 cover OK" };
+              }
+              return { ok: false, status: 0, responseText: result.error || "R2 cover upload failed" };
+            })();
 
         // Audio upload via R2 multipart (or skip)
         let r2AudioPublicUrl: string | null = null;
@@ -599,19 +602,29 @@ export function useTrackUpload() {
               return { ok: false, status: 0, responseText: result.error || "R2 upload failed" };
             })();
 
-        // Optional preview upload runs in parallel too
+        // Optional preview upload via R2 as well
         let previewPath: string | null = null;
+        let r2PreviewPublicUrl: string | null = null;
         let previewPromise: Promise<{ ok: boolean; status: number; responseText: string }> | null = null;
         if (processedPreviewFile && processedPreviewFile instanceof File) {
           const previewContentType = getAudioContentType(processedPreviewFile);
           const previewExt = audioExtFromContentType(previewContentType);
           previewPath = `artists/${artistId}/${trackId}_preview.${previewExt}`;
-          previewPromise = uploadToStorage({
-            bucket: "track_audio",
-            objectPath: previewPath,
-            file: processedPreviewFile,
-            contentType: previewContentType,
-          });
+          previewPromise = (async () => {
+            const result = await r2MultipartUpload({
+              trackId: `${trackId}_preview`,
+              file: processedPreviewFile!,
+              contentType: previewContentType,
+              accessToken: currentAccessToken,
+              fileType: "audio",
+              onProgress: () => {},
+            });
+            if (result.ok) {
+              r2PreviewPublicUrl = result.publicUrl || null;
+              return { ok: true, status: 200, responseText: "R2 preview OK" };
+            }
+            return { ok: false, status: 0, responseText: result.error || "R2 preview upload failed" };
+          })();
         }
 
         // Await all uploads in parallel
@@ -666,12 +679,9 @@ export function useTrackUpload() {
         setStep("db_update", 92);
         addDiagnostic({ step: "db_update", status: "pending", message: "Finalizing track...", timestamp: new Date() });
 
-        const coverPublicUrl = supabase.storage.from("track_covers").getPublicUrl(coverPath).data?.publicUrl || "";
-        // Audio URL comes from R2 if available, otherwise fall back to Supabase Storage
-        const audioPublicUrl = r2AudioPublicUrl || supabase.storage.from("track_audio").getPublicUrl(audioPath).data?.publicUrl || "";
-        const previewPublicUrl = previewPath
-          ? supabase.storage.from("track_audio").getPublicUrl(previewPath).data?.publicUrl || null
-          : null;
+        const coverPublicUrl = r2CoverPublicUrl || "";
+        const audioPublicUrl = r2AudioPublicUrl || "";
+        const previewPublicUrl = r2PreviewPublicUrl || null;
 
         // Detect audio duration
         let audioDuration = 180;

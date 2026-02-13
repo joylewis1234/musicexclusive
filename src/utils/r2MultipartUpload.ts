@@ -148,9 +148,10 @@ export async function r2MultipartUpload(params: {
   file: File;
   contentType: string;
   accessToken: string;
+  fileType?: "audio" | "cover";
   onProgress?: (pct: number) => void;
 }): Promise<R2UploadResult> {
-  const { trackId, file, contentType, accessToken, onProgress } = params;
+  const { trackId, file, contentType, accessToken, fileType = "audio", onProgress } = params;
   const tag = `[R2:${file.name?.slice(0, 20)}]`;
 
   debugLog(`${tag} Starting R2 multipart upload — ${(file.size / 1024 / 1024).toFixed(2)} MB`);
@@ -181,6 +182,7 @@ export async function r2MultipartUpload(params: {
       trackId,
       contentType,
       fileName: file.name,
+      fileType,
     }, accessToken);
 
     uploadId = initResult.uploadId;
