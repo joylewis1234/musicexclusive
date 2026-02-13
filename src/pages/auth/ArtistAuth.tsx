@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Loader2, Mic2, Sparkles } from "lucide-react";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
 import { lovable } from "@/integrations/lovable/index";
 
@@ -115,8 +116,7 @@ const ArtistAuth = () => {
               <label className="text-sm text-muted-foreground mb-1.5 block">
                 Password
               </label>
-              <Input
-                type="password"
+              <PasswordInput
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
