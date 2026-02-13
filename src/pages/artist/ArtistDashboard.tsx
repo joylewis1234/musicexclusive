@@ -539,17 +539,19 @@ const ArtistDashboard = () => {
       )}
 
       {showForceRefresh && (
-        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 px-4">
-          <div className="flex items-center gap-2 rounded-xl bg-primary/10 border border-primary/30 shadow-lg px-4 py-3 text-sm">
-            <RefreshCw className="w-4 h-4 text-primary animate-spin" />
-            <span className="text-foreground font-medium">Upload complete?</span>
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-sm">
+          <div className="flex flex-col items-center gap-3 rounded-2xl bg-card border border-border shadow-[0_0_30px_hsl(var(--primary)/0.15)] backdrop-blur-sm px-5 py-4">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-primary animate-spin" />
+              <span className="text-muted-foreground text-sm">Upload complete?</span>
+            </div>
             <button
               type="button"
               onClick={() => {
                 window.location.href =
                   window.location.pathname + "?_t=" + Date.now();
               }}
-              className="ml-1 px-3 py-1 rounded-full bg-primary text-primary-foreground text-xs font-bold"
+              className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-bold tracking-wide uppercase transition-all hover:shadow-[var(--shadow-cyan-md)] active:scale-[0.97]"
             >
               Refresh to see your upload
             </button>
