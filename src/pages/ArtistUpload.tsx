@@ -295,18 +295,15 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     }
   }, [uploadState.step]);
 
-  // --- On success: full reset + toast ---
+  // --- On success: full reset + redirect to dashboard ---
   useEffect(() => {
     if (uploadState.step === "success") {
       toast({
         title: "Track published successfully!",
-        description: "Ready for your next upload.",
+        description: "Redirecting to your dashboard…",
       });
-      const timer = setTimeout(() => {
-        resetUploadForm({ clearDraft: true });
-        navigate("/artist/dashboard");
-      }, 1500);
-      return () => clearTimeout(timer);
+      resetUploadForm({ clearDraft: true });
+      navigate("/artist/dashboard");
     }
   }, [uploadState.step, navigate, toast, resetUploadForm]);
 
