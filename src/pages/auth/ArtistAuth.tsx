@@ -154,7 +154,7 @@ const ArtistAuth = () => {
                 setIsLoading(true);
                 try {
                   const { error } = await lovable.auth.signInWithOAuth("google", {
-                    redirect_uri: window.location.origin + "/artist/profile",
+                    redirect_uri: window.location.origin + "/artist/dashboard",
                   });
                   if (error) {
                     toast.error(error.message || "Google sign-in failed");

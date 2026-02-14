@@ -39,7 +39,7 @@ function hasCachedSupabaseSession(): boolean {
  * - Artist profile verification runs once per session, cached for 30 min.
  */
 export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) => {
-  const { user, role, isLoading: authLoading, refreshRole } = useAuth();
+  const { user, role, userRoles, isLoading: authLoading, refreshRole, setActiveRole } = useAuth();
   const location = useLocation();
   const { gateResult, isVerifying, verificationError, retryVerification } =
     useArtistAccessCache();
@@ -84,8 +84,24 @@ export const ArtistProtectedRoute = ({ children }: ArtistProtectedRouteProps) =>
     return <Navigate to="/artist/login" state={{ from: location }} replace />;
   }
 
-  // ── 3. Wrong role ──
+  // ── 3. Wrong role — but check if user has artist role and just needs switching ──
   if (role !== "artist") {
+    // If the user has the artist role but it's not active (e.g., after OAuth redirect),
+    // automatically switch to artist role instead of blocking access
+    if (userRoles.includes("artist")) {
+      console.log("[ArtistProtectedRoute] 🔄 User has artist role, switching active role to artist");
+      setActiveRole("artist");
+      // Return loading while role switches
+      return (
+        <TimeoutSpinner
+          page="ArtistProtectedRoute"
+          loadingMessage="Switching to artist mode…"
+          errorMessage="Could not switch roles. Please try again."
+          timeoutMs={5_000}
+        />
+      );
+    }
+
     console.log("[ArtistProtectedRoute] ❌ Redirect: role is", role, "→ /access-restricted");
     return (
       <Navigate
