@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Play, Share2, Check } from "lucide-react";
+import { Play, Share2, Check, Plus, ListMusic } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { ExclusiveBadge } from "@/components/ui/ExclusiveBadge";
@@ -24,6 +24,8 @@ interface AppleMusicTrackRowProps {
   onToggleLike: () => void;
   onSelect: () => void;
   onShare: () => void;
+  onAddToPlaylist?: () => void;
+  isInPlaylist?: boolean;
   fallbackImage: string;
   hidePlayButton?: boolean;
 }
@@ -47,6 +49,8 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
   onToggleLike,
   onSelect,
   onShare,
+  onAddToPlaylist,
+  isInPlaylist = false,
   fallbackImage,
   hidePlayButton = false,
 }, ref) => {
@@ -70,6 +74,21 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
   const handleShareClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onShare();
+  };
+
+  const handlePlaylistClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!hasVaultAccess) {
+      toast({
+        title: "Vault Access Required",
+        description: "Enter the Vault to manage your playlist.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (fanId && onAddToPlaylist) {
+      onAddToPlaylist();
+    }
   };
 
   const canLike = fanId && hasVaultAccess;
@@ -151,6 +170,26 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
           canLike={canLike}
           onClick={handleLikeClick}
         />
+
+        {/* Add to playlist button */}
+        {onAddToPlaylist && (
+          <button
+            onClick={handlePlaylistClick}
+            className={cn(
+              "p-2 rounded-full transition-colors",
+              isInPlaylist
+                ? "text-primary bg-primary/15"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+            aria-label={isInPlaylist ? "In playlist" : "Add to playlist"}
+          >
+            {isInPlaylist ? (
+              <ListMusic className="w-5 h-5" />
+            ) : (
+              <Plus className="w-5 h-5" />
+            )}
+          </button>
+        )}
 
         {/* Share button */}
         <button
