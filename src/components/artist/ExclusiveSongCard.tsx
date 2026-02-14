@@ -320,10 +320,16 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
                 {song.title}
               </h3>
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-primary/15 text-primary/90 border border-primary/20">
-                  <Lock className="w-2 h-2" />
-                  Exclusive
-                </span>
+                {song.exclusivity_decision === "keep" ? (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-muted/30 text-muted-foreground/80 border border-muted-foreground/20">
+                    Non-Exclusive
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider bg-primary/15 text-primary/90 border border-primary/20">
+                    <Lock className="w-2 h-2" />
+                    🔥 Exclusive
+                  </span>
+                )}
                 {song.genre && !song.genre.startsWith("[") && (
                   <span className="text-[11px] text-muted-foreground/70">{song.genre}</span>
                 )}
