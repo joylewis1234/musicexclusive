@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { PlaylistTrack } from "@/hooks/usePlaylist";
 import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
-import { useCredits } from "@/hooks/useCredits";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 
 import artist1 from "@/assets/artist-1.jpg";
@@ -15,6 +14,8 @@ interface PlaylistSectionProps {
   isLoading: boolean;
   onRemove: (playlistEntryId: string, trackId: string) => Promise<boolean>;
   userEmail: string | null | undefined;
+  credits: number;
+  onCreditsChanged?: () => void;
 }
 
 const formatDuration = (seconds: number) => {
@@ -28,9 +29,10 @@ export const PlaylistSection = ({
   isLoading,
   onRemove,
   userEmail,
+  credits,
+  onCreditsChanged,
 }: PlaylistSectionProps) => {
   const navigate = useNavigate();
-  const { credits, refetch: refetchCredits } = useCredits();
   const { chargeStream, hasBeenCharged, clearCharged } = useStreamCharge(userEmail);
   const {
     isPlaying,
@@ -82,7 +84,7 @@ export const PlaylistSection = ({
     const result = await chargeStream(pendingTrack.track_id);
 
     if (result.success) {
-      refetchCredits();
+      onCreditsChanged?.();
       loadTrack(pendingTrack.full_audio_url || "", pendingTrack.title);
       setActiveTrackId(pendingTrack.track_id);
       setTimeout(() => play(), 100);
@@ -91,7 +93,7 @@ export const PlaylistSection = ({
     } else {
       throw new Error(result.error || "Failed to process stream");
     }
-  }, [pendingTrack, chargeStream, refetchCredits, loadTrack, play]);
+  }, [pendingTrack, chargeStream, onCreditsChanged, loadTrack, play]);
 
   const handleAddCredits = useCallback(() => {
     navigate("/fan/add-credits");

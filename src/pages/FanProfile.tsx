@@ -35,7 +35,7 @@ const FanProfile = () => {
   } = useFanProfile();
 
   const { user } = useAuth();
-  const { refetchWithRetry } = useCredits();
+  const { credits, refetch: refetchCredits, refetchWithRetry } = useCredits();
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -442,6 +442,8 @@ const FanProfile = () => {
             isLoading={isLoadingPlaylist}
             onRemove={removeFromPlaylist}
             userEmail={user?.email}
+            credits={credits}
+            onCreditsChanged={refetchCredits}
           />
         </section>
 
