@@ -8,9 +8,16 @@ import { useCredits } from "@/hooks/useCredits";
 
 const CREDIT_TO_DOLLAR = 0.20;
 
-const WalletBalanceCard = () => {
+interface WalletBalanceCardProps {
+  externalCredits?: number;
+  externalLoading?: boolean;
+}
+
+const WalletBalanceCard = ({ externalCredits, externalLoading }: WalletBalanceCardProps = {}) => {
   const navigate = useNavigate();
-  const { credits, loading } = useCredits();
+  const { credits: hookCredits, loading: hookLoading } = useCredits();
+  const credits = externalCredits !== undefined ? externalCredits : hookCredits;
+  const loading = externalLoading !== undefined ? externalLoading : hookLoading;
   const [showDollars, setShowDollars] = useState(false);
 
   const dollars = credits * CREDIT_TO_DOLLAR;
