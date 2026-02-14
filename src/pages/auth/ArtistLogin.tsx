@@ -19,7 +19,7 @@ const loginSchema = z.object({
 
 const ArtistLogin = () => {
   const navigate = useNavigate();
-  const { signIn, refreshRole } = useAuth();
+  const { signIn, refreshRole, setActiveRole } = useAuth();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -143,8 +143,9 @@ const ArtistLogin = () => {
       const newRole = await refreshRole();
       console.log("[ArtistLogin] Role after refresh:", newRole);
 
-      // If role is artist, go straight to dashboard
+      // If role is artist (or user has artist role), go straight to dashboard
       if (newRole === "artist") {
+        setActiveRole("artist");
         toast.success("Welcome back, artist!");
         navigate("/artist/dashboard", { replace: true });
         return;
