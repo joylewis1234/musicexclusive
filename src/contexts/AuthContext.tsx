@@ -72,11 +72,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Track whether initial load has completed so the onAuthStateChange
   // listener doesn't race with it.
   const initialLoadDone = useRef(false);
+  // Track the resolved user ID + role via refs so the onAuthStateChange
+  // callback (a stale closure) can read the latest values.
+  const resolvedUserIdRef = useRef<string | null>(null);
+  const resolvedRoleRef = useRef<AppRole | null>(null);
+  const resolvedRolesRef = useRef<AppRole[]>([]);
 
   // ── setActiveRole ──────────────────────────────────────────────────
   const setActiveRole = (newRole: AppRole) => {
     try { sessionStorage.setItem(ACTIVE_ROLE_KEY, newRole); } catch { /* ignore */ }
     setRole(newRole);
+    resolvedRoleRef.current = newRole;
   };
 
   useEffect(() => {
@@ -100,12 +106,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const roles = await fetchUserRoles(initialSession.user.id);
           if (!isMounted) return;
           setUserRoles(roles);
+          resolvedRolesRef.current = roles;
           const activeRole = pickActiveRole(roles);
           setRole(activeRole);
+          resolvedRoleRef.current = activeRole;
+          resolvedUserIdRef.current = initialSession.user.id;
           console.debug("[AuthContext] Initial session resolved, roles:", roles, "active:", activeRole);
         } else {
           setRole(null);
           setUserRoles([]);
+          resolvedUserIdRef.current = null;
+          resolvedRoleRef.current = null;
+          resolvedRolesRef.current = [];
           console.debug("[AuthContext] Initial session resolved: no user");
         }
       } catch (err) {
@@ -142,18 +154,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          const isNewSignIn = event === "SIGNED_IN" || event === "USER_UPDATED";
-          const isSameUser = currentSession.user.id === user?.id;
+          // Use refs (not stale closure state) to check if the same user is already resolved
+          const isSameUser = currentSession.user.id === resolvedUserIdRef.current;
+          const alreadyResolved = isSameUser && resolvedRoleRef.current && resolvedRolesRef.current.length > 0;
 
           // If the same user is already fully resolved, skip re-verification.
           // This prevents the spinner from showing when the phone wakes up
           // and Supabase fires SIGNED_IN after a token refresh.
-          if (isSameUser && role && userRoles.length > 0) {
+          if (alreadyResolved) {
             console.debug("[AuthContext] Same user already resolved, skipping re-fetch for event:", event);
             return;
           }
 
-          if (isNewSignIn || !role) {
+          const isNewSignIn = event === "SIGNED_IN" || event === "USER_UPDATED";
+
+          if (isNewSignIn || !resolvedRoleRef.current) {
             setIsLoading(true);
             setRole(null);
 
@@ -161,8 +176,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               const roles = await fetchUserRoles(currentSession.user.id);
               if (isMounted) {
                 setUserRoles(roles);
+                resolvedRolesRef.current = roles;
                 const activeRole = pickActiveRole(roles);
                 setRole(activeRole);
+                resolvedRoleRef.current = activeRole;
+                resolvedUserIdRef.current = currentSession.user.id;
                 console.debug("[AuthContext] Role resolved after auth change:", activeRole, "all:", roles);
               }
             } catch (err) {
@@ -177,6 +195,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         } else {
           setRole(null);
           setUserRoles([]);
+          resolvedUserIdRef.current = null;
+          resolvedRoleRef.current = null;
+          resolvedRolesRef.current = [];
           setIsLoading(false);
         }
       }
@@ -252,6 +273,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setSession(null);
     setRole(null);
     setUserRoles([]);
+    resolvedUserIdRef.current = null;
+    resolvedRoleRef.current = null;
+    resolvedRolesRef.current = [];
   };
 
   // ── refreshRole ────────────────────────────────────────────────────
