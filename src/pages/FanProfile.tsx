@@ -4,11 +4,13 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, User, Camera, Pencil, Check, X, Loader2, LogOut, Heart, Sparkles } from "lucide-react";
+import { ChevronLeft, User, Camera, Pencil, Check, X, Loader2, LogOut, Heart, Sparkles, ListMusic } from "lucide-react";
 import { useFanProfile } from "@/hooks/useFanProfile";
 import { useFanTopArtists } from "@/hooks/useFanTopArtists";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
+import { usePlaylist } from "@/hooks/usePlaylist";
+import { PlaylistSection } from "@/components/playlist/PlaylistSection";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,6 +103,7 @@ const FanProfile = () => {
   }, [user?.email]);
 
   const { topArtists, isLoading: isLoadingArtists } = useFanTopArtists(fanVaultId);
+  const { playlist, isLoading: isLoadingPlaylist, removeFromPlaylist } = usePlaylist(fanVaultId);
 
   // Fetch superfan status by checking for subscription credits in the ledger
   useEffect(() => {
@@ -413,6 +416,33 @@ const FanProfile = () => {
               </div>
             </div>
           )}
+        </section>
+
+        {/* My Playlist */}
+        <section className="animate-fade-in" style={{ animationDelay: "350ms" }}>
+          <div className="flex items-center gap-2 mb-4">
+            <ListMusic className="w-4 h-4 text-primary" />
+            <h2 
+              className="font-display text-sm uppercase tracking-wider text-foreground"
+              style={{
+                textShadow: "0 0 15px rgba(255, 255, 255, 0.2)"
+              }}
+            >
+              My Playlist
+            </h2>
+            {playlist.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                ({playlist.length}/50)
+              </span>
+            )}
+          </div>
+          
+          <PlaylistSection
+            playlist={playlist}
+            isLoading={isLoadingPlaylist}
+            onRemove={removeFromPlaylist}
+            userEmail={user?.email}
+          />
         </section>
 
         <section className="animate-fade-in pt-4 pb-8" style={{ animationDelay: "400ms" }}>

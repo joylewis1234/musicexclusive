@@ -517,6 +517,35 @@ export type Database = {
         }
         Relationships: []
       }
+      fan_playlists: {
+        Row: {
+          created_at: string
+          fan_id: string
+          id: string
+          track_id: string
+        }
+        Insert: {
+          created_at?: string
+          fan_id: string
+          id?: string
+          track_id: string
+        }
+        Update: {
+          created_at?: string
+          fan_id?: string
+          id?: string
+          track_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fan_playlists_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fan_terms_acceptances: {
         Row: {
           accepted_at: string
