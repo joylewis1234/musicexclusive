@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
@@ -9,8 +9,10 @@ import { useFanProfile } from "@/hooks/useFanProfile";
 import { useFanTopArtists } from "@/hooks/useFanTopArtists";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
-import { usePlaylist } from "@/hooks/usePlaylist";
+import { usePlaylist, PlaylistTrack } from "@/hooks/usePlaylist";
+import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { PlaylistSection } from "@/components/playlist/PlaylistSection";
+import { PlaylistPlayerBar } from "@/components/playlist/PlaylistPlayerBar";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +38,17 @@ const FanProfile = () => {
 
   const { user } = useAuth();
   const { credits, refetch: refetchCredits, refetchWithRetry } = useCredits();
+  const {
+    isPlaying,
+    currentTime,
+    duration,
+    isLoading: audioLoading,
+    play,
+    pause,
+    seek,
+    loadTrack,
+  } = useAudioPlayer();
+  const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -105,7 +118,46 @@ const FanProfile = () => {
   const { topArtists, isLoading: isLoadingArtists } = useFanTopArtists(fanVaultId);
   const { playlist, isLoading: isLoadingPlaylist, removeFromPlaylist } = usePlaylist(fanVaultId);
 
-  // Fetch superfan status by checking for subscription credits in the ledger
+  const activeTrack = playlist.find((t) => t.track_id === activeTrackId) || null;
+
+  const handlePlayTrack = useCallback(
+    (track: PlaylistTrack) => {
+      loadTrack(track.full_audio_url || "", track.title);
+      setActiveTrackId(track.track_id);
+      setTimeout(() => play(), 100);
+    },
+    [loadTrack, play]
+  );
+
+  const handlePlayerPlayPause = useCallback(() => {
+    if (isPlaying) {
+      pause();
+    } else {
+      play();
+    }
+  }, [isPlaying, pause, play]);
+
+  const handleNext = useCallback(() => {
+    if (!activeTrackId) return;
+    const idx = playlist.findIndex((t) => t.track_id === activeTrackId);
+    if (idx < playlist.length - 1) {
+      handlePlayTrack(playlist[idx + 1]);
+    }
+  }, [activeTrackId, playlist, handlePlayTrack]);
+
+  const handlePrev = useCallback(() => {
+    if (!activeTrackId) return;
+    const idx = playlist.findIndex((t) => t.track_id === activeTrackId);
+    if (idx > 0) {
+      handlePlayTrack(playlist[idx - 1]);
+    }
+  }, [activeTrackId, playlist, handlePlayTrack]);
+
+  const handleReplay = useCallback(() => {
+    seek(0);
+    play();
+  }, [seek, play]);
+
   useEffect(() => {
     const fetchSuperfanStatus = async () => {
       if (!user?.email) return;
@@ -444,6 +496,12 @@ const FanProfile = () => {
             userEmail={user?.email}
             credits={credits}
             onCreditsChanged={refetchCredits}
+            activeTrackId={activeTrackId}
+            isPlaying={isPlaying}
+            audioLoading={audioLoading}
+            onPlayTrack={handlePlayTrack}
+            onPause={pause}
+            onResume={play}
           />
         </section>
 
@@ -463,7 +521,23 @@ const FanProfile = () => {
             Log Out
           </Button>
         </section>
+        {/* Extra bottom padding when player bar is visible */}
+        {activeTrack && <div className="h-24" />}
       </div>
+
+      {/* Playlist Player Bar */}
+      <PlaylistPlayerBar
+        activeTrack={activeTrack}
+        playlist={playlist}
+        isPlaying={isPlaying}
+        isLoading={audioLoading}
+        currentTime={currentTime}
+        duration={duration}
+        onPlayPause={handlePlayerPlayPause}
+        onNext={handleNext}
+        onPrev={handlePrev}
+        onReplay={handleReplay}
+      />
     </div>
   );
 };

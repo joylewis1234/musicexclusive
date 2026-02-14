@@ -5,7 +5,6 @@ import { cn } from "@/lib/utils";
 import { PlaylistTrack } from "@/hooks/usePlaylist";
 import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 
 import artist1 from "@/assets/artist-1.jpg";
 
@@ -16,6 +15,13 @@ interface PlaylistSectionProps {
   userEmail: string | null | undefined;
   credits: number;
   onCreditsChanged?: () => void;
+  // Audio player state (lifted)
+  activeTrackId: string | null;
+  isPlaying: boolean;
+  audioLoading: boolean;
+  onPlayTrack: (track: PlaylistTrack) => void;
+  onPause: () => void;
+  onResume: () => void;
 }
 
 const formatDuration = (seconds: number) => {
@@ -31,20 +37,16 @@ export const PlaylistSection = ({
   userEmail,
   credits,
   onCreditsChanged,
+  activeTrackId,
+  isPlaying,
+  audioLoading,
+  onPlayTrack,
+  onPause,
+  onResume,
 }: PlaylistSectionProps) => {
   const navigate = useNavigate();
-  const { chargeStream, hasBeenCharged, clearCharged } = useStreamCharge(userEmail);
-  const {
-    isPlaying,
-    currentTime,
-    duration,
-    isLoading: audioLoading,
-    play,
-    pause,
-    loadTrack,
-  } = useAudioPlayer();
+  const { chargeStream, hasBeenCharged } = useStreamCharge(userEmail);
 
-  const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
   const [showStreamConfirm, setShowStreamConfirm] = useState(false);
   const [pendingTrack, setPendingTrack] = useState<PlaylistTrack | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -53,13 +55,13 @@ export const PlaylistSection = ({
     (track: PlaylistTrack) => {
       // If this track is currently playing, just pause
       if (activeTrackId === track.track_id && isPlaying) {
-        pause();
+        onPause();
         return;
       }
 
       // If this track is paused (already loaded), resume
       if (activeTrackId === track.track_id && !isPlaying && hasBeenCharged(track.track_id)) {
-        play();
+        onResume();
         return;
       }
 
@@ -71,11 +73,9 @@ export const PlaylistSection = ({
       }
 
       // Already charged, load and play
-      loadTrack(track.full_audio_url || "", track.title);
-      setActiveTrackId(track.track_id);
-      setTimeout(() => play(), 100);
+      onPlayTrack(track);
     },
-    [activeTrackId, isPlaying, hasBeenCharged, pause, play, loadTrack]
+    [activeTrackId, isPlaying, hasBeenCharged, onPause, onResume, onPlayTrack]
   );
 
   const handleStreamConfirm = useCallback(async () => {
@@ -85,15 +85,13 @@ export const PlaylistSection = ({
 
     if (result.success) {
       onCreditsChanged?.();
-      loadTrack(pendingTrack.full_audio_url || "", pendingTrack.title);
-      setActiveTrackId(pendingTrack.track_id);
-      setTimeout(() => play(), 100);
+      onPlayTrack(pendingTrack);
     } else if (result.requiresCredits) {
       throw new Error("Insufficient credits");
     } else {
       throw new Error(result.error || "Failed to process stream");
     }
-  }, [pendingTrack, chargeStream, onCreditsChanged, loadTrack, play]);
+  }, [pendingTrack, chargeStream, onCreditsChanged, onPlayTrack]);
 
   const handleAddCredits = useCallback(() => {
     navigate("/fan/add-credits");
@@ -104,13 +102,12 @@ export const PlaylistSection = ({
       setRemovingId(track.id);
       // If this track is playing, pause first
       if (activeTrackId === track.track_id) {
-        pause();
-        setActiveTrackId(null);
+        onPause();
       }
       await onRemove(track.id, track.track_id);
       setRemovingId(null);
     },
-    [activeTrackId, pause, onRemove]
+    [activeTrackId, onPause, onRemove]
   );
 
   if (isLoading) {
