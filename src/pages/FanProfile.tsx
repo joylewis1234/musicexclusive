@@ -45,6 +45,7 @@ const FanProfile = () => {
     isLoading: audioLoading,
     play,
     pause,
+    stop,
     seek,
     loadTrack,
   } = useAudioPlayer();
@@ -534,9 +535,8 @@ const FanProfile = () => {
         currentTime={currentTime}
         duration={duration}
         onPlayPause={handlePlayerPlayPause}
-        onNext={handleNext}
-        onPrev={handlePrev}
-        onReplay={handleReplay}
+        onStop={stop}
+        onSeek={seek}
       />
     </div>
   );
