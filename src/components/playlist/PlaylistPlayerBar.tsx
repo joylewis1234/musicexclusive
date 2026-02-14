@@ -48,7 +48,7 @@ export const PlaylistPlayerBar = ({
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 px-4 pb-safe">
+    <div className="fixed bottom-16 left-0 right-0 z-50 px-4">
       {/* Outer glow */}
       <div
         className="absolute inset-x-4 bottom-0 h-16 rounded-t-xl bg-primary/20 blur-xl opacity-50"
