@@ -12,7 +12,7 @@ import { lovable } from "@/integrations/lovable/index";
 const ArtistAuth = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, setActiveRole } = useAuth();
   
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
@@ -33,6 +33,7 @@ const ArtistAuth = () => {
           toast.error(error.message);
           return;
         }
+        setActiveRole("artist");
         toast.success("Artist account created! Welcome aboard.");
         navigate(from, { replace: true });
       } else {
@@ -41,6 +42,7 @@ const ArtistAuth = () => {
           toast.error(error.message);
           return;
         }
+        setActiveRole("artist");
         toast.success("Welcome back, artist!");
         navigate(from, { replace: true });
       }
