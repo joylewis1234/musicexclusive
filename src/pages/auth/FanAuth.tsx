@@ -24,7 +24,7 @@ const FanAuth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, setActiveRole } = useAuth();
   
   const state = location.state as LocationState | null;
   // Check both URL query param and location state for flow
@@ -114,6 +114,7 @@ const FanAuth = () => {
             const { error: loginErr } = await signIn(email, password);
             if (!loginErr) {
               await ensureFanRole();
+              setActiveRole("fan");
               await consumeInvite();
               toast.success("Welcome back!");
             }
@@ -124,6 +125,7 @@ const FanAuth = () => {
           toast.error(error.message);
           return;
         }
+        setActiveRole("fan");
         toast.success("Account created! Welcome to the Vault.");
         await consumeInvite();
         navigate(destination, { replace: true, state: navState });
@@ -134,6 +136,7 @@ const FanAuth = () => {
           return;
         }
         await ensureFanRole();
+        setActiveRole("fan");
         await consumeInvite();
         toast.success("Welcome back!");
         navigate(destination, { replace: true, state: navState });
@@ -148,6 +151,7 @@ const FanAuth = () => {
           const { error: fallbackErr } = await signIn(email, password);
           if (!fallbackErr) {
             await ensureFanRole();
+            setActiveRole("fan");
             await consumeInvite();
             toast.success("Account created! Welcome to the Vault.");
           }

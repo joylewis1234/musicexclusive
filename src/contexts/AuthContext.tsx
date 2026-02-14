@@ -6,15 +6,19 @@ import { supabase } from "@/integrations/supabase/client";
 
 export type AppRole = "fan" | "artist" | "admin";
 
+const ACTIVE_ROLE_KEY = "me_active_role";
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: AppRole | null;
+  userRoles: AppRole[];
   isLoading: boolean;
   signUp: (email: string, password: string, role: AppRole, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshRole: () => Promise<AppRole | null>;
+  setActiveRole: (role: AppRole) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,20 +31,32 @@ export const useAuth = () => {
   return context;
 };
 
-/** Fetch the highest-priority role for a given user id. */
-const fetchUserRole = async (userId: string): Promise<AppRole | null> => {
+/** Fetch all roles for a given user id. */
+const fetchUserRoles = async (userId: string): Promise<AppRole[]> => {
   const { data, error } = await supabase
     .from("user_roles")
     .select("role")
     .eq("user_id", userId);
 
   if (error || !data || data.length === 0) {
-    console.error("[AuthContext] Error fetching user role:", error);
-    return null;
+    console.error("[AuthContext] Error fetching user roles:", error);
+    return [];
   }
 
-  // Prioritize admin > artist > fan when user has multiple roles
-  const roles = data.map(r => r.role as AppRole);
+  return data.map(r => r.role as AppRole);
+};
+
+/** Pick the best role from a list, respecting sessionStorage preference. */
+const pickActiveRole = (roles: AppRole[]): AppRole | null => {
+  if (roles.length === 0) return null;
+
+  // Check if there's a stored preference that the user actually has
+  try {
+    const stored = sessionStorage.getItem(ACTIVE_ROLE_KEY) as AppRole | null;
+    if (stored && roles.includes(stored)) return stored;
+  } catch { /* ignore */ }
+
+  // Default: admin > artist > fan
   if (roles.includes("admin")) return "admin";
   if (roles.includes("artist")) return "artist";
   return roles[0];
@@ -50,17 +66,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
+  const [userRoles, setUserRoles] = useState<AppRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Track whether initial load has completed so the onAuthStateChange
   // listener doesn't race with it.
   const initialLoadDone = useRef(false);
 
+  // ── setActiveRole ──────────────────────────────────────────────────
+  const setActiveRole = (newRole: AppRole) => {
+    try { sessionStorage.setItem(ACTIVE_ROLE_KEY, newRole); } catch { /* ignore */ }
+    setRole(newRole);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
     // ── 1. Initial load ────────────────────────────────────────────
-    // Fetches existing session + role BEFORE setting isLoading=false.
     const initializeAuth = async () => {
       try {
         const { data: { session: initialSession }, error } = await supabase.auth.getSession();
@@ -75,12 +97,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(initialSession?.user ?? null);
 
         if (initialSession?.user) {
-          const userRole = await fetchUserRole(initialSession.user.id);
+          const roles = await fetchUserRoles(initialSession.user.id);
           if (!isMounted) return;
-          setRole(userRole);
-          console.debug("[AuthContext] Initial session resolved, role:", userRole);
+          setUserRoles(roles);
+          const activeRole = pickActiveRole(roles);
+          setRole(activeRole);
+          console.debug("[AuthContext] Initial session resolved, roles:", roles, "active:", activeRole);
         } else {
           setRole(null);
+          setUserRoles([]);
           console.debug("[AuthContext] Initial session resolved: no user");
         }
       } catch (err) {
@@ -89,6 +114,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           setSession(null);
           setUser(null);
           setRole(null);
+          setUserRoles([]);
         }
       } finally {
         if (isMounted) {
@@ -101,14 +127,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     initializeAuth();
 
     // ── 2. Ongoing auth changes ────────────────────────────────────
-    // Handles sign-in / sign-out / token refresh AFTER the initial load.
-    // Does NOT touch isLoading for the initial boot — only for subsequent
-    // sign-in events where we need to re-enter loading while fetching role.
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         if (!isMounted) return;
 
-        // Skip if initial load hasn't finished — initializeAuth handles it.
         if (!initialLoadDone.current) {
           console.debug("[AuthContext] onAuthStateChange skipped (initial load pending), event:", event);
           return;
@@ -120,8 +142,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          // Only re-enter loading for actual sign-in events, NOT token refreshes.
-          // Token refreshes don't change the user — no need to re-fetch role.
           const isNewSignIn = event === "SIGNED_IN" || event === "USER_UPDATED";
 
           if (isNewSignIn || !role) {
@@ -129,14 +149,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setRole(null);
 
             try {
-              const userRole = await fetchUserRole(currentSession.user.id);
+              const roles = await fetchUserRoles(currentSession.user.id);
               if (isMounted) {
-                setRole(userRole);
-                console.debug("[AuthContext] Role resolved after auth change:", userRole);
+                setUserRoles(roles);
+                const activeRole = pickActiveRole(roles);
+                setRole(activeRole);
+                console.debug("[AuthContext] Role resolved after auth change:", activeRole, "all:", roles);
               }
             } catch (err) {
               console.error("[AuthContext] Role fetch failed after auth change:", err);
-              if (isMounted) setRole(null);
+              if (isMounted) { setRole(null); setUserRoles([]); }
             } finally {
               if (isMounted) setIsLoading(false);
             }
@@ -145,6 +167,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
         } else {
           setRole(null);
+          setUserRoles([]);
           setIsLoading(false);
         }
       }
@@ -188,6 +211,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         setRole(selectedRole);
+        setUserRoles(prev => prev.includes(selectedRole) ? prev : [...prev, selectedRole]);
       }
 
       return { error: null };
@@ -213,10 +237,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // ── signOut ────────────────────────────────────────────────────────
   const signOut = async () => {
+    try { sessionStorage.removeItem(ACTIVE_ROLE_KEY); } catch { /* ignore */ }
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setRole(null);
+    setUserRoles([]);
   };
 
   // ── refreshRole ────────────────────────────────────────────────────
@@ -224,10 +250,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const currentUser = user ?? (await supabase.auth.getUser()).data.user;
     if (!currentUser) return null;
     try {
-      const userRole = await fetchUserRole(currentUser.id);
-      setRole(userRole);
+      const roles = await fetchUserRoles(currentUser.id);
+      setUserRoles(roles);
+      const activeRole = pickActiveRole(roles);
+      setRole(activeRole);
       setIsLoading(false);
-      return userRole;
+      return activeRole;
     } catch (err) {
       console.error("[AuthContext] refreshRole failed:", err);
       setIsLoading(false);
@@ -241,11 +269,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         user,
         session,
         role,
+        userRoles,
         isLoading,
         signUp,
         signIn,
         signOut,
         refreshRole,
+        setActiveRole,
       }}
     >
       {children}
