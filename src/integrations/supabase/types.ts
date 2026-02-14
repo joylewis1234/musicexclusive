@@ -983,6 +983,8 @@ export type Database = {
           artwork_url: string | null
           created_at: string
           duration: number
+          exclusivity_decision: string | null
+          exclusivity_expires_at: string | null
           full_audio_url: string | null
           genre: string | null
           id: string
@@ -998,6 +1000,8 @@ export type Database = {
           artwork_url?: string | null
           created_at?: string
           duration?: number
+          exclusivity_decision?: string | null
+          exclusivity_expires_at?: string | null
           full_audio_url?: string | null
           genre?: string | null
           id?: string
@@ -1013,6 +1017,8 @@ export type Database = {
           artwork_url?: string | null
           created_at?: string
           duration?: number
+          exclusivity_decision?: string | null
+          exclusivity_expires_at?: string | null
           full_audio_url?: string | null
           genre?: string | null
           id?: string

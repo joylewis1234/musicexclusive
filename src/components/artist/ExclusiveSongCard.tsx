@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import { ExclusivityBanner } from "@/components/artist/ExclusivityBanner";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -37,6 +38,8 @@ export interface ExclusiveSong {
   preview_start_seconds?: number;
   duration?: number;
   status?: string;
+  exclusivity_expires_at?: string;
+  exclusivity_decision?: string | null;
 }
 
 interface ExclusiveSongCardProps {
@@ -407,7 +410,19 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
             </div>
           </div>
 
-          {/* Debug details (temporary) */}
+          {/* Exclusivity Countdown Banner */}
+          {song.exclusivity_expires_at && (
+            <div className="px-4 pb-1">
+              <ExclusivityBanner
+                trackId={song.id}
+                trackTitle={song.title}
+                exclusivityExpiresAt={song.exclusivity_expires_at}
+                exclusivityDecision={song.exclusivity_decision || null}
+                onDecisionMade={onDeleted}
+              />
+            </div>
+          )}
+
           <div className="px-4 pb-2">
             <button
               onClick={() => setShowDebug(!showDebug)}
