@@ -103,14 +103,35 @@ serve(async (req) => {
       );
     }
 
-    // Idempotency check
+    // Idempotency check — look for our own key AND any webhook-created ledger entry
+    // for the same payment_intent to prevent double-crediting
+    const paymentIntentId = typeof session.payment_intent === 'string' 
+      ? session.payment_intent 
+      : session.payment_intent?.id;
+
     const { data: existingEvent } = await supabaseAdmin
       .from("stripe_events")
       .select("id")
       .eq("id", `checkout_${sessionId}`)
       .maybeSingle();
 
-    if (existingEvent) {
+    // Also check if the webhook already credited this payment_intent via the ledger
+    let webhookAlreadyHandled = false;
+    if (!existingEvent && paymentIntentId) {
+      const { data: existingLedger } = await supabaseAdmin
+        .from("credit_ledger")
+        .select("id")
+        .eq("reference", paymentIntentId)
+        .eq("user_email", customerEmail)
+        .limit(1)
+        .maybeSingle();
+      if (existingLedger) {
+        webhookAlreadyHandled = true;
+        logStep("Webhook already processed this payment_intent", { paymentIntentId });
+      }
+    }
+
+    if (existingEvent || webhookAlreadyHandled) {
       logStep("Session already processed, returning current credits", { sessionId });
       const { data: member } = await supabaseAdmin
         .from("vault_members")
@@ -194,9 +215,6 @@ serve(async (req) => {
 
     // Create ledger entry
     const usdAmount = credits * 0.20;
-    const paymentIntentId = typeof session.payment_intent === 'string' 
-      ? session.payment_intent 
-      : session.payment_intent?.id;
     const subscriptionId = typeof session.subscription === 'string' 
       ? session.subscription 
       : session.subscription?.id;
