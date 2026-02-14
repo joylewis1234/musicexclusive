@@ -135,19 +135,38 @@ export const DiscoveryTrackCard = ({
             <span className="text-[10px]">{likeCount}</span>
           </div>
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onStream();
-            }}
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-display uppercase tracking-wider font-semibold text-primary border border-primary/40 bg-primary/10 hover:bg-primary/20 transition-all"
-            style={{
-              boxShadow: "0 0 8px hsl(var(--primary) / 0.15)",
-            }}
-          >
-            <Headphones className="w-3 h-3" />
-            Stream
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onPreview();
+              }}
+              disabled={isPreviewDisabled}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-display uppercase tracking-wider font-semibold text-accent border border-accent/40 bg-accent/10 hover:bg-accent/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {isPreviewLoading ? (
+                <Loader2 className="w-3 h-3 animate-spin" />
+              ) : isPreviewPlaying ? (
+                <Pause className="w-3 h-3" />
+              ) : (
+                <Play className="w-3 h-3" />
+              )}
+              {isPreviewPlaying ? "Stop" : "Preview"}
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onStream();
+              }}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-display uppercase tracking-wider font-semibold text-primary border border-primary/40 bg-primary/10 hover:bg-primary/20 transition-all"
+              style={{
+                boxShadow: "0 0 8px hsl(var(--primary) / 0.15)",
+              }}
+            >
+              <Headphones className="w-3 h-3" />
+              Stream
+            </button>
+          </div>
         </div>
 
         {/* Error state */}
