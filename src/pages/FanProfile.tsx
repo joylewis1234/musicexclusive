@@ -343,7 +343,7 @@ const FanProfile = () => {
 
         {/* Wallet Balance Card */}
         <section className="animate-fade-in" style={{ animationDelay: "200ms" }}>
-          <WalletBalanceCard />
+          <WalletBalanceCard externalCredits={credits} externalLoading={false} />
         </section>
 
         {/* Discovery CTA */}
