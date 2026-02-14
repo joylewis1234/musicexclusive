@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { Play, Pause, SkipBack, SkipForward, RotateCcw, Loader2 } from "lucide-react";
+import { Play, Pause, Square, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlaylistTrack } from "@/hooks/usePlaylist";
 
@@ -13,9 +13,8 @@ interface PlaylistPlayerBarProps {
   currentTime: number;
   duration: number;
   onPlayPause: () => void;
-  onNext: () => void;
-  onPrev: () => void;
-  onReplay: () => void;
+  onStop: () => void;
+  onSeek: (time: number) => void;
 }
 
 const formatTime = (seconds: number) => {
@@ -33,19 +32,20 @@ export const PlaylistPlayerBar = ({
   currentTime,
   duration,
   onPlayPause,
-  onNext,
-  onPrev,
-  onReplay,
+  onStop,
+  onSeek,
 }: PlaylistPlayerBarProps) => {
   if (!activeTrack) return null;
 
-  const activeIndex = playlist.findIndex(
-    (t) => t.track_id === activeTrack.track_id
-  );
-  const hasPrev = activeIndex > 0;
-  const hasNext = activeIndex < playlist.length - 1;
-
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+
+  const handleScrub = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    const bar = e.currentTarget;
+    const rect = bar.getBoundingClientRect();
+    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    onSeek(ratio * duration);
+  };
 
   return (
     <div className="fixed bottom-16 left-0 right-0 z-50 px-4">
@@ -63,10 +63,20 @@ export const PlaylistPlayerBar = ({
           "shadow-[0_-4px_20px_rgba(0,255,255,0.15)]"
         )}
       >
-        {/* Progress bar */}
-        <div className="h-1 w-full bg-muted/30">
+        {/* Scrubber / seekable progress bar */}
+        <div
+          className="h-2 w-full bg-muted/30 cursor-pointer touch-none"
+          onClick={handleScrub}
+          onTouchStart={handleScrub}
+          onTouchMove={handleScrub}
+          role="slider"
+          aria-label="Seek"
+          aria-valuemin={0}
+          aria-valuemax={duration}
+          aria-valuenow={currentTime}
+        >
           <div
-            className="h-full bg-primary transition-all duration-200"
+            className="h-full bg-primary transition-[width] duration-100"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -92,23 +102,8 @@ export const PlaylistPlayerBar = ({
             </p>
           </div>
 
-          {/* Controls */}
+          {/* Controls: Play/Pause + Stop */}
           <div className="flex items-center gap-1 flex-shrink-0">
-            {/* Prev */}
-            <button
-              onClick={onPrev}
-              disabled={!hasPrev}
-              className={cn(
-                "w-9 h-9 rounded-full flex items-center justify-center transition-all",
-                hasPrev
-                  ? "text-foreground hover:bg-muted/40 active:scale-95"
-                  : "text-muted-foreground/30 cursor-not-allowed"
-              )}
-              aria-label="Previous track"
-            >
-              <SkipBack className="w-4 h-4" fill="currentColor" />
-            </button>
-
             {/* Play / Pause */}
             <button
               onClick={onPlayPause}
@@ -129,28 +124,13 @@ export const PlaylistPlayerBar = ({
               )}
             </button>
 
-            {/* Next */}
+            {/* Stop */}
             <button
-              onClick={onNext}
-              disabled={!hasNext}
-              className={cn(
-                "w-9 h-9 rounded-full flex items-center justify-center transition-all",
-                hasNext
-                  ? "text-foreground hover:bg-muted/40 active:scale-95"
-                  : "text-muted-foreground/30 cursor-not-allowed"
-              )}
-              aria-label="Next track"
-            >
-              <SkipForward className="w-4 h-4" fill="currentColor" />
-            </button>
-
-            {/* Replay */}
-            <button
-              onClick={onReplay}
+              onClick={onStop}
               className="w-9 h-9 rounded-full flex items-center justify-center text-foreground hover:bg-muted/40 active:scale-95 transition-all"
-              aria-label="Replay track"
+              aria-label="Stop"
             >
-              <RotateCcw className="w-4 h-4" />
+              <Square className="w-4 h-4" fill="currentColor" />
             </button>
           </div>
         </div>
