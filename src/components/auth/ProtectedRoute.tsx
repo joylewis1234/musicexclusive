@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) => {
-  const { user, role, isLoading } = useAuth();
+  const { user, role, userRoles, isLoading, setActiveRole } = useAuth();
   const location = useLocation();
 
   // If a user just signed in, role can be temporarily null while we fetch it.
@@ -30,8 +30,20 @@ export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) =
     return <Navigate to={loginPath} state={{ from: location }} replace />;
   }
 
-  // Authenticated but wrong role - show access restricted
+  // Authenticated but wrong active role — auto-switch if user has the required role
   if (role !== allowedRole) {
+    if (userRoles.includes(allowedRole)) {
+      console.log(`[ProtectedRoute] 🔄 Switching active role to ${allowedRole}`);
+      setActiveRole(allowedRole);
+      return (
+        <TimeoutSpinner
+          page={`ProtectedRoute(${allowedRole})`}
+          loadingMessage="Switching roles…"
+          errorMessage="Could not switch roles. Please try again."
+          timeoutMs={5_000}
+        />
+      );
+    }
     return <Navigate to="/access-restricted" state={{ userRole: role, requiredRole: allowedRole }} replace />;
   }
 
