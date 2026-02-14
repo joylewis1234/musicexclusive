@@ -313,16 +313,40 @@ const ArtistSetupAccount = () => {
         return;
       }
 
-      const { data: finalizeData, error: finalizeError } = await supabase.functions.invoke(
-        "finalize-artist-setup",
-        {
-          headers: { Authorization: `Bearer ${accessToken}` },
-          body: { application_id: resolvedApplicationId },
-        }
-      );
+      // Direct fetch with timeout for Android Chrome reliability
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30_000);
+
+      let finalizeData: any = null;
+      try {
+        const resp = await fetch(`${supabaseUrl}/functions/v1/finalize-artist-setup`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+            apikey: anonKey,
+          },
+          body: JSON.stringify({ application_id: resolvedApplicationId }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        finalizeData = await resp.json();
+      } catch (fetchErr: any) {
+        clearTimeout(timeout);
+        const isTimeout = fetchErr?.name === "AbortError";
+        console.error("[ArtistSetupAccount] ❌ Finalize fetch failed:", fetchErr);
+        setSetupError(
+          isTimeout
+            ? "Request timed out. Please check your connection and try again."
+            : `Artist setup failed: Network error. Please try again or contact support.`
+        );
+        setIsSubmitting(false);
+        return;
+      }
 
       // The edge function is the SOLE authority for role + profile + link.
-      // If it fails, we must block — no partial success states.
       if (finalizeData?.error_code === "ALREADY_LINKED") {
         setSetupError("This application is already linked to another account. Please log in or contact support.");
         setIsSubmitting(false);
@@ -335,8 +359,8 @@ const ArtistSetupAccount = () => {
         return;
       }
 
-      if (finalizeError || !finalizeData?.success) {
-        const errorMsg = finalizeData?.message || finalizeError?.message || "Unknown error";
+      if (!finalizeData?.success) {
+        const errorMsg = finalizeData?.message || "Unknown error";
         console.error("[ArtistSetupAccount] ❌ Finalize FAILED (hard block):", errorMsg);
         setSetupError(`Artist setup failed: ${errorMsg}. Please try again or contact support.`);
         setIsSubmitting(false);
