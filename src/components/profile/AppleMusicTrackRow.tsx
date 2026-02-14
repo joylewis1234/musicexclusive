@@ -11,6 +11,7 @@ interface AppleMusicTrackRowProps {
     title: string;
     artworkUrl: string | null;
     duration: number;
+    exclusivityDecision?: string | null;
   };
   index: number;
   fanId: string | null;
@@ -133,7 +134,7 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
             {track.title}
           </p>
           
-          <ExclusiveBadge />
+          <ExclusiveBadge isNonExclusive={track.exclusivityDecision === "keep"} />
         </div>
         
         {/* Duration */}

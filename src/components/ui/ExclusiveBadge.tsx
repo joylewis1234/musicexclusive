@@ -1,10 +1,30 @@
-import { Crown } from "lucide-react";
+import { Crown, Flame } from "lucide-react";
 
 interface ExclusiveBadgeProps {
   className?: string;
+  isNonExclusive?: boolean;
 }
 
-export const ExclusiveBadge = ({ className }: ExclusiveBadgeProps) => {
+export const ExclusiveBadge = ({ className, isNonExclusive = false }: ExclusiveBadgeProps) => {
+  if (isNonExclusive) {
+    return (
+      <div 
+        className={`relative px-2 py-0.5 rounded-full flex-shrink-0 ${className || ""}`}
+        style={{
+          background: 'hsla(0, 0%, 50%, 0.12)',
+          border: '1px solid hsla(0, 0%, 50%, 0.2)',
+        }}
+      >
+        <span 
+          className="text-[9px] font-display uppercase tracking-wider"
+          style={{ color: 'hsl(0, 0%, 60%)' }}
+        >
+          Non-Exclusive
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div 
       className={`relative px-2 py-0.5 rounded-full flex-shrink-0 ${className || ""}`}
@@ -19,6 +39,14 @@ export const ExclusiveBadge = ({ className }: ExclusiveBadgeProps) => {
           filter: 'drop-shadow(0 0 2px hsla(45, 90%, 55%, 0.8))'
         }}
         fill="hsl(45, 90%, 55%)"
+      />
+      <Flame
+        className="absolute -top-1.5 -right-1 w-3 h-3 rotate-[8deg]"
+        style={{
+          color: 'hsl(25, 95%, 55%)',
+          filter: 'drop-shadow(0 0 3px hsla(25, 95%, 55%, 0.8))'
+        }}
+        fill="hsl(25, 95%, 55%)"
       />
       <span 
         className="text-[9px] font-display uppercase tracking-wider pl-1"
