@@ -143,6 +143,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         if (currentSession?.user) {
           const isNewSignIn = event === "SIGNED_IN" || event === "USER_UPDATED";
+          const isSameUser = currentSession.user.id === user?.id;
+
+          // If the same user is already fully resolved, skip re-verification.
+          // This prevents the spinner from showing when the phone wakes up
+          // and Supabase fires SIGNED_IN after a token refresh.
+          if (isSameUser && role && userRoles.length > 0) {
+            console.debug("[AuthContext] Same user already resolved, skipping re-fetch for event:", event);
+            return;
+          }
 
           if (isNewSignIn || !role) {
             setIsLoading(true);
