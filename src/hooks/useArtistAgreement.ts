@@ -3,6 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 
 const CURRENT_AGREEMENT_VERSION = "MVP_v1";
 
+/** Wait for a valid auth session, retrying up to maxWaitMs */
+async function waitForSession(maxWaitMs = 6000): Promise<string | null> {
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.user?.id) return data.session.user.id;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  return null;
+}
+
 export const useArtistAgreement = () => {
   const [hasAccepted, setHasAccepted] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -14,8 +25,8 @@ export const useArtistAgreement = () => {
 
   const checkAcceptance = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
+      const userId = await waitForSession();
+      if (!userId) {
         setHasAccepted(false);
         setIsLoading(false);
         return;
@@ -24,7 +35,7 @@ export const useArtistAgreement = () => {
       const { data, error } = await supabase
         .from("artist_agreement_acceptances")
         .select("id")
-        .eq("artist_id", session.user.id)
+        .eq("artist_id", userId)
         .eq("agreement_version", CURRENT_AGREEMENT_VERSION)
         .maybeSingle();
 
@@ -45,15 +56,17 @@ export const useArtistAgreement = () => {
   const acceptAgreement = async (): Promise<boolean> => {
     setIsSubmitting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
+      // Wait for session to be ready (critical on mobile after account creation)
+      const userId = await waitForSession(8000);
+      if (!userId) {
+        console.error("[acceptAgreement] No session after waiting");
         return false;
       }
 
       const { error } = await supabase
         .from("artist_agreement_acceptances")
         .insert({
-          artist_id: session.user.id,
+          artist_id: userId,
           agreement_version: CURRENT_AGREEMENT_VERSION,
         });
 
