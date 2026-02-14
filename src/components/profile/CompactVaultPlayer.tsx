@@ -179,7 +179,7 @@ export const CompactVaultPlayer = ({
   }
 
   return (
-    <div className="mx-5 mb-6" style={{ contain: 'layout style' }}>
+    <div className="mx-5 mb-6" style={{ contain: 'layout style paint', isolation: 'isolate', transform: 'translateZ(0)' }}>
       <div className="relative rounded-2xl overflow-hidden">
         {/* Animated glow border when playing */}
         <div 
@@ -190,7 +190,9 @@ export const CompactVaultPlayer = ({
           style={{
             background: 'linear-gradient(135deg, hsl(280, 80%, 50%), hsl(300, 70%, 50%), hsl(280, 80%, 50%))',
             filter: isPlaying ? 'blur(4px)' : 'blur(2px)',
-            willChange: 'opacity, filter',
+            willChange: 'opacity',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
           }}
         />
         
