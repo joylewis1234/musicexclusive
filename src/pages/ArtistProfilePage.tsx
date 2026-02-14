@@ -15,6 +15,7 @@ import { PlayerErrorBoundary, TrackListErrorBoundary } from "@/components/error-
 import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
 import { useCredits } from "@/hooks/useCredits";
+import { usePlaylist } from "@/hooks/usePlaylist";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -84,6 +85,7 @@ const ArtistProfilePage = () => {
   const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
   const { chargeStream, hasBeenCharged, isProcessing: isCharging, clearCharged } = useStreamCharge(user?.email);
   const { credits, refetch: refetchCredits } = useCredits();
+  const { addToPlaylist, isInPlaylist } = usePlaylist(fanId);
 
   // Generate public URL for storage path if needed
   const ensurePublicUrl = async (track: TrackData): Promise<TrackData> => {
@@ -500,6 +502,8 @@ const ArtistProfilePage = () => {
                     onToggleLike={() => toggleLike(track.id)}
                     onSelect={() => handleSelectTrack(track)}
                     onShare={() => handleShareTrack(track)}
+                    onAddToPlaylist={fanId ? () => addToPlaylist(track.id) : undefined}
+                    isInPlaylist={isInPlaylist(track.id)}
                     fallbackImage={artistProfile.avatar_url || artist1}
                   />
                 );
