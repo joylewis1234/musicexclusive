@@ -83,6 +83,19 @@ const FanAuth = () => {
     }
   };
 
+  // Consume the invite token so it's marked "used" on the artist's dashboard
+  const consumeInvite = async () => {
+    if (!inviteToken) return;
+    try {
+      await supabase.functions.invoke("validate-fan-invite", {
+        body: { token: inviteToken, action: "consume" },
+      });
+      console.log("[FanAuth] Invite token consumed");
+    } catch (err) {
+      console.warn("[FanAuth] Failed to consume invite (non-fatal):", err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -101,6 +114,7 @@ const FanAuth = () => {
             const { error: loginErr } = await signIn(email, password);
             if (!loginErr) {
               await ensureFanRole();
+              await consumeInvite();
               toast.success("Welcome back!");
             }
             // Navigate forward regardless — account exists
@@ -111,6 +125,7 @@ const FanAuth = () => {
           return;
         }
         toast.success("Account created! Welcome to the Vault.");
+        await consumeInvite();
         navigate(destination, { replace: true, state: navState });
       } else {
         const { error } = await signIn(email, password);
@@ -119,6 +134,7 @@ const FanAuth = () => {
           return;
         }
         await ensureFanRole();
+        await consumeInvite();
         toast.success("Welcome back!");
         navigate(destination, { replace: true, state: navState });
       }
@@ -132,6 +148,7 @@ const FanAuth = () => {
           const { error: fallbackErr } = await signIn(email, password);
           if (!fallbackErr) {
             await ensureFanRole();
+            await consumeInvite();
             toast.success("Account created! Welcome to the Vault.");
           }
         } catch {
