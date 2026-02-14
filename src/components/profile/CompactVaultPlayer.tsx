@@ -179,7 +179,7 @@ export const CompactVaultPlayer = ({
   }
 
   return (
-    <div className="mx-5 mb-6">
+    <div className="mx-5 mb-6" style={{ contain: 'layout style' }}>
       <div className="relative rounded-2xl overflow-hidden">
         {/* Animated glow border when playing */}
         <div 
@@ -189,7 +189,8 @@ export const CompactVaultPlayer = ({
           )}
           style={{
             background: 'linear-gradient(135deg, hsl(280, 80%, 50%), hsl(300, 70%, 50%), hsl(280, 80%, 50%))',
-            filter: isPlaying ? 'blur(4px)' : 'blur(2px)'
+            filter: isPlaying ? 'blur(4px)' : 'blur(2px)',
+            willChange: 'opacity, filter',
           }}
         />
         
@@ -216,16 +217,16 @@ export const CompactVaultPlayer = ({
               
               {/* Playing indicator overlay */}
               {isPlaying && (
-                <div className="absolute inset-0 rounded-xl bg-black/30 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-xl bg-black/30 flex items-center justify-center" style={{ transform: 'translate3d(0,0,0)' }}>
                   <div className="flex gap-0.5">
                     {[0, 1, 2].map((i) => (
                       <div
                         key={i}
-                        className="w-1 bg-white rounded-full animate-pulse"
+                        className="w-1 bg-white rounded-full"
                         style={{
                           height: '12px',
-                          animationDelay: `${i * 150}ms`,
-                          animationDuration: '600ms'
+                          animation: `pulse 600ms cubic-bezier(0.4, 0, 0.6, 1) infinite ${i * 150}ms`,
+                          willChange: 'opacity',
                         }}
                       />
                     ))}
