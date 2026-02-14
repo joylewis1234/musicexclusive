@@ -104,6 +104,10 @@ const FanAuth = () => {
     const navState = { flow, email, name: displayName, invite_token: inviteToken, invite_type: inviteType };
 
     try {
+      // Pre-set the active role BEFORE signIn so that onAuthStateChange's
+      // pickActiveRole finds "fan" in sessionStorage and doesn't default to "artist"
+      setActiveRole("fan");
+
       if (isSignUp) {
         const { error } = await signUp(email, password, "fan", displayName);
         if (error) {
@@ -313,6 +317,8 @@ const FanAuth = () => {
               disabled={isLoading}
               onClick={async () => {
                 setIsLoading(true);
+                // Pre-set fan role so pickActiveRole finds it after OAuth redirect
+                setActiveRole("fan");
                 try {
                   const destination = getDestination();
                   const { error } = await lovable.auth.signInWithOAuth("google", {

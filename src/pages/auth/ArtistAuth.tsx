@@ -27,6 +27,10 @@ const ArtistAuth = () => {
     setIsLoading(true);
 
     try {
+      // Pre-set the active role BEFORE signIn so that onAuthStateChange's
+      // pickActiveRole finds "artist" in sessionStorage and doesn't default to another role
+      setActiveRole("artist");
+
       if (isSignUp) {
         const { error } = await signUp(email, password, "artist", displayName);
         if (error) {
@@ -152,6 +156,8 @@ const ArtistAuth = () => {
               disabled={isLoading}
               onClick={async () => {
                 setIsLoading(true);
+                // Pre-set artist role so pickActiveRole finds it after OAuth redirect
+                setActiveRole("artist");
                 try {
                   const { error } = await lovable.auth.signInWithOAuth("google", {
                     redirect_uri: window.location.origin + "/artist/dashboard",
