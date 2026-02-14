@@ -9,8 +9,9 @@ import { toast } from "sonner";
 
 const ArtistAgreementAccept = () => {
   const navigate = useNavigate();
-  const { acceptAgreement, isSubmitting } = useArtistAgreement();
+  const { acceptAgreement, isSubmitting, lastError } = useArtistAgreement();
   const [agreed, setAgreed] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const handleContinue = async () => {
     if (!agreed) {
@@ -18,12 +19,15 @@ const ArtistAgreementAccept = () => {
       return;
     }
 
+    setSaveError(null);
     const success = await acceptAgreement();
     if (success) {
       toast.success("Agreement accepted! You can now upload your music.");
       navigate("/artist/dashboard");
     } else {
-      toast.error("Failed to save agreement. Please try again.");
+      const errorMsg = lastError || "Failed to save agreement. Please try again.";
+      setSaveError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -170,6 +174,14 @@ const ArtistAgreementAccept = () => {
           </div>
           </div>
         </GlowCard>
+
+        {/* Error Banner */}
+        {saveError && (
+          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
+            <p className="text-destructive text-sm font-semibold mb-1">Could not save agreement</p>
+            <p className="text-muted-foreground text-xs">{saveError}</p>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="space-y-3 mt-6">
