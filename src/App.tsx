@@ -84,7 +84,13 @@ import AdminInvitations from "./pages/admin/AdminInvitations";
 import AdminHealthCheck from "./pages/admin/AdminHealthCheck";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
