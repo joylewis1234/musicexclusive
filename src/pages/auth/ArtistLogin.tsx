@@ -64,6 +64,7 @@ const ArtistLogin = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // prevent double-submit
     setErrors({});
     setApplicationStatus(null);
     setDebugInfo(null);
@@ -84,6 +85,12 @@ const ArtistLogin = () => {
     console.log("[ArtistLogin] Supabase env:", maskedUrl);
 
     setIsLoading(true);
+
+    // Safety timeout: if the login flow hangs for 30s, reset the button
+    const safetyTimer = setTimeout(() => {
+      console.warn("[ArtistLogin] Safety timeout: resetting isLoading after 30s");
+      setIsLoading(false);
+    }, 30_000);
 
     try {
       // Pre-check via edge function (bypasses RLS, works before sign-in)
@@ -222,6 +229,7 @@ const ArtistLogin = () => {
         toast.error("An error occurred. Please try again.");
       }
     } finally {
+      clearTimeout(safetyTimer);
       setIsLoading(false);
     }
   };
