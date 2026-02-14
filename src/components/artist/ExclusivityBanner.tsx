@@ -82,10 +82,15 @@ export const ExclusivityBanner = ({
   if (warningLevel === "safe") {
     const daysLeft = differenceInDays(expiresAt, new Date());
     return (
-      <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-        <Clock className="w-3.5 h-3.5 text-muted-foreground/60 flex-shrink-0" />
-        <p className="text-[11px] text-muted-foreground/70">
-          Exclusive for {daysLeft} more days · Ends {format(expiresAt, "MMM d, yyyy")}
+      <div 
+        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/[0.06] border border-amber-400/25"
+        style={{
+          boxShadow: '0 0 12px hsla(40, 90%, 50%, 0.15), inset 0 0 8px hsla(40, 90%, 50%, 0.05)',
+        }}
+      >
+        <Clock className="w-3.5 h-3.5 text-amber-400/80 flex-shrink-0" />
+        <p className="text-[11px] text-amber-300/80">
+          🔥 Exclusive for {daysLeft} more days · Ends {format(expiresAt, "MMM d, yyyy")}
         </p>
       </div>
     );

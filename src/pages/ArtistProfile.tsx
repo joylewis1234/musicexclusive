@@ -429,6 +429,7 @@ const ArtistProfile = () => {
                     title: track.title,
                     artworkUrl: track.artwork_url,
                     duration: track.duration,
+                    exclusivityDecision: (track as any).exclusivity_decision,
                   }}
                   index={index}
                   fanId={fanId}
