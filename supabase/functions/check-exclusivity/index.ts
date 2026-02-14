@@ -31,6 +31,17 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY");
     const supabase = createClient(supabaseUrl, serviceKey);
 
+    // Support override_email for testing
+    let overrideEmail: string | null = null;
+    try {
+      const body = await req.json();
+      overrideEmail = body?.override_email || null;
+    } catch { /* no body or not JSON, that's fine */ }
+
+    if (overrideEmail) {
+      logStep("Using override email for testing", { overrideEmail });
+    }
+
     const now = new Date();
     
     // Find tracks that need warnings:
@@ -103,7 +114,7 @@ Deno.serve(async (req) => {
       }
 
       const { data: userData } = await supabase.auth.admin.getUserById(artistProfile.user_id);
-      const artistEmail = userData?.user?.email;
+      const artistEmail = overrideEmail || userData?.user?.email;
 
       if (!artistEmail) {
         logStep("No artist email found", { userId: artistProfile.user_id });
