@@ -4,6 +4,7 @@ import { Header } from "@/components/Header"
 import Footer from "@/components/Footer"
 import { ArtistCard } from "@/components/ArtistCard"
 import { ArtistPreviewStrip } from "@/components/ArtistPreviewStrip"
+import { ArtistCardCarousel } from "@/components/ArtistCardCarousel"
 import { StepCard } from "@/components/StepCard"
 import { BenefitCard } from "@/components/BenefitCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
@@ -198,33 +199,7 @@ const Index = () => {
 
       {/* Artists Section */}
       <section className="py-12 overflow-hidden">
-        <div className="container max-w-lg md:max-w-4xl mx-auto px-4 mb-6">
-          {/* No header needed - just the carousel */}
-        </div>
-        
-        {/* Continuous Scrolling Carousel */}
-        <div className="relative overflow-hidden">
-          <div className="flex gap-6 animate-scroll-cards hover:[animation-play-state:paused]">
-            {/* First set */}
-            {artists.map((artist) => (
-              <ArtistCard
-                key={artist.name}
-                name={artist.name}
-                genre={artist.genre}
-                imageUrl={artist.imageUrl}
-              />
-            ))}
-            {/* Duplicate set for seamless loop */}
-            {artists.map((artist) => (
-              <ArtistCard
-                key={`${artist.name}-dup`}
-                name={artist.name}
-                genre={artist.genre}
-                imageUrl={artist.imageUrl}
-              />
-            ))}
-          </div>
-        </div>
+        <ArtistCardCarousel artists={artists} />
       </section>
 
       {/* How It Works Section */}
