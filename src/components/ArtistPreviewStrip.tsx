@@ -36,9 +36,8 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
     setSingleSetWidth(width)
   }, [artists.length])
 
-  // Speed: ~40px/s for a smooth slow scroll
-  // Medium speed: ~30px/s
-  const duration = singleSetWidth > 0 ? singleSetWidth / 30 : 30
+  // ~40px/s
+  const duration = singleSetWidth > 0 ? singleSetWidth / 40 : 30
 
   return (
     <div className={cn("w-full overflow-hidden", className)}>
