@@ -71,14 +71,6 @@ const ArtistApplicationSubmitted = () => {
               Review typically takes 3-5 business days.
             </p>
 
-            {/* Debug: Application ID */}
-            {applicationId && (
-              <div className="mt-4 p-2 bg-muted/20 rounded-lg border border-border/30">
-                <p className="text-[10px] text-muted-foreground/60 font-mono break-all">
-                  Application ID: {applicationId}
-                </p>
-              </div>
-            )}
           </GlowCard>
 
           {/* What Happens Next */}
