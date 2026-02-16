@@ -33,8 +33,8 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
     setSingleSetWidth(width)
   }, [artists.length])
 
-  // Faster speed: ~60px/s
-  const duration = singleSetWidth > 0 ? singleSetWidth / 60 : 25
+  // Medium speed: ~40px/s
+  const duration = singleSetWidth > 0 ? singleSetWidth / 40 : 30
 
   return (
     <div className="relative overflow-hidden">
