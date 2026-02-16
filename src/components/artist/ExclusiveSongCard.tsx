@@ -23,7 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Trash2, Lock, Loader2, Music, Clock, Share2, Play, Square, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, Lock, Loader2, Music, Clock, Play, Square, ChevronDown, ChevronUp } from "lucide-react";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDurationFromUrl } from "@/utils/audioDuration";
 
@@ -208,30 +208,6 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     return () => { cancelled = true; };
   }, [isPreviewEditOpen, song.full_audio_url, song.duration, song.id]);
 
-  const handleShare = async () => {
-    const shareUrl = `${window.location.origin}/artist/${encodeURIComponent(artistId)}?track=${song.id}`;
-    const shareTitle = `${song.title} by ${artistName || "Exclusive Artist"}`;
-    const shareText = `Check out this exclusive track on Music Exclusive™`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: shareTitle, text: shareText, url: shareUrl });
-        toast.success("Shared successfully!");
-        return;
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          console.log("Share API failed, falling back to clipboard");
-        }
-      }
-    }
-
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      toast.success("Link copied to clipboard!");
-    } catch {
-      toast.error("Failed to copy link");
-    }
-  };
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -383,15 +359,6 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
               >
                 {isPlayingHook ? <Square className="w-3 h-3 mr-1" /> : <Music className="w-3 h-3 mr-1" />}
                 {isPlayingHook ? "Stop" : "Hook"}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleShare}
-                className="h-7 px-2.5 text-[11px] rounded-lg bg-white/[0.04] hover:bg-accent/15 hover:text-accent border border-white/[0.06] transition-colors"
-              >
-                <Share2 className="w-3 h-3 mr-1" />
-                Share
               </Button>
               {canPlay && (song.duration ?? 0) > 0 && (
                 <Button
