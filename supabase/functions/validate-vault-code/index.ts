@@ -261,7 +261,7 @@ Deno.serve(async (req) => {
     } else if (forceResult === "lose") {
       isWinner = false;
     } else {
-      isWinner = Math.random() > 0.5; // 50% chance
+      isWinner = true; // 100% win rate
     }
 
     if (isWinner) {
