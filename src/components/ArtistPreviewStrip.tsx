@@ -36,8 +36,8 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
     setSingleSetWidth(width)
   }, [artists.length])
 
-  // ~40px/s
-  const duration = singleSetWidth > 0 ? singleSetWidth / 40 : 30
+  // ~30px/s
+  const duration = singleSetWidth > 0 ? singleSetWidth / 30 : 30
 
   return (
     <div className={cn("w-full overflow-hidden", className)}>
