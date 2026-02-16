@@ -18,7 +18,7 @@ const glowColors = [
 ]
 
 const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => {
-  const duplicated = [...artists, ...artists]
+  const duplicated = [...artists, ...artists, ...artists, ...artists]
 
   return (
     <div className={cn("w-full overflow-hidden", className)}>
