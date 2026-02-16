@@ -15,7 +15,7 @@ const qualifications = [
   },
   {
     icon: FileAudio,
-    text: "Submit professionally produced music (.WAV format)",
+    text: "Submit professionally produced music (MP3 or WAV format)",
   },
   {
     icon: Shield,
