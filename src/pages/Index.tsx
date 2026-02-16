@@ -15,6 +15,12 @@ import artistSkyeMonroe from "@/assets/artist-skye-monroe.jpg"
 import artistZionChase from "@/assets/artist-zion-chase.jpg"
 import artistLunaVale from "@/assets/artist-luna-vale.jpg"
 import artistEdenReign from "@/assets/artist-eden-reign.jpg"
+import artistElectronic from "@/assets/artist-electronic.jpg"
+import artistRockFemale from "@/assets/artist-rock-female.jpg"
+import artistLatinMale from "@/assets/artist-latin-male.jpg"
+import artistCountryFemale from "@/assets/artist-country-female.jpg"
+import artistJazz from "@/assets/artist-jazz.jpg"
+import artistLofi from "@/assets/artist-lofi.jpg"
 
 const artists = [
   { name: "Nova Rae", genre: "Alt Pop", imageUrl: artistNovaRae },
@@ -23,6 +29,12 @@ const artists = [
   { name: "Zion Chase", genre: "Hip Hop", imageUrl: artistZionChase },
   { name: "Luna Vale", genre: "Indie Pop", imageUrl: artistLunaVale },
   { name: "Eden Reign", genre: "Christian", imageUrl: artistEdenReign },
+  { name: "Axel Volt", genre: "Electronic", imageUrl: artistElectronic },
+  { name: "Raven Cross", genre: "Rock", imageUrl: artistRockFemale },
+  { name: "Marco Sol", genre: "Latin", imageUrl: artistLatinMale },
+  { name: "Cassidy Lane", genre: "Country", imageUrl: artistCountryFemale },
+  { name: "Miles Ivory", genre: "Jazz", imageUrl: artistJazz },
+  { name: "Yuki Haze", genre: "Lo-Fi", imageUrl: artistLofi },
 ]
 
 const steps = [
