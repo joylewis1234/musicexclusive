@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { useRef, useEffect, useState } from "react"
 
 interface Artist {
   name: string
@@ -18,11 +19,37 @@ const glowColors = [
 ]
 
 const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => {
-  const duplicated = [...artists, ...artists, ...artists, ...artists]
+  // We render 3 copies: when the first copy scrolls off-screen, CSS resets seamlessly
+  const duplicated = [...artists, ...artists, ...artists]
+  const trackRef = useRef<HTMLDivElement>(null)
+  const [singleSetWidth, setSingleSetWidth] = useState(0)
+
+  useEffect(() => {
+    if (!trackRef.current) return
+    // Measure the width of one set of artists
+    const cards = trackRef.current.children
+    const count = artists.length
+    let width = 0
+    for (let i = 0; i < count && i < cards.length; i++) {
+      width += (cards[i] as HTMLElement).offsetWidth
+    }
+    setSingleSetWidth(width)
+  }, [artists.length])
+
+  // Speed: ~40px/s for a smooth slow scroll
+  const duration = singleSetWidth > 0 ? singleSetWidth / 40 : 30
 
   return (
     <div className={cn("w-full overflow-hidden", className)}>
-      <div className="flex animate-scroll-slow hover:[animation-play-state:paused]">
+      <div
+        ref={trackRef}
+        className="flex hover:[animation-play-state:paused]"
+        style={{
+          animation: singleSetWidth > 0
+            ? `marquee-scroll ${duration}s linear infinite`
+            : undefined,
+        }}
+      >
         {duplicated.map((artist, index) => {
           const colorIndex = index % glowColors.length
           const glowColor = glowColors[colorIndex]
@@ -33,7 +60,7 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
               className="flex-shrink-0 px-2"
             >
               <div
-                className="relative w-20 md:w-24 h-28 md:h-36 rounded-xl overflow-hidden transition-all duration-300"
+                className="relative w-20 md:w-24 h-28 md:h-36 rounded-xl overflow-hidden"
                 style={{
                   boxShadow: `0 0 12px hsla(${glowColor.base}, 0.5), 0 0 24px hsla(${glowColor.base}, 0.3), 0 0 40px hsla(${glowColor.base}, 0.15)`,
                 }}
@@ -41,7 +68,7 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
                 <img
                   src={artist.imageUrl}
                   alt={artist.name}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-1.5 md:p-2 text-center">
@@ -57,6 +84,16 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
           )
         })}
       </div>
+
+      {/* Inject the keyframe using exact pixel measurement */}
+      {singleSetWidth > 0 && (
+        <style>{`
+          @keyframes marquee-scroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-${singleSetWidth}px); }
+          }
+        `}</style>
+      )}
     </div>
   )
 }
