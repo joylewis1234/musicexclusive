@@ -142,7 +142,7 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
           loading="lazy"
         />
         {track.exclusivityDecision !== "keep" && (
-          <span className="absolute -top-1 -left-1 text-sm" style={{ filter: 'drop-shadow(0 0 3px hsla(25, 95%, 55%, 0.8))' }}>🔥</span>
+          <span className="absolute -bottom-1 -left-1 text-sm" style={{ filter: 'drop-shadow(0 0 3px hsla(25, 95%, 55%, 0.8))' }}>🔥</span>
         )}
       </div>
 
