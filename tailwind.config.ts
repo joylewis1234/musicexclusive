@@ -138,7 +138,7 @@ export default {
         "fade-up": "fade-up 0.6s ease-out forwards",
         float: "float 6s ease-in-out infinite",
         "scroll-slow": "scroll-slow 30s linear infinite",
-        "scroll-cards": "scroll-cards 40s linear infinite",
+        "scroll-cards": "scroll-cards 25s linear infinite",
         // Extra slow for ambient UI accents (Stream CTAs, headphones indicators)
         "pulse-slow": "slow-fade 10s ease-in-out infinite",
       },
