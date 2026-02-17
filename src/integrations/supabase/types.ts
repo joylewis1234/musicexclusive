@@ -888,6 +888,30 @@ export type Database = {
           },
         ]
       }
+      stream_charges: {
+        Row: {
+          created_at: string
+          fan_email: string
+          stream_id: string
+          stream_ledger_id: string | null
+          track_id: string
+        }
+        Insert: {
+          created_at?: string
+          fan_email: string
+          stream_id?: string
+          stream_ledger_id?: string | null
+          track_id: string
+        }
+        Update: {
+          created_at?: string
+          fan_email?: string
+          stream_id?: string
+          stream_ledger_id?: string | null
+          track_id?: string
+        }
+        Relationships: []
+      }
       stream_ledger: {
         Row: {
           amount_artist: number
