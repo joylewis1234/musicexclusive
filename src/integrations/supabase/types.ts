@@ -402,7 +402,7 @@ export type Database = {
           credits_delta: number
           id: string
           payout_batch_id: string | null
-          reference: string | null
+          reference: string
           type: string
           usd_delta: number
           user_email: string
@@ -412,7 +412,7 @@ export type Database = {
           credits_delta: number
           id?: string
           payout_batch_id?: string | null
-          reference?: string | null
+          reference: string
           type: string
           usd_delta: number
           user_email: string
@@ -422,7 +422,7 @@ export type Database = {
           credits_delta?: number
           id?: string
           payout_batch_id?: string | null
-          reference?: string | null
+          reference?: string
           type?: string
           usd_delta?: number
           user_email?: string

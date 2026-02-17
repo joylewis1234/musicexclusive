@@ -1,0 +1,1 @@
+ALTER TABLE public.credit_ledger ALTER COLUMN reference SET NOT NULL;
