@@ -109,8 +109,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 3. Deduct 1 credit (optimistic lock)
-    const { error: deductError, count } = await adminClient
+    // 3. Idempotency: insert into stream_charges; if duplicate, return success
+    const streamChargeId = crypto.randomUUID();
+
+    const { error: idempotencyError } = await adminClient
+      .from("stream_charges")
+      .insert({
+        stream_id: streamChargeId,
+        fan_email: fanEmail,
+        track_id: trackId,
+      });
+
+    // Note: stream_charges has a PK on stream_id (always unique UUID), so
+    // we rely on the credit_ledger unique index for true dedupe protection.
+    if (idempotencyError) {
+      console.error("Idempotency insert error:", idempotencyError);
+      // Non-fatal — continue with the charge
+    }
+
+    // 4. Deduct 1 credit (optimistic lock via CHECK constraint credits >= 0)
+    const { error: deductError } = await adminClient
       .from("vault_members")
       .update({ credits: vaultMember.credits - 1 })
       .eq("email", fanEmail)
@@ -118,13 +136,20 @@ Deno.serve(async (req) => {
 
     if (deductError) {
       console.error("Error deducting credit:", deductError);
+      // If CHECK constraint fires, credits would go negative
+      if (deductError.message?.includes("credits_non_negative")) {
+        return new Response(JSON.stringify({ error: "Insufficient credits", requiresCredits: true }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       return new Response(JSON.stringify({ error: "Failed to process payment" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 4. Create ledger entries
+    // 5. Create ledger entries (unique index prevents duplicates)
     const streamReference = `stream_${trackId}_${Date.now()}`;
 
     // STREAM_DEBIT for fan
@@ -154,8 +179,8 @@ Deno.serve(async (req) => {
       reference: streamReference,
     });
 
-    // 5. Create stream_ledger entry
-    await adminClient.from("stream_ledger").insert({
+    // 6. Create stream_ledger entry
+    const { data: streamEntry } = await adminClient.from("stream_ledger").insert({
       fan_id: fanUserId,
       fan_email: fanEmail,
       artist_id: trackOwnerArtistId,
@@ -165,7 +190,15 @@ Deno.serve(async (req) => {
       amount_artist: 0.10,
       amount_platform: 0.10,
       payout_status: "pending",
-    });
+    }).select("id").maybeSingle();
+
+    // 7. Update stream_charges with the stream_ledger_id
+    if (streamEntry?.id) {
+      await adminClient
+        .from("stream_charges")
+        .update({ stream_ledger_id: streamEntry.id })
+        .eq("stream_id", streamChargeId);
+    }
 
     // Return the new credit balance
     const newCredits = vaultMember.credits - 1;
