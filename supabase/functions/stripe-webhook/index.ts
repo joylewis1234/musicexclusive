@@ -17,6 +17,18 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
+const rollbackStripeEvent = async (eventId: string, reason: string) => {
+  const { error } = await supabaseAdmin
+    .from("stripe_events")
+    .delete()
+    .eq("id", eventId);
+  if (error) {
+    logStep("Failed to rollback stripe event", { eventId, reason, error: error.message });
+  } else {
+    logStep("Rolled back stripe event", { eventId, reason });
+  }
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,10 +36,10 @@ serve(async (req) => {
 
   try {
     logStep("Webhook received");
-    
+
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    
+
     if (!stripeKey) {
       logStep("STRIPE_SECRET_KEY not configured");
       return new Response(JSON.stringify({ error: "Server configuration error" }), {
@@ -35,59 +47,63 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    
+
+    if (!webhookSecret) {
+      logStep("STRIPE_WEBHOOK_SECRET not configured");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const signature = req.headers.get("stripe-signature");
     const body = await req.text();
-    
-    // Verify webhook signature if secret is configured
+
+    // Verify webhook signature
     let event: Stripe.Event;
-    
-    if (webhookSecret && signature) {
-      try {
-        event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
-        logStep("Webhook signature verified");
-      } catch (err) {
-        logStep("Invalid webhook signature", { error: String(err) });
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } else if (webhookSecret && !signature) {
-      // Secret is configured but no signature provided - reject
+
+    if (!signature) {
       logStep("Missing stripe-signature header");
       return new Response(JSON.stringify({ error: "Missing signature" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    } else {
-      // No webhook secret configured - parse as JSON (legacy mode, log warning)
-      logStep("WARNING: STRIPE_WEBHOOK_SECRET not configured - signature verification skipped");
-      try {
-        event = JSON.parse(body) as Stripe.Event;
-      } catch (err) {
-        logStep("Failed to parse webhook body", { error: String(err) });
-        return new Response(JSON.stringify({ error: "Invalid payload" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    }
+
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      logStep("Webhook signature verified");
+    } catch (err) {
+      logStep("Invalid webhook signature", { error: String(err) });
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     logStep("Event parsed", { type: event.type, eventId: event.id });
 
-    // Idempotency check: verify event hasn't been processed already
-    const { data: existingEvent } = await supabaseAdmin
+    // Idempotency check: insert first to prevent race conditions
+    const { error: insertEventError } = await supabaseAdmin
       .from("stripe_events")
-      .select("id")
-      .eq("id", event.id)
-      .maybeSingle();
+      .insert({
+        id: event.id,
+        event_type: event.type,
+        payload: event.data.object as unknown as Record<string, unknown>,
+      });
 
-    if (existingEvent) {
-      logStep("Event already processed, skipping", { eventId: event.id });
-      return new Response(JSON.stringify({ received: true, duplicate: true }), {
-        status: 200,
+    if (insertEventError) {
+      if (insertEventError.code === "23505") {
+        logStep("Event already processed, skipping", { eventId: event.id });
+        return new Response(JSON.stringify({ received: true, duplicate: true }), {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      logStep("Error storing event ID", { error: insertEventError.message });
+      return new Response(JSON.stringify({ error: "Idempotency insert failed" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -95,116 +111,48 @@ serve(async (req) => {
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
-        logStep("Checkout session completed", { 
-          sessionId: session.id, 
+        logStep("Checkout session completed", {
+          sessionId: session.id,
           mode: session.mode,
-          paymentIntent: session.payment_intent 
+          paymentIntent: session.payment_intent,
         });
-        
+
         // Get the customer email and credits from metadata
         const customerEmail = session.customer_email || session.metadata?.email;
         const credits = parseInt(session.metadata?.credits || "0", 10);
         const transactionType = session.metadata?.type || "CREDITS_PURCHASE";
         const isSubscription = session.mode === "subscription";
-        const paymentIntentId = typeof session.payment_intent === 'string' 
-          ? session.payment_intent 
+        const paymentIntentId = typeof session.payment_intent === 'string'
+          ? session.payment_intent
           : session.payment_intent?.id;
-        
-        if (customerEmail && credits > 0) {
-          logStep("Processing credit purchase", { 
-            email: customerEmail, 
-            credits, 
-            type: transactionType,
-            paymentIntentId 
-          });
-          
-          // Get current credits
-          const { data: member, error: fetchError } = await supabaseAdmin
-            .from("vault_members")
-            .select("credits")
-            .eq("email", customerEmail)
-            .maybeSingle();
-          
-          if (fetchError) {
-            logStep("Error fetching member", { error: fetchError.message });
-          } else if (member) {
-            // Update existing member
-            const newCredits = (member.credits || 0) + credits;
-            const updateData: Record<string, unknown> = { 
-              credits: newCredits,
-              vault_access_active: true,
-            };
-            
-            if (isSubscription) {
-              updateData.membership_type = "superfan";
-              updateData.superfan_active = true;
-              updateData.superfan_since = new Date().toISOString();
-            }
-            
-            const { error: updateError } = await supabaseAdmin
-              .from("vault_members")
-              .update(updateData)
-              .eq("email", customerEmail);
-            
-            if (updateError) {
-              logStep("Error updating credits", { error: updateError.message });
-            } else {
-              logStep("Credits updated successfully", { 
-                email: customerEmail, 
-                previousCredits: member.credits,
-                newCredits 
-              });
-            }
-          } else {
-            // Create new member
-            const insertData: Record<string, unknown> = {
-              email: customerEmail,
-              display_name: customerEmail.split("@")[0],
-              credits: credits,
-              vault_access_active: true,
-            };
-            
-            if (isSubscription) {
-              insertData.membership_type = "superfan";
-              insertData.superfan_active = true;
-              insertData.superfan_since = new Date().toISOString();
-            }
-            
-            const { error: insertError } = await supabaseAdmin
-              .from("vault_members")
-              .insert(insertData);
-            
-            if (insertError) {
-              logStep("Error creating member", { error: insertError.message });
-            } else {
-              logStep("New member created with credits", { 
-                email: customerEmail, 
-                credits 
-              });
-            }
-          }
 
-          // Create ledger entry
+        if (customerEmail && credits > 0) {
+          logStep("Processing credit purchase", {
+            email: customerEmail,
+            credits,
+            type: transactionType,
+            paymentIntentId,
+          });
+
           const usdAmount = credits * 0.20;
           const ledgerType = isSubscription ? "SUBSCRIPTION_CREDITS" : transactionType;
-          const { error: ledgerError } = await supabaseAdmin
-            .from("credit_ledger")
-            .insert({
-              user_email: customerEmail,
-              type: ledgerType,
-              credits_delta: credits,
-              usd_delta: usdAmount,
-              reference: paymentIntentId || session.id,
-            });
 
-          if (ledgerError) {
-            logStep("Error creating ledger entry", { error: ledgerError.message });
-          } else {
-            logStep("Ledger entry created", { 
-              email: customerEmail, 
-              credits_delta: credits,
-              usd_delta: usdAmount,
-              reference: paymentIntentId || session.id
+          const { error: rpcError } = await supabaseAdmin.rpc("apply_credit_purchase", {
+            p_email: customerEmail,
+            p_credits: credits,
+            p_ledger_type: ledgerType,
+            p_reference: paymentIntentId || session.id,
+            p_usd: usdAmount,
+            p_set_superfan: isSubscription,
+            p_set_superfan_since: isSubscription,
+          });
+
+          if (rpcError) {
+            logStep("Error applying credits", { error: rpcError.message });
+            await rollbackStripeEvent(event.id, "apply_credit_purchase failed");
+            return new Response(JSON.stringify({ error: "Credit processing failed" }), {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
           }
 
@@ -213,8 +161,7 @@ serve(async (req) => {
             try {
               const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
               const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-              
-              // Send welcome email (which now also generates the invite link internally)
+
               fetch(`${supabaseUrl}/functions/v1/send-superfan-welcome-email`, {
                 method: "POST",
                 headers: {
@@ -223,13 +170,13 @@ serve(async (req) => {
                 },
                 body: JSON.stringify({ email: customerEmail }),
               }).catch(err => logStep("Superfan email fire-and-forget error", { error: String(err) }));
-              
+
               logStep("Superfan welcome email + invite triggered", { email: customerEmail });
             } catch (emailErr) {
               logStep("Error triggering superfan email/invite", { error: String(emailErr) });
             }
           }
-          
+
           // Consume invite token if present in metadata
           const inviteToken = session.metadata?.invite_token;
           if (inviteToken) {
@@ -251,98 +198,90 @@ serve(async (req) => {
         }
         break;
       }
-      
+
       case "invoice.payment_succeeded": {
         // Handle subscription renewals
         const invoice = event.data.object as Stripe.Invoice;
         logStep("Invoice payment succeeded", { invoiceId: invoice.id });
-        
+
         // Check if this is a subscription invoice (not first payment)
         if (invoice.billing_reason === "subscription_cycle") {
           const customerEmail = invoice.customer_email;
           if (customerEmail) {
             // Grant monthly credits for Superfan subscription
             const subscriptionCredits = 25;
-            
-            const { data: member } = await supabaseAdmin
-              .from("vault_members")
-              .select("credits")
-              .eq("email", customerEmail)
-              .maybeSingle();
-            
-            if (member) {
-              const newCredits = (member.credits || 0) + subscriptionCredits;
-              await supabaseAdmin
-                .from("vault_members")
-                .update({ credits: newCredits })
-                .eq("email", customerEmail);
-              
-              // Create ledger entry for subscription credits
-              await supabaseAdmin
-                .from("credit_ledger")
-                .insert({
-                  user_email: customerEmail,
-                  type: "SUBSCRIPTION_CREDITS",
-                  credits_delta: subscriptionCredits,
-                  usd_delta: 5.00,
-                  reference: invoice.id,
-                });
-              
-              logStep("Subscription credits granted", { 
-                email: customerEmail, 
-                credits: subscriptionCredits 
+            const usdAmount = 5.00;
+
+            const { error: rpcError } = await supabaseAdmin.rpc("apply_credit_purchase", {
+              p_email: customerEmail,
+              p_credits: subscriptionCredits,
+              p_ledger_type: "SUBSCRIPTION_CREDITS",
+              p_reference: invoice.id,
+              p_usd: usdAmount,
+              p_set_superfan: true,
+              p_set_superfan_since: false,
+            });
+
+            if (rpcError) {
+              logStep("Error applying subscription credits", { error: rpcError.message });
+              await rollbackStripeEvent(event.id, "subscription credits failed");
+              return new Response(JSON.stringify({ error: "Subscription credit processing failed" }), {
+                status: 500,
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
               });
-              
-              // Generate monthly superfan invite (non-blocking)
-              try {
-                const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-                const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-                fetch(`${supabaseUrl}/functions/v1/generate-superfan-invite`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${supabaseAnonKey}`,
-                  },
-                  body: JSON.stringify({ email: customerEmail, sendEmail: true, isRenewal: true }),
-                }).catch(err => logStep("Monthly invite fire-and-forget error", { error: String(err) }));
-                logStep("Monthly superfan invite triggered", { email: customerEmail });
-              } catch (err) {
-                logStep("Error triggering monthly invite", { error: String(err) });
-              }
+            }
+
+            logStep("Subscription credits granted", {
+              email: customerEmail,
+              credits: subscriptionCredits,
+            });
+
+            // Generate monthly superfan invite (non-blocking)
+            try {
+              const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+              const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+              fetch(`${supabaseUrl}/functions/v1/generate-superfan-invite`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${supabaseAnonKey}`,
+                },
+                body: JSON.stringify({ email: customerEmail, sendEmail: true, isRenewal: true }),
+              }).catch(err => logStep("Monthly invite fire-and-forget error", { error: String(err) }));
+              logStep("Monthly superfan invite triggered", { email: customerEmail });
+            } catch (err) {
+              logStep("Error triggering monthly invite", { error: String(err) });
             }
           }
         }
         break;
       }
-      
+
       case "customer.subscription.created":
       case "customer.subscription.updated": {
         const subscription = event.data.object as Stripe.Subscription;
-        logStep("Subscription event", { 
-          type: event.type, 
-          subscriptionId: subscription.id, 
-          status: subscription.status 
+        logStep("Subscription event", {
+          type: event.type,
+          subscriptionId: subscription.id,
+          status: subscription.status,
         });
-        // Handle subscription status changes if needed
         break;
       }
-      
+
       case "payment_intent.succeeded": {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         logStep("Payment intent succeeded", { paymentIntentId: paymentIntent.id });
         break;
       }
 
-      // Stripe Connect events for artist payout accounts
       case "account.updated": {
         const account = event.data.object as Stripe.Account;
-        logStep("Connect account updated", { 
-          accountId: account.id, 
+        logStep("Connect account updated", {
+          accountId: account.id,
           chargesEnabled: account.charges_enabled,
-          payoutsEnabled: account.payouts_enabled
+          payoutsEnabled: account.payouts_enabled,
         });
 
-        // Find artist profile by stripe_account_id and update payout status
         const { data: artistProfile, error: findError } = await supabaseAdmin
           .from("artist_profiles")
           .select("id, payout_status")
@@ -371,33 +310,18 @@ serve(async (req) => {
             if (updateError) {
               logStep("Error updating payout status", { error: updateError.message });
             } else {
-              logStep("Payout status updated via webhook", { 
-                artistProfileId: artistProfile.id, 
-                newStatus 
+              logStep("Payout status updated via webhook", {
+                artistProfileId: artistProfile.id,
+                newStatus,
               });
             }
           }
         }
         break;
       }
-      
+
       default:
         logStep("Unhandled event type", { type: event.type });
-    }
-
-    // Store event ID to prevent duplicate processing
-    const { error: insertEventError } = await supabaseAdmin
-      .from("stripe_events")
-      .insert({
-        id: event.id,
-        event_type: event.type,
-        payload: event.data.object as unknown as Record<string, unknown>,
-      });
-
-    if (insertEventError) {
-      logStep("Error storing event ID", { error: insertEventError.message });
-    } else {
-      logStep("Event stored for idempotency", { eventId: event.id });
     }
 
     return new Response(JSON.stringify({ received: true }), {
