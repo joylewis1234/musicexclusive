@@ -1286,6 +1286,18 @@ export type Database = {
       }
     }
     Functions: {
+      apply_credit_purchase: {
+        Args: {
+          p_credits: number
+          p_email: string
+          p_ledger_type: string
+          p_reference: string
+          p_set_superfan?: boolean
+          p_set_superfan_since?: boolean
+          p_usd: number
+        }
+        Returns: undefined
+      }
       get_fan_top_artists: {
         Args: { p_fan_id: string; p_limit?: number }
         Returns: {
