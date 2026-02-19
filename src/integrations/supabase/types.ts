@@ -919,6 +919,7 @@ export type Database = {
         Row: {
           created_at: string
           fan_email: string
+          idempotency_key: string | null
           stream_id: string
           stream_ledger_id: string | null
           track_id: string
@@ -926,6 +927,7 @@ export type Database = {
         Insert: {
           created_at?: string
           fan_email: string
+          idempotency_key?: string | null
           stream_id?: string
           stream_ledger_id?: string | null
           track_id: string
@@ -933,6 +935,7 @@ export type Database = {
         Update: {
           created_at?: string
           fan_email?: string
+          idempotency_key?: string | null
           stream_id?: string
           stream_ledger_id?: string | null
           track_id?: string

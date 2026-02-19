@@ -45,9 +45,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { trackId } = await req.json();
+    const body = await req.json();
+    const { trackId, idempotencyKey } = body ?? {};
     if (!trackId) {
       return new Response(JSON.stringify({ error: "trackId is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    if (!idempotencyKey || typeof idempotencyKey !== "string") {
+      return new Response(JSON.stringify({ error: "idempotencyKey is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -118,11 +125,22 @@ Deno.serve(async (req) => {
         stream_id: streamChargeId,
         fan_email: fanEmail,
         track_id: trackId,
+        idempotency_key: idempotencyKey,
       });
 
-    // Note: stream_charges has a PK on stream_id (always unique UUID), so
-    // we rely on the credit_ledger unique index for true dedupe protection.
     if (idempotencyError) {
+      if (idempotencyError.code === "23505") {
+        // Duplicate idempotency key — already charged
+        const { data: current } = await adminClient
+          .from("vault_members")
+          .select("credits")
+          .eq("email", fanEmail)
+          .maybeSingle();
+        return new Response(
+          JSON.stringify({ success: true, alreadyCharged: true, newCredits: current?.credits ?? null }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
       console.error("Idempotency insert error:", idempotencyError);
       // Non-fatal — continue with the charge
     }
