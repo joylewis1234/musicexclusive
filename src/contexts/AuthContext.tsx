@@ -231,15 +231,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (error) throw error;
 
       if (data.user) {
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({ user_id: data.user.id, role: selectedRole });
-
-        if (roleError) {
-          console.error("[AuthContext] Error inserting role:", roleError);
-          throw roleError;
-        }
-
+        // Role is assigned by database trigger (fan) or edge function (artist).
+        // Just set the local active role for immediate UI routing.
         setRole(selectedRole);
         setUserRoles(prev => prev.includes(selectedRole) ? prev : [...prev, selectedRole]);
       }

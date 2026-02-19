@@ -59,30 +59,6 @@ const FanAuth = () => {
     return state?.from?.pathname || "/fan/profile";
   };
 
-  // Ensure the fan role exists for the current user after sign-in
-  const ensureFanRole = async () => {
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      if (!currentUser) return;
-
-      // Check if a fan role already exists
-      const { data: existingRoles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", currentUser.id)
-        .eq("role", "fan");
-
-      if (!existingRoles || existingRoles.length === 0) {
-        console.log("[FanAuth] No fan role found, inserting...");
-        await supabase
-          .from("user_roles")
-          .insert({ user_id: currentUser.id, role: "fan" });
-      }
-    } catch (err) {
-      console.warn("[FanAuth] ensureFanRole error (non-fatal):", err);
-    }
-  };
-
   // Consume the invite token so it's marked "used" on the artist's dashboard
   const consumeInvite = async () => {
     if (!inviteToken) return;
@@ -115,10 +91,9 @@ const FanAuth = () => {
           const msg = (error.message || "").toLowerCase();
           if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
             console.log("[FanAuth] User already exists, attempting sign-in...");
-            const { error: loginErr } = await signIn(email, password);
-            if (!loginErr) {
-              await ensureFanRole();
-              setActiveRole("fan");
+              const { error: loginErr } = await signIn(email, password);
+              if (!loginErr) {
+                setActiveRole("fan");
               await consumeInvite();
               toast.success("Welcome back!");
             }
@@ -139,7 +114,6 @@ const FanAuth = () => {
           toast.error(error.message);
           return;
         }
-        await ensureFanRole();
         setActiveRole("fan");
         await consumeInvite();
         toast.success("Welcome back!");
@@ -154,7 +128,6 @@ const FanAuth = () => {
         try {
           const { error: fallbackErr } = await signIn(email, password);
           if (!fallbackErr) {
-            await ensureFanRole();
             setActiveRole("fan");
             await consumeInvite();
             toast.success("Account created! Welcome to the Vault.");
