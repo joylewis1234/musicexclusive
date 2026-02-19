@@ -1,74 +1,31 @@
 
 
-## Move Anonymous Inserts Server-Side with Rate Limiting
+## Add Required Idempotency Key to charge-stream
 
 ### Overview
-Remove public/anonymous INSERT policies from `agreement_acceptances` and `artist_applications`, replacing them with service-role-only INSERT policies. Create two new backend functions to handle these inserts with rate limiting. Add a `request_rate_limits` table for tracking submission rates.
+Enforce a client-generated `idempotencyKey` on every stream charge request. The edge function validates its presence, writes it to `stream_charges.idempotency_key`, and short-circuits on duplicate (Postgres error code 23505) instead of double-charging.
 
-### Database Migration
+### No Database Changes Needed
+The `stream_charges` table already has a partial unique index `stream_charges_idempotency_unique` on `idempotency_key WHERE idempotency_key IS NOT NULL`. Once the field is always populated, duplicates will be caught automatically.
 
-**New table**: `request_rate_limits` for rate-limit tracking
-- `id bigserial primary key`
-- `key text not null` (email|IP composite)
-- `endpoint text not null`
-- `window_start timestamptz not null`
-- `count int not null default 0`
-- `updated_at timestamptz not null default now()`
-- Unique constraint on `(key, endpoint, window_start)`
-- RLS enabled with service-role-only INSERT/UPDATE/SELECT policies
+### Edge Function: `supabase/functions/charge-stream/index.ts`
 
-**RLS policy changes**:
-- Drop "Anyone can insert agreement acceptances" on `agreement_acceptances`
-- Drop "Anyone can insert artist applications" on `artist_applications`
-- Create "Service role can insert agreement acceptances" (service_role only)
-- Create "Service role can insert artist applications" (service_role only)
+**Body parse (line 48)**: Destructure `idempotencyKey` alongside `trackId`. Add a 400 guard if `idempotencyKey` is missing or not a string.
 
-### New Backend Functions
+**Idempotency insert (lines 112-128)**: Add `idempotency_key: idempotencyKey` to the insert payload. On error code `23505`, fetch current credits and return `{ success: true, alreadyCharged: true, newCredits }` (200). All other insert errors remain non-fatal log-and-continue.
 
-**A) `submit-artist-application`**
-- Validates required fields (contact_email, artist_name, agrees_terms)
-- Rate limits: 5 submissions per 10 minutes per email+IP
-- Inserts into `artist_applications` using service-role client
-- Triggers `notify-new-application` internally
-- Returns `{ success: true }` or `{ error }` with appropriate status codes (400, 429, 500)
+### Frontend Hook: `src/hooks/useStreamCharge.ts`
 
-**B) `submit-agreement-acceptance`**
-- Validates required fields (email, name, terms_version, privacy_version)
-- Rate limits: 5 submissions per 10 minutes per email+IP
-- Upserts into `agreement_acceptances` using service-role client (conflict on email)
-- Returns `{ success: true }` or `{ error }`
+**`chargeStream` call (line 26-28)**: Generate `idempotencyKey` via `crypto.randomUUID()` and include it in the request body.
 
-Both functions:
-- Use `verify_jwt = false` (called by unauthenticated users)
-- Include standard CORS headers
-- Extract IP from `x-forwarded-for` header
+**Result interface (lines 5-10)**: Add optional `alreadyCharged?: boolean` to `StreamChargeResult`.
 
-### Frontend Changes
-
-**`src/pages/ArtistApplicationForm.tsx`** (lines 96-105):
-- Replace direct `fetch` to REST API with `supabase.functions.invoke("submit-artist-application", { body: insertBody })`
-- Remove the separate `notify-new-application` invoke (handled server-side now)
-- Keep existing error handling and abort detection
-
-**`src/pages/Agreements.tsx`** (lines 195-206):
-- Replace `supabase.from("agreement_acceptances").upsert(...)` with `supabase.functions.invoke("submit-agreement-acceptance", { body: payload })`
-- Keep existing navigation logic unchanged
-
-### Config Changes
-
-**`supabase/config.toml`**: Add entries for both new functions with `verify_jwt = false`
+**Success handler (lines 59-67)**: If `data.alreadyCharged` is true, skip the "1 credit used" toast (the charge was already processed).
 
 ### Files Modified
 
 | File | Change |
 |------|--------|
-| New migration SQL | Create `request_rate_limits` table, swap INSERT policies |
-| `supabase/functions/submit-artist-application/index.ts` | New function: validate, rate limit, insert application, trigger notification |
-| `supabase/functions/submit-agreement-acceptance/index.ts` | New function: validate, rate limit, upsert acceptance |
-| `src/pages/ArtistApplicationForm.tsx` | Replace direct REST insert with edge function invoke |
-| `src/pages/Agreements.tsx` | Replace Supabase client upsert with edge function invoke |
+| `supabase/functions/charge-stream/index.ts` | Require `idempotencyKey`, write to insert, short-circuit on 23505 |
+| `src/hooks/useStreamCharge.ts` | Generate and send `idempotencyKey`, handle `alreadyCharged` response |
 
-### Risk Assessment
-- **Low risk**: Both tables currently accept anonymous writes; moving to service-role preserves the same data flow while adding rate limiting
-- **No auth required**: Both flows are pre-login (artist application, vault agreement), so `verify_jwt = false` is correct
-- **Notification folded in**: The artist application notification is moved server-side, eliminating a separate client-side call
