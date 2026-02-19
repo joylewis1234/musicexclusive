@@ -192,20 +192,17 @@ const Agreements = () => {
     try {
       // Only save to database if we have user info from the vault flow
       if (state?.email && state?.name) {
-        const { error } = await supabase
-          .from("agreement_acceptances")
-          .upsert(
-            {
-              email: state.email,
-              name: state.name,
-              terms_version: TERMS_VERSION,
-              privacy_version: PRIVACY_VERSION,
-              accepted_at: new Date().toISOString(),
-            },
-            { onConflict: "email" }
-          );
+        const { data, error } = await supabase.functions.invoke("submit-agreement-acceptance", {
+          body: {
+            email: state.email,
+            name: state.name,
+            terms_version: TERMS_VERSION,
+            privacy_version: PRIVACY_VERSION,
+          },
+        });
 
         if (error) throw error;
+        if (data?.error) throw new Error(data.error);
       }
 
       // Navigate based on flow type

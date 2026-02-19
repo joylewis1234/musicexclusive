@@ -90,39 +90,21 @@ const ArtistApplicationForm = () => {
         owns_rights: true,
         not_released_publicly: true,
         agrees_terms: true,
-        status: "pending",
+        baseUrl: window.location.origin,
       }
 
-      const res = await fetch(`${supabaseUrl}/rest/v1/artist_applications`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": supabaseKey,
-          "Authorization": `Bearer ${supabaseKey}`,
-          "Prefer": "return=minimal",
-        },
-        body: JSON.stringify(insertBody),
+      const { data, error: fnError } = await supabase.functions.invoke("submit-artist-application", {
+        body: insertBody,
       })
 
-      if (!res.ok) {
-        const errText = await res.text()
-        console.error("[ArtistApplicationForm] Insert error:", res.status, errText)
-        throw new Error(errText || `Insert failed (${res.status})`)
+      if (fnError) {
+        console.error("[ArtistApplicationForm] Edge function error:", fnError)
+        throw new Error(fnError.message || "Submission failed")
       }
 
-      console.log("[ArtistApply] ✅ Submitted application only (no auth user created):", applicationId)
-
-      // Send notification email to support@musicexclusive.co
-      try {
-        await supabase.functions.invoke("notify-new-application", {
-          body: {
-            applicationId,
-            baseUrl: window.location.origin,
-          },
-        })
-      } catch (notifyError) {
-        // Log but don't fail the submission if notification fails
-        console.error("Failed to send notification email:", notifyError)
+      if (data?.error) {
+        console.error("[ArtistApplicationForm] Server error:", data.error)
+        throw new Error(data.error)
       }
 
       navigate("/artist/application-submitted", {
