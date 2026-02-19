@@ -767,6 +767,33 @@ export type Database = {
         }
         Relationships: []
       }
+      request_rate_limits: {
+        Row: {
+          count: number
+          endpoint: string
+          id: number
+          key: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          endpoint: string
+          id?: number
+          key: string
+          updated_at?: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          endpoint?: string
+          id?: number
+          key?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       shared_artist_profiles: {
         Row: {
           artist_profile_id: string
