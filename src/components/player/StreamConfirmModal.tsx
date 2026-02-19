@@ -95,26 +95,23 @@ export const StreamConfirmModal = ({
 
           <DialogHeader className="space-y-3 text-center">
             <DialogTitle className="font-display text-xl font-semibold text-foreground">
-              {hasEnoughCredits ? "Stream this song?" : "Not Enough Credits"}
+              {hasEnoughCredits ? "🔒 Exclusive Pre-Release. Protected Content." : "Not Enough Credits"}
             </DialogTitle>
             
             <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
               {hasEnoughCredits ? (
-                <span className="space-y-2 block">
+                <span className="space-y-3 block">
                   <span className="block">
-                    <span className="text-foreground font-medium">Cost:</span>{" "}
-                    <span 
-                      className="font-semibold"
-                      style={{ 
-                        color: "hsl(280, 80%, 65%)",
-                        textShadow: "0 0 8px hsla(280, 80%, 50%, 0.5)"
-                      }}
-                    >
-                      1 credit ($0.20)
-                    </span>
+                    This track is made available exclusively through Music Exclusive.
                   </span>
-                  <span className="block mt-2">
-                    Thank you for supporting this artist — every stream truly matters.
+                  <span className="block">
+                    Unauthorized copying, recording, or redistribution of this content may constitute copyright infringement and may result in account termination and legal action by rights holders.
+                  </span>
+                  <span className="block font-medium text-foreground">
+                    🛡 Playback sessions are monitored for abuse.
+                  </span>
+                  <span className="block">
+                    By continuing, you agree to stream for personal use only in accordance with our Terms of Service.
                   </span>
                 </span>
               ) : (
