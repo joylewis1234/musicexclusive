@@ -1,99 +1,103 @@
 
 
-## Harden `user_roles` RLS + Move Role Assignment Server-Side
+## Restrict `track_likes` SELECT + Add Trigger-Maintained Like Counts
 
-### Overview
-This change closes a privilege escalation vulnerability where any authenticated user can self-assign any role (including `artist` or `admin`) by calling `supabase.from("user_roles").insert(...)` directly. We will:
+### Problem
+The current "Anyone can read track likes" policy exposes every fan's like activity to every visitor. The user wants to restrict reads to service_role, admins, or the owning fan. However, the app displays like counts on every track (Discovery page, artist profiles, player) by fetching all `track_likes` rows and counting client-side. Restricting SELECT will break all like counts.
 
-1. Replace the permissive "System can insert roles" RLS policy with a service-role-only policy
-2. Create a database trigger that auto-assigns the `fan` role on every new signup
-3. Remove all client-side `user_roles` inserts from the frontend code
+### Solution
+
+1. **Add a `like_count` column to `tracks`** with a default of 0
+2. **Create a trigger** on `track_likes` that increments/decrements `tracks.like_count` on INSERT/DELETE
+3. **Backfill** existing counts from current data
+4. **Apply the new RLS policy** (drop "Anyone can read", create restricted read)
+5. **Update frontend hooks** to read count from `tracks.like_count` instead of counting rows
 
 ### Why this is safe
+- `tracks` already has an "Anyone can read tracks" SELECT policy, so like counts remain visible
+- The trigger runs as SECURITY DEFINER, so it can update `tracks` regardless of the calling user's role
+- Individual like status (isLiked) is still readable because the new policy allows fans to see their own likes
 
-- **Fans**: The new trigger automatically grants `fan` on signup -- no client insert needed.
-- **Artists**: The `finalize-artist-setup` edge function already uses the service role key to upsert the artist role, so it will continue working.
-- **Admins**: The `ensure_admin_role` trigger already handles admin assignment based on an email allowlist.
-- **Google OAuth fans**: The trigger fires on `auth.users` INSERT, so OAuth signups also get the `fan` role automatically.
+### Technical Details
 
-### Changes
-
-#### 1. Database migration (SQL)
+#### Database Migration (single migration)
 
 ```sql
--- Drop the unsafe self-assign policy
-DROP POLICY IF EXISTS "System can insert roles" ON public.user_roles;
+-- 1. Add like_count column to tracks
+ALTER TABLE public.tracks
+  ADD COLUMN IF NOT EXISTS like_count integer NOT NULL DEFAULT 0;
 
--- Only service_role can manage roles (insert/update/delete/select)
-CREATE POLICY "Service role can manage roles"
-  ON public.user_roles
-  FOR ALL
-  USING ((auth.jwt() ->> 'role') = 'service_role')
-  WITH CHECK ((auth.jwt() ->> 'role') = 'service_role');
+-- 2. Backfill existing counts
+UPDATE public.tracks t
+SET like_count = (
+  SELECT count(*)::int FROM public.track_likes tl
+  WHERE tl.track_id = t.id
+);
 
--- New trigger function: auto-assign fan role on signup
-CREATE OR REPLACE FUNCTION public.handle_new_user_role()
+-- 3. Trigger function to keep like_count in sync
+CREATE OR REPLACE FUNCTION public.update_track_like_count()
   RETURNS trigger
   LANGUAGE plpgsql
   SECURITY DEFINER
   SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.user_roles (user_id, role)
-  VALUES (NEW.id, 'fan')
-  ON CONFLICT DO NOTHING;
-  RETURN NEW;
+  IF TG_OP = 'INSERT' THEN
+    UPDATE public.tracks SET like_count = like_count + 1 WHERE id = NEW.track_id;
+    RETURN NEW;
+  ELSIF TG_OP = 'DELETE' THEN
+    UPDATE public.tracks SET like_count = like_count - 1 WHERE id = OLD.track_id;
+    RETURN OLD;
+  END IF;
+  RETURN NULL;
 END;
 $$;
 
--- Attach trigger to auth.users
-DROP TRIGGER IF EXISTS on_auth_user_created_role ON auth.users;
-CREATE TRIGGER on_auth_user_created_role
-  AFTER INSERT ON auth.users
+DROP TRIGGER IF EXISTS trg_track_like_count ON public.track_likes;
+CREATE TRIGGER trg_track_like_count
+  AFTER INSERT OR DELETE ON public.track_likes
   FOR EACH ROW
-  EXECUTE PROCEDURE public.handle_new_user_role();
-```
+  EXECUTE PROCEDURE public.update_track_like_count();
 
-#### 2. `src/contexts/AuthContext.tsx` -- Remove role insert from `signUp`
+-- 4. Drop the open SELECT policy
+DROP POLICY IF EXISTS "Anyone can read track likes" ON public.track_likes;
 
-The `signUp` function currently inserts into `user_roles` after `supabase.auth.signUp`. This block will be removed entirely. The function signature keeps the `selectedRole` parameter (used to set `activeRole` in memory), but no longer writes to the database. The trigger handles `fan`, and `finalize-artist-setup` handles `artist`.
-
-Before:
-```typescript
-if (data.user) {
-  const { error: roleError } = await supabase
-    .from("user_roles")
-    .insert({ user_id: data.user.id, role: selectedRole });
-  if (roleError) { ... throw roleError; }
-  setRole(selectedRole);
-  setUserRoles(prev => ...);
-}
-```
-
-After:
-```typescript
-if (data.user) {
-  // Role is assigned by database trigger (fan) or edge function (artist).
-  // Just set the local active role for immediate UI routing.
-  setRole(selectedRole);
-  setUserRoles(prev =>
-    prev.includes(selectedRole) ? prev : [...prev, selectedRole]
+-- 5. Create the restricted SELECT policy
+CREATE POLICY "Users can read their own likes"
+  ON public.track_likes
+  FOR SELECT
+  USING (
+    (auth.jwt() ->> 'role') = 'service_role'
+    OR has_role(auth.uid(), 'admin'::app_role)
+    OR fan_id IN (
+      SELECT id FROM public.vault_members
+      WHERE email = (auth.jwt() ->> 'email')
+    )
   );
-}
 ```
 
-#### 3. `src/pages/auth/FanAuth.tsx` -- Remove `ensureFanRole` function
+#### Frontend: `src/hooks/useTrackLikesBatch.ts`
 
-The `ensureFanRole` function checks for and inserts a fan role from the client. With the trigger in place, this is unnecessary and will fail under the new RLS. The function will be removed, and all calls to it (3 places in `handleSubmit`) will be deleted.
+Replace the "fetch all likes and count client-side" approach:
 
-#### 4. `src/pages/auth/ArtistAuth.tsx` -- No changes needed
+- **Like counts**: Read from `tracks` table (include `like_count` in the existing track queries, or fetch it here via `.select("id, like_count").in("id", trackIds)` from `tracks`)
+- **isLiked check**: Keep the existing fan-specific query (fan can still see their own likes under new RLS)
+- Remove the query that fetches all `track_likes` rows just for counting
 
-ArtistAuth calls `signUp(email, password, "artist", displayName)` which flows through AuthContext. Since we are removing the insert from AuthContext, ArtistAuth will still work. The artist role is assigned later via the application/approval flow, not at signup time. The signup note already says "After signing up, you can apply to become an exclusive artist."
+#### Frontend: `src/hooks/useTrackLikes.ts`
+
+Same pattern -- read `like_count` from `tracks` instead of `count(*)` on `track_likes`.
+
+#### Frontend: Realtime subscription update
+
+The existing realtime subscription on `track_likes` will only fire for the fan's own likes now. Update the handler to increment/decrement from the `like_count` value instead. Alternatively, subscribe to changes on `tracks.like_count` for broader updates.
 
 ### Files modified
+
 | File | Change |
 |------|--------|
-| New migration SQL | Drop old policy, create service-role policy, create trigger |
-| `src/contexts/AuthContext.tsx` | Remove `user_roles` insert from `signUp` |
-| `src/pages/auth/FanAuth.tsx` | Remove `ensureFanRole` function and its 3 call sites |
+| New migration SQL | Add `like_count` column, backfill, create trigger, swap RLS policy |
+| `src/hooks/useTrackLikesBatch.ts` | Read count from `tracks.like_count`; keep fan-specific isLiked query |
+| `src/hooks/useTrackLikes.ts` | Read count from `tracks.like_count` instead of counting rows |
+| `src/integrations/supabase/types.ts` | Auto-updated (new `like_count` column on tracks) |
 
