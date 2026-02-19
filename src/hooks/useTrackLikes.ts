@@ -10,23 +10,23 @@ export const useTrackLikes = (trackId: string, fanId: string | null) => {
   const [likeState, setLikeState] = useState<LikeState>({ count: 0, isLiked: false });
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch like count and user's like status
   const fetchLikeData = useCallback(async () => {
     if (!trackId) return;
 
     try {
-      // Get total like count
-      const { count, error: countError } = await supabase
-        .from("track_likes")
-        .select("*", { count: "exact", head: true })
-        .eq("track_id", trackId);
+      // Read like_count from tracks table (publicly readable)
+      const { data: trackData, error: trackError } = await supabase
+        .from("tracks")
+        .select("like_count")
+        .eq("id", trackId)
+        .maybeSingle();
 
-      if (countError) {
-        console.error("Error fetching like count:", countError);
+      if (trackError) {
+        console.error("Error fetching like count:", trackError);
         return;
       }
 
-      // Check if current fan has liked
+      // Check if current fan has liked (fan can read their own likes under new RLS)
       let isLiked = false;
       if (fanId) {
         const { data: likeData } = await supabase
@@ -39,7 +39,7 @@ export const useTrackLikes = (trackId: string, fanId: string | null) => {
         isLiked = !!likeData;
       }
 
-      setLikeState({ count: count || 0, isLiked });
+      setLikeState({ count: (trackData as any)?.like_count ?? 0, isLiked });
     } catch (error) {
       console.error("Error fetching like data:", error);
     }
@@ -56,7 +56,6 @@ export const useTrackLikes = (trackId: string, fanId: string | null) => {
 
     try {
       if (likeState.isLiked) {
-        // Unlike
         const { error } = await supabase
           .from("track_likes")
           .delete()
@@ -70,7 +69,6 @@ export const useTrackLikes = (trackId: string, fanId: string | null) => {
           isLiked: false,
         }));
       } else {
-        // Like
         const { error } = await supabase.from("track_likes").insert({
           track_id: trackId,
           fan_id: fanId,
@@ -85,7 +83,6 @@ export const useTrackLikes = (trackId: string, fanId: string | null) => {
       }
     } catch (error) {
       console.error("Error toggling like:", error);
-      // Refetch to sync state
       fetchLikeData();
     } finally {
       setIsLoading(false);
