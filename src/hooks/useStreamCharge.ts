@@ -7,6 +7,7 @@ interface StreamChargeResult {
   error?: string;
   requiresCredits?: boolean;
   newCredits?: number;
+  alreadyCharged?: boolean;
 }
 
 export const useStreamCharge = (userEmail: string | null | undefined) => {
@@ -23,8 +24,9 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
     setIsProcessing(true);
 
     try {
+      const idempotencyKey = crypto.randomUUID();
       const { data, error } = await supabase.functions.invoke("charge-stream", {
-        body: { trackId },
+        body: { trackId, idempotencyKey },
       });
 
       if (error) {
@@ -56,7 +58,9 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
         return { success: false, error: data.error };
       }
 
-      toast.success("1 credit used • Enjoy 🎶");
+      if (!data?.alreadyCharged) {
+        toast.success("1 credit used • Enjoy 🎶");
+      }
 
       // Mark this track as charged for this session
       setChargedTracks(prev => new Set(prev).add(trackId));
@@ -64,6 +68,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
       return {
         success: true,
         newCredits: data?.newCredits,
+        alreadyCharged: data?.alreadyCharged,
       };
     } catch (err) {
       console.error("Stream charge error:", err);
