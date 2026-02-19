@@ -14,7 +14,6 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
 
-  // Memoize trackIds to prevent unnecessary refetches
   const trackIdsKey = useMemo(() => trackIds.sort().join(","), [trackIds]);
 
   const fetchAllLikeData = useCallback(async () => {
@@ -26,25 +25,24 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
     setIsLoading(true);
 
     try {
-      // Single query to get all like counts grouped by track_id
-      const { data: likeCounts, error: countError } = await supabase
-        .from("track_likes")
-        .select("track_id")
-        .in("track_id", trackIds);
+      // Read like_count from tracks table (publicly readable via "Anyone can read tracks")
+      const { data: tracksData, error: tracksError } = await supabase
+        .from("tracks")
+        .select("id, like_count")
+        .in("id", trackIds);
 
-      if (countError) {
-        console.error("Error fetching like counts:", countError);
+      if (tracksError) {
+        console.error("Error fetching like counts:", tracksError);
         setIsLoading(false);
         return;
       }
 
-      // Count likes per track
       const countMap: Record<string, number> = {};
-      (likeCounts || []).forEach((like) => {
-        countMap[like.track_id] = (countMap[like.track_id] || 0) + 1;
+      (tracksData || []).forEach((t: any) => {
+        countMap[t.id] = t.like_count ?? 0;
       });
 
-      // If fan is logged in, get their likes in one query
+      // If fan is logged in, get their likes (fan can read own likes under new RLS)
       const fanLikedSet = new Set<string>();
       if (fanId) {
         const { data: fanLikes, error: fanError } = await supabase
@@ -58,7 +56,6 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
         }
       }
 
-      // Build the likes map
       const newLikesMap: LikesMap = {};
       trackIds.forEach((trackId) => {
         newLikesMap[trackId] = {
@@ -79,13 +76,12 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
     fetchAllLikeData();
   }, [fetchAllLikeData]);
 
-  // Subscribe to realtime changes on track_likes
+  // Subscribe to realtime changes on tracks.like_count for live count updates
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
     if (trackIds.length === 0) return;
 
-    // Clean up previous channel
     if (channelRef.current) {
       supabase.removeChannel(channelRef.current);
     }
@@ -95,36 +91,24 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "UPDATE",
           schema: "public",
-          table: "track_likes",
+          table: "tracks",
         },
         (payload) => {
-          const trackId = (payload.new as any)?.track_id || (payload.old as any)?.track_id;
-          
-          // Only update if this track is in our list
+          const updatedTrack = payload.new as any;
+          const trackId = updatedTrack?.id;
+
           if (!trackId || !trackIds.includes(trackId)) return;
+          if (updatedTrack.like_count === undefined) return;
 
-          // Skip if this is our own action (already handled optimistically)
-          const eventFanId = (payload.new as any)?.fan_id || (payload.old as any)?.fan_id;
-          if (eventFanId === fanId) return;
-
-          // Update count based on event type
           setLikesMap((prev) => {
-            const current = prev[trackId] || { count: 0, isLiked: false };
-            
-            if (payload.eventType === "INSERT") {
-              return {
-                ...prev,
-                [trackId]: { ...current, count: current.count + 1 },
-              };
-            } else if (payload.eventType === "DELETE") {
-              return {
-                ...prev,
-                [trackId]: { ...current, count: Math.max(0, current.count - 1) },
-              };
-            }
-            return prev;
+            const current = prev[trackId];
+            if (!current || current.count === updatedTrack.like_count) return prev;
+            return {
+              ...prev,
+              [trackId]: { ...current, count: updatedTrack.like_count },
+            };
           });
         }
       )
@@ -138,7 +122,7 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
         channelRef.current = null;
       }
     };
-  }, [trackIdsKey, fanId]);
+  }, [trackIdsKey]);
 
   const toggleLike = useCallback(async (trackId: string) => {
     if (!fanId || !trackId || loadingTrackId) return;
@@ -149,7 +133,7 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
     const wasLiked = currentState.isLiked;
     const prevCount = currentState.count;
 
-    // Optimistic update - instant UI feedback
+    // Optimistic update
     setLikesMap((prev) => ({
       ...prev,
       [trackId]: {
@@ -179,7 +163,6 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
       }
     } catch (error) {
       console.error("Error toggling like:", error);
-      // Revert optimistic update on failure
       setLikesMap((prev) => ({
         ...prev,
         [trackId]: {
