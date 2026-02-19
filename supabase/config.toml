@@ -104,3 +104,9 @@ verify_jwt = false
 
 [functions.check-exclusivity]
 verify_jwt = false
+
+[functions.submit-artist-application]
+verify_jwt = false
+
+[functions.submit-agreement-acceptance]
+verify_jwt = false
