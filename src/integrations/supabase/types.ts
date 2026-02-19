@@ -1041,6 +1041,7 @@ export type Database = {
           full_audio_url: string | null
           genre: string | null
           id: string
+          like_count: number
           preview_audio_url: string | null
           preview_start_seconds: number
           status: string
@@ -1058,6 +1059,7 @@ export type Database = {
           full_audio_url?: string | null
           genre?: string | null
           id?: string
+          like_count?: number
           preview_audio_url?: string | null
           preview_start_seconds?: number
           status?: string
@@ -1075,6 +1077,7 @@ export type Database = {
           full_audio_url?: string | null
           genre?: string | null
           id?: string
+          like_count?: number
           preview_audio_url?: string | null
           preview_start_seconds?: number
           status?: string
