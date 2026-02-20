@@ -200,13 +200,10 @@ Deno.serve(async (req) => {
     }
 
     // ── Success ──
-    const publicBaseUrl = Deno.env.get("R2_PUBLIC_BASE_URL")!.replace(/\/+$/, "");
-    const publicUrl = `${publicBaseUrl}/${key}`;
-
-    console.log(`COMPLETE: done key=${key} publicUrl=${publicUrl}`);
+    console.log(`COMPLETE: done key=${key}`);
 
     return new Response(
-      JSON.stringify({ publicUrl, key, stage: "done" }),
+      JSON.stringify({ key, stage: "done" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {

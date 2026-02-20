@@ -564,7 +564,7 @@ export function useTrackUpload() {
         }, TUS_SAFETY_TIMEOUT_MS);
 
         // Cover upload via R2 multipart (or skip)
-        let r2CoverPublicUrl: string | null = null;
+        let r2CoverKey: string | null = null;
         const coverPromise = SKIP_COVER_UPLOAD
           ? Promise.resolve({ ok: true, status: 200, responseText: "SKIPPED" } as { ok: boolean; status: number; responseText: string })
           : (async () => {
@@ -577,14 +577,14 @@ export function useTrackUpload() {
                 onProgress: (pct) => { coverPct = pct; updateParallelProgress(); },
               });
               if (result.ok) {
-                r2CoverPublicUrl = result.publicUrl || null;
+                r2CoverKey = result.key || null;
                 return { ok: true, status: 200, responseText: "R2 cover OK" };
               }
               return { ok: false, status: 0, responseText: result.error || "R2 cover upload failed" };
             })();
 
         // Audio upload via R2 multipart (or skip)
-        let r2AudioPublicUrl: string | null = null;
+        let r2AudioKey: string | null = null;
         const audioPromise = SKIP_AUDIO_UPLOAD
           ? Promise.resolve({ ok: true, status: 200, responseText: "SKIPPED" } as { ok: boolean; status: number; responseText: string })
           : (async () => {
@@ -596,7 +596,7 @@ export function useTrackUpload() {
                 onProgress: (pct) => { audioPct = pct; anyProgressFired = true; updateParallelProgress(); },
               });
               if (result.ok) {
-                r2AudioPublicUrl = result.publicUrl || null;
+                r2AudioKey = result.key || null;
                 return { ok: true, status: 200, responseText: "R2 OK" };
               }
               return { ok: false, status: 0, responseText: result.error || "R2 upload failed" };
@@ -604,7 +604,7 @@ export function useTrackUpload() {
 
         // Optional preview upload via R2 as well
         let previewPath: string | null = null;
-        let r2PreviewPublicUrl: string | null = null;
+        let r2PreviewKey: string | null = null;
         let previewPromise: Promise<{ ok: boolean; status: number; responseText: string }> | null = null;
         if (processedPreviewFile && processedPreviewFile instanceof File) {
           const previewContentType = getAudioContentType(processedPreviewFile);
@@ -620,7 +620,7 @@ export function useTrackUpload() {
               onProgress: () => {},
             });
             if (result.ok) {
-              r2PreviewPublicUrl = result.publicUrl || null;
+              r2PreviewKey = result.key || null;
               return { ok: true, status: 200, responseText: "R2 preview OK" };
             }
             return { ok: false, status: 0, responseText: result.error || "R2 preview upload failed" };
@@ -679,10 +679,6 @@ export function useTrackUpload() {
         setStep("db_update", 92);
         addDiagnostic({ step: "db_update", status: "pending", message: "Finalizing track...", timestamp: new Date() });
 
-        const coverPublicUrl = r2CoverPublicUrl || "";
-        const audioPublicUrl = r2AudioPublicUrl || "";
-        const previewPublicUrl = r2PreviewPublicUrl || null;
-
         // Detect audio duration
         let audioDuration = 180;
         try {
@@ -693,13 +689,13 @@ export function useTrackUpload() {
 
         try {
           const updatePayload: Record<string, unknown> = {
-            artwork_url: coverPublicUrl,
-            full_audio_url: audioPublicUrl,
+            artwork_key: r2CoverKey,
+            full_audio_key: r2AudioKey,
+            preview_audio_key: r2PreviewKey,
             status: "ready",
             duration: audioDuration,
             preview_start_seconds: previewStartSeconds ?? 0,
           };
-          if (previewPublicUrl) updatePayload.preview_audio_url = previewPublicUrl;
 
           // Use direct REST to avoid Supabase SDK hanging on Android Chrome
           const restUpdateUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`;
