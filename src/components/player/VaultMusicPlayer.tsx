@@ -45,13 +45,13 @@ export const VaultMusicPlayer = ({
     loadTrack,
   } = useAudioPlayer();
 
-  // Load track when it changes
+  // Load track when it changes — fetch signed URL via edge function
   useEffect(() => {
-    if (track?.audioUrl) {
-      loadTrack(track.audioUrl, track.title);
+    if (track?.id) {
+      loadTrack(track.id, "audio", track.title);
       setHasCalledOnPlay(false);
     }
-  }, [track?.id, track?.audioUrl, loadTrack]);
+  }, [track?.id, loadTrack]);
 
   const handlePlayPause = async () => {
     if (!track) return;
@@ -285,16 +285,12 @@ export const VaultMusicPlayer = ({
                 <span className="text-foreground truncate max-w-[180px]">{diagnostics.trackTitle || "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Bucket:</span>
-                <span className="text-foreground">{diagnostics.bucketName}</span>
+                <span className="text-muted-foreground">Track ID:</span>
+                <span className="text-foreground truncate max-w-[180px]">{diagnostics.trackId || "—"}</span>
               </div>
-              <div>
-                <span className="text-muted-foreground">Audio URL:</span>
-                <p className="text-foreground break-all mt-0.5 text-[10px]">{diagnostics.audioUrl || "—"}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Audio Path:</span>
-                <p className="text-foreground break-all mt-0.5 text-[10px]">{diagnostics.audioPath || "—"}</p>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">File Type:</span>
+                <span className="text-foreground">{diagnostics.fileType || "—"}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Can Play:</span>
