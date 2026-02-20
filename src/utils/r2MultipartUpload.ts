@@ -135,7 +135,6 @@ async function uploadPartWithRetry(
 
 export interface R2UploadResult {
   ok: boolean;
-  publicUrl?: string;
   key?: string;
   error?: string;
 }
@@ -258,12 +257,11 @@ export async function r2MultipartUpload(params: {
   clearState(trackId);
   onProgress?.(100);
 
-  debugLog(`${tag} ✅ R2 upload complete: ${completeResult.publicUrl}`);
-  console.log(tag, "R2 upload complete:", completeResult.publicUrl);
+  debugLog(`${tag} ✅ R2 upload complete: key=${completeResult.key}`);
+  console.log(tag, "R2 upload complete:", completeResult.key);
 
   return {
     ok: true,
-    publicUrl: completeResult.publicUrl,
     key: completeResult.key,
   };
 }
