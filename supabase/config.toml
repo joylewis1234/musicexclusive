@@ -110,3 +110,6 @@ verify_jwt = false
 
 [functions.submit-agreement-acceptance]
 verify_jwt = false
+
+[functions.mint-playback-url]
+verify_jwt = false
