@@ -1063,15 +1063,18 @@ export type Database = {
         Row: {
           album: string | null
           artist_id: string
+          artwork_key: string | null
           artwork_url: string | null
           created_at: string
           duration: number
           exclusivity_decision: string | null
           exclusivity_expires_at: string | null
+          full_audio_key: string | null
           full_audio_url: string | null
           genre: string | null
           id: string
           like_count: number
+          preview_audio_key: string | null
           preview_audio_url: string | null
           preview_start_seconds: number
           status: string
@@ -1081,15 +1084,18 @@ export type Database = {
         Insert: {
           album?: string | null
           artist_id: string
+          artwork_key?: string | null
           artwork_url?: string | null
           created_at?: string
           duration?: number
           exclusivity_decision?: string | null
           exclusivity_expires_at?: string | null
+          full_audio_key?: string | null
           full_audio_url?: string | null
           genre?: string | null
           id?: string
           like_count?: number
+          preview_audio_key?: string | null
           preview_audio_url?: string | null
           preview_start_seconds?: number
           status?: string
@@ -1099,15 +1105,18 @@ export type Database = {
         Update: {
           album?: string | null
           artist_id?: string
+          artwork_key?: string | null
           artwork_url?: string | null
           created_at?: string
           duration?: number
           exclusivity_decision?: string | null
           exclusivity_expires_at?: string | null
+          full_audio_key?: string | null
           full_audio_url?: string | null
           genre?: string | null
           id?: string
           like_count?: number
+          preview_audio_key?: string | null
           preview_audio_url?: string | null
           preview_start_seconds?: number
           status?: string
