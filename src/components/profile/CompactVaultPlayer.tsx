@@ -60,13 +60,13 @@ export const CompactVaultPlayer = ({
 
   const prevIsPlayingRef = useRef(isPlaying);
 
-  // Load track when it changes
+  // Load track when it changes — fetch signed URL via edge function
   useEffect(() => {
-    if (track?.audioUrl) {
-      loadTrack(track.audioUrl, track.title);
+    if (track?.id) {
+      loadTrack(track.id, "audio", track.title);
       setHasCalledOnPlay(false);
     }
-  }, [track?.id, track?.audioUrl, loadTrack]);
+  }, [track?.id, loadTrack]);
 
   // Detect song completion: was playing, now stopped, and currentTime is at/near end
   useEffect(() => {

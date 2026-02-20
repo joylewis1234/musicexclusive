@@ -1,11 +1,66 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+/* ── Signed-URL in-memory cache ── */
+
+interface CachedUrl {
+  url: string;
+  expiresAt: number; // Date.now() + TTL
+}
+
+const urlCache = new Map<string, CachedUrl>();
+const CACHE_TTL_MS = 60_000; // 60 seconds (signed URLs last 90s)
+
+function getCachedUrl(trackId: string, fileType: string): string | null {
+  const key = `${trackId}:${fileType}`;
+  const entry = urlCache.get(key);
+  if (entry && entry.expiresAt > Date.now()) {
+    return entry.url;
+  }
+  urlCache.delete(key);
+  return null;
+}
+
+function setCachedUrl(trackId: string, fileType: string, url: string) {
+  urlCache.set(`${trackId}:${fileType}`, { url, expiresAt: Date.now() + CACHE_TTL_MS });
+}
+
+/* ── Mint signed playback URL via edge function ── */
+
+async function mintPlaybackUrl(
+  trackId: string,
+  fileType: "audio" | "preview"
+): Promise<string> {
+  // Check cache first
+  const cached = getCachedUrl(trackId, fileType);
+  if (cached) {
+    console.log("[AudioPlayer] Using cached signed URL for", trackId, fileType);
+    return cached;
+  }
+
+  const { data, error } = await supabase.functions.invoke("mint-playback-url", {
+    body: { trackId, fileType },
+  });
+
+  if (error) {
+    throw new Error(error.message || "Failed to get playback URL");
+  }
+
+  if (!data?.url) {
+    throw new Error(data?.error || "No URL returned from mint-playback-url");
+  }
+
+  setCachedUrl(trackId, fileType, data.url);
+  console.log("[AudioPlayer] Minted signed URL for", trackId, fileType);
+  return data.url;
+}
+
+/* ── Types ── */
+
 export interface PlaybackDiagnostics {
   trackTitle: string | null;
-  audioUrl: string | null;
-  audioPath: string | null;
-  bucketName: string;
+  trackId: string | null;
+  fileType: string | null;
   lastError: string | null;
   canPlay: boolean;
   readyState: number;
@@ -24,33 +79,10 @@ export interface UseAudioPlayerReturn {
   stop: () => void;
   seek: (time: number) => void;
   setVolume: (vol: number) => void;
-  loadTrack: (audioUrl: string, trackTitle?: string) => void;
+  loadTrack: (trackId: string, fileType: "audio" | "preview", trackTitle?: string) => void;
 }
 
-/**
- * Extract storage path from a Supabase public URL
- * URL format: https://xxx.supabase.co/storage/v1/object/public/{bucket}/{path}
- */
-function extractPathFromUrl(url: string | null): string | null {
-  if (!url) return null;
-  try {
-    const match = url.match(/\/storage\/v1\/object\/public\/[^/]+\/(.+)$/);
-    return match ? match[1] : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Generate a public URL from a storage path if the URL is missing
- */
-export function generatePublicUrl(
-  bucket: "track_audio" | "track_covers",
-  path: string
-): string {
-  const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-  return data?.publicUrl || "";
-}
+/* ── Hook ── */
 
 export function useAudioPlayer(): UseAudioPlayerReturn {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -60,12 +92,11 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [volume, setVolumeState] = useState(75);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const [diagnostics, setDiagnostics] = useState<PlaybackDiagnostics>({
     trackTitle: null,
-    audioUrl: null,
-    audioPath: null,
-    bucketName: "track_audio",
+    trackId: null,
+    fileType: null,
     lastError: null,
     canPlay: false,
     readyState: 0,
@@ -78,27 +109,17 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
     const audio = audioRef.current;
 
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
       setIsLoading(false);
-      setDiagnostics(prev => ({
-        ...prev,
-        canPlay: true,
-        readyState: audio.readyState,
-      }));
+      setDiagnostics((prev) => ({ ...prev, canPlay: true, readyState: audio.readyState }));
     };
 
     const handleCanPlay = () => {
       setIsLoading(false);
-      setDiagnostics(prev => ({
-        ...prev,
-        canPlay: true,
-        readyState: audio.readyState,
-      }));
+      setDiagnostics((prev) => ({ ...prev, canPlay: true, readyState: audio.readyState }));
     };
 
     const handleEnded = () => {
@@ -109,7 +130,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const handleError = (e: Event) => {
       const audioEl = e.target as HTMLAudioElement;
       let errorMessage = "Unknown playback error";
-      
       if (audioEl.error) {
         switch (audioEl.error.code) {
           case MediaError.MEDIA_ERR_ABORTED:
@@ -126,12 +146,11 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
             break;
         }
       }
-
       console.error("[AudioPlayer] Error:", errorMessage, audioEl.error);
       setError(errorMessage);
       setIsLoading(false);
       setIsPlaying(false);
-      setDiagnostics(prev => ({
+      setDiagnostics((prev) => ({
         ...prev,
         lastError: errorMessage,
         canPlay: false,
@@ -139,10 +158,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       }));
     };
 
-    const handleWaiting = () => {
-      setIsLoading(true);
-    };
-
+    const handleWaiting = () => setIsLoading(true);
     const handlePlaying = () => {
       setIsLoading(false);
       setIsPlaying(true);
@@ -176,34 +192,45 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     }
   }, [volume]);
 
-  const loadTrack = useCallback((audioUrl: string, trackTitle?: string) => {
-    if (!audioRef.current) return;
+  const loadTrack = useCallback(
+    (trackId: string, fileType: "audio" | "preview", trackTitle?: string) => {
+      if (!audioRef.current) return;
 
-    // Reset state
-    setError(null);
-    setIsPlaying(false);
-    setCurrentTime(0);
-    setDuration(0);
-    setIsLoading(true);
+      // Reset state
+      setError(null);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsLoading(true);
 
-    const audioPath = extractPathFromUrl(audioUrl);
+      setDiagnostics({
+        trackTitle: trackTitle || null,
+        trackId,
+        fileType,
+        lastError: null,
+        canPlay: false,
+        readyState: 0,
+      });
 
-    setDiagnostics({
-      trackTitle: trackTitle || null,
-      audioUrl,
-      audioPath,
-      bucketName: "track_audio",
-      lastError: null,
-      canPlay: false,
-      readyState: 0,
-    });
+      console.log("[AudioPlayer] Loading track:", { trackId, fileType, trackTitle });
 
-    // Load the new source
-    audioRef.current.src = audioUrl;
-    audioRef.current.load();
-    
-    console.log("[AudioPlayer] Loading track:", { trackTitle, audioUrl, audioPath });
-  }, []);
+      // Fetch signed URL then load
+      mintPlaybackUrl(trackId, fileType)
+        .then((signedUrl) => {
+          if (!audioRef.current) return;
+          audioRef.current.src = signedUrl;
+          audioRef.current.load();
+        })
+        .catch((err) => {
+          const msg = err instanceof Error ? err.message : "Failed to get playback URL";
+          console.error("[AudioPlayer] mintPlaybackUrl failed:", msg);
+          setError(msg);
+          setIsLoading(false);
+          setDiagnostics((prev) => ({ ...prev, lastError: msg }));
+        });
+    },
+    []
+  );
 
   const play = useCallback(async () => {
     if (!audioRef.current) {
@@ -212,7 +239,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     }
 
     const audio = audioRef.current;
-    
+
     if (!audio.src) {
       setError("No audio source loaded");
       return;
@@ -228,10 +255,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       console.error("[AudioPlayer] Play failed:", err);
       setError(msg);
       setIsPlaying(false);
-      setDiagnostics(prev => ({
-        ...prev,
-        lastError: msg,
-      }));
+      setDiagnostics((prev) => ({ ...prev, lastError: msg }));
     } finally {
       setIsLoading(false);
     }
