@@ -1,5 +1,6 @@
 import { RefreshCw, Flame, Play } from "lucide-react";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 import artist1 from "@/assets/artist-1.jpg";
 
@@ -47,7 +48,6 @@ export const HotNewTracks = ({
           className={`flex gap-3 transition-opacity duration-300 ${isRefreshing ? "opacity-50" : "opacity-100"}`}
         >
           {tracks.map((track) => {
-            const coverImage = track.artwork_url || track.artist_avatar_url || artist1;
             const artistName = getArtistName(track);
 
             return (
@@ -62,9 +62,10 @@ export const HotNewTracks = ({
                     boxShadow: "0 0 6px hsl(var(--primary) / 0.08)",
                   }}
                 >
-                  <img
-                    src={coverImage}
+                  <SignedArtwork
+                    trackId={track.id}
                     alt={track.title}
+                    fallbackSrc={track.artist_avatar_url || artist1}
                     className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
 
