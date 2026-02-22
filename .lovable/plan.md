@@ -1,29 +1,36 @@
 
 
-## Update Stream Confirmation Modal Text
+## Signed Artwork -- Remaining Gaps
 
-### What Changes
-Update the `StreamConfirmModal` component (`src/components/player/StreamConfirmModal.tsx`) to replace the current friendly messaging with formal copyright/legal language.
+Most of this work is already complete. The edge function, hook, and component all exist and 11+ components already use `<SignedArtwork>`. Only three small changes remain:
 
-### Specific Text Changes
+### 1. Edge function: add `expiresAt` to response
+**File:** `supabase/functions/mint-playback-url/index.ts`
 
-**Title:** "Stream this song?" → "Exclusive Pre-Release. Protected Content." (with lock emoji prefix)
+The response currently returns only `{ url }`. Update it to return `{ url, expiresAt }` so the client can use server-reported expiry instead of guessing.
 
-**Body text** (replaces "Cost: 1 credit..." and "Thank you for supporting..."): 
-- "This track is made available exclusively through Music Exclusive."
-- "Unauthorized copying, recording, or redistribution of this content may constitute copyright infringement and may result in account termination and legal action by rights holders."
-- "Playback sessions are monitored for abuse." (with shield emoji)
-- "By continuing, you agree to stream for personal use only in accordance with our Terms of Service."
+```
+// Change line 194 from:
+{ url: signedUrl }
+// To:
+{ url: signedUrl, expiresAt: new Date(Date.now() + ttl * 1000).toISOString() }
+```
 
-**Balance section, buttons, footer** — all remain unchanged.
+### 2. Replace direct `<img>` in ShareExclusiveTrackModal
+**File:** `src/components/profile/ShareExclusiveTrackModal.tsx`
 
-**Insufficient credits state** — remains unchanged ("Not Enough Credits" title and messaging).
+Lines 164-169 render `<img src={track.artworkUrl}>`. Replace with `<SignedArtwork trackId={track.id} />`. This requires adding `track.id` which is already available in the `TrackInfo` interface.
 
-### Technical Details
+### 3. Replace direct `<img>` in WeeklyTransparencyReport
+**File:** `src/components/artist/WeeklyTransparencyReport.tsx`
 
-**File:** `src/components/player/StreamConfirmModal.tsx`
-- Replace the `DialogTitle` text for the `hasEnoughCredits` branch
-- Replace the `DialogDescription` content for the `hasEnoughCredits` branch with the new multi-paragraph legal copy
-- Remove the "Cost: 1 credit ($0.20)" line (the button still says "Stream Now (1 Credit)")
-- Keep all existing balance display logic, button handlers, and insufficient-credits flow intact
+Lines 565-569 render `<img src={track.artworkUrl}>`. Replace with `<SignedArtwork trackId={track.trackId} />`. The `trackId` field already exists in the component's data structure.
+
+---
+
+### What is NOT changing
+- All other components (HotNewTracks, DiscoveryTrackCard, PlaylistSection, PlaylistPlayerBar, etc.) are already migrated.
+- `artwork_url` remains in DB queries for status checks -- only the render path changes.
+- `avatar_url` is untouched (Supabase Storage, not R2).
+- The `useSignedArtworkUrl` hook can optionally be updated to use the server-returned `expiresAt` instead of the hardcoded 5-min offset, but this is a minor improvement.
 
