@@ -1,5 +1,6 @@
 import { Play, Pause, Share2, Headphones, Loader2, AlertCircle, Heart } from "lucide-react";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 import artist1 from "@/assets/artist-1.jpg";
 
 interface DiscoveryTrackCardProps {
@@ -28,7 +29,6 @@ export const DiscoveryTrackCard = ({
   onArtistClick,
 }: DiscoveryTrackCardProps) => {
   const artistName = getArtistName(track);
-  const coverImage = track.artwork_url || track.artist_avatar_url || artist1;
   const hasPreviewAudio = !!track.preview_audio_url || !!track.full_audio_url;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
@@ -47,9 +47,10 @@ export const DiscoveryTrackCard = ({
         className="relative aspect-square overflow-hidden cursor-pointer"
         onClick={hasPreviewAudio && !isPreviewDisabled ? onPreview : onStream}
       >
-        <img
-          src={coverImage}
+        <SignedArtwork
+          trackId={track.id}
           alt={track.title}
+          fallbackSrc={track.artist_avatar_url || artist1}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 

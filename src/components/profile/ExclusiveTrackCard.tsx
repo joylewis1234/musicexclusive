@@ -2,6 +2,7 @@ import { Headphones, Heart, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { cn } from "@/lib/utils";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 interface ExclusiveTrackCardProps {
   id: string;
@@ -48,9 +49,10 @@ export const ExclusiveTrackCard = ({
       <div className="flex items-center gap-4">
         {/* Cover Art */}
         <div className="relative flex-shrink-0">
-          <img
-            src={artworkUrl || fallbackImage}
+          <SignedArtwork
+            trackId={id}
             alt={title}
+            fallbackSrc={fallbackImage}
             className="w-14 h-14 rounded-lg object-cover"
           />
         </div>

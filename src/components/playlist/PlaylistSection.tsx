@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { PlaylistTrack } from "@/hooks/usePlaylist";
 import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 import artist1 from "@/assets/artist-1.jpg";
 
@@ -179,11 +180,11 @@ export const PlaylistSection = ({
               </button>
 
               {/* Artwork */}
-              <img
-                src={track.artwork_url || artist1}
+              <SignedArtwork
+                trackId={track.track_id}
                 alt={track.title}
+                fallbackSrc={artist1}
                 className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                loading="lazy"
               />
 
               {/* Track info */}
