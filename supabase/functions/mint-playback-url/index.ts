@@ -191,7 +191,7 @@ Deno.serve(async (req) => {
     const ttl = fileType === "artwork" ? 300 : 90;
     const signedUrl = await presignR2Url(key, ttl);
 
-    return new Response(JSON.stringify({ url: signedUrl }), {
+    return new Response(JSON.stringify({ url: signedUrl, expiresAt: new Date(Date.now() + ttl * 1000).toISOString() }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

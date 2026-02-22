@@ -19,8 +19,10 @@ async function mintArtworkUrl(trackId: string): Promise<{ url: string; expiresAt
     throw new Error(error?.message || "Failed to mint artwork URL");
   }
 
-  // Edge function returns a 5-min TTL for artwork
-  const expiresAt = Date.now() + 5 * 60 * 1000;
+  // Use server-reported expiry if available, otherwise fall back to 5 min
+  const expiresAt = data.expiresAt
+    ? new Date(data.expiresAt).getTime()
+    : Date.now() + 5 * 60 * 1000;
   return { url: data.url as string, expiresAt };
 }
 
