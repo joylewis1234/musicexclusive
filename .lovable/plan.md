@@ -1,36 +1,48 @@
 
 
-## Signed Artwork -- Remaining Gaps
+## Testing the Worker Gate -- Blockers and Plan
 
-Most of this work is already complete. The edge function, hook, and component all exist and 11+ components already use `<SignedArtwork>`. Only three small changes remain:
+### Current situation
+- **No tracks have `artwork_key` set** in the database, so `mint-playback-url` with `fileType: "artwork"` will return 404 ("No artwork key on this track").
+- **You are currently logged out** (on `/admin/login`), so the edge function rejects all requests with 401.
+- The only track with real R2 data is **"Say Less"** (`9fad1e64-...`), which has `full_audio_key` and an `artwork_url` pointing to `pub-51f09041...r2.dev/artists/.../covers/9fad1e64-....jpg`.
 
-### 1. Edge function: add `expiresAt` to response
-**File:** `supabase/functions/mint-playback-url/index.ts`
+### Step 1 -- Backfill artwork_key for "Say Less"
 
-The response currently returns only `{ url }`. Update it to return `{ url, expiresAt }` so the client can use server-reported expiry instead of guessing.
+Run a DB migration to extract the R2 object key from the existing `artwork_url` and populate `artwork_key`:
 
+```sql
+UPDATE tracks
+SET artwork_key = 'artists/72473c4c-3ad4-46f7-b25c-3ee2497d4d78/covers/9fad1e64-016e-41da-95b5-6f2dd154ee41.jpg'
+WHERE id = '9fad1e64-016e-41da-95b5-6f2dd154ee41'
+  AND artwork_key IS NULL;
 ```
-// Change line 194 from:
-{ url: signedUrl }
-// To:
-{ url: signedUrl, expiresAt: new Date(Date.now() + ttl * 1000).toISOString() }
+
+### Step 2 -- Log in as admin
+
+Once logged in, I can call `mint-playback-url` with either:
+- `fileType: "artwork"` (any authenticated user allowed, 300s TTL) -- preferred since it requires no vault/admin check
+- `fileType: "audio"` (requires admin, artist-owner, or vault-active)
+
+### Step 3 -- Mint and host-swap test
+
+After minting, take the returned signed URL:
+
+```text
+https://<account>.r2.cloudflarestorage.com/<bucket>/<key>?X-Amz-...
 ```
 
-### 2. Replace direct `<img>` in ShareExclusiveTrackModal
-**File:** `src/components/profile/ShareExclusiveTrackModal.tsx`
+Replace the host portion with the Worker domain:
 
-Lines 164-169 render `<img src={track.artworkUrl}>`. Replace with `<SignedArtwork trackId={track.id} />`. This requires adding `track.id` which is already available in the `TrackInfo` interface.
+```text
+https://r2-playback-gate.long-dew-571e.workers.dev/<bucket>/<key>?X-Amz-...
+```
 
-### 3. Replace direct `<img>` in WeeklyTransparencyReport
-**File:** `src/components/artist/WeeklyTransparencyReport.tsx`
+Open in browser. Expected result: the file is served (200 with the image/audio content).
 
-Lines 565-569 render `<img src={track.artworkUrl}>`. Replace with `<SignedArtwork trackId={track.trackId} />`. The `trackId` field already exists in the component's data structure.
+### Technical details
 
----
-
-### What is NOT changing
-- All other components (HotNewTracks, DiscoveryTrackCard, PlaylistSection, PlaylistPlayerBar, etc.) are already migrated.
-- `artwork_url` remains in DB queries for status checks -- only the render path changes.
-- `avatar_url` is untouched (Supabase Storage, not R2).
-- The `useSignedArtworkUrl` hook can optionally be updated to use the server-returned `expiresAt` instead of the hardcoded 5-min offset, but this is a minor improvement.
+- The migration is a single `UPDATE` statement, no schema changes.
+- The `artwork_key` value is derived from the existing `artwork_url` by stripping the public R2 base URL prefix (`https://pub-51f09041f1d54e669dc9fcbc987d5191.r2.dev/`).
+- Future uploads already set `artwork_key` during upload, so this is a one-time backfill for existing data.
 
