@@ -9,7 +9,6 @@ interface Track {
   title: string;
   artist: string;
   artworkUrl: string;
-  audioUrl: string;
 }
 
 interface CompactVaultPlayerProps {
@@ -63,10 +62,10 @@ export const CompactVaultPlayer = ({
   // Load track when it changes — fetch signed URL via edge function
   useEffect(() => {
     if (track?.id) {
-      loadTrack(track.id, "audio", track.title);
+      void loadTrack({ trackId: track.id, fileType: "audio", trackTitle: track.title });
       setHasCalledOnPlay(false);
     }
-  }, [track?.id, loadTrack]);
+  }, [track?.id, loadTrack, track?.title]);
 
   // Detect song completion: was playing, now stopped, and currentTime is at/near end
   useEffect(() => {
@@ -80,13 +79,13 @@ export const CompactVaultPlayer = ({
 
   // Handle auto-play trigger from parent (after confirmation modal)
   useEffect(() => {
-    if (autoPlay && track?.audioUrl && hasVaultAccess) {
+    if (autoPlay && track?.id && hasVaultAccess) {
       play().then(() => {
         setHasCalledOnPlay(true);
         onAutoPlayConsumed?.();
       });
     }
-  }, [autoPlay, track?.audioUrl, hasVaultAccess, play, onAutoPlayConsumed]);
+  }, [autoPlay, track?.id, hasVaultAccess, play, onAutoPlayConsumed]);
 
   const handlePlayPause = async () => {
     if (!track) return;
@@ -96,8 +95,8 @@ export const CompactVaultPlayer = ({
       return;
     }
 
-    if (!track.audioUrl) {
-      console.error("[VaultPlayer] No audio URL for track:", track.title);
+    if (!track.id) {
+      console.error("[VaultPlayer] No track id");
       return;
     }
 
@@ -120,7 +119,7 @@ export const CompactVaultPlayer = ({
 
   // External method to start playback after confirmation
   const startPlayback = async () => {
-    if (!track?.audioUrl) return;
+    if (!track?.id) return;
     await play();
     setHasCalledOnPlay(true);
   };

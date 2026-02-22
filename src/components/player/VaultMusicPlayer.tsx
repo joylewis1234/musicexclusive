@@ -10,7 +10,6 @@ interface Track {
   title: string;
   artist: string;
   artworkUrl: string;
-  audioUrl: string;
 }
 
 interface VaultMusicPlayerProps {
@@ -48,10 +47,10 @@ export const VaultMusicPlayer = ({
   // Load track when it changes — fetch signed URL via edge function
   useEffect(() => {
     if (track?.id) {
-      loadTrack(track.id, "audio", track.title);
+      void loadTrack({ trackId: track.id, fileType: "audio", trackTitle: track.title });
       setHasCalledOnPlay(false);
     }
-  }, [track?.id, loadTrack]);
+  }, [track?.id, loadTrack, track?.title]);
 
   const handlePlayPause = async () => {
     if (!track) return;
@@ -61,8 +60,8 @@ export const VaultMusicPlayer = ({
       return;
     }
 
-    if (!track.audioUrl) {
-      console.error("[VaultPlayer] No audio URL for track:", track.title);
+    if (!track.id) {
+      console.error("[VaultPlayer] No track id for:", track.title);
       return;
     }
 
