@@ -110,8 +110,8 @@ Deno.serve(async (req) => {
 
     // ── Body ──
     const { trackId, fileType } = await req.json();
-    if (!trackId || !["audio", "preview"].includes(fileType)) {
-      return new Response(JSON.stringify({ error: "Missing trackId or invalid fileType (audio|preview)" }), {
+    if (!trackId || !["audio", "preview", "artwork"].includes(fileType)) {
+      return new Response(JSON.stringify({ error: "Missing trackId or invalid fileType (audio|preview|artwork)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -121,21 +121,10 @@ Deno.serve(async (req) => {
     const admin = createClient(supabaseUrl, supabaseServiceKey);
     const userEmail = user.email?.toLowerCase() ?? "";
 
-    // Check access: admin, artist owner, or active vault member
-    const [roleResult, vaultResult] = await Promise.all([
-      admin.from("user_roles").select("role").eq("user_id", user.id),
-      admin.from("vault_members").select("vault_access_active").eq("email", userEmail).maybeSingle(),
-    ]);
-
-    const roles = (roleResult.data ?? []).map((r: any) => r.role as string);
-    const isAdmin = roles.includes("admin");
-    const isArtist = roles.includes("artist");
-    const isVaultActive = vaultResult.data?.vault_access_active === true;
-
     // Look up the track
     const { data: track, error: trackErr } = await admin
       .from("tracks")
-      .select("artist_id, full_audio_key, preview_audio_key, status")
+      .select("artist_id, full_audio_key, preview_audio_key, artwork_key, status")
       .eq("id", trackId)
       .maybeSingle();
 
@@ -146,31 +135,51 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (track.status !== "ready") {
-      return new Response(JSON.stringify({ error: "Track not available" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // Artwork is promotional — any authenticated user may view it.
+    // Audio/preview require full access check.
+    if (fileType !== "artwork") {
+      if (track.status !== "ready") {
+        return new Response(JSON.stringify({ error: "Track not available" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-    // Artist ownership check
-    let isOwner = false;
-    if (isArtist) {
-      const { data: profile } = await admin.from("artist_profiles").select("id").eq("user_id", user.id).maybeSingle();
-      if (profile && String(profile.id) === track.artist_id) {
-        isOwner = true;
+      // Check access: admin, artist owner, or active vault member
+      const [roleResult, vaultResult] = await Promise.all([
+        admin.from("user_roles").select("role").eq("user_id", user.id),
+        admin.from("vault_members").select("vault_access_active").eq("email", userEmail).maybeSingle(),
+      ]);
+
+      const roles = (roleResult.data ?? []).map((r: any) => r.role as string);
+      const isAdmin = roles.includes("admin");
+      const isArtist = roles.includes("artist");
+      const isVaultActive = vaultResult.data?.vault_access_active === true;
+
+      // Artist ownership check
+      let isOwner = false;
+      if (isArtist) {
+        const { data: profile } = await admin.from("artist_profiles").select("id").eq("user_id", user.id).maybeSingle();
+        if (profile && String(profile.id) === track.artist_id) {
+          isOwner = true;
+        }
+      }
+
+      if (!isAdmin && !isOwner && !isVaultActive) {
+        return new Response(JSON.stringify({ error: "Access denied" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
     }
 
-    if (!isAdmin && !isOwner && !isVaultActive) {
-      return new Response(JSON.stringify({ error: "Access denied" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     // ── Resolve key ──
-    const key = fileType === "audio" ? track.full_audio_key : track.preview_audio_key;
+    const key = fileType === "audio"
+      ? track.full_audio_key
+      : fileType === "preview"
+      ? track.preview_audio_key
+      : track.artwork_key;
+
     if (!key) {
       return new Response(JSON.stringify({ error: `No ${fileType} key on this track` }), {
         status: 404,
@@ -178,8 +187,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── Generate presigned URL (90 seconds) ──
-    const signedUrl = await presignR2Url(key, 90);
+    // Artwork gets a longer TTL (5 min) since it's just a cover image
+    const ttl = fileType === "artwork" ? 300 : 90;
+    const signedUrl = await presignR2Url(key, ttl);
 
     return new Response(JSON.stringify({ url: signedUrl }), {
       status: 200,

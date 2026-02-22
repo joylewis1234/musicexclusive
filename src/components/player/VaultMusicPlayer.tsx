@@ -4,6 +4,7 @@ import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 interface Track {
   id: string;
@@ -162,9 +163,10 @@ export const VaultMusicPlayer = ({
           {/* Album art with glow */}
           <div className="relative">
             <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-primary/40 to-purple-500/40 blur-sm" />
-            <img
-              src={track.artworkUrl}
+            <SignedArtwork
+              trackId={track.id}
               alt={track.title}
+              fallbackSrc={track.artworkUrl}
               className="relative w-16 h-16 rounded-lg object-cover"
             />
           </div>

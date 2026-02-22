@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { Play, Pause, Square, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PlaylistTrack } from "@/hooks/usePlaylist";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 import artist1 from "@/assets/artist-1.jpg";
 
@@ -83,9 +84,10 @@ export const PlaylistPlayerBar = ({
 
         <div className="flex items-center gap-3 p-3">
           {/* Artwork */}
-          <img
-            src={activeTrack.artwork_url || artist1}
+          <SignedArtwork
+            trackId={activeTrack.track_id}
             alt={activeTrack.title}
+            fallbackSrc={artist1}
             className="w-12 h-12 rounded-lg object-cover flex-shrink-0"
           />
 

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -456,15 +457,11 @@ const ArtistEarnings = () => {
                       className="flex items-center gap-3 p-3 rounded-xl bg-muted/20"
                     >
                       <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {track.artwork_url ? (
-                          <img
-                            src={track.artwork_url}
-                            alt={track.title}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <Music className="w-5 h-5 text-muted-foreground" />
-                        )}
+                        <SignedArtwork
+                          trackId={track.track_id}
+                          alt={track.title}
+                          className="w-full h-full object-cover"
+                        />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">

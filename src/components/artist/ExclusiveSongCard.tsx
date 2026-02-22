@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { Trash2, Lock, Loader2, Music, Clock, Play, Square, ChevronDown, ChevronUp } from "lucide-react";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDurationFromUrl } from "@/utils/audioDuration";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 export interface ExclusiveSong {
   id: string;
@@ -277,8 +278,8 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
               <div className="absolute -inset-1 rounded-xl bg-primary/20 blur-md opacity-0 group-hover:opacity-50 transition-opacity" />
               <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden bg-muted/20 border border-white/[0.08] shadow-lg">
                 {song.artwork_url ? (
-                  <img
-                    src={`${song.artwork_url}${song.artwork_url.includes('?') ? '&' : '?'}v=${encodeURIComponent(song.updated_at || song.created_at)}`}
+                  <SignedArtwork
+                    trackId={song.id}
                     alt={song.title}
                     className="w-full h-full object-cover"
                   />
