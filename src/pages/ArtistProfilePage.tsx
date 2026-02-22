@@ -47,7 +47,6 @@ interface PlayerTrack {
   title: string;
   artist: string;
   artworkUrl: string;
-  audioUrl: string;
 }
 
 type ViewerContext = "fan" | "artist-own" | "artist-preview";
@@ -87,44 +86,7 @@ const ArtistProfilePage = () => {
   const { credits, refetch: refetchCredits } = useCredits();
   const { addToPlaylist, isInPlaylist } = usePlaylist(fanId);
 
-  // Generate public URL for storage path if needed
-  const ensurePublicUrl = async (track: TrackData): Promise<TrackData> => {
-    if (track.full_audio_url && track.full_audio_url.startsWith("http")) {
-      return track;
-    }
-
-    const audioPath = `artists/${track.artist_id}/${track.id}.mp3`;
-    const { data: audioData } = supabase.storage
-      .from("track_audio")
-      .getPublicUrl(audioPath);
-
-    const newAudioUrl = audioData?.publicUrl || "";
-
-    let newArtworkUrl = track.artwork_url;
-    if (!track.artwork_url || !track.artwork_url.startsWith("http")) {
-      const coverPath = `artists/${track.artist_id}/${track.id}.jpg`;
-      const { data: coverData } = supabase.storage
-        .from("track_covers")
-        .getPublicUrl(coverPath);
-      newArtworkUrl = coverData?.publicUrl || null;
-    }
-
-    if (newAudioUrl && newAudioUrl !== track.full_audio_url) {
-      await supabase
-        .from("tracks")
-        .update({
-          full_audio_url: newAudioUrl,
-          artwork_url: newArtworkUrl,
-        } as any)
-        .eq("id", track.id);
-    }
-
-    return {
-      ...track,
-      full_audio_url: newAudioUrl,
-      artwork_url: newArtworkUrl,
-    };
-  };
+  // No more ensurePublicUrl — audio is now served via signed URLs from mint-playback-url
 
   // Load artist profile and tracks
   useEffect(() => {
@@ -171,13 +133,10 @@ const ArtistProfilePage = () => {
           .order("created_at", { ascending: false });
 
         if (trackData && trackData.length > 0) {
-          const tracksWithUrls = await Promise.all(
-            trackData.map(t => ensurePublicUrl(t))
-          );
-          setTracks(tracksWithUrls);
+          setTracks(trackData);
 
           if (highlightTrackId) {
-            const highlightedTrack = tracksWithUrls.find(t => t.id === highlightTrackId);
+            const highlightedTrack = trackData.find(t => t.id === highlightTrackId);
             if (highlightedTrack) {
               handleSelectTrack(highlightedTrack, profile);
             }
@@ -253,7 +212,6 @@ const ArtistProfilePage = () => {
       title: track.title,
       artist: profile?.artist_name || "Unknown Artist",
       artworkUrl: track.artwork_url || profile?.avatar_url || artist1,
-      audioUrl: track.full_audio_url || "",
     });
   };
 
