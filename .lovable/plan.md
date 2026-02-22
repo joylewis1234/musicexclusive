@@ -1,48 +1,63 @@
 
 
-## Testing the Worker Gate -- Blockers and Plan
+## Add Playback Session JWT to `mint-playback-url`
 
-### Current situation
-- **No tracks have `artwork_key` set** in the database, so `mint-playback-url` with `fileType: "artwork"` will return 404 ("No artwork key on this track").
-- **You are currently logged out** (on `/admin/login`), so the edge function rejects all requests with 401.
-- The only track with real R2 data is **"Say Less"** (`9fad1e64-...`), which has `full_audio_key` and an `artwork_url` pointing to `pub-51f09041...r2.dev/artists/.../covers/9fad1e64-....jpg`.
+### Overview
+Extend the existing edge function to mint a short-lived playback session JWT alongside the signed R2 URL. This JWT will be used by the Cloudflare Worker gate to validate playback requests.
 
-### Step 1 -- Backfill artwork_key for "Say Less"
+### Step 1 -- Add `PLAYBACK_JWT_SECRET` secret
+Use the secrets tool to prompt you to enter a secret value for `PLAYBACK_JWT_SECRET`. This should be a random string (32+ chars) shared between the edge function and the Cloudflare Worker.
 
-Run a DB migration to extract the R2 object key from the existing `artwork_url` and populate `artwork_key`:
+### Step 2 -- Update `supabase/functions/mint-playback-url/index.ts`
 
-```sql
-UPDATE tracks
-SET artwork_key = 'artists/72473c4c-3ad4-46f7-b25c-3ee2497d4d78/covers/9fad1e64-016e-41da-95b5-6f2dd154ee41.jpg'
-WHERE id = '9fad1e64-016e-41da-95b5-6f2dd154ee41'
-  AND artwork_key IS NULL;
-```
+**Add constants and helpers after the existing presign helpers (after line 73):**
+- `SESSION_TTL_SECONDS = 300`
+- `base64url()` helper for URL-safe base64 encoding
+- `signJwtHS256()` to create an HS256-signed JWT using Web Crypto
 
-### Step 2 -- Log in as admin
+**Add session minting logic after access checks (after line 174, before "Resolve key"):**
+- Generate a `sessionId` via `crypto.randomUUID()`
+- Compute `sessionExpiresAt` from `SESSION_TTL_SECONDS`
+- Read `PLAYBACK_JWT_SECRET` from env (return 500 if missing)
+- Sign a JWT containing `track_id`, `user_id`, `session_id`, `expires_at`, `exp`, `iat`
 
-Once logged in, I can call `mint-playback-url` with either:
-- `fileType: "artwork"` (any authenticated user allowed, 300s TTL) -- preferred since it requires no vault/admin check
-- `fileType: "audio"` (requires admin, artist-owner, or vault-active)
+**Update the success response (line 194):**
+- Add `sessionToken` and `session` object (`track_id`, `user_id`, `session_id`, `expires_at`) to the JSON response
+- Existing `url` and `expiresAt` fields remain unchanged
 
-### Step 3 -- Mint and host-swap test
+### Step 3 -- Deploy the edge function
 
-After minting, take the returned signed URL:
-
-```text
-https://<account>.r2.cloudflarestorage.com/<bucket>/<key>?X-Amz-...
-```
-
-Replace the host portion with the Worker domain:
-
-```text
-https://r2-playback-gate.long-dew-571e.workers.dev/<bucket>/<key>?X-Amz-...
-```
-
-Open in browser. Expected result: the file is served (200 with the image/audio content).
+### What does NOT change
+- All existing access checks, signed URL logic, and error handling remain intact
+- Client hooks (`useAudioPlayer`, `useSignedArtworkUrl`) are not modified in this step -- they will simply receive extra fields in the response that they can ignore for now
+- No database changes
 
 ### Technical details
 
-- The migration is a single `UPDATE` statement, no schema changes.
-- The `artwork_key` value is derived from the existing `artwork_url` by stripping the public R2 base URL prefix (`https://pub-51f09041f1d54e669dc9fcbc987d5191.r2.dev/`).
-- Future uploads already set `artwork_key` during upload, so this is a one-time backfill for existing data.
+The session JWT payload:
+```json
+{
+  "track_id": "<uuid>",
+  "user_id": "<uuid>",
+  "session_id": "<uuid>",
+  "expires_at": 1234567890,
+  "exp": 1234567890,
+  "iat": 1234567890
+}
+```
+
+The updated response shape:
+```json
+{
+  "url": "https://...",
+  "expiresAt": "2025-...",
+  "sessionToken": "eyJ...",
+  "session": {
+    "track_id": "...",
+    "user_id": "...",
+    "session_id": "...",
+    "expires_at": "2025-..."
+  }
+}
+```
 
