@@ -72,6 +72,34 @@ async function presignR2Url(key: string, expireSeconds: number): Promise<string>
   return `https://${host}${path}?${sortedQs}&X-Amz-Signature=${signature}`;
 }
 
+/* ── Session JWT helpers ── */
+
+const SESSION_TTL_SECONDS = 300;
+
+function base64url(data: Uint8Array): string {
+  let binary = "";
+  for (const byte of data) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function signJwtHS256(payload: Record<string, unknown>, secret: string): Promise<string> {
+  const header = { alg: "HS256", typ: "JWT" };
+  const enc = new TextEncoder();
+  const headerB64 = base64url(enc.encode(JSON.stringify(header)));
+  const payloadB64 = base64url(enc.encode(JSON.stringify(payload)));
+  const data = `${headerB64}.${payloadB64}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
+  const sigB64 = base64url(new Uint8Array(sig));
+  return `${data}.${sigB64}`;
+}
+
 /* ── Main handler ── */
 
 Deno.serve(async (req) => {
@@ -173,6 +201,54 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── Mint playback session JWT ──
+    const sessionId = crypto.randomUUID();
+    const sessionExpiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
+    const sessionExpiresAtIso = new Date(sessionExpiresAt * 1000).toISOString();
+
+    const playbackJwtSecret = Deno.env.get("PLAYBACK_JWT_SECRET");
+    if (!playbackJwtSecret) {
+      return new Response(JSON.stringify({ error: "Missing PLAYBACK_JWT_SECRET" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const sessionToken = await signJwtHS256(
+      {
+        track_id: trackId,
+        user_id: user.id,
+        session_id: sessionId,
+        expires_at: sessionExpiresAt,
+        exp: sessionExpiresAt,
+        iat: Math.floor(Date.now() / 1000),
+      },
+      playbackJwtSecret
+    );
+
+    // ── Record session in DB ──
+    const ipAddress = req.headers.get("cf-connecting-ip");
+    const userAgent = req.headers.get("user-agent");
+
+    const { error: sessionInsertError } = await admin
+      .from("playback_sessions")
+      .insert({
+        session_id: sessionId,
+        user_id: user.id,
+        track_id: trackId,
+        expires_at: sessionExpiresAtIso,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      });
+
+    if (sessionInsertError) {
+      console.error("[mint-playback-url] Session insert error:", sessionInsertError);
+      return new Response(
+        JSON.stringify({ error: "Failed to store playback session" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // ── Resolve key ──
     const key = fileType === "audio"
       ? track.full_audio_key
@@ -191,10 +267,23 @@ Deno.serve(async (req) => {
     const ttl = fileType === "artwork" ? 300 : 90;
     const signedUrl = await presignR2Url(key, ttl);
 
-    return new Response(JSON.stringify({ url: signedUrl, expiresAt: new Date(Date.now() + ttl * 1000).toISOString() }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        url: signedUrl,
+        expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
+        sessionToken,
+        session: {
+          track_id: trackId,
+          user_id: user.id,
+          session_id: sessionId,
+          expires_at: sessionExpiresAtIso,
+        },
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (err) {
     console.error("[mint-playback-url] Error:", err);
     return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }), {
