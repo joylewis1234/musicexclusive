@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -562,15 +563,11 @@ const WeeklyTransparencyReport = () => {
 
                 {/* Track Artwork */}
                 <div className="w-12 h-12 rounded-lg bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {track.artworkUrl ? (
-                    <img
-                      src={track.artworkUrl}
-                      alt={track.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Music className="w-5 h-5 text-muted-foreground" />
-                  )}
+                  <SignedArtwork
+                    trackId={track.trackId}
+                    alt={track.title}
+                    className="w-full h-full object-cover"
+                  />
                 </div>
 
                 {/* Track Info */}
