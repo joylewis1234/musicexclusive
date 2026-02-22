@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { ExclusiveBadge } from "@/components/ui/ExclusiveBadge";
 import { LikeButton } from "@/components/ui/LikeButton";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 interface AppleMusicTrackRowProps {
   track: {
@@ -135,11 +136,11 @@ export const AppleMusicTrackRow = forwardRef<HTMLDivElement, AppleMusicTrackRowP
 
       {/* Cover art */}
       <div className="relative flex-shrink-0">
-        <img
-          src={track.artworkUrl || fallbackImage}
+        <SignedArtwork
+          trackId={track.id}
           alt={track.title}
+          fallbackSrc={fallbackImage}
           className="w-12 h-12 rounded-lg object-cover"
-          loading="lazy"
         />
       </div>
 

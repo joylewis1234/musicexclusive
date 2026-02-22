@@ -3,6 +3,7 @@ import { Heart } from "lucide-react";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 import artist1 from "@/assets/artist-1.jpg";
 
@@ -76,9 +77,10 @@ export const TrackListItem = forwardRef<HTMLDivElement, TrackListItemProps>(({
           {showHighlight && (
             <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-r from-primary to-purple-500 blur-sm opacity-60" />
           )}
-          <img
-            src={track.artworkUrl || artist1}
+          <SignedArtwork
+            trackId={track.id}
             alt={track.title}
+            fallbackSrc={artist1}
             className="relative w-12 h-12 rounded-lg object-cover"
           />
         </div>

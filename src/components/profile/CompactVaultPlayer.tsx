@@ -3,6 +3,7 @@ import { Play, Pause, Square, Heart, Share2, Loader2, AlertCircle, Crown } from 
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 interface Track {
   id: string;
@@ -210,9 +211,10 @@ export const CompactVaultPlayer = ({
                 className="absolute -inset-1 rounded-xl blur-sm opacity-60"
                 style={{ background: 'hsl(280, 80%, 50%)' }}
               />
-              <img
-                src={track.artworkUrl}
+              <SignedArtwork
+                trackId={track.id}
                 alt={track.title}
+                fallbackSrc={track.artworkUrl}
                 className="relative w-16 h-16 rounded-xl object-cover"
               />
               
