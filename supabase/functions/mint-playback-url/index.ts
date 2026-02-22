@@ -214,6 +214,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    const hlsWorkerBaseUrl = Deno.env.get("HLS_WORKER_BASE_URL");
+    if (!hlsWorkerBaseUrl) {
+      return new Response(JSON.stringify({ error: "Missing HLS_WORKER_BASE_URL" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const sessionToken = await signJwtHS256(
       {
         track_id: trackId,
@@ -267,11 +275,14 @@ Deno.serve(async (req) => {
     const ttl = fileType === "artwork" ? 300 : 90;
     const signedUrl = await presignR2Url(key, ttl);
 
+    const hlsUrl = `${hlsWorkerBaseUrl}/${trackId}/master.m3u8?token=${encodeURIComponent(sessionToken)}`;
+
     return new Response(
       JSON.stringify({
         url: signedUrl,
         expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
         sessionToken,
+        hlsUrl,
         session: {
           track_id: trackId,
           user_id: user.id,
