@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Search, Send, User, Lock, Crown } from "lucide-react";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
@@ -161,13 +162,11 @@ export const ShareExclusiveTrackModal = ({
         {track && (
           <div className="mb-4 p-3 rounded-xl bg-muted/20 border border-primary/20">
             <div className="flex items-center gap-3">
-              {track.artworkUrl && (
-                <img 
-                  src={track.artworkUrl} 
-                  alt={track.title}
-                  className="w-12 h-12 rounded-lg object-cover"
-                />
-              )}
+              <SignedArtwork
+                trackId={track.id}
+                alt={track.title}
+                className="w-12 h-12 rounded-lg object-cover"
+              />
               <div className="flex-1 min-w-0">
                 <p className="font-display font-semibold text-foreground truncate">
                   {track.title}
