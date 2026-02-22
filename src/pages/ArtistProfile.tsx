@@ -46,7 +46,6 @@ interface PlayerTrack {
   title: string;
   artist: string;
   artworkUrl: string;
-  audioUrl: string;
 }
 
 type ViewContext = "fan" | "artist-own" | "artist-other";
@@ -230,7 +229,6 @@ const ArtistProfile = () => {
       title: track.title,
       artist: artist?.name || "Unknown Artist",
       artworkUrl: track.artwork_url || artist?.imageUrl || artist1,
-      audioUrl: track.full_audio_url || "",
     });
   };
 

@@ -123,7 +123,7 @@ const FanProfile = () => {
 
   const handlePlayTrack = useCallback(
     (track: PlaylistTrack) => {
-      loadTrack(track.track_id, "audio", track.title);
+      void loadTrack({ trackId: track.track_id, fileType: "audio", trackTitle: track.title });
       setActiveTrackId(track.track_id);
       setTimeout(() => play(), 100);
     },

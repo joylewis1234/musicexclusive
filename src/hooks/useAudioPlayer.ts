@@ -1,69 +1,25 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-/* ── Signed-URL in-memory cache ── */
-
-interface CachedUrl {
-  url: string;
-  expiresAt: number; // Date.now() + TTL
-}
-
-const urlCache = new Map<string, CachedUrl>();
-const CACHE_TTL_MS = 60_000; // 60 seconds (signed URLs last 90s)
-
-function getCachedUrl(trackId: string, fileType: string): string | null {
-  const key = `${trackId}:${fileType}`;
-  const entry = urlCache.get(key);
-  if (entry && entry.expiresAt > Date.now()) {
-    return entry.url;
-  }
-  urlCache.delete(key);
-  return null;
-}
-
-function setCachedUrl(trackId: string, fileType: string, url: string) {
-  urlCache.set(`${trackId}:${fileType}`, { url, expiresAt: Date.now() + CACHE_TTL_MS });
-}
-
-/* ── Mint signed playback URL via edge function ── */
-
-async function mintPlaybackUrl(
-  trackId: string,
-  fileType: "audio" | "preview"
-): Promise<string> {
-  // Check cache first
-  const cached = getCachedUrl(trackId, fileType);
-  if (cached) {
-    console.log("[AudioPlayer] Using cached signed URL for", trackId, fileType);
-    return cached;
-  }
-
-  const { data, error } = await supabase.functions.invoke("mint-playback-url", {
-    body: { trackId, fileType },
-  });
-
-  if (error) {
-    throw new Error(error.message || "Failed to get playback URL");
-  }
-
-  if (!data?.url) {
-    throw new Error(data?.error || "No URL returned from mint-playback-url");
-  }
-
-  setCachedUrl(trackId, fileType, data.url);
-  console.log("[AudioPlayer] Minted signed URL for", trackId, fileType);
-  return data.url;
-}
-
-/* ── Types ── */
+type PlaybackFileType = "audio" | "preview";
 
 export interface PlaybackDiagnostics {
   trackTitle: string | null;
   trackId: string | null;
-  fileType: string | null;
+  fileType: PlaybackFileType | null;
+  audioUrl: string | null;
+  audioPath: string | null;
+  bucketName: string;
   lastError: string | null;
   canPlay: boolean;
   readyState: number;
+}
+
+export interface LoadTrackParams {
+  trackId: string;
+  fileType: PlaybackFileType;
+  trackTitle?: string;
+  forceRefresh?: boolean;
 }
 
 export interface UseAudioPlayerReturn {
@@ -79,13 +35,21 @@ export interface UseAudioPlayerReturn {
   stop: () => void;
   seek: (time: number) => void;
   setVolume: (vol: number) => void;
-  loadTrack: (trackId: string, fileType: "audio" | "preview", trackTitle?: string) => void;
+  loadTrack: (params: LoadTrackParams) => Promise<void>;
 }
-
-/* ── Hook ── */
 
 export function useAudioPlayer(): UseAudioPlayerReturn {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const signedUrlCacheRef = useRef(
+    new Map<string, { url: string; expiresAt: number }>()
+  );
+
+  const [currentTrack, setCurrentTrack] = useState<{
+    trackId: string;
+    fileType: PlaybackFileType;
+    trackTitle?: string;
+  } | null>(null);
+
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -97,10 +61,56 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     trackTitle: null,
     trackId: null,
     fileType: null,
+    audioUrl: null,
+    audioPath: null,
+    bucketName: "r2",
     lastError: null,
     canPlay: false,
     readyState: 0,
   });
+
+  const getCacheKey = (trackId: string, fileType: PlaybackFileType) =>
+    `${trackId}:${fileType}`;
+
+  const mintSignedUrl = useCallback(
+    async (trackId: string, fileType: PlaybackFileType) => {
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "mint-playback-url",
+        { body: { trackId, fileType } }
+      );
+
+      if (fnError) {
+        throw new Error(fnError.message || "Failed to mint playback URL");
+      }
+      if (!data?.url) {
+        throw new Error("Failed to mint playback URL (missing url)");
+      }
+
+      const expiresAt = data.expiresAt
+        ? new Date(data.expiresAt).getTime()
+        : Date.now() + 60_000;
+
+      return { url: data.url as string, expiresAt };
+    },
+    []
+  );
+
+  const loadSignedUrl = useCallback(
+    async (trackId: string, fileType: PlaybackFileType, forceRefresh = false) => {
+      const cacheKey = getCacheKey(trackId, fileType);
+      const now = Date.now();
+      const cached = signedUrlCacheRef.current.get(cacheKey);
+
+      if (!forceRefresh && cached && cached.expiresAt > now + 5_000) {
+        return cached.url;
+      }
+
+      const minted = await mintSignedUrl(trackId, fileType);
+      signedUrlCacheRef.current.set(cacheKey, minted);
+      return minted.url;
+    },
+    [mintSignedUrl]
+  );
 
   // Initialize audio element
   useEffect(() => {
@@ -109,17 +119,27 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
     const audio = audioRef.current;
 
-    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime);
+    };
 
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
       setIsLoading(false);
-      setDiagnostics((prev) => ({ ...prev, canPlay: true, readyState: audio.readyState }));
+      setDiagnostics((prev) => ({
+        ...prev,
+        canPlay: true,
+        readyState: audio.readyState,
+      }));
     };
 
     const handleCanPlay = () => {
       setIsLoading(false);
-      setDiagnostics((prev) => ({ ...prev, canPlay: true, readyState: audio.readyState }));
+      setDiagnostics((prev) => ({
+        ...prev,
+        canPlay: true,
+        readyState: audio.readyState,
+      }));
     };
 
     const handleEnded = () => {
@@ -158,7 +178,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       }));
     };
 
-    const handleWaiting = () => setIsLoading(true);
+    const handleWaiting = () => {
+      setIsLoading(true);
+    };
+
     const handlePlaying = () => {
       setIsLoading(false);
       setIsPlaying(true);
@@ -193,43 +216,65 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   }, [volume]);
 
   const loadTrack = useCallback(
-    (trackId: string, fileType: "audio" | "preview", trackTitle?: string) => {
+    async ({ trackId, fileType, trackTitle, forceRefresh }: LoadTrackParams) => {
       if (!audioRef.current) return;
 
-      // Reset state
+      if (!trackId) {
+        setError("Missing trackId");
+        return;
+      }
+
       setError(null);
       setIsPlaying(false);
       setCurrentTime(0);
       setDuration(0);
       setIsLoading(true);
+      setCurrentTrack({ trackId, fileType, trackTitle });
 
       setDiagnostics({
         trackTitle: trackTitle || null,
         trackId,
         fileType,
+        audioUrl: null,
+        audioPath: null,
+        bucketName: "r2",
         lastError: null,
         canPlay: false,
         readyState: 0,
       });
 
-      console.log("[AudioPlayer] Loading track:", { trackId, fileType, trackTitle });
+      try {
+        const signedUrl = await loadSignedUrl(
+          trackId,
+          fileType,
+          !!forceRefresh
+        );
 
-      // Fetch signed URL then load
-      mintPlaybackUrl(trackId, fileType)
-        .then((signedUrl) => {
-          if (!audioRef.current) return;
-          audioRef.current.src = signedUrl;
-          audioRef.current.load();
-        })
-        .catch((err) => {
-          const msg = err instanceof Error ? err.message : "Failed to get playback URL";
-          console.error("[AudioPlayer] mintPlaybackUrl failed:", msg);
-          setError(msg);
-          setIsLoading(false);
-          setDiagnostics((prev) => ({ ...prev, lastError: msg }));
+        setDiagnostics((prev) => ({
+          ...prev,
+          audioUrl: signedUrl,
+        }));
+
+        audioRef.current.src = signedUrl;
+        audioRef.current.load();
+
+        console.log("[AudioPlayer] Loading track:", {
+          trackTitle,
+          trackId,
+          fileType,
         });
+      } catch (err) {
+        const msg =
+          err instanceof Error ? err.message : "Failed to load audio";
+        setError(msg);
+        setIsLoading(false);
+        setDiagnostics((prev) => ({
+          ...prev,
+          lastError: msg,
+        }));
+      }
     },
-    []
+    [loadSignedUrl]
   );
 
   const play = useCallback(async () => {
@@ -240,12 +285,32 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
     const audio = audioRef.current;
 
-    if (!audio.src) {
+    if (!audio.src || !currentTrack) {
       setError("No audio source loaded");
       return;
     }
 
     try {
+      const cacheKey = getCacheKey(
+        currentTrack.trackId,
+        currentTrack.fileType
+      );
+      const cached = signedUrlCacheRef.current.get(cacheKey);
+
+      if (!cached || cached.expiresAt <= Date.now() + 5_000) {
+        const refreshed = await loadSignedUrl(
+          currentTrack.trackId,
+          currentTrack.fileType,
+          true
+        );
+        audio.src = refreshed;
+        audio.load();
+        setDiagnostics((prev) => ({
+          ...prev,
+          audioUrl: refreshed,
+        }));
+      }
+
       setIsLoading(true);
       setError(null);
       await audio.play();
@@ -255,11 +320,14 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       console.error("[AudioPlayer] Play failed:", err);
       setError(msg);
       setIsPlaying(false);
-      setDiagnostics((prev) => ({ ...prev, lastError: msg }));
+      setDiagnostics((prev) => ({
+        ...prev,
+        lastError: msg,
+      }));
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentTrack, loadSignedUrl]);
 
   const pause = useCallback(() => {
     if (audioRef.current) {

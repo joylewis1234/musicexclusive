@@ -122,9 +122,8 @@ const Discovery = () => {
     if (currentPreviewId === track.id && isPlaying) {
       stopPreview();
     } else {
-      const audioUrl = track.preview_audio_url || track.full_audio_url;
       const startSeconds = track.preview_start_seconds || 0;
-      startPreview(track.id, audioUrl, startSeconds);
+      startPreview(track.id, startSeconds);
     }
   };
 
