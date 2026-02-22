@@ -707,6 +707,47 @@ export type Database = {
         }
         Relationships: []
       }
+      playback_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          ip_address: string | null
+          revoked_at: string | null
+          session_id: string
+          track_id: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          session_id: string
+          track_id: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          ip_address?: string | null
+          revoked_at?: string | null
+          session_id?: string
+          track_id?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playback_sessions_track_id_fkey"
+            columns: ["track_id"]
+            isOneToOne: false
+            referencedRelation: "tracks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
