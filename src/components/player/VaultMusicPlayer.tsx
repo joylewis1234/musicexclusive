@@ -294,6 +294,12 @@ export const VaultMusicPlayer = ({
                 <span className="text-foreground">{diagnostics.fileType || "—"}</span>
               </div>
               <div className="flex justify-between">
+                <span className="text-muted-foreground">HLS Active:</span>
+                <span className={diagnostics.hlsActive ? "text-green-400" : "text-muted-foreground"}>
+                  {diagnostics.hlsActive ? "Yes" : "No"}
+                </span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Can Play:</span>
                 <span className={diagnostics.canPlay ? "text-green-400" : "text-amber-400"}>
                   {diagnostics.canPlay ? "Yes" : "No"}
