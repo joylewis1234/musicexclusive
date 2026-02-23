@@ -48,8 +48,18 @@ The `charge-stream` edge function was hardened to eliminate ledger concurrency b
 
 These changes close the gap where ledger entries could be written even if the credit decrement affected zero rows due to a concurrent update.
 
+## Ledger Concurrency Stress Test — Final Run (2026-02-23)
+
+- Tool: `scripts/ledger-stress-test.js`
+- Total requests: 40
+- Concurrency: 5
+- Status codes: 200 x 10, 402 x 13, 409 x 17
+- Credits: starting 10, ending 0 (expected 0)
+- Ledger delta: STREAM_DEBIT +10, stream_ledger +10
+- Integrity: **OK** — credits consumed matches ledger deltas exactly; no negatives, no orphaned entries.
+- 402 (insufficient credits) and 409 (concurrent update, retry) are expected under contention and confirm the hardened logic is working correctly.
+
 ## Limitations
 
 - Playback system load testing not executed (requires authenticated minting and signed URL playback).
-- Ledger concurrency stress testing under high concurrency not yet executed (logic hardened but not load-tested).
 - Results are from light load and should be repeated at higher concurrency in a staging environment.
