@@ -1,26 +1,31 @@
 
 
-# Create Final Security Hardening Audit Report
+# Fix Ledger Concurrency in charge-stream
 
 ## Overview
-Create `docs/final-audit-report.md` using the provided content verbatim. This is the capstone document for Milestones 1-4 of the security hardening program.
+Harden the `charge-stream` edge function to ensure ledger entries are only written when the credit decrement succeeds, and enforce strict idempotency.
 
-## What will be created
+## Changes to `supabase/functions/charge-stream/index.ts`
 
-A single new file at `docs/final-audit-report.md` containing:
+### 1. Idempotency gate (already exists, minor cleanup)
+- The idempotencyKey validation and `stream_charges` insert already exist. On duplicate (23505), return early with `{ success: true, alreadyCharged: true }` and skip all ledger writes. Currently it falls through on non-23505 errors -- will make non-duplicate insert errors return 500 instead of continuing.
 
-- **Executive Summary** of the security hardening program status
-- **Severity Ratings** (current risk map with no critical/high issues in reviewed scope)
-- **Architecture Documentation** summarizing core services (Lovable Cloud, Cloudflare R2, Stripe, React client) and key flows (streaming protection, invite system, financial integrity)
-- **Completed Work** highlights (RLS hardening, idempotency, signed URLs, abuse controls, load testing)
-- **Load Testing Summary** referencing results from `docs/load-testing-summary.md`
-- **Findings and Residual Risks** (playback and ledger stress tests pending)
-- **Recommendations** for next steps
-- **Appendix** linking key migration files, edge functions, and documentation
+### 2. Credit decrement with row-return validation
+- Add `.select("credits").maybeSingle()` to the credit update call so we can verify a row was actually updated.
+- If `updatedMember` is null (no row matched due to concurrent update), return 409 "Concurrent update, retry" **without writing any ledger entries**.
+- This prevents the current bug where ledger entries could be written even if the credit decrement silently affected zero rows.
+
+### 3. Ledger writes gated on successful decrement
+- Move all `credit_ledger` inserts and `stream_ledger` insert to only execute after confirming `updatedMember` is non-null.
+- Use `updatedMember.credits` as the authoritative new balance in the response.
 
 ## Technical Details
 
-- No code changes, database migrations, or edge function modifications required.
-- The file will be created exactly as provided in the draft.
-- This document cross-references existing docs: `invite-system-validation-confirmation.md`, `rate-limiting-documentation.md`, `abuse-prevention-confirmation.md`, and `load-testing-summary.md`.
+Key lines changing in `charge-stream/index.ts`:
+
+- **Idempotency duplicate handling** (~line 112): On non-23505 insert error, return 500 instead of continuing.
+- **Credit deduct** (~line 125): Add `.select("credits").maybeSingle()`, check for null result (409).
+- **Response** (~line 170): Use `updatedMember.credits` instead of `vaultMember.credits - 1`.
+
+No database schema changes needed -- the existing unique index on `stream_charges.idempotency_key` and the `credits_non_negative` CHECK constraint already provide the DB-level guarantees.
 
