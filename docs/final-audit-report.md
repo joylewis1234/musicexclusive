@@ -80,6 +80,20 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - Edge function load testing: executed on safe public endpoints.
 
+## Failure Handling Validation (Raw Payloads)
+
+- `mint-playback-url` (missing auth): `401 {"error":"Unauthorized"}`
+
+- `mint-playback-url` (missing fileType): `400 {"error":"Missing trackId or invalid fileType (audio|preview|artwork)"}`
+
+- `charge-stream` (missing idempotencyKey): `400 {"error":"idempotencyKey is required"}`
+
+- `charge-stream` (missing trackId): `400 {"error":"trackId is required"}`
+
+- `validate-fan-invite` (missing token): `400 {"valid":false,"error":"Missing invite token"}`
+
+- `validate-vault-code` (missing fields): `400 {"error":"Email and vault code are required"}`
+
 ## Load Testing Summary
 
 - **Edge functions**: light load testing for `validate-fan-invite` and `validate-vault-code` completed.
