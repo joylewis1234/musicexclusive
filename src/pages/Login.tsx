@@ -1,12 +1,13 @@
+import { forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { ArrowLeft, Music, Mic2, Shield } from "lucide-react";
 
-const Login = () => {
+const Login = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div ref={ref} className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="container max-w-lg mx-auto px-4 h-14 flex items-center">
@@ -131,6 +132,7 @@ const Login = () => {
       </main>
     </div>
   );
-};
+});
+Login.displayName = "Login";
 
 export default Login;
