@@ -26,11 +26,18 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Find user by email
-    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-    if (listError) throw listError;
-
-    const user = users.users.find(u => u.email === email);
+    // Find user by email (paginated)
+    let user = null;
+    let page = 1;
+    const perPage = 100;
+    while (true) {
+      const { data: batch, error: listError } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+      if (listError) throw listError;
+      const found = batch.users.find(u => u.email === email);
+      if (found) { user = found; break; }
+      if (batch.users.length < perPage) break;
+      page++;
+    }
 
     // If user doesn't exist, create them
     if (!user) {
