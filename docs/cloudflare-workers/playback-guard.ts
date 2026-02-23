@@ -4,7 +4,8 @@
  * Reference implementation — deploy this on Cloudflare, NOT inside
  * this repo's edge functions.  It validates the HS256 session JWT
  * minted by `mint-playback-url`, proxies HLS assets from R2, and
- * rewrites playlist lines so every segment request carries the token.
+ * rewrites playlist lines so every segment request carries the token
+ * and a per-session watermark ID for forensic tracing.
  *
  * Bindings (wrangler.toml):
  *   [[r2_buckets]]
@@ -67,16 +68,39 @@ async function verifyJwtHS256(
   return payload;
 }
 
-/* ── Playlist rewriter ── */
+/* ── Watermark injection ── */
 
-function rewritePlaylist(text: string, token: string): string {
+function injectWatermark(playlist: string, watermarkId: string): string {
+  const header = `#EXT-X-SESSION-DATA:DATA-ID="WATERMARK",VALUE="${watermarkId}"`;
+  const lines = playlist.split("\n");
+  const output: string[] = [];
+  let injected = false;
+  for (const line of lines) {
+    if (!injected && line.startsWith("#EXTM3U")) {
+      output.push(line);
+      output.push(header);
+      injected = true;
+      continue;
+    }
+    output.push(line);
+  }
+  return output.join("\n");
+}
+
+/* ── Playlist rewriter with token + watermark ── */
+
+function rewritePlaylistWithTokenAndWatermark(
+  text: string,
+  token: string,
+  watermarkId: string,
+): string {
   return text
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) return line;
       const sep = trimmed.includes("?") ? "&" : "?";
-      return `${trimmed}${sep}token=${encodeURIComponent(token)}`;
+      return `${trimmed}${sep}token=${encodeURIComponent(token)}&wm=${encodeURIComponent(watermarkId)}`;
     })
     .join("\n");
 }
@@ -92,6 +116,8 @@ export default {
     const payload = await verifyJwtHS256(token, env.PLAYBACK_JWT_SECRET);
     if (!payload) return new Response("Invalid token", { status: 401 });
 
+    const watermarkId: string = payload.watermark_id ?? "";
+
     // Strip leading slashes and build the R2 key
     const path = url.pathname.replace(/^\/+/, "");
     const key = `${HLS_PREFIX}/${path}`;
@@ -106,7 +132,8 @@ export default {
 
     if (isPlaylist) {
       const text = await obj.text();
-      const rewritten = rewritePlaylist(text, token);
+      const withHeader = injectWatermark(text, watermarkId);
+      const rewritten = rewritePlaylistWithTokenAndWatermark(withHeader, token, watermarkId);
       headers.set("Content-Type", "application/vnd.apple.mpegurl");
       return new Response(rewritten, { status: 200, headers });
     }
