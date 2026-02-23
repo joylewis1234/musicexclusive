@@ -37,8 +37,19 @@ This summary covers edge function load tests executed against safe, public endpo
 - validate-fan-invite returned consistent 200 responses under light load.
 - validate-vault-code returned expected 404 responses for invalid lookups; latency was higher but stable.
 
+## Ledger Concurrency Hardening (2026-02-23)
+
+The `charge-stream` edge function was hardened to eliminate ledger concurrency bugs:
+
+1. **Idempotency gate**: Non-duplicate `stream_charges` insert errors now return 500 (previously fell through silently).
+2. **Credit decrement validation**: `.select("credits").maybeSingle()` confirms a row was actually updated. If no row matched (concurrent update race), the function returns 409 without writing any ledger entries.
+3. **Gated ledger writes**: All `credit_ledger` and `stream_ledger` inserts execute only after confirmed credit decrement.
+4. **Authoritative balance**: Response uses the DB-returned `updatedMember.credits` instead of client-side arithmetic.
+
+These changes close the gap where ledger entries could be written even if the credit decrement affected zero rows due to a concurrent update.
+
 ## Limitations
 
 - Playback system load testing not executed (requires authenticated minting and signed URL playback).
-- Ledger concurrency stress testing not executed in this run.
+- Ledger concurrency stress testing under high concurrency not yet executed (logic hardened but not load-tested).
 - Results are from light load and should be repeated at higher concurrency in a staging environment.
