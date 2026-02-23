@@ -206,6 +206,16 @@ Deno.serve(async (req) => {
     const sessionExpiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
     const sessionExpiresAtIso = new Date(sessionExpiresAt * 1000).toISOString();
 
+    // ── Derive watermark ID ──
+    const watermarkSalt = Deno.env.get("PLAYBACK_WATERMARK_SALT");
+    if (!watermarkSalt) {
+      return new Response(JSON.stringify({ error: "Missing PLAYBACK_WATERMARK_SALT" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const watermarkId = await sha256Hex(`${sessionId}:${watermarkSalt}`);
+
     const playbackJwtSecret = Deno.env.get("PLAYBACK_JWT_SECRET");
     if (!playbackJwtSecret) {
       return new Response(JSON.stringify({ error: "Missing PLAYBACK_JWT_SECRET" }), {
@@ -227,6 +237,7 @@ Deno.serve(async (req) => {
         track_id: trackId,
         user_id: user.id,
         session_id: sessionId,
+        watermark_id: watermarkId,
         expires_at: sessionExpiresAt,
         exp: sessionExpiresAt,
         iat: Math.floor(Date.now() / 1000),
@@ -247,6 +258,7 @@ Deno.serve(async (req) => {
         expires_at: sessionExpiresAtIso,
         ip_address: ipAddress,
         user_agent: userAgent,
+        watermark_id: watermarkId,
       });
 
     if (sessionInsertError) {
@@ -287,6 +299,7 @@ Deno.serve(async (req) => {
           track_id: trackId,
           user_id: user.id,
           session_id: sessionId,
+          watermark_id: watermarkId,
           expires_at: sessionExpiresAtIso,
         },
       }),
