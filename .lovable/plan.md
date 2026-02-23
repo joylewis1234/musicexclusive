@@ -1,31 +1,46 @@
 
 
-# Fix Ledger Concurrency in charge-stream
+# Update Docs with Playback Load Test Results
 
-## Overview
-Harden the `charge-stream` edge function to ensure ledger entries are only written when the credit decrement succeeds, and enforce strict idempotency.
+## 1. `docs/load-testing-summary.md`
 
-## Changes to `supabase/functions/charge-stream/index.ts`
+- **Line 5 (Scope)**: Change to include playback and ledger stress tests:
+  > "This summary covers edge function load tests, playback load tests, and ledger concurrency stress tests."
 
-### 1. Idempotency gate (already exists, minor cleanup)
-- The idempotencyKey validation and `stream_charges` insert already exist. On duplicate (23505), return early with `{ success: true, alreadyCharged: true }` and skip all ledger writes. Currently it falls through on non-23505 errors -- will make non-duplicate insert errors return 500 instead of continuing.
+- **Add new section** after the Ledger Stress Test Final Run (after line 60), before Limitations:
 
-### 2. Credit decrement with row-return validation
-- Add `.select("credits").maybeSingle()` to the credit update call so we can verify a row was actually updated.
-- If `updatedMember` is null (no row matched due to concurrent update), return 409 "Concurrent update, retry" **without writing any ledger entries**.
-- This prevents the current bug where ledger entries could be written even if the credit decrement silently affected zero rows.
+```
+## Playback Load Test (2026-02-23)
 
-### 3. Ledger writes gated on successful decrement
-- Move all `credit_ledger` inserts and `stream_ledger` insert to only execute after confirming `updatedMember` is non-null.
-- Use `updatedMember.credits` as the authoritative new balance in the response.
+- Tool: `scripts/load-test-playback.js`
+- Date: 2026-02-23
+- Total requests: 20
+- Concurrency: 5
+- Status codes: 200 x 20
+- Throughput: ~0.10 RPS (duration ~193.6s)
+- Latency (ms): p50 45,616, p95 61,095, p99 66,191, max 66,191
+```
 
-## Technical Details
+- **Lines 62-65 (Limitations)**: Remove the playback bullet, keep only the light-load note:
+  > "Results are from light load and should be repeated at higher concurrency in a staging environment."
 
-Key lines changing in `charge-stream/index.ts`:
+## 2. `docs/final-audit-report.md`
 
-- **Idempotency duplicate handling** (~line 112): On non-23505 insert error, return 500 instead of continuing.
-- **Credit deduct** (~line 125): Add `.select("credits").maybeSingle()`, check for null result (409).
-- **Response** (~line 170): Use `updatedMember.credits` instead of `vaultMember.credits - 1`.
+- **Line 17 (Executive Summary)**: Update to reflect playback and ledger tests are done:
+  > "...Playback and ledger stress tests have been executed under light concurrency; no integrity issues observed."
 
-No database schema changes needed -- the existing unique index on `stream_charges.idempotency_key` and the `credits_non_negative` CHECK constraint already provide the DB-level guarantees.
+- **Lines 20-27 (Severity Ratings)**: Remove the Medium line about playback. Keep:
+  - Critical: None
+  - High: None
+  - Low: Load testing performed under light load only (limited concurrency)
+
+- **Lines 85-91 (Load Testing Summary)**: Update playback line from "not executed" to:
+  > "Playback load testing: completed (20 requests, concurrency 5). All 200 OK. p50 45,616 ms, p95 61,095 ms."
+
+- **Lines 105-109 (Findings and Residual Risks)**: Remove Medium playback pending. Keep:
+  > "Low: All load testing performed at light concurrency only."
+
+- **Lines 111-115 (Recommendations)**: Replace playback recommendation with:
+  > "Repeat playback and ledger stress tests at higher concurrency levels."
+  > "Capture p95/p99 for additional endpoints under sustained load."
 
