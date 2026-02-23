@@ -22,7 +22,9 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - **High**: None observed in reviewed scope
 
-- **Medium**: Playback load testing and ledger concurrency stress testing not executed
+- **Medium**: Playback load testing not executed
+
+- **Medium**: Ledger concurrency stress testing under high load not executed (logic hardened, see below)
 
 - **Low**: Edge function load testing performed under light load only (limited concurrency)
 
@@ -66,6 +68,8 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - Ledger entries are inserted atomically via server-side logic.
 
+- Stream charges use optimistic concurrency with row-return validation; ledger writes are gated on confirmed credit decrement (409 on race). See `charge-stream` hardening below.
+
 ## Completed Work (Highlights)
 
 - RLS hardening: removed public reads on sensitive tables and enforced least privilege.
@@ -86,13 +90,25 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - **Playback load testing**: not executed.
 
-- **Ledger concurrency stress tests**: not executed.
+- **Ledger concurrency stress tests**: not executed under high load (logic hardened).
+
+## Ledger Concurrency Hardening (2026-02-23)
+
+The `charge-stream` edge function was updated to close the gap where ledger entries could be written without a successful credit decrement:
+
+- Non-duplicate `stream_charges` insert errors now return 500 instead of falling through.
+
+- Credit decrement uses `.select("credits").maybeSingle()` to verify a row was updated; returns 409 on concurrent race with no ledger writes.
+
+- All ledger inserts (`credit_ledger`, `stream_ledger`) are gated on confirmed decrement.
+
+- Response uses DB-returned balance (`updatedMember.credits`) as authoritative value.
 
 ## Findings and Residual Risks
 
 - **Medium**: Playback load testing pending.
 
-- **Medium**: Ledger concurrency stress testing pending.
+- **Medium**: Ledger concurrency stress testing under high concurrency pending (logic is hardened).
 
 - **Low**: Current edge load testing performed at light concurrency only.
 
@@ -100,7 +116,7 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - Execute authenticated playback load tests (signed URL minting and playback).
 
-- Run ledger concurrency stress tests in staging.
+- Run ledger concurrency stress tests under high concurrency in staging to validate the hardened logic at scale.
 
 - Increase load test concurrency levels and capture p95/p99 for additional endpoints.
 

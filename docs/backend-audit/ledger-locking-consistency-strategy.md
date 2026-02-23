@@ -44,9 +44,9 @@ in a single database transaction, so credits and ledger entries are atomically c
 
 Credits are guarded by a CHECK constraint to prevent any write that would take the balance below zero.
 
-### 5) Stream charges use optimistic concurrency
+### 5) Stream charges use optimistic concurrency with row-return validation
 
-The per-stream charge flow updates credits with a compare-and-set style condition (`credits = previous`) to avoid double-deducting when concurrent calls occur. The CHECK constraint blocks negatives.
+The per-stream charge flow updates credits with a compare-and-set style condition (`credits = previous`) and uses `.select("credits").maybeSingle()` to confirm a row was actually updated. If no row matched (concurrent update), the function returns 409 without writing any ledger entries. The CHECK constraint blocks negatives. All ledger writes are gated on confirmed credit decrement.
 
 ### 6) Payout batching uniqueness
 
@@ -62,19 +62,21 @@ The per-stream charge flow updates credits with a compare-and-set style conditio
 
 - Payout batches are unique per artist/week.
 
+- Stream charge ledger writes only occur after confirmed credit decrement (no orphaned ledger entries).
+
 ## Known Gaps / Hardening Targets
 
-1) **Stream charge transactionality**
+1) **Stream charge transactionality** — PARTIALLY ADDRESSED (2026-02-23)
 
-   - The stream charge flow performs multiple DB calls without a single DB transaction.
+   - Ledger writes are now gated on confirmed credit decrement with row-return validation.
 
-   - Target: move the entire stream charge into a Postgres RPC (single transaction).
+   - Non-duplicate idempotency insert errors return 500 instead of falling through.
 
-2) **Stream charge idempotency scope**
+   - Remaining: the entire stream charge is still multiple DB calls, not a single Postgres RPC transaction. Full transactional RPC remains a future hardening target.
 
-   - `stream_charges` exists, but no unique idempotency key tied to client retries.
+2) **Stream charge idempotency scope** — ADDRESSED
 
-   - Target: enforce a unique `idempotency_key` per user+track+session or similar.
+   - `stream_charges` enforces a unique `idempotency_key`. Duplicate keys return early with `{ success: true, alreadyCharged: true }`.
 
 3) **Payout aggregation race safety**
 
@@ -84,4 +86,4 @@ The per-stream charge flow updates credits with a compare-and-set style conditio
 
 ## Summary
 
-The system relies on database-enforced constraints, idempotency tables, and atomic RPCs to prevent duplicates and ensure credit consistency. The remaining hardening work is to make stream charges and payout batching fully transactional and idempotent at the DB level.
+The system relies on database-enforced constraints, idempotency tables, and atomic RPCs to prevent duplicates and ensure credit consistency. Stream charge ledger writes are now gated on confirmed credit decrement. The remaining hardening work is to make stream charges fully transactional via a single DB RPC and to wrap payout batching in a transaction.
