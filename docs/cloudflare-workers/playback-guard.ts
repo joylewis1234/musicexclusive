@@ -8,8 +8,8 @@
  *
  * Bindings (wrangler.toml):
  *   [[r2_buckets]]
- *   binding = "HLS_BUCKET"
- *   bucket_name = "<your-bucket>"
+ *   binding = "R2_BUCKET"
+ *   bucket_name = "musicexclusive-audio"
  *
  *   [vars]
  *   PLAYBACK_JWT_SECRET = "<same secret as edge function>"
@@ -17,7 +17,7 @@
 
 export interface Env {
   PLAYBACK_JWT_SECRET: string;
-  HLS_BUCKET: R2Bucket;
+  R2_BUCKET: R2Bucket;
 }
 
 const HLS_PREFIX = "hls";
@@ -96,7 +96,7 @@ export default {
     const path = url.pathname.replace(/^\/+/, "");
     const key = `${HLS_PREFIX}/${path}`;
 
-    const obj = await env.HLS_BUCKET.get(key);
+    const obj = await env.R2_BUCKET.get(key);
     if (!obj) return new Response("Not found", { status: 404 });
 
     const isPlaylist = key.endsWith(".m3u8");
