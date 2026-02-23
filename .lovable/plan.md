@@ -1,59 +1,42 @@
 
 
-## Add HLS Playback Guard: Edge Function Update + Worker Reference
+## Fix forwardRef Warnings + Investigate Signup Issue
 
-### Overview
-Three deliverables:
-1. Save the Cloudflare Worker code as a reference file in the repo
-2. Add `HLS_WORKER_BASE_URL` secret and update `mint-playback-url` to return `hlsUrl`
-3. No client changes yet (HLS assets not in R2 yet)
+### Problem 1: forwardRef Warnings (Cosmetic)
+React Router v6 tries to pass a `ref` to `Login` and `FanAuth` components. Since they are plain function components (not wrapped in `React.forwardRef`), React logs a warning. This does NOT block functionality but clutters the console.
 
-### Step 1 -- Save Worker reference file
+**Fix:** Wrap both components with `React.forwardRef`.
 
-Create `docs/cloudflare-workers/playback-guard.ts` with the full Worker implementation you provided (JWT verification, R2 proxying, playlist rewriting). This is a reference for deploying on Cloudflare -- it does not run in this project.
+| File | Change |
+|------|--------|
+| `src/pages/Login.tsx` | Wrap component with `React.forwardRef` |
+| `src/pages/auth/FanAuth.tsx` | Wrap component with `React.forwardRef` |
 
-### Step 2 -- Add `HLS_WORKER_BASE_URL` secret
+### Problem 2: Signup Not Working
+The ref warning itself does not prevent signup. Possible causes to investigate:
+- Email confirmation may be required (user signs up but can't sign in until email is verified)
+- Password too short (minimum 6 characters enforced)
+- Network/backend error not surfacing properly
 
-Use the secrets tool to prompt for the Worker's deployed URL (e.g. `https://playback-guard.your-account.workers.dev`). This will be read by the edge function.
+**Action:** After fixing the ref warnings, test the full signup flow in the browser to see the actual error response.
 
-### Step 3 -- Update `mint-playback-url` edge function
+### Technical Details
 
-After the session JWT is minted and before the final response, add:
+For each affected component, change the export pattern from:
 
-- Read `HLS_WORKER_BASE_URL` from env
-- If missing, return 500 (same pattern as `PLAYBACK_JWT_SECRET` check)
-- Build `hlsUrl` as `{HLS_WORKER_BASE_URL}/{trackId}/master.m3u8?token={sessionToken}`
-- Add `hlsUrl` to the success response JSON alongside the existing `url`, `expiresAt`, `sessionToken`, and `session` fields
-
-Updated response shape:
-```json
-{
-  "url": "https://... (signed R2 URL, unchanged)",
-  "expiresAt": "2026-...",
-  "sessionToken": "eyJ...",
-  "hlsUrl": "https://playback-guard.../trackId/master.m3u8?token=eyJ...",
-  "session": {
-    "track_id": "...",
-    "user_id": "...",
-    "session_id": "...",
-    "expires_at": "2026-..."
-  }
-}
+```typescript
+const Login = () => { ... };
+export default Login;
 ```
 
-### Step 4 -- Deploy edge function
+To:
 
-Automatic on save.
+```typescript
+import { forwardRef } from "react";
+const Login = forwardRef<HTMLDivElement>((_, ref) => { ... });
+Login.displayName = "Login";
+export default Login;
+```
 
-### What does NOT change
-- All existing access checks, signed URL logic, session insert, and error handling remain intact
-- `useAudioPlayer` and other client hooks are untouched -- they will receive `hlsUrl` in the response and ignore it until we add hls.js support
-- No database changes
-
-### File summary
-
-| File | Action |
-|------|--------|
-| `docs/cloudflare-workers/playback-guard.ts` | Create (reference only) |
-| `supabase/functions/mint-playback-url/index.ts` | Edit (add hlsUrl to response) |
+The outer `div` gets the forwarded `ref`. Same pattern for `FanAuth`.
 
