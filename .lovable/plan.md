@@ -1,65 +1,58 @@
 
 
-## Add HLS Playback with hls.js
+## Move vault_members Writes to Edge Functions
 
-### Overview
-Integrate `hls.js` into the audio player so it prefers HLS streaming (via the Worker-guarded `hlsUrl`) when available, falling back to the existing signed R2 URL for direct playback.
+### Problem
+The client currently tries to INSERT/UPDATE `vault_members` directly, but RLS only allows `service_role` writes. This causes "new row violates row-level security policy" errors for new fans.
 
-### Steps
+### Changes
 
-**1. Add `hls.js` dependency**
-- Install `hls.js` (latest stable, ~1.5.x)
+**1. New Edge Function: `ensure-vault-member`**
+- File: `supabase/functions/ensure-vault-member/index.ts`
+- Requires Bearer token (validates via `getClaims`)
+- Uses `service_role` client to upsert `vault_members` by email
+- Sets `user_id`, `display_name`, `vault_access_active = false`, `credits = 0`
+- Returns the upserted row
+- Add config entry in `supabase/config.toml`
 
-**2. Update `src/hooks/useAudioPlayer.ts`**
+**2. New Edge Function: `apply-credit-topup`**
+- File: `supabase/functions/apply-credit-topup/index.ts`
+- Requires Bearer token (validates via `getClaims`)
+- Accepts `{ credits, usd }` in body
+- Uses `service_role` to call existing `apply_credit_purchase` RPC (which atomically upserts `vault_members` and inserts `credit_ledger`)
+- Reference format: `topup_{timestamp}` for idempotency
+- Returns `{ success, newBalance }`
+- Add config entry in `supabase/config.toml`
 
-The `mintSignedUrl` function already receives `hlsUrl` from the edge function but currently ignores it. Changes:
+**3. Update `src/hooks/useCredits.ts`**
+- `fetchCredits`: Remove the client-side INSERT block (lines 30-44). Replace with a call to `supabase.functions.invoke("ensure-vault-member")` when no row exists.
+- `addCredits`: Remove entirely (all client-side INSERT/UPDATE of `vault_members`). Replace with a call to `supabase.functions.invoke("apply-credit-topup", { body: { credits, usd } })`.
+- Return signature stays the same.
 
-- Import `Hls` from `hls.js`
-- Add an `hlsRef = useRef<Hls | null>(null)` to track the HLS instance
-- Update `mintSignedUrl` to also return `hlsUrl` from the response
-- Update the signed-URL cache to store `hlsUrl` alongside `url` and `expiresAt`
-- In `loadTrack`:
-  - Destroy any existing `hlsRef.current` before loading a new track
-  - After minting, check if `hlsUrl` exists:
-    - If `Hls.isSupported()`: create `new Hls()`, call `hls.loadSource(hlsUrl)`, `hls.attachMedia(audioElement)`, listen for `Hls.Events.ERROR` to surface fatal errors
-    - Else if the browser supports HLS natively (Safari — check `audio.canPlayType('application/vnd.apple.mpegurl')`): set `audio.src = hlsUrl` directly
-    - Else: fall back to the existing signed R2 URL (current behavior)
-- In `play`: when HLS is active, skip the signed-URL refresh logic (the Worker handles token-gated segments)
-- In `stop`: call `hlsRef.current?.stopLoad()` before pausing
-- In the cleanup effect: call `hlsRef.current?.destroy()` to release resources
-- Add `hlsActive: boolean` to `PlaybackDiagnostics` so the debug panel shows which path is in use
-
-**3. Update `src/components/player/VaultMusicPlayer.tsx` debug panel**
-- Show the new `hlsActive` diagnostic field so developers can confirm HLS is being used
-
-**4. Verification**
-- After deployment, open DevTools Network tab
-- Play a track that has HLS assets in R2 (`hls/{trackId}/master.m3u8`)
-- Confirm `.m3u8` and `.ts` requests load from the Worker URL with `?token=` appended
-- For tracks without HLS assets, confirm graceful fallback to signed R2 URL
+**4. Update `src/pages/AddCredits.tsx`**
+- Remove the direct `credit_ledger` INSERT (lines 52-58) since the edge function handles it atomically.
+- `handlePurchase` just calls `addCredits(option.credits)` which now invokes the edge function.
+- Remove the "MVP Testing Mode" banner since credits now go through the proper server-side path.
 
 ### Technical Details
 
 ```text
-loadTrack flow:
-  mint-playback-url
-       |
-       v
-  { url (signed R2), hlsUrl (Worker) }
-       |
-       v
-  hlsUrl exists?
-    YES --> Hls.isSupported()?
-              YES --> new Hls() + loadSource + attachMedia
-              NO  --> canPlayType('application/...mpegurl')?
-                        YES --> audio.src = hlsUrl (Safari native)
-                        NO  --> audio.src = url (signed R2 fallback)
-    NO  --> audio.src = url (signed R2 fallback)
+Before (broken):
+  Client --INSERT--> vault_members  --> RLS DENY (service_role only)
+
+After:
+  Client --Bearer--> ensure-vault-member (edge fn)
+                        |
+                        v
+                     service_role --UPSERT--> vault_members --> OK
+
+  Client --Bearer--> apply-credit-topup (edge fn)
+                        |
+                        v
+                     service_role --RPC--> apply_credit_purchase
+                        |
+                        v
+                     vault_members + credit_ledger (atomic)
 ```
 
-Key considerations:
-- `hls.js` only needs to be imported/used in this one hook — no other files require changes
-- The HLS instance must be destroyed before creating a new one (track change) or on unmount
-- Fatal HLS errors should trigger a fallback to the signed URL so playback is never completely blocked
-- The `play()` function skips URL refresh when HLS is active since segment tokens are baked into the playlist by the Worker
-
+No database schema changes needed. No RLS policy changes. The existing `apply_credit_purchase` RPC already handles the atomic credit grant correctly.
