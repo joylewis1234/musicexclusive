@@ -142,19 +142,23 @@ Deno.serve(async (req) => {
         );
       }
       console.error("Idempotency insert error:", idempotencyError);
-      // Non-fatal — continue with the charge
+      return new Response(JSON.stringify({ error: "Failed to record stream charge" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // 4. Deduct 1 credit (optimistic lock via CHECK constraint credits >= 0)
-    const { error: deductError } = await adminClient
+    const { data: updatedMember, error: deductError } = await adminClient
       .from("vault_members")
       .update({ credits: vaultMember.credits - 1 })
       .eq("email", fanEmail)
-      .eq("credits", vaultMember.credits);
+      .eq("credits", vaultMember.credits)
+      .select("credits")
+      .maybeSingle();
 
     if (deductError) {
       console.error("Error deducting credit:", deductError);
-      // If CHECK constraint fires, credits would go negative
       if (deductError.message?.includes("credits_non_negative")) {
         return new Response(JSON.stringify({ error: "Insufficient credits", requiresCredits: true }), {
           status: 402,
@@ -167,7 +171,15 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 5. Create ledger entries (unique index prevents duplicates)
+    // No row matched — concurrent update consumed credits first
+    if (!updatedMember) {
+      return new Response(JSON.stringify({ error: "Concurrent update, retry" }), {
+        status: 409,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 5. Create ledger entries (only after confirmed credit decrement)
     const streamReference = `stream_${trackId}_${Date.now()}`;
 
     // STREAM_DEBIT for fan
@@ -218,11 +230,8 @@ Deno.serve(async (req) => {
         .eq("stream_id", streamChargeId);
     }
 
-    // Return the new credit balance
-    const newCredits = vaultMember.credits - 1;
-
     return new Response(
-      JSON.stringify({ success: true, newCredits }),
+      JSON.stringify({ success: true, newCredits: updatedMember.credits }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
