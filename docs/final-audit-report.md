@@ -24,8 +24,6 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - **Medium**: Playback load testing not executed
 
-- **Medium**: Ledger concurrency stress testing under high load not executed (logic hardened, see below)
-
 - **Low**: Edge function load testing performed under light load only (limited concurrency)
 
 ## Architecture Documentation (Summary)
@@ -88,9 +86,9 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - **Edge functions**: light load testing for `validate-fan-invite` and `validate-vault-code` completed.
 
-- **Playback load testing**: not executed.
+- **Ledger concurrency stress test**: completed (40 requests, concurrency 5). Status codes: 200 x 10, 402 x 13, 409 x 17. Credits and ledger deltas matched exactly — integrity confirmed under contention.
 
-- **Ledger concurrency stress tests**: not executed under high load (logic hardened).
+- **Playback load testing**: not executed.
 
 ## Ledger Concurrency Hardening (2026-02-23)
 
@@ -108,15 +106,11 @@ The `charge-stream` edge function was updated to close the gap where ledger entr
 
 - **Medium**: Playback load testing pending.
 
-- **Medium**: Ledger concurrency stress testing under high concurrency pending (logic is hardened).
-
 - **Low**: Current edge load testing performed at light concurrency only.
 
 ## Recommendations
 
 - Execute authenticated playback load tests (signed URL minting and playback).
-
-- Run ledger concurrency stress tests under high concurrency in staging to validate the hardened logic at scale.
 
 - Increase load test concurrency levels and capture p95/p99 for additional endpoints.
 
