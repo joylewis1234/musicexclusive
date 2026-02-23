@@ -717,6 +717,7 @@ export type Database = {
           track_id: string
           user_agent: string | null
           user_id: string
+          watermark_id: string | null
         }
         Insert: {
           created_at?: string
@@ -727,6 +728,7 @@ export type Database = {
           track_id: string
           user_agent?: string | null
           user_id: string
+          watermark_id?: string | null
         }
         Update: {
           created_at?: string
@@ -737,6 +739,7 @@ export type Database = {
           track_id?: string
           user_agent?: string | null
           user_id?: string
+          watermark_id?: string | null
         }
         Relationships: [
           {
