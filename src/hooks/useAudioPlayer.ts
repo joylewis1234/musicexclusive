@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import Hls from "hls.js";
 import { supabase } from "@/integrations/supabase/client";
 
 type PlaybackFileType = "audio" | "preview";
@@ -13,6 +14,7 @@ export interface PlaybackDiagnostics {
   lastError: string | null;
   canPlay: boolean;
   readyState: number;
+  hlsActive: boolean;
 }
 
 export interface LoadTrackParams {
@@ -38,11 +40,16 @@ export interface UseAudioPlayerReturn {
   loadTrack: (params: LoadTrackParams) => Promise<void>;
 }
 
+interface CachedEntry {
+  url: string;
+  hlsUrl?: string;
+  expiresAt: number;
+}
+
 export function useAudioPlayer(): UseAudioPlayerReturn {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const signedUrlCacheRef = useRef(
-    new Map<string, { url: string; expiresAt: number }>()
-  );
+  const hlsRef = useRef<Hls | null>(null);
+  const signedUrlCacheRef = useRef(new Map<string, CachedEntry>());
 
   const [currentTrack, setCurrentTrack] = useState<{
     trackId: string;
@@ -67,10 +74,18 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     lastError: null,
     canPlay: false,
     readyState: 0,
+    hlsActive: false,
   });
 
   const getCacheKey = (trackId: string, fileType: PlaybackFileType) =>
     `${trackId}:${fileType}`;
+
+  const destroyHls = useCallback(() => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+  }, []);
 
   const mintSignedUrl = useCallback(
     async (trackId: string, fileType: PlaybackFileType) => {
@@ -90,7 +105,11 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         ? new Date(data.expiresAt).getTime()
         : Date.now() + 60_000;
 
-      return { url: data.url as string, expiresAt };
+      return {
+        url: data.url as string,
+        hlsUrl: (data.hlsUrl as string) || undefined,
+        expiresAt,
+      };
     },
     []
   );
@@ -102,12 +121,17 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       const cached = signedUrlCacheRef.current.get(cacheKey);
 
       if (!forceRefresh && cached && cached.expiresAt > now + 5_000) {
-        return cached.url;
+        return cached;
       }
 
       const minted = await mintSignedUrl(trackId, fileType);
-      signedUrlCacheRef.current.set(cacheKey, minted);
-      return minted.url;
+      const entry: CachedEntry = {
+        url: minted.url,
+        hlsUrl: minted.hlsUrl,
+        expiresAt: minted.expiresAt,
+      };
+      signedUrlCacheRef.current.set(cacheKey, entry);
+      return entry;
     },
     [mintSignedUrl]
   );
@@ -119,73 +143,36 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
     const audio = audioRef.current;
 
-    const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime);
-    };
-
+    const handleTimeUpdate = () => setCurrentTime(audio.currentTime);
     const handleLoadedMetadata = () => {
       setDuration(audio.duration);
       setIsLoading(false);
-      setDiagnostics((prev) => ({
-        ...prev,
-        canPlay: true,
-        readyState: audio.readyState,
-      }));
+      setDiagnostics((prev) => ({ ...prev, canPlay: true, readyState: audio.readyState }));
     };
-
     const handleCanPlay = () => {
       setIsLoading(false);
-      setDiagnostics((prev) => ({
-        ...prev,
-        canPlay: true,
-        readyState: audio.readyState,
-      }));
+      setDiagnostics((prev) => ({ ...prev, canPlay: true, readyState: audio.readyState }));
     };
-
-    const handleEnded = () => {
-      setIsPlaying(false);
-      setCurrentTime(0);
-    };
-
+    const handleEnded = () => { setIsPlaying(false); setCurrentTime(0); };
     const handleError = (e: Event) => {
       const audioEl = e.target as HTMLAudioElement;
       let errorMessage = "Unknown playback error";
       if (audioEl.error) {
         switch (audioEl.error.code) {
-          case MediaError.MEDIA_ERR_ABORTED:
-            errorMessage = "Playback aborted";
-            break;
-          case MediaError.MEDIA_ERR_NETWORK:
-            errorMessage = "Network error while loading audio";
-            break;
-          case MediaError.MEDIA_ERR_DECODE:
-            errorMessage = "Audio decode error - file may be corrupted";
-            break;
-          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
-            errorMessage = "Audio format not supported or URL invalid";
-            break;
+          case MediaError.MEDIA_ERR_ABORTED: errorMessage = "Playback aborted"; break;
+          case MediaError.MEDIA_ERR_NETWORK: errorMessage = "Network error while loading audio"; break;
+          case MediaError.MEDIA_ERR_DECODE: errorMessage = "Audio decode error - file may be corrupted"; break;
+          case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED: errorMessage = "Audio format not supported or URL invalid"; break;
         }
       }
       console.error("[AudioPlayer] Error:", errorMessage, audioEl.error);
       setError(errorMessage);
       setIsLoading(false);
       setIsPlaying(false);
-      setDiagnostics((prev) => ({
-        ...prev,
-        lastError: errorMessage,
-        canPlay: false,
-        readyState: audioEl.readyState,
-      }));
+      setDiagnostics((prev) => ({ ...prev, lastError: errorMessage, canPlay: false, readyState: audioEl.readyState }));
     };
-
-    const handleWaiting = () => {
-      setIsLoading(true);
-    };
-
-    const handlePlaying = () => {
-      setIsLoading(false);
-      setIsPlaying(true);
-    };
+    const handleWaiting = () => setIsLoading(true);
+    const handlePlaying = () => { setIsLoading(false); setIsPlaying(true); };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -205,32 +192,28 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       audio.removeEventListener("waiting", handleWaiting);
       audio.removeEventListener("playing", handlePlaying);
       audioRef.current = null;
+      destroyHls();
     };
   }, []);
 
   // Update volume
   useEffect(() => {
-    if (audioRef.current) {
-      audioRef.current.volume = volume / 100;
-    }
+    if (audioRef.current) audioRef.current.volume = volume / 100;
   }, [volume]);
 
   const loadTrack = useCallback(
     async ({ trackId, fileType, trackTitle, forceRefresh }: LoadTrackParams) => {
       if (!audioRef.current) return;
+      if (!trackId) { setError("Missing trackId"); return; }
 
-      if (!trackId) {
-        setError("Missing trackId");
-        return;
-      }
-
+      // Reset state
+      destroyHls();
       setError(null);
       setIsPlaying(false);
       setCurrentTime(0);
       setDuration(0);
       setIsLoading(true);
       setCurrentTrack({ trackId, fileType, trackTitle });
-
       setDiagnostics({
         trackTitle: trackTitle || null,
         trackId,
@@ -241,74 +224,96 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         lastError: null,
         canPlay: false,
         readyState: 0,
+        hlsActive: false,
       });
 
       try {
-        const signedUrl = await loadSignedUrl(
-          trackId,
-          fileType,
-          !!forceRefresh
-        );
+        const entry = await loadSignedUrl(trackId, fileType, !!forceRefresh);
+        const audio = audioRef.current!;
 
-        setDiagnostics((prev) => ({
-          ...prev,
-          audioUrl: signedUrl,
-        }));
+        // Prefer HLS when available
+        if (entry.hlsUrl) {
+          if (Hls.isSupported()) {
+            const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+            hlsRef.current = hls;
 
-        audioRef.current.src = signedUrl;
-        audioRef.current.load();
+            hls.on(Hls.Events.ERROR, (_event, data) => {
+              console.error("[AudioPlayer] HLS error:", data.type, data.details);
+              if (data.fatal) {
+                console.warn("[AudioPlayer] Fatal HLS error, falling back to signed URL");
+                destroyHls();
+                // Fallback to signed R2 URL
+                audio.src = entry.url;
+                audio.load();
+                setDiagnostics((prev) => ({
+                  ...prev,
+                  hlsActive: false,
+                  audioUrl: entry.url,
+                  lastError: `HLS fatal: ${data.details}, fell back to direct URL`,
+                }));
+              }
+            });
 
-        console.log("[AudioPlayer] Loading track:", {
-          trackTitle,
-          trackId,
-          fileType,
-        });
+            hls.loadSource(entry.hlsUrl);
+            hls.attachMedia(audio);
+
+            setDiagnostics((prev) => ({
+              ...prev,
+              audioUrl: entry.hlsUrl!,
+              hlsActive: true,
+            }));
+
+            console.log("[AudioPlayer] HLS active for track:", { trackTitle, trackId, fileType });
+          } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
+            // Safari native HLS
+            audio.src = entry.hlsUrl;
+            audio.load();
+            setDiagnostics((prev) => ({
+              ...prev,
+              audioUrl: entry.hlsUrl!,
+              hlsActive: true,
+            }));
+            console.log("[AudioPlayer] Native HLS (Safari) for track:", { trackTitle, trackId });
+          } else {
+            // No HLS support at all — direct signed URL
+            audio.src = entry.url;
+            audio.load();
+            setDiagnostics((prev) => ({ ...prev, audioUrl: entry.url }));
+            console.log("[AudioPlayer] No HLS support, using signed URL:", { trackTitle, trackId });
+          }
+        } else {
+          // No hlsUrl returned — direct signed URL fallback
+          audio.src = entry.url;
+          audio.load();
+          setDiagnostics((prev) => ({ ...prev, audioUrl: entry.url }));
+          console.log("[AudioPlayer] No hlsUrl, using signed URL:", { trackTitle, trackId, fileType });
+        }
       } catch (err) {
-        const msg =
-          err instanceof Error ? err.message : "Failed to load audio";
+        const msg = err instanceof Error ? err.message : "Failed to load audio";
         setError(msg);
         setIsLoading(false);
-        setDiagnostics((prev) => ({
-          ...prev,
-          lastError: msg,
-        }));
+        setDiagnostics((prev) => ({ ...prev, lastError: msg }));
       }
     },
-    [loadSignedUrl]
+    [loadSignedUrl, destroyHls]
   );
 
   const play = useCallback(async () => {
-    if (!audioRef.current) {
-      setError("Audio player not initialized");
-      return;
-    }
-
+    if (!audioRef.current) { setError("Audio player not initialized"); return; }
     const audio = audioRef.current;
-
-    if (!audio.src || !currentTrack) {
-      setError("No audio source loaded");
-      return;
-    }
+    if (!audio.src || !currentTrack) { setError("No audio source loaded"); return; }
 
     try {
-      const cacheKey = getCacheKey(
-        currentTrack.trackId,
-        currentTrack.fileType
-      );
-      const cached = signedUrlCacheRef.current.get(cacheKey);
-
-      if (!cached || cached.expiresAt <= Date.now() + 5_000) {
-        const refreshed = await loadSignedUrl(
-          currentTrack.trackId,
-          currentTrack.fileType,
-          true
-        );
-        audio.src = refreshed;
-        audio.load();
-        setDiagnostics((prev) => ({
-          ...prev,
-          audioUrl: refreshed,
-        }));
+      // Only refresh signed URL if NOT using HLS (HLS tokens are in the playlist)
+      if (!hlsRef.current) {
+        const cacheKey = getCacheKey(currentTrack.trackId, currentTrack.fileType);
+        const cached = signedUrlCacheRef.current.get(cacheKey);
+        if (!cached || cached.expiresAt <= Date.now() + 5_000) {
+          const refreshed = await loadSignedUrl(currentTrack.trackId, currentTrack.fileType, true);
+          audio.src = refreshed.url;
+          audio.load();
+          setDiagnostics((prev) => ({ ...prev, audioUrl: refreshed.url }));
+        }
       }
 
       setIsLoading(true);
@@ -320,23 +325,18 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       console.error("[AudioPlayer] Play failed:", err);
       setError(msg);
       setIsPlaying(false);
-      setDiagnostics((prev) => ({
-        ...prev,
-        lastError: msg,
-      }));
+      setDiagnostics((prev) => ({ ...prev, lastError: msg }));
     } finally {
       setIsLoading(false);
     }
   }, [currentTrack, loadSignedUrl]);
 
   const pause = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      setIsPlaying(false);
-    }
+    if (audioRef.current) { audioRef.current.pause(); setIsPlaying(false); }
   }, []);
 
   const stop = useCallback(() => {
+    if (hlsRef.current) hlsRef.current.stopLoad();
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
@@ -357,18 +357,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   }, []);
 
   return {
-    isPlaying,
-    currentTime,
-    duration,
-    volume,
-    isLoading,
-    error,
-    diagnostics,
-    play,
-    pause,
-    stop,
-    seek,
-    setVolume,
-    loadTrack,
+    isPlaying, currentTime, duration, volume, isLoading, error, diagnostics,
+    play, pause, stop, seek, setVolume, loadTrack,
   };
 }
