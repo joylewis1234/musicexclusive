@@ -2,7 +2,7 @@
 
 ## Scope
 
-This summary covers edge function load tests executed against safe, public endpoints. Playback load testing and ledger stress tests are not included here.
+This summary covers edge function load tests, playback load tests, and ledger concurrency stress tests.
 
 ## Test Configuration
 
@@ -59,7 +59,16 @@ These changes close the gap where ledger entries could be written even if the cr
 - Integrity: **OK** — credits consumed matches ledger deltas exactly; no negatives, no orphaned entries.
 - 402 (insufficient credits) and 409 (concurrent update, retry) are expected under contention and confirm the hardened logic is working correctly.
 
+## Playback Load Test (2026-02-23)
+
+- Tool: `scripts/load-test-playback.js`
+- Date: 2026-02-23
+- Total requests: 20
+- Concurrency: 5
+- Status codes: 200 x 20
+- Throughput: ~0.10 RPS (duration ~193.6s)
+- Latency (ms): p50 45,616, p95 61,095, p99 66,191, max 66,191
+
 ## Limitations
 
-- Playback system load testing not executed (requires authenticated minting and signed URL playback).
 - Results are from light load and should be repeated at higher concurrency in a staging environment.
