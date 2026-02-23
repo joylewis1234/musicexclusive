@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, forwardRef } from "react";
 import { useNavigate, useLocation, useSearchParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ interface LocationState {
   invite_type?: string;
 }
 
-const FanAuth = () => {
+const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -146,7 +146,7 @@ const FanAuth = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div ref={ref} className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
         <div className="container max-w-lg mx-auto px-4 h-14 flex items-center">
@@ -349,6 +349,7 @@ const FanAuth = () => {
       </main>
     </div>
   );
-};
+});
+FanAuth.displayName = "FanAuth";
 
 export default FanAuth;
