@@ -113,3 +113,9 @@ verify_jwt = false
 
 [functions.mint-playback-url]
 verify_jwt = false
+
+[functions.ensure-vault-member]
+verify_jwt = false
+
+[functions.apply-credit-topup]
+verify_jwt = false
