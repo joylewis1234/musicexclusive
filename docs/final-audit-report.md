@@ -143,3 +143,9 @@ The `charge-stream` edge function was updated to close the gap where ledger entr
 - `docs/abuse-prevention-confirmation.md`
 
 - `docs/load-testing-summary.md`
+
+- `docs/rls-changes.md`
+
+- `docs/trust-boundary-map.md`
+
+- `docs/auth-jwt-review.md`
