@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Coins, Loader2, Sparkles, Wallet } from "lucide-react";
+import { ChevronLeft, Coins, Loader2, Wallet } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { PaymentErrorBoundary } from "@/components/error-boundaries";
 import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -41,32 +40,16 @@ const AddCredits = () => {
     setSelectedOption(option);
 
     try {
-      // MVP: Simulate purchase by adding credits directly
-      const success = await addCredits(option.credits);
+      const success = await addCredits(option.credits, option.dollars);
 
       if (!success) {
         throw new Error("Failed to add credits");
       }
 
-      // Log the credit purchase in credit_ledger
-      const { error: ledgerError } = await supabase.from("credit_ledger").insert({
-        user_email: user.email,
-        type: "CREDITS_PURCHASE",
-        credits_delta: option.credits,
-        usd_delta: option.dollars,
-        reference: `topup_${Date.now()}`,
-      });
-
-      if (ledgerError) {
-        console.error("Error logging credit purchase:", ledgerError);
-        // Don't fail the transaction, just log the error
-      }
-
-      // Refresh balance
       await refetch();
 
       toast.success(`+${option.credits} credits added! 🎉`, {
-        description: `$${option.dollars.toFixed(2)} • Balance: ${currentBalance + option.credits} credits`
+        description: `$${option.dollars.toFixed(2)} • Balance updated`
       });
 
     } catch (err) {
@@ -203,19 +186,6 @@ const AddCredits = () => {
             </div>
           </div>
         </PaymentErrorBoundary>
-
-        {/* MVP Testing Notice */}
-        <GlowCard glowColor="gradient" hover={false}>
-          <div className="p-4 flex items-start gap-3">
-            <Sparkles className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-medium text-amber-400">MVP Testing Mode</p>
-              <p className="text-xs text-muted-foreground mt-1">
-                Credits are added instantly for testing. In production, this will use Stripe payments.
-              </p>
-            </div>
-          </div>
-        </GlowCard>
 
         {/* Info */}
         <div className="text-center space-y-1">
