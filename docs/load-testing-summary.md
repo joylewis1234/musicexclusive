@@ -77,6 +77,16 @@ These changes close the gap where ledger entries could be written even if the cr
 - High 409 rate indicates contention on concurrent update; retry/backoff is needed for higher success rates.
 - No 500s observed in this run.
 
+## mint-playback-url Load Test (High Concurrency Run)
+
+- Tool: scripts/load-test-edge.js
+- Date: 2026-02-24
+- Concurrency: 25
+- Requests: 200
+- Status codes: 200 x 200
+- Throughput: ~10.68 RPS
+- Latency (ms): p50 1005, p95 3301, p99 4876, max 8025
+
 ## Playback Load Test (2026-02-23)
 
 - Tool: `scripts/load-test-playback.js`
@@ -112,9 +122,9 @@ These changes close the gap where ledger entries could be written even if the cr
 ### mint-playback-url (200 req, concurrency 25)
 
 - Total requests: 200
-- Status codes: _TBD_
-- Throughput: _TBD_ RPS
-- Latency (ms): p50 _TBD_, p95 _TBD_, p99 _TBD_, max _TBD_
+- Status codes: 200 x 200
+- Throughput: ~10.68 RPS
+- Latency (ms): p50 1005, p95 3301, p99 4876, max 8025
 
 ### charge-stream (80 req, concurrency 20)
 
