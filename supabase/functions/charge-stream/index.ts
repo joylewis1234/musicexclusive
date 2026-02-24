@@ -148,26 +148,46 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4. Transactional debit: single RPC handles credit deduction + all ledger writes atomically
-    const { data: rpcResult, error: rpcError } = await adminClient.rpc("debit_stream_credit", {
-      p_fan_email: fanEmail,
-      p_fan_user_id: fanUserId,
-      p_track_id: trackId,
-      p_artist_id: trackOwnerArtistId,
-      p_stream_charge_id: streamChargeId,
-      p_idempotency_key: idempotencyKey,
-    });
+    // 4. Transactional debit with retry on serialization/deadlock errors
+    const RPC_MAX_RETRIES = 3;
+    const RPC_BACKOFF_MS = [50, 100, 200];
+    let rpcResult: { success: boolean; newCredits?: number; streamLedgerId?: string } | null = null;
 
-    if (rpcError) {
-      console.error("debit_stream_credit RPC error:", rpcError);
-      return new Response(JSON.stringify({ error: "Failed to process payment" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    for (let attempt = 0; attempt < RPC_MAX_RETRIES; attempt++) {
+      const { data, error: rpcError } = await adminClient.rpc("debit_stream_credit", {
+        p_fan_email: fanEmail,
+        p_fan_user_id: fanUserId,
+        p_track_id: trackId,
+        p_artist_id: trackOwnerArtistId,
+        p_stream_charge_id: streamChargeId,
+        p_idempotency_key: idempotencyKey,
       });
+
+      if (!rpcError) {
+        rpcResult = data as { success: boolean; newCredits?: number; streamLedgerId?: string } | null;
+        break;
+      }
+
+      // Retry on serialization failure (40001) or deadlock (40P01)
+      if ((rpcError.code === "40001" || rpcError.code === "40P01") && attempt < RPC_MAX_RETRIES - 1) {
+        console.warn(`debit_stream_credit contention (${rpcError.code}), retry ${attempt + 1}`);
+        await new Promise((r) => setTimeout(r, RPC_BACKOFF_MS[attempt]));
+        continue;
+      }
+
+      // Non-retryable error or retries exhausted
+      console.error("debit_stream_credit RPC error:", rpcError);
+      const isContention = rpcError.code === "40001" || rpcError.code === "40P01";
+      return new Response(
+        JSON.stringify({ error: isContention ? "Concurrent update, retry" : "Failed to process payment" }),
+        {
+          status: isContention ? 409 : 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     if (!rpcResult?.success) {
-      // Debit failed — could be concurrent update or insufficient credits
       return new Response(JSON.stringify({ error: "Concurrent update, retry" }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
