@@ -194,6 +194,14 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Handle duplicate detected inside RPC (ON CONFLICT DO NOTHING path)
+    if (rpcResult.alreadyCharged) {
+      return new Response(
+        JSON.stringify({ success: true, alreadyCharged: true, newCredits: rpcResult.newCredits }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ success: true, newCredits: rpcResult.newCredits }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
