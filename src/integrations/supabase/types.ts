@@ -1384,6 +1384,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      debit_stream_credit: {
+        Args: {
+          p_artist_id: string
+          p_fan_email: string
+          p_fan_user_id: string
+          p_idempotency_key: string
+          p_stream_charge_id: string
+          p_track_id: string
+        }
+        Returns: Json
+      }
       get_fan_top_artists: {
         Args: { p_fan_id: string; p_limit?: number }
         Returns: {
