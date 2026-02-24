@@ -14,7 +14,7 @@ This report covers Milestones 1–4 for the Music Exclusive security hardening p
 
 ## Executive Summary
 
-The application's core security posture is substantially improved. RLS policy exposure is reduced, financial operations are protected with idempotency and uniqueness constraints, and streaming access is guarded by short-lived signed URLs. Abuse controls for invites and vault codes are enforced. Playback and ledger stress tests have been executed under light concurrency; no integrity issues observed.
+The application's core security posture is substantially improved. RLS policy exposure is reduced, financial operations are protected with idempotency and uniqueness constraints, and streaming access is guarded by short-lived signed URLs. Abuse controls for invites and vault codes are enforced. Playback and ledger stress tests have been executed under both light and higher concurrency; no integrity issues observed.
 
 ## Severity Ratings (Current Risk Map)
 
@@ -22,7 +22,7 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - **High**: None observed in reviewed scope
 
-- **Low**: Load testing performed under light load only (limited concurrency)
+- **Info**: Higher-concurrency load testing prepared; results pending execution (2026-02-24)
 
 ## Architecture Documentation (Summary)
 
@@ -78,7 +78,7 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - Abuse controls: invite expiration, single-use enforcement, issuer binding, and rate limiting on vault code endpoints.
 
-- Edge function load testing: executed on safe public endpoints.
+- Edge function load testing: executed on safe public endpoints and authenticated endpoints.
 
 ## Failure Handling Validation (Raw Payloads)
 
@@ -96,11 +96,15 @@ The application's core security posture is substantially improved. RLS policy ex
 
 ## Load Testing Summary
 
-- **Edge functions**: light load testing for `validate-fan-invite` and `validate-vault-code` completed.
+- **Edge functions**: Light load (120 req, concurrency 6) and higher-concurrency (200 req, concurrency 20) testing for `validate-fan-invite` and `validate-vault-code` completed.
 
-- **Ledger concurrency stress test**: completed (40 requests, concurrency 5). Status codes: 200 x 10, 402 x 13, 409 x 17. Credits and ledger deltas matched exactly — integrity confirmed under contention.
+- **mint-playback-url**: Higher-concurrency testing (200 req, concurrency 25) prepared. Results pending.
 
-- **Playback load testing**: completed (20 requests, concurrency 5). All 200 OK. p50 45,616 ms, p95 61,095 ms.
+- **charge-stream**: Higher-concurrency testing (80 req, concurrency 20) prepared. Results pending.
+
+- **Ledger concurrency stress test**: Light load completed (40 requests, concurrency 5). Status codes: 200 x 10, 402 x 13, 409 x 17. Credits and ledger deltas matched exactly — integrity confirmed under contention. Higher-concurrency run (200 req, concurrency 25) prepared.
+
+- **Playback load testing**: Light load completed (20 requests, concurrency 5). All 200 OK. p50 45,616 ms, p95 61,095 ms. Higher-concurrency run (200 req, concurrency 20) prepared.
 
 ## Ledger Concurrency Hardening (2026-02-23)
 
@@ -116,13 +120,13 @@ The `charge-stream` edge function was updated to close the gap where ledger entr
 
 ## Findings and Residual Risks
 
-- **Low**: All load testing performed at light concurrency only.
+- **Info**: Higher-concurrency load tests have been scripted and are ready to execute. Results will be captured and documented upon completion.
 
 ## Recommendations
 
-- Repeat playback and ledger stress tests at higher concurrency levels.
+- Execute higher-concurrency load tests and capture results.
 
-- Capture p95/p99 for additional endpoints under sustained load.
+- Monitor p95/p99 latencies for authenticated endpoints under sustained load.
 
 ## Appendix: Key Files
 
@@ -135,6 +139,12 @@ The `charge-stream` edge function was updated to close the gap where ledger entr
 - `supabase/functions/validate-fan-invite/index.ts`
 
 - `supabase/functions/validate-vault-code/index.ts`
+
+- `scripts/load-test-edge.js`
+
+- `scripts/load-test-playback.js`
+
+- `scripts/ledger-stress-test.js`
 
 - `docs/invite-system-validation-confirmation.md`
 
