@@ -80,7 +80,7 @@ Deno.serve(async (req) => {
 
     const trackOwnerArtistId = trackData.artist_id;
 
-    // 2. Check vault membership and credits
+    // 2. Check vault membership (read-only pre-check for better error messages)
     const { data: vaultMember, error: vaultError } = await adminClient
       .from("vault_members")
       .select("id, credits, vault_access_active")
@@ -148,90 +148,34 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 4. Deduct 1 credit (optimistic lock via CHECK constraint credits >= 0)
-    const { data: updatedMember, error: deductError } = await adminClient
-      .from("vault_members")
-      .update({ credits: vaultMember.credits - 1 })
-      .eq("email", fanEmail)
-      .eq("credits", vaultMember.credits)
-      .select("credits")
-      .maybeSingle();
+    // 4. Transactional debit: single RPC handles credit deduction + all ledger writes atomically
+    const { data: rpcResult, error: rpcError } = await adminClient.rpc("debit_stream_credit", {
+      p_fan_email: fanEmail,
+      p_fan_user_id: fanUserId,
+      p_track_id: trackId,
+      p_artist_id: trackOwnerArtistId,
+      p_stream_charge_id: streamChargeId,
+      p_idempotency_key: idempotencyKey,
+    });
 
-    if (deductError) {
-      console.error("Error deducting credit:", deductError);
-      if (deductError.message?.includes("credits_non_negative")) {
-        return new Response(JSON.stringify({ error: "Insufficient credits", requiresCredits: true }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    if (rpcError) {
+      console.error("debit_stream_credit RPC error:", rpcError);
       return new Response(JSON.stringify({ error: "Failed to process payment" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // No row matched — concurrent update consumed credits first
-    if (!updatedMember) {
+    if (!rpcResult?.success) {
+      // Debit failed — could be concurrent update or insufficient credits
       return new Response(JSON.stringify({ error: "Concurrent update, retry" }), {
         status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 5. Create ledger entries (only after confirmed credit decrement)
-    const streamReference = `stream_${trackId}_${Date.now()}`;
-
-    // STREAM_DEBIT for fan
-    await adminClient.from("credit_ledger").insert({
-      user_email: fanEmail,
-      type: "STREAM_DEBIT",
-      credits_delta: -1,
-      usd_delta: -0.20,
-      reference: streamReference,
-    });
-
-    // ARTIST_EARNING
-    await adminClient.from("credit_ledger").insert({
-      user_email: trackOwnerArtistId,
-      type: "ARTIST_EARNING",
-      credits_delta: 0,
-      usd_delta: 0.10,
-      reference: streamReference,
-    });
-
-    // PLATFORM_EARNING
-    await adminClient.from("credit_ledger").insert({
-      user_email: "platform@musicexclusive.com",
-      type: "PLATFORM_EARNING",
-      credits_delta: 0,
-      usd_delta: 0.10,
-      reference: streamReference,
-    });
-
-    // 6. Create stream_ledger entry
-    const { data: streamEntry } = await adminClient.from("stream_ledger").insert({
-      fan_id: fanUserId,
-      fan_email: fanEmail,
-      artist_id: trackOwnerArtistId,
-      track_id: trackId,
-      credits_spent: 1,
-      amount_total: 0.20,
-      amount_artist: 0.10,
-      amount_platform: 0.10,
-      payout_status: "pending",
-    }).select("id").maybeSingle();
-
-    // 7. Update stream_charges with the stream_ledger_id
-    if (streamEntry?.id) {
-      await adminClient
-        .from("stream_charges")
-        .update({ stream_ledger_id: streamEntry.id })
-        .eq("stream_id", streamChargeId);
-    }
-
     return new Response(
-      JSON.stringify({ success: true, newCredits: updatedMember.credits }),
+      JSON.stringify({ success: true, newCredits: rpcResult.newCredits }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
