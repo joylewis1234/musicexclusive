@@ -59,6 +59,24 @@ These changes close the gap where ledger entries could be written even if the cr
 - Integrity: **OK** — credits consumed matches ledger deltas exactly; no negatives, no orphaned entries.
 - 402 (insufficient credits) and 409 (concurrent update, retry) are expected under contention and confirm the hardened logic is working correctly.
 
+## Ledger Concurrency Stress Test (High Concurrency Run)
+
+- Tool: scripts/ledger-stress-test.js
+- Date: 2026-02-24
+- Concurrency: 25
+- Requests: 200
+- Status codes: 200 x 37, 409 x 163
+- Throughput: ~8.93 RPS
+- Latency (ms): p50 1566, p95 3056, p99 8328, max 10671
+- Credits: starting 1999, ending 1962, expected ending 1962
+- Ledger delta: STREAM_DEBIT +37, stream_ledger +37
+
+## Ledger Findings (High Concurrency Run)
+
+- Credits and ledger deltas match successful deductions (no overspend observed).
+- High 409 rate indicates contention on concurrent update; retry/backoff is needed for higher success rates.
+- No 500s observed in this run.
+
 ## Playback Load Test (2026-02-23)
 
 - Tool: `scripts/load-test-playback.js`
@@ -116,7 +134,7 @@ These changes close the gap where ledger entries could be written even if the cr
 ### Ledger Stress Test (200 req, concurrency 25)
 
 - Total requests: 200
-- Status codes: _TBD_
-- Credits before/after: _TBD_
-- Ledger delta: STREAM_DEBIT +_TBD_, stream_ledger +_TBD_
-- Integrity: _TBD_
+- Status codes: 200 x 37, 409 x 163
+- Credits before/after: 1999 / 1962
+- Ledger delta: STREAM_DEBIT +37, stream_ledger +37
+- Integrity: **OK** -- credits match ledger deltas exactly; no overspend, no 500s observed
