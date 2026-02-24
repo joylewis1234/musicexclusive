@@ -66,13 +66,15 @@ The per-stream charge flow updates credits with a compare-and-set style conditio
 
 ## Known Gaps / Hardening Targets
 
-1) **Stream charge transactionality** — PARTIALLY ADDRESSED (2026-02-23)
+1) **Stream charge transactionality** — ADDRESSED (2026-02-24)
 
-   - Ledger writes are now gated on confirmed credit decrement with row-return validation.
+   - Fully transactional via `debit_stream_credit` RPC: credit decrement, ledger writes, and stream recording in a single Postgres transaction.
 
-   - Non-duplicate idempotency insert errors return 500 instead of falling through.
+   - Reference uses deterministic format `stream_<trackId>_<idempotencyKey>` for ledger deduplication.
 
-   - Remaining: the entire stream charge is still multiple DB calls, not a single Postgres RPC transaction. Full transactional RPC remains a future hardening target.
+   - Ledger inserts use `ON CONFLICT (reference, type, user_email) DO NOTHING`; if duplicate detected, credit deduction is rolled back and `alreadyCharged` is returned.
+
+   - Server-side retry loop (3 attempts) handles serialization (40001) and deadlock (40P01) errors.
 
 2) **Stream charge idempotency scope** — ADDRESSED
 
