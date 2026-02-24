@@ -15,17 +15,31 @@ import { performance } from "node:perf_hooks";
  * Usage:
  *   AUTH_TOKEN="<jwt>" TRACK_ID="<uuid>" FAN_EMAIL="<email>" \
  *     node scripts/ledger-stress-test.js
+ *
+ * Tuning:
+ *   REQUESTS or TOTAL_REQUESTS (default 40)
+ *   CONCURRENCY (default 5)
+ *   ALLOW_OVERSPEND (logged; DB CHECK constraint prevents actual overspend)
  */
 
-const BASE = "https://yjytuglxpvdkyvjsdyfk.functions.supabase.co";
+const BASE = process.env.SUPABASE_URL
+  ? process.env.SUPABASE_URL.replace(/\/$/, "").replace(/\.supabase\.co$/, ".functions.supabase.co")
+  : "https://yjytuglxpvdkyvjsdyfk.functions.supabase.co";
+
 const ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqeXR1Z2x4cHZka3l2anNkeWZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzMzM3MzMsImV4cCI6MjA4NDkwOTczM30.NEs_fcWRbHfrDIVIySQHRs8xq9mrel9ZxBGg4YA95a0";
+
+const REST_BASE = process.env.SUPABASE_URL
+  ? process.env.SUPABASE_URL.replace(/\/$/, "")
+  : "https://yjytuglxpvdkyvjsdyfk.supabase.co";
 
 const AUTH_TOKEN = process.env.AUTH_TOKEN;
 const TRACK_ID = process.env.TRACK_ID;
 const FAN_EMAIL = process.env.FAN_EMAIL;
-const TOTAL_REQUESTS = parseInt(process.env.TOTAL_REQUESTS || "40", 10);
+const TOTAL_REQUESTS = parseInt(process.env.REQUESTS || process.env.TOTAL_REQUESTS || "40", 10);
 const CONCURRENCY = parseInt(process.env.CONCURRENCY || "5", 10);
+const ALLOW_OVERSPEND = process.env.ALLOW_OVERSPEND || "false";
 
 if (!AUTH_TOKEN || !TRACK_ID || !FAN_EMAIL) {
   console.error("Required env vars: AUTH_TOKEN, TRACK_ID, FAN_EMAIL");
@@ -41,11 +55,11 @@ async function fetchLedgerCounts() {
 
   const [debitRes, streamRes] = await Promise.all([
     fetch(
-      `${BASE.replace(".functions.", ".")}/rest/v1/credit_ledger?select=id&type=eq.STREAM_DEBIT&user_email=eq.${encodeURIComponent(FAN_EMAIL)}`,
+      `${REST_BASE}/rest/v1/credit_ledger?select=id&type=eq.STREAM_DEBIT&user_email=eq.${encodeURIComponent(FAN_EMAIL)}`,
       { headers }
     ),
     fetch(
-      `${BASE.replace(".functions.", ".")}/rest/v1/stream_ledger?select=id&fan_email=eq.${encodeURIComponent(FAN_EMAIL)}&track_id=eq.${TRACK_ID}`,
+      `${REST_BASE}/rest/v1/stream_ledger?select=id&fan_email=eq.${encodeURIComponent(FAN_EMAIL)}&track_id=eq.${TRACK_ID}`,
       { headers }
     ),
   ]);
@@ -65,7 +79,7 @@ async function fetchCredits() {
     "Content-Type": "application/json",
   };
   const res = await fetch(
-    `${BASE.replace(".functions.", ".")}/rest/v1/vault_members?select=credits&email=eq.${encodeURIComponent(FAN_EMAIL)}`,
+    `${REST_BASE}/rest/v1/vault_members?select=credits&email=eq.${encodeURIComponent(FAN_EMAIL)}`,
     { headers }
   );
   const data = await res.json();
@@ -76,7 +90,8 @@ async function runStressTest() {
   console.log(`\n=== Ledger Stress Test ===`);
   console.log(`Fan: ${FAN_EMAIL}`);
   console.log(`Track: ${TRACK_ID}`);
-  console.log(`Requests: ${TOTAL_REQUESTS}, Concurrency: ${CONCURRENCY}\n`);
+  console.log(`Requests: ${TOTAL_REQUESTS}, Concurrency: ${CONCURRENCY}`);
+  console.log(`ALLOW_OVERSPEND: ${ALLOW_OVERSPEND} (DB CHECK constraint enforced regardless)\n`);
 
   // Snapshot before
   const creditsBefore = await fetchCredits();
