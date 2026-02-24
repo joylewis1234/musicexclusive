@@ -72,3 +72,51 @@ These changes close the gap where ledger entries could be written even if the cr
 ## Limitations
 
 - Results are from light load and should be repeated at higher concurrency in a staging environment.
+
+---
+
+## Higher-Concurrency Load Tests (2026-02-24)
+
+### validate-fan-invite (200 req, concurrency 20)
+
+- Total requests: 200
+- Status codes: _TBD_
+- Throughput: _TBD_ RPS
+- Latency (ms): p50 _TBD_, p95 _TBD_, p99 _TBD_, max _TBD_
+
+### validate-vault-code (200 req, concurrency 20)
+
+- Total requests: 200
+- Status codes: _TBD_
+- Throughput: _TBD_ RPS
+- Latency (ms): p50 _TBD_, p95 _TBD_, p99 _TBD_, max _TBD_
+
+### mint-playback-url (200 req, concurrency 25)
+
+- Total requests: 200
+- Status codes: _TBD_
+- Throughput: _TBD_ RPS
+- Latency (ms): p50 _TBD_, p95 _TBD_, p99 _TBD_, max _TBD_
+
+### charge-stream (80 req, concurrency 20)
+
+- Total requests: 80
+- Status codes: _TBD_
+- Throughput: _TBD_ RPS
+- Latency (ms): p50 _TBD_, p95 _TBD_, p99 _TBD_, max _TBD_
+- Ledger deltas: _TBD_
+
+### Playback Load Test (200 req, concurrency 20)
+
+- Total requests: 200
+- Status codes: _TBD_
+- Throughput: _TBD_ RPS
+- Latency (ms): p50 _TBD_, p95 _TBD_, p99 _TBD_, max _TBD_
+
+### Ledger Stress Test (200 req, concurrency 25)
+
+- Total requests: 200
+- Status codes: _TBD_
+- Credits before/after: _TBD_
+- Ledger delta: STREAM_DEBIT +_TBD_, stream_ledger +_TBD_
+- Integrity: _TBD_
