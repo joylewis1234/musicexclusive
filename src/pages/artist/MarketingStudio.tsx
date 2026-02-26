@@ -6,16 +6,13 @@ import { Slider } from "@/components/ui/slider";
 import { TemplateCanvas, TemplateType, TEMPLATE_DIMENSIONS } from "@/components/artist/marketing/TemplateCanvas";
 import { useTemplateExport } from "@/hooks/useTemplateExport";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
-import { Download, Upload, Sparkles, Image, Lock, ShieldCheck, Crown, Layers, Move } from "lucide-react";
+import { Download, Upload, Sparkles, Image, Layers, Move } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const TEMPLATES: { id: TemplateType; label: string; icon: React.ReactNode; desc: string }[] = [
   { id: "artist-photo", label: "Cinematic Photo", icon: <Image className="w-5 h-5" />, desc: "Artist portrait with bokeh glow" },
-  { id: "cover-art", label: "Cover Art", icon: <Layers className="w-5 h-5" />, desc: "Album cover cinematic layout" },
-  { id: "vault-glow", label: "Vault Glow", icon: <ShieldCheck className="w-5 h-5" />, desc: "Vault lighting & gold ring" },
-  { id: "minimal-luxury", label: "Minimal Luxury", icon: <Crown className="w-5 h-5" />, desc: "Clean black & gold elegance" },
-  { id: "story-format", label: "Story Format", icon: <Lock className="w-5 h-5" />, desc: "1080×1920 Instagram Story" },
+  { id: "cover-art", label: "Cover Art", icon: <Layers className="w-5 h-5" />, desc: "Album cover cinematic blue" },
 ];
 
 const MarketingStudio = () => {
