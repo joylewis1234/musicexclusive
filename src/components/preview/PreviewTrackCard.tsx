@@ -1,17 +1,30 @@
 import { Play, Pause, Lock, Loader2, AlertCircle, Heart } from "lucide-react";
-import { DbTrack, getArtistName } from "@/hooks/useTracks";
 import artist1 from "@/assets/artist-1.jpg";
 
+interface PreviewTrack {
+  id: string;
+  title: string;
+  artist_id: string;
+  genre: string | null;
+  artwork_url: string | null;
+  has_preview: boolean;
+  like_count: number;
+  preview_start_seconds: number;
+  artist_name: string | null;
+  artist_avatar_url: string | null;
+}
+
 interface PreviewTrackCardProps {
-  track: DbTrack;
+  track: PreviewTrack;
   isPreviewPlaying: boolean;
   isPreviewLoading: boolean;
   previewProgress: number;
   previewError: string | null;
-  likeCount: number;
   onPreview: () => void;
   onGetAccess: () => void;
 }
+
+export type { PreviewTrack };
 
 export const PreviewTrackCard = ({
   track,
@@ -19,12 +32,11 @@ export const PreviewTrackCard = ({
   isPreviewLoading,
   previewProgress,
   previewError,
-  likeCount,
   onPreview,
   onGetAccess,
 }: PreviewTrackCardProps) => {
-  const artistName = getArtistName(track);
-  const hasPreviewAudio = !!track.preview_audio_url || !!track.full_audio_url;
+  const artistName = track.artist_name || "Artist";
+  const hasPreviewAudio = track.has_preview;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
 
@@ -37,7 +49,7 @@ export const PreviewTrackCard = ({
           : "0 0 8px hsl(var(--primary) / 0.06)",
       }}
     >
-      {/* Artwork — use artist avatar or fallback (no signed URL needed) */}
+      {/* Artwork */}
       <div
         className="relative aspect-square overflow-hidden cursor-pointer"
         onClick={hasPreviewAudio && !isPreviewDisabled ? onPreview : undefined}
@@ -54,7 +66,7 @@ export const PreviewTrackCard = ({
           }}
         />
 
-        {/* Hover overlay with play button */}
+        {/* Hover overlay */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
           {isPreviewLoading ? (
             <div
@@ -106,11 +118,11 @@ export const PreviewTrackCard = ({
           {artistName}
         </p>
 
-        {/* Bottom row: likes + preview + get access */}
+        {/* Bottom row */}
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-1 text-muted-foreground">
             <Heart className="w-3 h-3 text-pink-400/70" />
-            <span className="text-[10px]">{likeCount}</span>
+            <span className="text-[10px]">{track.like_count}</span>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -147,7 +159,7 @@ export const PreviewTrackCard = ({
           </div>
         </div>
 
-        {/* Error state */}
+        {/* Error / no preview state */}
         {(showError || isPreviewDisabled) && (
           <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground mt-2 p-1.5 rounded bg-muted/20 border border-border/30">
             <AlertCircle className="w-3 h-3 text-accent flex-shrink-0" />
@@ -158,7 +170,7 @@ export const PreviewTrackCard = ({
         )}
       </div>
 
-      {/* Hover glow border */}
+      {/* Hover glow */}
       <div
         className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         style={{
