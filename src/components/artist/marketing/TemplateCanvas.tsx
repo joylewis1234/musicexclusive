@@ -15,6 +15,11 @@ export const TEMPLATE_DIMENSIONS: Record<TemplateType, { width: number; height: 
   "story-format": { width: 1080, height: 1920 },
 };
 
+export interface ImagePosition {
+  scale: number;
+  objectPosition: string;
+}
+
 interface Props {
   template: TemplateType;
   imageUrl: string | null;
@@ -22,6 +27,7 @@ interface Props {
   trackTitle: string;
   releaseDate?: string;
   ctaLine: string;
+  imagePosition?: ImagePosition;
 }
 
 const templateMap: Record<TemplateType, React.FC<Omit<Props, "template">>> = {
