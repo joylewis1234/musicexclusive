@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { recordMonitoringEvent } from "../_shared/monitoring.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,28 +17,6 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
-
-// ── Monitoring helper (fire-and-forget) ──
-async function logMonitoringEvent(
-  event: {
-    function_name: string;
-    event_type: string;
-    status: number;
-    latency_ms?: number;
-    stage?: string;
-    error_code?: string;
-    error_message?: string;
-    conflict?: boolean;
-    retry_count?: number;
-    contention_count?: number;
-    ledger_written?: boolean;
-    metadata?: Record<string, unknown>;
-  }
-) {
-  try {
-    await supabaseAdmin.from("monitoring_events").insert(event);
-  } catch (_) { /* never block main flow */ }
-}
 
 const rollbackStripeEvent = async (eventId: string, reason: string) => {
   const { error } = await supabaseAdmin
@@ -56,7 +35,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
+  const startTime = performance.now();
 
   try {
     logStep("Webhook received");
@@ -84,16 +63,15 @@ serve(async (req) => {
     const signature = req.headers.get("stripe-signature");
     const body = await req.text();
 
-    // Verify webhook signature
     let event: Stripe.Event;
 
     if (!signature) {
       logStep("Missing stripe-signature header");
-      logMonitoringEvent({
+      recordMonitoringEvent({
         function_name: "stripe-webhook",
         event_type: "signature_missing",
         status: 403,
-        latency_ms: Date.now() - startTime,
+        latency_ms: Math.round(performance.now() - startTime),
       }).catch(() => {});
       return new Response(JSON.stringify({ error: "Missing signature" }), {
         status: 403,
@@ -106,11 +84,11 @@ serve(async (req) => {
       logStep("Webhook signature verified");
     } catch (err) {
       logStep("Invalid webhook signature", { error: String(err) });
-      logMonitoringEvent({
+      recordMonitoringEvent({
         function_name: "stripe-webhook",
         event_type: "signature_invalid",
         status: 400,
-        latency_ms: Date.now() - startTime,
+        latency_ms: Math.round(performance.now() - startTime),
         error_message: String(err),
       }).catch(() => {});
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
@@ -121,7 +99,7 @@ serve(async (req) => {
 
     logStep("Event parsed", { type: event.type, eventId: event.id });
 
-    // Idempotency check: insert first to prevent race conditions
+    // Idempotency check
     const { error: insertEventError } = await supabaseAdmin
       .from("stripe_events")
       .insert({
@@ -186,11 +164,11 @@ serve(async (req) => {
           if (rpcError) {
             logStep("Error applying credits", { error: rpcError.message });
             await rollbackStripeEvent(event.id, "apply_credit_purchase failed");
-            logMonitoringEvent({
+            recordMonitoringEvent({
               function_name: "stripe-webhook",
               event_type: "credit_apply_error",
               status: 500,
-              latency_ms: Date.now() - startTime,
+              latency_ms: Math.round(performance.now() - startTime),
               ledger_written: false,
               error_message: rpcError.message,
               metadata: { stripe_event_type: "checkout.session.completed", email: customerEmail },
@@ -201,7 +179,6 @@ serve(async (req) => {
             });
           }
 
-          // Send Superfan welcome email + generate invite for subscription purchases (non-blocking)
           if (isSubscription) {
             try {
               const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -222,7 +199,6 @@ serve(async (req) => {
             }
           }
 
-          // Consume invite token if present in metadata
           const inviteToken = session.metadata?.invite_token;
           if (inviteToken) {
             try {
@@ -241,11 +217,11 @@ serve(async (req) => {
             }
           }
 
-          logMonitoringEvent({
+          recordMonitoringEvent({
             function_name: "stripe-webhook",
             event_type: "checkout.session.completed",
             status: 200,
-            latency_ms: Date.now() - startTime,
+            latency_ms: Math.round(performance.now() - startTime),
             ledger_written: true,
             metadata: { credits, is_subscription: isSubscription },
           }).catch(() => {});
@@ -276,11 +252,11 @@ serve(async (req) => {
             if (rpcError) {
               logStep("Error applying subscription credits", { error: rpcError.message });
               await rollbackStripeEvent(event.id, "subscription credits failed");
-              logMonitoringEvent({
+              recordMonitoringEvent({
                 function_name: "stripe-webhook",
                 event_type: "credit_apply_error",
                 status: 500,
-                latency_ms: Date.now() - startTime,
+                latency_ms: Math.round(performance.now() - startTime),
                 ledger_written: false,
                 error_message: rpcError.message,
                 metadata: { stripe_event_type: "invoice.payment_succeeded", email: customerEmail },
@@ -296,7 +272,6 @@ serve(async (req) => {
               credits: subscriptionCredits,
             });
 
-            // Generate monthly superfan invite (non-blocking)
             try {
               const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
               const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
@@ -313,11 +288,11 @@ serve(async (req) => {
               logStep("Error triggering monthly invite", { error: String(err) });
             }
 
-            logMonitoringEvent({
+            recordMonitoringEvent({
               function_name: "stripe-webhook",
               event_type: "invoice.payment_succeeded",
               status: 200,
-              latency_ms: Date.now() - startTime,
+              latency_ms: Math.round(performance.now() - startTime),
               ledger_written: true,
               metadata: { credits: subscriptionCredits, billing_reason: "subscription_cycle" },
             }).catch(() => {});
@@ -400,11 +375,11 @@ serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logStep("ERROR", { message: errorMessage });
-    logMonitoringEvent({
+    recordMonitoringEvent({
       function_name: "stripe-webhook",
       event_type: "error",
       status: 500,
-      latency_ms: Date.now() - startTime,
+      latency_ms: Math.round(performance.now() - startTime),
       error_message: errorMessage,
     }).catch(() => {});
     return new Response(JSON.stringify({ error: errorMessage }), {
