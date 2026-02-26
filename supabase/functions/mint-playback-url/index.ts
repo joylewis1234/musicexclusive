@@ -1,32 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
+import { recordMonitoringEvent } from "../_shared/monitoring.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
-
-// ── Monitoring helper (fire-and-forget) ──
-async function logMonitoringEvent(
-  client: any,
-  event: {
-    function_name: string;
-    event_type: string;
-    status: number;
-    latency_ms?: number;
-    stage?: string;
-    error_code?: string;
-    error_message?: string;
-    conflict?: boolean;
-    retry_count?: number;
-    contention_count?: number;
-    ledger_written?: boolean;
-    metadata?: Record<string, unknown>;
-  }
-) {
-  try {
-    await client.from("monitoring_events").insert(event);
-  } catch (_) { /* never block main flow */ }
-}
 
 /* ── AWS Signature V4 presign helpers ── */
 
@@ -63,10 +41,7 @@ async function presignR2Url(key: string, expireSeconds: number): Promise<string>
   const path = `/${bucket}${encodeR2Path(key)}`;
 
   const now = new Date();
-  const amzDate = now
-    .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d{3}/, "");
+  const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const dateStamp = amzDate.slice(0, 8);
   const credentialScope = `${dateStamp}/${region}/${service}/aws4_request`;
   const credential = `${accessKeyId}/${credentialScope}`;
@@ -85,7 +60,6 @@ async function presignR2Url(key: string, expireSeconds: number): Promise<string>
     .join("&");
 
   const canonicalRequest = ["GET", path, sortedQs, `host:${host}\n`, "host", "UNSIGNED-PAYLOAD"].join("\n");
-
   const stringToSign = ["AWS4-HMAC-SHA256", amzDate, credentialScope, await sha256Hex(canonicalRequest)].join("\n");
 
   const signingKey = await getSignatureKey(secretAccessKey, dateStamp, region, service);
@@ -111,13 +85,7 @@ async function signJwtHS256(payload: Record<string, unknown>, secret: string): P
   const headerB64 = base64url(enc.encode(JSON.stringify(header)));
   const payloadB64 = base64url(enc.encode(JSON.stringify(payload)));
   const data = `${headerB64}.${payloadB64}`;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
+  const key = await crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, enc.encode(data));
   const sigB64 = base64url(new Uint8Array(sig));
   return `${data}.${sigB64}`;
@@ -130,59 +98,81 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
+  const requestStart = performance.now();
+  let stage = "init";
+  let errorCode: string | null = null;
+  let errorMessage: string | null = null;
+  let trackId: string | null = null;
+  let requestedFileType: string | null = null;
+  let resolvedFileType: string | null = null;
+  let sessionId: string | null = null;
+  let r2Key: string | null = null;
+
+  const respond = async (status: number, payload: Record<string, unknown>) => {
+    const latencyMs = Math.round(performance.now() - requestStart);
+    recordMonitoringEvent({
+      function_name: "mint-playback-url",
+      event_type: "request",
+      status,
+      latency_ms: latencyMs,
+      stage,
+      error_code: errorCode ?? undefined,
+      error_message: errorMessage ?? undefined,
+      metadata: {
+        track_id: trackId,
+        file_type: resolvedFileType ?? requestedFileType,
+        session_id: sessionId,
+        r2_key: r2Key,
+        session_ttl_seconds: SESSION_TTL_SECONDS,
+      },
+    }).catch(() => {});
+    return new Response(JSON.stringify(payload), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  };
 
   try {
     // ── Auth ──
+    stage = "auth";
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Unauthorized";
+      return await respond(401, { error: "Unauthorized" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Validate user token
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const {
-      data: { user },
-      error: userErr,
-    } = await userClient.auth.getUser();
+    const { data: { user }, error: userErr } = await userClient.auth.getUser();
 
     const admin = createClient(supabaseUrl, supabaseServiceKey);
 
     if (userErr || !user) {
-      logMonitoringEvent(admin, {
-        function_name: "mint-playback-url",
-        event_type: "auth_failure",
-        status: 401,
-        latency_ms: Date.now() - startTime,
-      }).catch(() => {});
-      return new Response(JSON.stringify({ error: "Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Invalid token";
+      return await respond(401, { error: "Invalid token" });
     }
 
     // ── Body ──
-    const { trackId, fileType } = await req.json();
-    if (!trackId || !["audio", "preview", "artwork"].includes(fileType)) {
-      return new Response(JSON.stringify({ error: "Missing trackId or invalid fileType (audio|preview|artwork)" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    stage = "parse";
+    const body = await req.json();
+    trackId = body.trackId ?? null;
+    requestedFileType = body.fileType ?? null;
+    resolvedFileType = requestedFileType;
+
+    if (!trackId || !["audio", "preview", "artwork"].includes(requestedFileType ?? "")) {
+      errorMessage = "Missing trackId or invalid fileType";
+      return await respond(400, { error: "Missing trackId or invalid fileType (audio|preview|artwork)" });
     }
 
-    // ── Access check (service role to bypass RLS) ──
+    // ── Access check ──
+    stage = "access_check";
     const userEmail = user.email?.toLowerCase() ?? "";
 
-    // Look up the track
     const { data: track, error: trackErr } = await admin
       .from("tracks")
       .select("artist_id, full_audio_key, preview_audio_key, artwork_key, status")
@@ -190,30 +180,16 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (trackErr || !track) {
-      logMonitoringEvent(admin, {
-        function_name: "mint-playback-url",
-        event_type: "track_not_found",
-        status: 404,
-        latency_ms: Date.now() - startTime,
-        metadata: { track_id: trackId },
-      }).catch(() => {});
-      return new Response(JSON.stringify({ error: "Track not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Track not found";
+      return await respond(404, { error: "Track not found" });
     }
 
-    // Artwork is promotional — any authenticated user may view it.
-    // Audio/preview require full access check.
-    if (fileType !== "artwork") {
+    if (requestedFileType !== "artwork") {
       if (track.status !== "ready") {
-        return new Response(JSON.stringify({ error: "Track not available" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        errorMessage = "Track not available";
+        return await respond(403, { error: "Track not available" });
       }
 
-      // Check access: admin, artist owner, or active vault member
       const [roleResult, vaultResult] = await Promise.all([
         admin.from("user_roles").select("role").eq("user_id", user.id),
         admin.from("vault_members").select("vault_access_active").eq("email", userEmail).maybeSingle(),
@@ -224,7 +200,6 @@ Deno.serve(async (req) => {
       const isArtist = roles.includes("artist");
       const isVaultActive = vaultResult.data?.vault_access_active === true;
 
-      // Artist ownership check
       let isOwner = false;
       if (isArtist) {
         const { data: profile } = await admin.from("artist_profiles").select("id").eq("user_id", user.id).maybeSingle();
@@ -234,49 +209,34 @@ Deno.serve(async (req) => {
       }
 
       if (!isAdmin && !isOwner && !isVaultActive) {
-        logMonitoringEvent(admin, {
-          function_name: "mint-playback-url",
-          event_type: "access_denied",
-          status: 403,
-          latency_ms: Date.now() - startTime,
-          metadata: { track_id: trackId, file_type: fileType },
-        }).catch(() => {});
-        return new Response(JSON.stringify({ error: "Access denied" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        errorMessage = "Access denied";
+        return await respond(403, { error: "Access denied" });
       }
     }
 
-    // ── Mint playback session JWT ──
-    const sessionId = crypto.randomUUID();
+    // ── Mint session ──
+    stage = "mint_session";
+    sessionId = crypto.randomUUID();
     const sessionExpiresAt = Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS;
     const sessionExpiresAtIso = new Date(sessionExpiresAt * 1000).toISOString();
 
-    // ── Derive watermark ID ──
     const watermarkSalt = Deno.env.get("PLAYBACK_WATERMARK_SALT");
     if (!watermarkSalt) {
-      return new Response(JSON.stringify({ error: "Missing PLAYBACK_WATERMARK_SALT" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Missing PLAYBACK_WATERMARK_SALT";
+      return await respond(500, { error: "Missing PLAYBACK_WATERMARK_SALT" });
     }
     const watermarkId = await sha256Hex(`${sessionId}:${watermarkSalt}`);
 
     const playbackJwtSecret = Deno.env.get("PLAYBACK_JWT_SECRET");
     if (!playbackJwtSecret) {
-      return new Response(JSON.stringify({ error: "Missing PLAYBACK_JWT_SECRET" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Missing PLAYBACK_JWT_SECRET";
+      return await respond(500, { error: "Missing PLAYBACK_JWT_SECRET" });
     }
 
     const hlsWorkerBaseUrl = Deno.env.get("HLS_WORKER_BASE_URL");
     if (!hlsWorkerBaseUrl) {
-      return new Response(JSON.stringify({ error: "Missing HLS_WORKER_BASE_URL" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Missing HLS_WORKER_BASE_URL";
+      return await respond(500, { error: "Missing HLS_WORKER_BASE_URL" });
     }
 
     const sessionToken = await signJwtHS256(
@@ -292,7 +252,8 @@ Deno.serve(async (req) => {
       playbackJwtSecret
     );
 
-    // ── Record session in DB ──
+    // ── Record session ──
+    stage = "session_insert";
     const ipAddress = req.headers.get("cf-connecting-ip");
     const userAgent = req.headers.get("user-agent");
 
@@ -310,70 +271,57 @@ Deno.serve(async (req) => {
 
     if (sessionInsertError) {
       console.error("[mint-playback-url] Session insert error:", sessionInsertError);
-      logMonitoringEvent(admin, {
-        function_name: "mint-playback-url",
-        event_type: "session_insert_error",
-        status: 500,
-        latency_ms: Date.now() - startTime,
-        error_message: sessionInsertError.message,
-        metadata: { track_id: trackId },
-      }).catch(() => {});
-      return new Response(
-        JSON.stringify({ error: "Failed to store playback session" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      errorMessage = sessionInsertError.message;
+      return await respond(500, { error: "Failed to store playback session" });
     }
 
-    // ── Resolve key ──
-    const key = fileType === "audio"
-      ? track.full_audio_key
-      : fileType === "preview"
-      ? track.preview_audio_key
-      : track.artwork_key;
+    // ── Resolve key & presign ──
+    stage = "presign";
+    const key =
+      requestedFileType === "audio"
+        ? track.full_audio_key
+        : requestedFileType === "preview"
+        ? track.preview_audio_key
+        : track.artwork_key;
+
+    r2Key = key;
 
     if (!key) {
-      return new Response(JSON.stringify({ error: `No ${fileType} key on this track` }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = `No ${requestedFileType} key`;
+      return await respond(404, { error: `No ${requestedFileType} key on this track` });
     }
 
-    // Artwork gets a longer TTL (5 min) since it's just a cover image
-    const ttl = fileType === "artwork" ? 300 : 90;
+    const ttl = requestedFileType === "artwork" ? 300 : 90;
     const signedUrl = await presignR2Url(key, ttl);
-
     const hlsUrl = `${hlsWorkerBaseUrl}/${trackId}/master.m3u8?token=${encodeURIComponent(sessionToken)}`;
 
-    logMonitoringEvent(admin, {
-      function_name: "mint-playback-url",
-      event_type: "success",
-      status: 200,
-      latency_ms: Date.now() - startTime,
-      metadata: { track_id: trackId, file_type: fileType },
-    }).catch(() => {});
-
-    return new Response(
-      JSON.stringify({
-        url: signedUrl,
-        expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
-        sessionToken,
-        hlsUrl,
-        session: {
-          track_id: trackId,
-          user_id: user.id,
-          session_id: sessionId,
-          watermark_id: watermarkId,
-          expires_at: sessionExpiresAtIso,
-        },
-      }),
-      {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+    stage = "done";
+    return await respond(200, {
+      url: signedUrl,
+      expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
+      sessionToken,
+      hlsUrl,
+      session: {
+        track_id: trackId,
+        user_id: user.id,
+        session_id: sessionId,
+        watermark_id: watermarkId,
+        expires_at: sessionExpiresAtIso,
+      },
+    });
   } catch (err) {
     console.error("[mint-playback-url] Error:", err);
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }), {
+    errorMessage = err instanceof Error ? err.message : "Internal error";
+    const latencyMs = Math.round(performance.now() - requestStart);
+    recordMonitoringEvent({
+      function_name: "mint-playback-url",
+      event_type: "unhandled_error",
+      status: 500,
+      latency_ms: latencyMs,
+      stage,
+      error_message: errorMessage,
+    }).catch(() => {});
+    return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

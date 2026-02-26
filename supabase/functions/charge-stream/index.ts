@@ -1,102 +1,101 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { recordMonitoringEvent } from "../_shared/monitoring.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ── Monitoring helper (fire-and-forget) ──
-async function logMonitoringEvent(
-  client: any,
-  event: {
-    function_name: string;
-    event_type: string;
-    status: number;
-    latency_ms?: number;
-    stage?: string;
-    error_code?: string;
-    error_message?: string;
-    conflict?: boolean;
-    retry_count?: number;
-    contention_count?: number;
-    ledger_written?: boolean;
-    metadata?: Record<string, unknown>;
-  }
-) {
-  try {
-    await client.from("monitoring_events").insert(event);
-  } catch (_) { /* never block main flow */ }
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
+  const requestStart = performance.now();
+  let stage = "init";
+  let errorCode: string | null = null;
+  let errorMessage: string | null = null;
+  let conflict = false;
+  let retryCount = 0;
   let contentionCount = 0;
+  let ledgerWritten: boolean | null = null;
+  let trackId: string | null = null;
+  let fanUserId: string | null = null;
+
+  const respond = async (status: number, payload: Record<string, unknown>) => {
+    const latencyMs = Math.round(performance.now() - requestStart);
+    recordMonitoringEvent({
+      function_name: "charge-stream",
+      event_type: "request",
+      status,
+      latency_ms: latencyMs,
+      stage,
+      error_code: errorCode ?? undefined,
+      error_message: errorMessage ?? undefined,
+      conflict,
+      retry_count: retryCount,
+      contention_count: contentionCount,
+      ledger_written: ledgerWritten,
+      metadata: {
+        track_id: trackId,
+        fan_user_id: fanUserId,
+      },
+    }).catch(() => {});
+    return new Response(JSON.stringify(payload), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  };
 
   try {
+    // ── Auth ──
+    stage = "auth";
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing authorization" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Missing authorization";
+      return await respond(401, { error: "Missing authorization" });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Create a client with the user's JWT to verify identity
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const { data: { user }, error: userError } = await userClient.auth.getUser();
     if (userError || !user) {
-      const adminClient = createClient(supabaseUrl, serviceRoleKey);
-      logMonitoringEvent(adminClient, {
-        function_name: "charge-stream",
-        event_type: "auth_failure",
-        status: 401,
-        latency_ms: Date.now() - startTime,
-      }).catch(() => {});
-      return new Response(JSON.stringify({ error: "Not authenticated" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Not authenticated";
+      return await respond(401, { error: "Not authenticated" });
     }
 
     const fanEmail = user.email;
-    const fanUserId = user.id;
+    fanUserId = user.id;
 
     if (!fanEmail) {
-      return new Response(JSON.stringify({ error: "No email on account" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "No email on account";
+      return await respond(400, { error: "No email on account" });
     }
 
+    // ── Parse body ──
+    stage = "parse";
     const body = await req.json();
-    const { trackId, idempotencyKey } = body ?? {};
+    const { idempotencyKey } = body ?? {};
+    trackId = body?.trackId ?? null;
+
     if (!trackId) {
-      return new Response(JSON.stringify({ error: "trackId is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "trackId is required";
+      return await respond(400, { error: "trackId is required" });
     }
     if (!idempotencyKey || typeof idempotencyKey !== "string") {
-      return new Response(JSON.stringify({ error: "idempotencyKey is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "idempotencyKey is required";
+      return await respond(400, { error: "idempotencyKey is required" });
     }
 
-    // Use service role client for all DB operations
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
-    // 1. Fetch the track to get the owner's artist_id
+    // ── Track lookup ──
+    stage = "track_lookup";
     const { data: trackData, error: trackError } = await adminClient
       .from("tracks")
       .select("artist_id")
@@ -105,15 +104,14 @@ Deno.serve(async (req) => {
 
     if (trackError || !trackData) {
       console.error("Error fetching track:", trackError);
-      return new Response(JSON.stringify({ error: "Track not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Track not found";
+      return await respond(404, { error: "Track not found" });
     }
 
     const trackOwnerArtistId = trackData.artist_id;
 
-    // 2. Check vault membership (read-only pre-check for better error messages)
+    // ── Vault check ──
+    stage = "vault_check";
     const { data: vaultMember, error: vaultError } = await adminClient
       .from("vault_members")
       .select("id, credits, vault_access_active")
@@ -122,41 +120,27 @@ Deno.serve(async (req) => {
 
     if (vaultError) {
       console.error("Error checking vault:", vaultError);
-      return new Response(JSON.stringify({ error: "Could not verify vault access" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = vaultError.message;
+      return await respond(500, { error: "Could not verify vault access" });
     }
 
     if (!vaultMember) {
-      return new Response(JSON.stringify({ error: "You need vault access to stream" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "No vault access";
+      return await respond(403, { error: "You need vault access to stream" });
     }
 
     if (!vaultMember.vault_access_active) {
-      return new Response(JSON.stringify({ error: "Your vault access is not active" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Vault access not active";
+      return await respond(403, { error: "Your vault access is not active" });
     }
 
     if (vaultMember.credits < 1) {
-      logMonitoringEvent(adminClient, {
-        function_name: "charge-stream",
-        event_type: "insufficient_credits",
-        status: 402,
-        latency_ms: Date.now() - startTime,
-        metadata: { fan_email: fanEmail, track_id: trackId },
-      }).catch(() => {});
-      return new Response(JSON.stringify({ error: "Insufficient credits", requiresCredits: true }), {
-        status: 402,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorMessage = "Insufficient credits";
+      return await respond(402, { error: "Insufficient credits", requiresCredits: true });
     }
 
-    // 3. Idempotency: insert into stream_charges; if duplicate, return success
+    // ── Idempotency ──
+    stage = "idempotency";
     const streamChargeId = crypto.randomUUID();
 
     const { error: idempotencyError } = await adminClient
@@ -170,35 +154,25 @@ Deno.serve(async (req) => {
 
     if (idempotencyError) {
       if (idempotencyError.code === "23505") {
-        // Duplicate idempotency key — already charged
         const { data: current } = await adminClient
           .from("vault_members")
           .select("credits")
           .eq("email", fanEmail)
           .maybeSingle();
-        logMonitoringEvent(adminClient, {
-          function_name: "charge-stream",
-          event_type: "idempotency_duplicate",
-          status: 200,
-          latency_ms: Date.now() - startTime,
-          conflict: true,
-        }).catch(() => {});
-        return new Response(
-          JSON.stringify({ success: true, alreadyCharged: true, newCredits: current?.credits ?? null }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        conflict = true;
+        return await respond(200, { success: true, alreadyCharged: true, newCredits: current?.credits ?? null });
       }
       console.error("Idempotency insert error:", idempotencyError);
-      return new Response(JSON.stringify({ error: "Failed to record stream charge" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      errorCode = idempotencyError.code;
+      errorMessage = idempotencyError.message;
+      return await respond(500, { error: "Failed to record stream charge" });
     }
 
-    // 4. Transactional debit with retry on serialization/deadlock errors
+    // ── Debit with retry ──
+    stage = "debit";
     const RPC_MAX_RETRIES = 3;
     const RPC_BACKOFF_MS = [50, 100, 200];
-    let rpcResult: { success: boolean; newCredits?: number; streamLedgerId?: string } | null = null;
+    let rpcResult: { success: boolean; newCredits?: number; alreadyCharged?: boolean; streamLedgerId?: string } | null = null;
 
     for (let attempt = 0; attempt < RPC_MAX_RETRIES; attempt++) {
       const { data, error: rpcError } = await adminClient.rpc("debit_stream_credit", {
@@ -211,11 +185,11 @@ Deno.serve(async (req) => {
       });
 
       if (!rpcError) {
-        rpcResult = data as { success: boolean; newCredits?: number; streamLedgerId?: string } | null;
+        retryCount = attempt;
+        rpcResult = data as typeof rpcResult;
         break;
       }
 
-      // Retry on serialization failure (40001) or deadlock (40P01)
       if ((rpcError.code === "40001" || rpcError.code === "40P01") && attempt < RPC_MAX_RETRIES - 1) {
         console.warn(`debit_stream_credit contention (${rpcError.code}), retry ${attempt + 1}`);
         contentionCount++;
@@ -223,74 +197,44 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Non-retryable error or retries exhausted
       console.error("debit_stream_credit RPC error:", rpcError);
       const isContention = rpcError.code === "40001" || rpcError.code === "40P01";
       contentionCount++;
-      logMonitoringEvent(adminClient, {
-        function_name: "charge-stream",
-        event_type: "contention_exhausted",
-        status: isContention ? 409 : 500,
-        latency_ms: Date.now() - startTime,
-        conflict: isContention,
-        retry_count: attempt + 1,
-        contention_count: contentionCount,
-        error_code: rpcError.code,
-        error_message: rpcError.message,
-      }).catch(() => {});
-      return new Response(
-        JSON.stringify({ error: isContention ? "Concurrent update, retry" : "Failed to process payment" }),
-        {
-          status: isContention ? 409 : 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
-    if (!rpcResult?.success) {
-      logMonitoringEvent(adminClient, {
-        function_name: "charge-stream",
-        event_type: "debit_failed",
-        status: 409,
-        latency_ms: Date.now() - startTime,
-        conflict: true,
-      }).catch(() => {});
-      return new Response(JSON.stringify({ error: "Concurrent update, retry" }), {
-        status: 409,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      retryCount = attempt + 1;
+      conflict = isContention;
+      errorCode = rpcError.code;
+      errorMessage = rpcError.message;
+      return await respond(isContention ? 409 : 500, {
+        error: isContention ? "Concurrent update, retry" : "Failed to process payment",
       });
     }
 
-    // Handle duplicate detected inside RPC (ON CONFLICT DO NOTHING path)
-    if (rpcResult.alreadyCharged) {
-      logMonitoringEvent(adminClient, {
-        function_name: "charge-stream",
-        event_type: "idempotency_duplicate",
-        status: 200,
-        latency_ms: Date.now() - startTime,
-        conflict: true,
-      }).catch(() => {});
-      return new Response(
-        JSON.stringify({ success: true, alreadyCharged: true, newCredits: rpcResult.newCredits }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (!rpcResult?.success) {
+      conflict = true;
+      errorMessage = "debit returned false";
+      return await respond(409, { error: "Concurrent update, retry" });
     }
 
-    logMonitoringEvent(adminClient, {
-      function_name: "charge-stream",
-      event_type: "success",
-      status: 200,
-      latency_ms: Date.now() - startTime,
-      ledger_written: true,
-      contention_count: contentionCount,
-    }).catch(() => {});
+    if (rpcResult.alreadyCharged) {
+      conflict = true;
+      return await respond(200, { success: true, alreadyCharged: true, newCredits: rpcResult.newCredits });
+    }
 
-    return new Response(
-      JSON.stringify({ success: true, newCredits: rpcResult.newCredits }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    stage = "done";
+    ledgerWritten = true;
+    return await respond(200, { success: true, newCredits: rpcResult.newCredits });
   } catch (err) {
     console.error("charge-stream error:", err);
+    errorMessage = err instanceof Error ? err.message : "Internal server error";
+    const latencyMs = Math.round(performance.now() - requestStart);
+    recordMonitoringEvent({
+      function_name: "charge-stream",
+      event_type: "unhandled_error",
+      status: 500,
+      latency_ms: latencyMs,
+      stage,
+      error_message: errorMessage,
+    }).catch(() => {});
     return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
