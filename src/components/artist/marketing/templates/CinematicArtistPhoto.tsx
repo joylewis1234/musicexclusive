@@ -55,12 +55,13 @@ export const CinematicArtistPhoto = ({
         filter: "blur(45px)",
       }} />
 
-      {/* Gold light burst behind hero */}
+      {/* Gold light burst behind hero (ANIMATED) */}
       <div className="absolute pointer-events-none" style={{
         top: "80px", left: "50%", transform: "translateX(-50%)",
         width: "800px", height: "600px",
-        background: "radial-gradient(ellipse at center, hsla(42, 80%, 50%, 0.25) 0%, hsla(42, 70%, 40%, 0.10) 30%, transparent 65%)",
+        background: "radial-gradient(ellipse at center, hsla(42, 80%, 50%, 0.35) 0%, hsla(42, 70%, 40%, 0.12) 30%, transparent 65%)",
         filter: "blur(30px)",
+        animation: "marketing-glow-slow 3s ease-in-out infinite",
       }} />
 
       {/* Horizontal gold flare */}
@@ -101,6 +102,7 @@ export const CinematicArtistPhoto = ({
         border: "2px solid hsla(42, 70%, 50%, 0.6)",
         background: "hsla(0, 0%, 0%, 0.6)",
         borderRadius: "4px",
+        animation: "marketing-glow-badge 2.5s ease-in-out infinite",
       }}>
         <Flame className="w-9 h-9" style={{ color: "hsl(25, 95%, 55%)" }} />
         <span className="font-bold uppercase" style={{ fontSize: "28px", color: "hsl(42, 75%, 55%)", letterSpacing: "0.4em" }}>
@@ -180,6 +182,7 @@ export const CinematicArtistPhoto = ({
         <span className="uppercase font-extrabold px-8 py-2" style={{
           fontSize: "28px", color: "hsl(0, 70%, 50%)", letterSpacing: "0.25em",
           border: "2px solid hsla(42, 70%, 50%, 0.4)", borderRadius: "4px", background: "hsla(0, 0%, 0%, 0.5)",
+          animation: "marketing-glow-cta-red 3s ease-in-out infinite",
         }}>
           {ctaLine}
         </span>

@@ -690,3 +690,21 @@
     opacity: 0.9;
   }
 }
+
+/* Marketing Studio glow animations */
+@keyframes marketing-glow-slow {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.4; }
+}
+@keyframes marketing-glow-badge {
+  0%, 100% { box-shadow: 0 0 10px hsla(42, 80%, 55%, 0.15); border-color: hsla(42, 70%, 50%, 0.4); }
+  50% { box-shadow: 0 0 30px hsla(42, 80%, 55%, 0.45); border-color: hsla(42, 70%, 50%, 0.8); }
+}
+@keyframes marketing-glow-cta-red {
+  0%, 100% { box-shadow: 0 0 8px hsla(0, 70%, 50%, 0.15); border-color: hsla(42, 70%, 50%, 0.3); }
+  50% { box-shadow: 0 0 28px hsla(0, 70%, 50%, 0.5); border-color: hsla(42, 70%, 50%, 0.75); }
+}
+@keyframes marketing-glow-cta-blue {
+  0%, 100% { box-shadow: 0 0 8px hsla(210, 70%, 50%, 0.15); border-color: hsla(42, 70%, 50%, 0.3); }
+  50% { box-shadow: 0 0 28px hsla(210, 70%, 50%, 0.5); border-color: hsla(42, 70%, 50%, 0.75); }
+}
