@@ -46,8 +46,9 @@ const MarketingStudio = () => {
   const previewScale = previewMaxW / dims.width;
 
   const handleExport = useCallback(() => {
-    exportPng({ width: dims.width, height: dims.height });
-  }, [exportPng, dims]);
+    const safeName = `${(artistName || "promo").replace(/\s+/g, "-")}-${(trackTitle || "track").replace(/\s+/g, "-")}`.toLowerCase();
+    exportPng({ width: dims.width, height: dims.height, fileName: `${safeName}-${dims.width}x${dims.height}.png` });
+  }, [exportPng, dims, artistName, trackTitle]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
