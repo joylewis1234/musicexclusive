@@ -2,11 +2,19 @@ import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TemplateCanvas, TemplateType } from "@/components/artist/marketing/TemplateCanvas";
+import { TemplateCanvas, TemplateType, TEMPLATE_DIMENSIONS } from "@/components/artist/marketing/TemplateCanvas";
 import { useTemplateExport } from "@/hooks/useTemplateExport";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
-import { Download, Upload, Image, Sparkles } from "lucide-react";
+import { Download, Upload, Sparkles, Image, Lock, ShieldCheck, Crown, Layers } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const TEMPLATES: { id: TemplateType; label: string; icon: React.ReactNode; desc: string }[] = [
+  { id: "artist-photo", label: "Cinematic Photo", icon: <Image className="w-5 h-5" />, desc: "Artist portrait with bokeh glow" },
+  { id: "cover-art", label: "Cover Art", icon: <Layers className="w-5 h-5" />, desc: "Album cover cinematic layout" },
+  { id: "vault-glow", label: "Vault Glow", icon: <ShieldCheck className="w-5 h-5" />, desc: "Vault lighting & gold ring" },
+  { id: "minimal-luxury", label: "Minimal Luxury", icon: <Crown className="w-5 h-5" />, desc: "Clean black & gold elegance" },
+  { id: "story-format", label: "Story Format", icon: <Lock className="w-5 h-5" />, desc: "1080×1920 Instagram Story" },
+];
 
 const MarketingStudio = () => {
   const { artistProfile } = useArtistProfile();
@@ -29,13 +37,17 @@ const MarketingStudio = () => {
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Local preview only — no R2 upload needed for marketing images
     const url = URL.createObjectURL(file);
     setLocalImageUrl(url);
   }, []);
 
-  // Scale factor for preview (1080 → fit in ~400px)
-  const previewScale = 400 / 1080;
+  const dims = TEMPLATE_DIMENSIONS[template];
+  const previewMaxW = 400;
+  const previewScale = previewMaxW / dims.width;
+
+  const handleExport = useCallback(() => {
+    exportPng({ width: dims.width, height: dims.height });
+  }, [exportPng, dims]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -50,31 +62,40 @@ const MarketingStudio = () => {
         </p>
       </div>
 
+      {/* Template Selector — thumbnail cards */}
+      <div className="px-4 mb-6">
+        <Label className="mb-2 block">Template</Label>
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+          {TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTemplate(t.id)}
+              className={cn(
+                "flex-shrink-0 w-[140px] rounded-xl border p-3 text-left transition-all",
+                template === t.id
+                  ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                  : "border-border bg-card hover:border-muted-foreground/30"
+              )}
+            >
+              <div className={cn(
+                "w-8 h-8 rounded-lg flex items-center justify-center mb-2",
+                template === t.id ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+              )}>
+                {t.icon}
+              </div>
+              <p className="text-xs font-semibold text-foreground truncate">{t.label}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{t.desc}</p>
+              <div className="mt-2 text-[9px] text-muted-foreground/70">
+                {TEMPLATE_DIMENSIONS[t.id].width}×{TEMPLATE_DIMENSIONS[t.id].height}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="px-4 flex flex-col lg:flex-row gap-6">
         {/* Left: Controls */}
         <div className="lg:w-[360px] space-y-5 flex-shrink-0">
-          {/* Template selector */}
-          <div className="space-y-2">
-            <Label>Template</Label>
-            <Select value={template} onValueChange={(v) => setTemplate(v as TemplateType)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="artist-photo">
-                  <div className="flex items-center gap-2">
-                    <Image className="w-4 h-4" /> Cinematic Artist Photo
-                  </div>
-                </SelectItem>
-                <SelectItem value="cover-art">
-                  <div className="flex items-center gap-2">
-                    <Image className="w-4 h-4" /> Cinematic Cover Art
-                  </div>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Upload Image */}
           <div className="space-y-2">
             <Label>Upload Image *</Label>
@@ -137,13 +158,13 @@ const MarketingStudio = () => {
 
           {/* Download */}
           <Button
-            onClick={exportPng}
+            onClick={handleExport}
             disabled={isExporting || !localImageUrl}
             className="w-full gap-2"
             size="lg"
           >
             <Download className="w-4 h-4" />
-            {isExporting ? "Exporting…" : "Download PNG (1080×1080)"}
+            {isExporting ? "Exporting…" : `Download PNG (${dims.width}×${dims.height})`}
           </Button>
         </div>
 
@@ -153,8 +174,8 @@ const MarketingStudio = () => {
           <div
             className="rounded-xl overflow-hidden border border-border shadow-xl"
             style={{
-              width: 1080 * previewScale,
-              height: 1080 * previewScale,
+              width: dims.width * previewScale,
+              height: dims.height * previewScale,
             }}
           >
             <div style={{ transform: `scale(${previewScale})`, transformOrigin: "top left" }}>
