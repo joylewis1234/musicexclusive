@@ -1,4 +1,5 @@
 import { Lock, Crown, Globe, ShieldCheck } from "lucide-react";
+import type { ImagePosition } from "../TemplateCanvas";
 
 interface Props {
   imageUrl: string | null;
@@ -6,6 +7,7 @@ interface Props {
   trackTitle: string;
   releaseDate?: string;
   ctaLine: string;
+  imagePosition?: ImagePosition;
 }
 
 export const VaultGlow = ({
@@ -14,7 +16,11 @@ export const VaultGlow = ({
   trackTitle,
   releaseDate,
   ctaLine,
+  imagePosition,
 }: Props) => {
+  const imgStyle: React.CSSProperties = imagePosition
+    ? { objectFit: "cover" as const, objectPosition: imagePosition.objectPosition, transform: `scale(${imagePosition.scale})` }
+    : { objectFit: "cover" as const };
   return (
     <div
       className="relative w-[1080px] h-[1080px] overflow-hidden flex flex-col items-center justify-between"
@@ -105,7 +111,7 @@ export const VaultGlow = ({
           }}
         >
           {imageUrl ? (
-            <img src={imageUrl} alt="Artist" className="w-full h-full object-cover" crossOrigin="anonymous" />
+            <img src={imageUrl} alt="Artist" className="w-full h-full" crossOrigin="anonymous" style={imgStyle} />
           ) : (
             <div className="w-full h-full flex items-center justify-center" style={{ background: "hsl(0 0% 12%)" }}>
               <span className="text-[48px]" style={{ color: "hsl(0 0% 25%)" }}>🔒</span>
