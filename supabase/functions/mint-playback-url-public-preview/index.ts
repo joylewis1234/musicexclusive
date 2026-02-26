@@ -2,13 +2,34 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-/* ── AWS Signature V4 presign helpers (same as mint-playback-url) ── */
+/* ── In-memory IP rate limiter: 10 requests per 10 minutes ── */
+
+const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
+const RATE_WINDOW_MS = 10 * 60 * 1000; // 10 minutes
+const RATE_LIMIT = 10;
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now - entry.windowStart > RATE_WINDOW_MS) {
+    rateLimitMap.set(ip, { count: 1, windowStart: now });
+    return true;
+  }
+  if (entry.count >= RATE_LIMIT) return false;
+  entry.count++;
+  return true;
+}
+
+/* ── AWS Signature V4 presign helpers ── */
 
 async function hmacSha256(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
-  const cryptoKey = await crypto.subtle.importKey("raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
   return crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(data));
 }
 
@@ -76,50 +97,57 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Rate limit by IP
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("cf-connecting-ip") ||
+      "unknown";
+
+    if (!checkRateLimit(ip)) {
+      return new Response(
+        JSON.stringify({ error: "Rate limit exceeded. Try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { trackId } = await req.json();
-    if (!trackId) {
+    if (!trackId || typeof trackId !== "string") {
       return new Response(JSON.stringify({ error: "Missing trackId" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Use service role to look up the track's preview key
+    // Use ANON key — NOT service role
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const admin = createClient(supabaseUrl, supabaseServiceKey);
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const client = createClient(supabaseUrl, supabaseAnonKey);
 
-    const { data: track, error: trackErr } = await admin
-      .from("tracks")
-      .select("preview_audio_key, status")
-      .eq("id", trackId)
-      .maybeSingle();
+    // Call the SECURITY DEFINER RPC that only returns preview_audio_key
+    // for tracks where is_preview_public = true AND status = 'ready'
+    const { data: previewKey, error: rpcError } = await client.rpc(
+      "get_public_preview_audio_key",
+      { p_track_id: trackId }
+    );
 
-    if (trackErr || !track) {
-      return new Response(JSON.stringify({ error: "Track not found" }), {
-        status: 404,
+    if (rpcError) {
+      console.error("[mint-playback-url-public-preview] RPC error:", rpcError);
+      return new Response(JSON.stringify({ error: "Track lookup failed" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (track.status !== "ready") {
-      return new Response(JSON.stringify({ error: "Track not available" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Only serve preview_audio_key — never full audio
-    if (!track.preview_audio_key) {
+    if (!previewKey) {
       return new Response(JSON.stringify({ error: "No preview available" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Short TTL for preview (60 seconds)
-    const ttl = 60;
-    const signedUrl = await presignR2Url(track.preview_audio_key, ttl);
+    // Presign with R2 credentials (NOT Supabase service role)
+    const ttl = 45;
+    const signedUrl = await presignR2Url(previewKey, ttl);
 
     return new Response(
       JSON.stringify({
@@ -132,7 +160,7 @@ Deno.serve(async (req) => {
       }
     );
   } catch (err) {
-    console.error("[mint-preview-url] Error:", err);
+    console.error("[mint-playback-url-public-preview] Error:", err);
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Internal error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
