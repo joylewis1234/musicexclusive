@@ -14,8 +14,8 @@ interface UsePublicAudioPreviewReturn {
 const PREVIEW_DURATION = 15;
 
 /**
- * Like useAudioPreview but calls the public mint-preview-url endpoint
- * (no auth required). Only serves preview audio.
+ * Public audio preview hook — calls mint-playback-url-public-preview
+ * which uses ANON key + SECURITY DEFINER RPC. No auth required.
  */
 export const usePublicAudioPreview = (): UsePublicAudioPreviewReturn => {
   const [currentPreviewId, setCurrentPreviewId] = useState<string | null>(null);
@@ -58,19 +58,31 @@ export const usePublicAudioPreview = (): UsePublicAudioPreviewReturn => {
       setIsLoading(true);
       setError(null);
 
-      // Call the public (no-auth) preview endpoint
-      const { data, error: fnError } = await supabase.functions.invoke(
-        "mint-preview-url",
+      // Call the secure public preview endpoint (no auth header needed)
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+      const response = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/mint-playback-url-public-preview`,
         {
-          body: { trackId },
+          method: "POST",
           headers: {
-            // Remove auth header so it works without login
-            Authorization: "",
+            "Content-Type": "application/json",
+            apikey: anonKey,
           },
+          body: JSON.stringify({ trackId }),
         }
       );
 
-      if (fnError || !data?.url) {
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        setError(body?.error || "Preview not available yet.");
+        setIsLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+      if (!data?.url) {
         setError("Preview not available yet.");
         setIsLoading(false);
         return;
