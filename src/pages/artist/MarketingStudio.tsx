@@ -164,7 +164,7 @@ const MarketingStudio = () => {
                 <Slider
                   value={[imageScale]}
                   onValueChange={(v) => setImageScale(v[0])}
-                  min={100}
+                  min={50}
                   max={200}
                   step={5}
                 />
