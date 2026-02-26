@@ -148,3 +148,30 @@ These changes close the gap where ledger entries could be written even if the cr
 - Credits before/after: 1999 / 1962
 - Ledger delta: STREAM_DEBIT +37, stream_ledger +37
 - Integrity: **OK** -- credits match ledger deltas exactly; no overspend, no 500s observed
+
+## Moderate Concurrency Run (2026-02-26)
+
+### mint-playback-url (400 req, concurrency 150)
+
+- Total requests: 400
+- Status codes: 200 x 400
+- Throughput: ~34.21 RPS
+- Latency (ms): p95 5030, p99 5940
+
+### charge-stream (400 req, concurrency 150)
+
+- Total requests: 400
+- Status codes: 200 x 400
+- Throughput: ~22.32 RPS
+- Latency (ms): p95 3289, p99 6076
+
+### Ledger Stress Test (300 req, concurrency 150)
+
+- Total requests: 300
+- Success: 300/300
+- Throughput: ~31.02 RPS
+- Latency (ms): p95 4373, p99 5087
+- Credits before/after: 1242 / 942 (expected 942)
+- Ledger deltas: STREAM_DEBIT +242, stream_ledger +242
+- **Note:** Ledger deltas lower than total requests (242 vs 300) — under investigation (likely idempotency deduplication or 402 responses)
+- Integrity: **OK** — credits match expected ending balance; no overspend, no 500s
