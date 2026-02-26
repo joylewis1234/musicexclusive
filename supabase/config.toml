@@ -119,3 +119,9 @@ verify_jwt = false
 
 [functions.apply-credit-topup]
 verify_jwt = false
+
+[functions.monitoring-metrics]
+verify_jwt = false
+
+[functions.playback-telemetry]
+verify_jwt = false

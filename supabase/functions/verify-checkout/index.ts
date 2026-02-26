@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { recordMonitoringEvent } from "../_shared/monitoring.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,28 +17,6 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
-
-// ── Monitoring helper (fire-and-forget) ──
-async function logMonitoringEvent(
-  event: {
-    function_name: string;
-    event_type: string;
-    status: number;
-    latency_ms?: number;
-    stage?: string;
-    error_code?: string;
-    error_message?: string;
-    conflict?: boolean;
-    retry_count?: number;
-    contention_count?: number;
-    ledger_written?: boolean;
-    metadata?: Record<string, unknown>;
-  }
-) {
-  try {
-    await supabaseAdmin.from("monitoring_events").insert(event);
-  } catch (_) { /* never block main flow */ }
-}
 
 // Helper: resolve auth user_id from email (no listUsers)
 async function resolveAuthUserId(email: string): Promise<string | null> {
@@ -55,7 +34,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
+  const startTime = performance.now();
 
   try {
     logStep("Function started");
@@ -63,7 +42,6 @@ serve(async (req) => {
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
 
-    // Try to extract caller's auth user_id from Authorization header
     let callerUserId: string | null = null;
     const authHeader = req.headers.get("Authorization");
     if (authHeader) {
@@ -109,11 +87,11 @@ serve(async (req) => {
     
     if (!isPaid && !(isSubscription && isComplete)) {
       logStep("Payment not completed", { paymentStatus: session.payment_status, status: session.status });
-      logMonitoringEvent({
+      recordMonitoringEvent({
         function_name: "verify-checkout",
         event_type: "payment_not_completed",
         status: 400,
-        latency_ms: Date.now() - startTime,
+        latency_ms: Math.round(performance.now() - startTime),
         metadata: { payment_status: session.payment_status, session_status: session.status },
       }).catch(() => {});
       return new Response(
@@ -167,11 +145,11 @@ serve(async (req) => {
         .eq("email", customerEmail)
         .maybeSingle();
       
-      logMonitoringEvent({
+      recordMonitoringEvent({
         function_name: "verify-checkout",
         event_type: "already_processed",
         status: 200,
-        latency_ms: Date.now() - startTime,
+        latency_ms: Math.round(performance.now() - startTime),
         conflict: true,
       }).catch(() => {});
 
@@ -181,10 +159,8 @@ serve(async (req) => {
       );
     }
 
-    // Determine user_id to write
     const userId = callerUserId || await resolveAuthUserId(customerEmail);
 
-    // Update or create vault_members
     const { data: member, error: fetchError } = await supabaseAdmin
       .from("vault_members")
       .select("credits")
@@ -271,11 +247,11 @@ serve(async (req) => {
 
     if (ledgerError) {
       logStep("Error creating ledger entry", { error: ledgerError.message });
-      logMonitoringEvent({
+      recordMonitoringEvent({
         function_name: "verify-checkout",
         event_type: "ledger_error",
         status: 200,
-        latency_ms: Date.now() - startTime,
+        latency_ms: Math.round(performance.now() - startTime),
         ledger_written: false,
         error_message: ledgerError.message,
       }).catch(() => {});
@@ -294,7 +270,6 @@ serve(async (req) => {
 
     logStep("Session marked as processed", { sessionId });
 
-    // Send Superfan welcome email + generate invite for subscription purchases (non-blocking)
     if (isSubscription) {
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -315,7 +290,6 @@ serve(async (req) => {
       }
     }
 
-    // Consume invite token if present
     const inviteToken = session.metadata?.invite_token;
     if (inviteToken) {
       try {
@@ -335,11 +309,11 @@ serve(async (req) => {
       }
     }
 
-    logMonitoringEvent({
+    recordMonitoringEvent({
       function_name: "verify-checkout",
       event_type: "success",
       status: 200,
-      latency_ms: Date.now() - startTime,
+      latency_ms: Math.round(performance.now() - startTime),
       ledger_written: ledgerWritten,
       metadata: { credits, is_subscription: isSubscription },
     }).catch(() => {});
@@ -351,11 +325,11 @@ serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logStep("ERROR", { message: errorMessage });
-    logMonitoringEvent({
+    recordMonitoringEvent({
       function_name: "verify-checkout",
       event_type: "error",
       status: 500,
-      latency_ms: Date.now() - startTime,
+      latency_ms: Math.round(performance.now() - startTime),
       error_message: errorMessage,
     }).catch(() => {});
     return new Response(
