@@ -80,25 +80,25 @@ export const CinematicArtistPhoto = ({
       {/* ——— CONTENT ——— */}
 
       {/* Top badge */}
-      <div className="relative z-10 mt-[36px] flex items-center gap-4 px-12 py-4" style={{
+      <div className="relative z-10 mt-[24px] flex items-center gap-4 px-12 py-3" style={{
         border: "2px solid hsla(42, 70%, 50%, 0.6)",
         background: "hsla(0, 0%, 0%, 0.6)",
         borderRadius: "4px",
       }}>
         <Flame className="w-9 h-9" style={{ color: "hsl(25, 95%, 55%)" }} />
-        <span className="font-bold uppercase" style={{ fontSize: "30px", color: "hsl(42, 75%, 55%)", letterSpacing: "0.4em" }}>
+        <span className="font-bold uppercase" style={{ fontSize: "28px", color: "hsl(42, 75%, 55%)", letterSpacing: "0.4em" }}>
           Exclusive Music Release
         </span>
       </div>
 
       {/* Hero image with cinematic frame */}
-      <div className="relative z-10 mt-[20px]">
+      <div className="relative z-10 mt-[14px]">
         <div className="absolute -inset-8" style={{
           background: "radial-gradient(ellipse at center, hsla(42, 80%, 50%, 0.35) 0%, hsla(42, 80%, 50%, 0.05) 60%, transparent 80%)",
           filter: "blur(30px)",
         }} />
         <div className="relative overflow-hidden" style={{
-          width: "500px", height: "500px", borderRadius: "16px",
+          width: "440px", height: "440px", borderRadius: "16px",
           border: "3px solid hsla(42, 70%, 50%, 0.5)",
           boxShadow: "0 0 80px hsla(42, 80%, 50%, 0.25), 0 0 40px hsla(42, 80%, 50%, 0.15), 0 30px 80px hsla(0, 0%, 0%, 0.7), inset 0 0 30px hsla(0, 0%, 0%, 0.3)",
         }}>
@@ -113,61 +113,61 @@ export const CinematicArtistPhoto = ({
       </div>
 
       {/* Text block */}
-      <div className="relative z-10 flex flex-col items-center text-center mt-[16px] px-[80px]">
-        <p className="font-semibold italic" style={{ fontSize: "34px", color: "hsl(42, 55%, 65%)", letterSpacing: "0.05em" }}>
+      <div className="relative z-10 flex flex-col items-center text-center mt-[8px] px-[80px]">
+        <p className="font-semibold italic" style={{ fontSize: "30px", color: "hsl(42, 55%, 65%)", letterSpacing: "0.05em" }}>
           Now Streaming On
         </p>
         <h2 className="font-extrabold uppercase" style={{
-          fontSize: "76px", color: "hsl(0, 0%, 96%)", letterSpacing: "0.14em", lineHeight: 1.0,
+          fontSize: "72px", color: "hsl(0, 0%, 96%)", letterSpacing: "0.14em", lineHeight: 1.0,
           textShadow: "0 0 40px hsla(42, 70%, 50%, 0.35), 0 2px 6px hsla(0, 0%, 0%, 0.6)", marginTop: "0px",
         }}>
           Music Exclusive
         </h2>
         <p className="font-semibold italic" style={{
-          fontSize: "42px", color: "hsl(42, 65%, 62%)", marginTop: "4px",
+          fontSize: "38px", color: "hsl(42, 65%, 62%)", marginTop: "2px",
           maxWidth: "800px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           fontFamily: "'Georgia', 'Times New Roman', serif",
         }}>
           {artistName || "Artist Name"}
         </p>
         <h3 className="font-extrabold uppercase" style={{
-          fontSize: "56px", color: "hsl(0, 0%, 100%)", letterSpacing: "0.06em", lineHeight: 1.1,
+          fontSize: "50px", color: "hsl(0, 0%, 100%)", letterSpacing: "0.06em", lineHeight: 1.1,
           maxWidth: "900px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           textShadow: "0 2px 10px hsla(0, 0%, 0%, 0.6)",
         }}>
           {trackTitle || "Track Title"}
         </h3>
         {releaseDate && (
-          <p className="font-bold italic" style={{ fontSize: "36px", color: "hsl(0, 70%, 50%)", marginTop: "0px", fontFamily: "'Georgia', 'Times New Roman', serif" }}>
+          <p className="font-bold italic" style={{ fontSize: "32px", color: "hsl(0, 70%, 50%)", marginTop: "0px", fontFamily: "'Georgia', 'Times New Roman', serif" }}>
             {releaseDate}
           </p>
         )}
       </div>
 
       {/* Red accent line */}
-      <div className="relative z-10 mt-[14px]" style={{
+      <div className="relative z-10 mt-[6px]" style={{
         width: "600px", height: "2px",
         background: "linear-gradient(90deg, transparent, hsla(0, 70%, 45%, 0.6), hsla(0, 70%, 45%, 0.8), hsla(0, 70%, 45%, 0.6), transparent)",
       }} />
 
       {/* Domain line */}
-      <div className="relative z-10 flex flex-col items-center mt-[10px] gap-[2px]">
-        <span className="uppercase font-semibold" style={{ fontSize: "18px", color: "hsl(0, 0%, 50%)", letterSpacing: "0.25em" }}>
+      <div className="relative z-10 flex flex-col items-center mt-[6px] gap-[1px]">
+        <span className="uppercase font-semibold" style={{ fontSize: "16px", color: "hsl(0, 0%, 50%)", letterSpacing: "0.25em" }}>
           Only Exclusively Released On
         </span>
         <div className="flex items-center gap-2">
           <Globe className="w-5 h-5" style={{ color: "hsl(0, 0%, 60%)" }} />
-          <span className="font-bold" style={{ fontSize: "26px", color: "hsl(0, 0%, 90%)" }}>
+          <span className="font-bold" style={{ fontSize: "24px", color: "hsl(0, 0%, 90%)" }}>
             www.TheMusicIsExclusive.com
           </span>
         </div>
       </div>
 
       {/* Footer brand lockup */}
-      <div className="relative z-10 mt-auto mb-[30px] flex flex-col items-center gap-[8px]">
+      <div className="relative z-10 mt-auto mb-[20px] flex flex-col items-center gap-[6px]">
         <div className="flex items-center gap-3">
           <Crown className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
-          <span className="font-extrabold uppercase" style={{ fontSize: "32px", color: "hsl(0, 0%, 92%)", letterSpacing: "0.25em" }}>
+          <span className="font-extrabold uppercase" style={{ fontSize: "30px", color: "hsl(0, 0%, 92%)", letterSpacing: "0.25em" }}>
             Music Exclusive
           </span>
           <Crown className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
