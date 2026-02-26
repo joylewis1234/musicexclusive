@@ -12,6 +12,8 @@ interface VideoExportParams {
   ctaLine: string;
   imagePosition?: { scale: number; objectPosition: string };
   durationSeconds?: number;
+  artistNameColor?: string;
+  ctaColorHsl?: string;
 }
 
 export const useVideoExport = () => {
@@ -30,6 +32,7 @@ export const useVideoExport = () => {
       const {
         width: W, height: H, template, imageUrl, artistName, trackTitle,
         releaseDate, ctaLine, imagePosition, durationSeconds = 6,
+        artistNameColor: nameColorHsl, ctaColorHsl,
       } = params;
 
       const img = await loadImage(imageUrl);
@@ -61,7 +64,7 @@ export const useVideoExport = () => {
       const imgOffX = posMatch ? parseInt(posMatch[1]) / 100 : 0.5;
       const imgOffY = posMatch ? parseInt(posMatch[2]) / 100 : 0.5;
 
-      const drawParams = { W, H, isRed, accentHue, img, artistName, trackTitle, releaseDate, ctaLine, imgScale, imgOffX, imgOffY };
+      const drawParams = { W, H, isRed, accentHue, img, artistName, trackTitle, releaseDate, ctaLine, imgScale, imgOffX, imgOffY, nameColorHsl: nameColorHsl || (isRed ? "hsl(42, 65%, 62%)" : "hsl(42, 65%, 62%)"), ctaColorHsl: ctaColorHsl || (isRed ? "hsl(0, 70%, 50%)" : "hsl(210, 70%, 50%)") };
 
       const startTime = performance.now();
       const duration = durationSeconds * 1000;
@@ -135,10 +138,11 @@ interface DrawParams {
   img: HTMLImageElement; artistName: string; trackTitle: string;
   releaseDate?: string; ctaLine: string;
   imgScale: number; imgOffX: number; imgOffY: number; t: number;
+  nameColorHsl: string; ctaColorHsl: string;
 }
 
 function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
-  const { W, H, isRed, accentHue, img, artistName, trackTitle, releaseDate, ctaLine, imgScale, imgOffX, imgOffY, t } = p;
+  const { W, H, isRed, accentHue, img, artistName, trackTitle, releaseDate, ctaLine, imgScale, imgOffX, imgOffY, t, nameColorHsl, ctaColorHsl } = p;
 
   // Animated values — more pronounced pulsing
   const glowPulse = 0.3 + 0.7 * Math.sin(t * 1.5);
@@ -259,7 +263,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
 
   // Artist name
   ctx.save();
-  ctx.fillStyle = "hsl(42, 65%, 62%)";
+  ctx.fillStyle = nameColorHsl;
   ctx.font = "italic 800 44px Georgia, serif";
   ctx.shadowColor = "hsla(42, 70%, 50%, 0.25)";
   ctx.shadowBlur = 20;
@@ -321,7 +325,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
   ctx.stroke();
   ctx.restore();
 
-  ctx.fillStyle = `hsl(${accentHue}, 70%, 50%)`;
+  ctx.fillStyle = ctaColorHsl;
   ctx.font = "800 26px Georgia, serif";
   ctx.fillText(ctaText, W / 2, nextY + 32);
   nextY += ctaH + 12;
