@@ -140,10 +140,10 @@ interface DrawParams {
 function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
   const { W, H, isRed, accentHue, img, artistName, trackTitle, releaseDate, ctaLine, imgScale, imgOffX, imgOffY, t } = p;
 
-  // Animated values
-  const glowPulse = 0.5 + 0.5 * Math.sin(t * 1.5);
-  const ctaGlow = 0.5 + 0.5 * Math.sin(t * 2.0 + 1);
-  const badgeGlow = 0.4 + 0.4 * Math.sin(t * 1.2 + 0.5);
+  // Animated values — more pronounced pulsing
+  const glowPulse = 0.3 + 0.7 * Math.sin(t * 1.5);
+  const ctaGlow = 0.3 + 0.7 * Math.sin(t * 2.0 + 1);
+  const badgeGlow = 0.2 + 0.8 * Math.sin(t * 1.2 + 0.5);
 
   // ── Background ──
   const bgGrad = ctx.createRadialGradient(W / 2, 0, 0, W / 2, H / 2, W);
@@ -158,11 +158,11 @@ function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
   drawSmoke(ctx, W * 0.7, H * 0.3, W * 0.45, H * 0.35, `hsla(${accentHue}, 60%, 28%, 0.12)`);
   drawSmoke(ctx, W * 0.5, H * 0.7, W * 0.5, H * 0.3, `hsla(${accentHue}, 55%, 25%, 0.10)`);
 
-  // ── Gold light burst behind image (ANIMATED) ──
-  const burstAlpha = 0.12 + 0.18 * glowPulse;
-  const burst = ctx.createRadialGradient(W / 2, 280, 0, W / 2, 280, 420);
-  burst.addColorStop(0, `hsla(42, 80%, 50%, ${burstAlpha})`);
-  burst.addColorStop(0.5, `hsla(42, 70%, 40%, ${burstAlpha * 0.35})`);
+  // ── Gold light burst behind image (ANIMATED) — more intense ──
+  const burstAlpha = 0.2 + 0.35 * glowPulse;
+  const burst = ctx.createRadialGradient(W / 2, 280, 0, W / 2, 280, 500);
+  burst.addColorStop(0, `hsla(42, 85%, 55%, ${burstAlpha})`);
+  burst.addColorStop(0.4, `hsla(42, 75%, 45%, ${burstAlpha * 0.5})`);
   burst.addColorStop(1, "transparent");
   ctx.fillStyle = burst;
   ctx.fillRect(0, 0, W, H);
@@ -172,34 +172,49 @@ function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
   const imgX = (W - imgSize) / 2;
   const imgY = 110;
 
-  // Animated glow ring behind image
+  // Animated outer glow box behind image — very pronounced
   ctx.save();
-  ctx.shadowColor = `hsla(42, 80%, 50%, ${0.15 + 0.25 * glowPulse})`;
-  ctx.shadowBlur = 50 + 40 * glowPulse;
+  ctx.shadowColor = `hsla(42, 85%, 55%, ${0.35 + 0.55 * glowPulse})`;
+  ctx.shadowBlur = 60 + 80 * glowPulse;
   ctx.fillStyle = "rgba(0,0,0,0.01)";
-  roundRect(ctx, imgX - 6, imgY - 6, imgSize + 12, imgSize + 12, 18);
+  roundRect(ctx, imgX - 10, imgY - 10, imgSize + 20, imgSize + 20, 20);
   ctx.fill();
   ctx.restore();
 
-  // Draw image clipped
+  // Second glow layer for extra intensity
+  ctx.save();
+  ctx.shadowColor = `hsla(42, 90%, 60%, ${0.2 + 0.4 * glowPulse})`;
+  ctx.shadowBlur = 100 + 60 * glowPulse;
+  ctx.fillStyle = "rgba(0,0,0,0.01)";
+  roundRect(ctx, imgX - 4, imgY - 4, imgSize + 8, imgSize + 8, 18);
+  ctx.fill();
+  ctx.restore();
+
+  // Draw image clipped — respect user's crop position
   ctx.save();
   roundRect(ctx, imgX, imgY, imgSize, imgSize, 16);
   ctx.clip();
 
   const iw = img.width, ih = img.height;
-  const coverScale = Math.max(imgSize / iw, imgSize / ih) * imgScale;
-  const sw = imgSize / coverScale;
-  const sh = imgSize / coverScale;
-  const sx = (iw - sw) * imgOffX;
-  const sy = (ih - sh) * imgOffY;
-  ctx.drawImage(img, sx, sy, sw, sh, imgX, imgY, imgSize, imgSize);
+  // Use cover-fit logic: scale to fill, then offset based on user's position
+  const baseScale = Math.max(imgSize / iw, imgSize / ih);
+  const finalScale = baseScale * imgScale;
+  const dw = iw * finalScale;
+  const dh = ih * finalScale;
+  const dx = imgX - (dw - imgSize) * imgOffX;
+  const dy = imgY - (dh - imgSize) * imgOffY;
+  ctx.drawImage(img, 0, 0, iw, ih, dx, dy, dw, dh);
   ctx.restore();
 
-  // Image border
-  ctx.strokeStyle = `hsla(42, 70%, 50%, ${0.4 + 0.2 * glowPulse})`;
+  // Image border with animated glow
+  ctx.save();
+  ctx.shadowColor = `hsla(42, 80%, 55%, ${0.3 + 0.4 * glowPulse})`;
+  ctx.shadowBlur = 20 + 30 * glowPulse;
+  ctx.strokeStyle = `hsla(42, 75%, 55%, ${0.5 + 0.4 * glowPulse})`;
   ctx.lineWidth = 3;
   roundRect(ctx, imgX, imgY, imgSize, imgSize, 16);
   ctx.stroke();
+  ctx.restore();
 
   // ── Badge at top (ANIMATED glow) ──
   const badgeText = "EXCLUSIVE MUSIC RELEASE";
@@ -211,11 +226,11 @@ function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
   const badgeY = 24;
 
   ctx.save();
-  ctx.shadowColor = `hsla(42, 80%, 55%, ${badgeGlow * 0.5})`;
-  ctx.shadowBlur = 15 + 20 * badgeGlow;
+  ctx.shadowColor = `hsla(42, 85%, 60%, ${0.4 + 0.5 * badgeGlow})`;
+  ctx.shadowBlur = 25 + 40 * badgeGlow;
   ctx.fillStyle = "hsla(0, 0%, 0%, 0.6)";
-  ctx.strokeStyle = `hsla(42, 70%, 50%, ${0.35 + 0.35 * badgeGlow})`;
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = `hsla(42, 75%, 55%, ${0.4 + 0.5 * badgeGlow})`;
+  ctx.lineWidth = 2.5;
   roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 4);
   ctx.fill();
   ctx.stroke();
@@ -296,11 +311,11 @@ function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
   const ctaX = (W - ctaW) / 2;
 
   ctx.save();
-  ctx.shadowColor = `hsla(${accentHue}, 70%, 50%, ${ctaGlow * 0.45})`;
-  ctx.shadowBlur = 12 + 22 * ctaGlow;
+  ctx.shadowColor = `hsla(${accentHue}, 80%, 55%, ${0.3 + 0.6 * ctaGlow})`;
+  ctx.shadowBlur = 20 + 45 * ctaGlow;
   ctx.fillStyle = "hsla(0, 0%, 0%, 0.5)";
-  ctx.strokeStyle = `hsla(42, 70%, 50%, ${0.3 + 0.35 * ctaGlow})`;
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = `hsla(42, 75%, 55%, ${0.4 + 0.5 * ctaGlow})`;
+  ctx.lineWidth = 2.5;
   roundRect(ctx, ctaX, nextY, ctaW, ctaH, 4);
   ctx.fill();
   ctx.stroke();
