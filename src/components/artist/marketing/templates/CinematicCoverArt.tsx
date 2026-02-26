@@ -168,21 +168,8 @@ export const CinematicCoverArt = ({
         background: "linear-gradient(90deg, transparent, hsla(210, 70%, 45%, 0.6), hsla(210, 70%, 45%, 0.8), hsla(210, 70%, 45%, 0.6), transparent)",
       }} />
 
-      {/* Domain line */}
-      <div className="relative z-10 flex flex-col items-center mt-[6px] gap-[1px]">
-        <span className="uppercase font-semibold" style={{ fontSize: "16px", color: "hsl(0, 0%, 50%)", letterSpacing: "0.25em" }}>
-          Only Exclusively Released On
-        </span>
-        <div className="flex items-center gap-2">
-          <Globe className="w-5 h-5" style={{ color: "hsl(0, 0%, 60%)" }} />
-          <span className="font-bold" style={{ fontSize: "24px", color: "hsl(0, 0%, 90%)" }}>
-            www.TheMusicIsExclusive.com
-          </span>
-        </div>
-      </div>
-
       {/* Footer brand lockup */}
-      <div className="relative z-10 mt-[12px] mb-[20px] flex flex-col items-center gap-[6px]">
+      <div className="relative z-10 mt-[6px] flex flex-col items-center gap-[6px]">
         <div className="flex items-center gap-3">
           <Crown className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
           <span className="font-extrabold uppercase" style={{ fontSize: "30px", color: "hsl(0, 0%, 92%)", letterSpacing: "0.25em" }}>
@@ -196,6 +183,19 @@ export const CinematicCoverArt = ({
         }}>
           {ctaLine}
         </span>
+      </div>
+
+      {/* Domain line */}
+      <div className="relative z-10 flex flex-col items-center mt-[4px] mb-[16px] gap-[2px]">
+        <span className="uppercase font-bold" style={{ fontSize: "22px", color: "hsl(0, 0%, 55%)", letterSpacing: "0.3em" }}>
+          Only Exclusively Released On
+        </span>
+        <div className="flex items-center gap-3">
+          <Globe className="w-7 h-7" style={{ color: "hsl(0, 0%, 65%)" }} />
+          <span className="font-extrabold" style={{ fontSize: "32px", color: "hsl(0, 0%, 93%)", letterSpacing: "0.05em" }}>
+            www.TheMusicIsExclusive.com
+          </span>
+        </div>
       </div>
     </div>
   );
