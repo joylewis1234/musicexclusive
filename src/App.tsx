@@ -41,6 +41,7 @@ import FanAgreementStep from "./pages/FanAgreementStep";
 import PatentNotice from "./pages/PatentNotice";
 import InviteLanding from "./pages/InviteLanding";
 import TestSounds from "./pages/TestSounds";
+import PreviewDiscovery from "./pages/PreviewDiscovery";
 
 // Auth pages
 import FanAuth from "./pages/auth/FanAuth";
@@ -137,6 +138,7 @@ const App = () => {
                 <Route path="/invite" element={<InviteLanding />} />
                 <Route path="/artist-agreement" element={<ArtistAgreement />} />
                 <Route path="/test-sounds" element={<TestSounds />} />
+                <Route path="/preview" element={<PreviewDiscovery />} />
                 
                 {/* Login selector page */}
                 <Route path="/login" element={<Login />} />

@@ -107,14 +107,23 @@ const Index = () => {
             <span className="text-muted-foreground">THE FUTURE OF MUSIC IS HERE.</span>
           </h1>
           
-          <div className="text-muted-foreground text-base md:text-lg mb-8 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3" style={{ textShadow: '0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.15)' }}>
+          <div className="text-muted-foreground text-base md:text-lg mb-4 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3" style={{ textShadow: '0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.15)' }}>
             <p>First access. First listen. Before anywhere else.</p>
             <p>Exclusive music from your favorite artists, only on Music Exclusive.</p>
-            <p>Enter the Vault Lottery for a chance to unlock exclusive access.</p>
           </div>
+          <p className="text-muted-foreground/70 text-sm font-body mb-8 animate-fade-up [animation-delay:250ms] opacity-0 max-w-sm mx-auto">
+            Preview 15-second hooks, then play the Vault Lottery to win full access.
+          </p>
           
           {/* Primary CTA */}
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
+            <Button 
+              size="lg" 
+              className="w-full max-w-xs"
+              onClick={() => navigate("/preview")}
+            >
+              Preview Exclusive Music
+            </Button>
             <Button 
               size="lg" 
               className="w-full max-w-xs text-sm md:text-base whitespace-normal h-auto py-3"
@@ -316,19 +325,46 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Mid-page Preview CTA */}
+      <section className="px-4 py-12">
+        <div className="container max-w-lg md:max-w-md mx-auto text-center">
+          <h2 className="text-foreground mb-3 font-display text-xl md:text-2xl uppercase tracking-wider">
+            Still curious?
+          </h2>
+          <p className="text-muted-foreground text-sm font-body mb-6">
+            Hear 15-second hooks from exclusive tracks. No sign-in required.
+          </p>
+          <Button 
+            size="lg" 
+            className="w-full max-w-xs"
+            onClick={() => navigate("/preview")}
+          >
+            Preview Exclusive Music
+          </Button>
+        </div>
+      </section>
+
       {/* Bottom CTA Section */}
       <section className="px-4 py-16">
         <div className="container max-w-lg md:max-w-md mx-auto text-center">
           <h2 className="text-foreground mb-4">
-            Ready to Enter?
+            Want a taste before entering the Vault?
           </h2>
           <p className="text-muted-foreground text-sm font-body mb-8">
-            Get instant access to the vault and unlock exclusive content from top artists.
+            Listen to previews, then enter the Vault Lottery or join as a Superfan for instant access.
           </p>
           
           <div className="flex flex-col gap-3">
             <Button 
               size="lg" 
+              className="w-full"
+              onClick={() => navigate("/preview")}
+            >
+              Preview Exclusive Music
+            </Button>
+            <Button 
+              size="lg" 
+              variant="outline"
               className="w-full animate-glow-pulse"
               onClick={() => navigate("/vault/enter")}
             >
