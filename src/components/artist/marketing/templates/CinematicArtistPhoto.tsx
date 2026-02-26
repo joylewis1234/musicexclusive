@@ -164,7 +164,7 @@ export const CinematicArtistPhoto = ({
       </div>
 
       {/* Footer brand lockup */}
-      <div className="relative z-10 mt-auto mb-[20px] flex flex-col items-center gap-[6px]">
+      <div className="relative z-10 mt-[12px] mb-[20px] flex flex-col items-center gap-[6px]">
         <div className="flex items-center gap-3">
           <Crown className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
           <span className="font-extrabold uppercase" style={{ fontSize: "30px", color: "hsl(0, 0%, 92%)", letterSpacing: "0.25em" }}>
