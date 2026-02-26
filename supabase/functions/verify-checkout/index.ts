@@ -17,9 +17,30 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
+// ── Monitoring helper (fire-and-forget) ──
+async function logMonitoringEvent(
+  event: {
+    function_name: string;
+    event_type: string;
+    status: number;
+    latency_ms?: number;
+    stage?: string;
+    error_code?: string;
+    error_message?: string;
+    conflict?: boolean;
+    retry_count?: number;
+    contention_count?: number;
+    ledger_written?: boolean;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  try {
+    await supabaseAdmin.from("monitoring_events").insert(event);
+  } catch (_) { /* never block main flow */ }
+}
+
 // Helper: resolve auth user_id from email (no listUsers)
 async function resolveAuthUserId(email: string): Promise<string | null> {
-  // Use vault_members first (may already have user_id from prior login)
   const { data: vm } = await supabaseAdmin
     .from("vault_members")
     .select("user_id")
@@ -33,6 +54,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     logStep("Function started");
@@ -86,6 +109,13 @@ serve(async (req) => {
     
     if (!isPaid && !(isSubscription && isComplete)) {
       logStep("Payment not completed", { paymentStatus: session.payment_status, status: session.status });
+      logMonitoringEvent({
+        function_name: "verify-checkout",
+        event_type: "payment_not_completed",
+        status: 400,
+        latency_ms: Date.now() - startTime,
+        metadata: { payment_status: session.payment_status, session_status: session.status },
+      }).catch(() => {});
       return new Response(
         JSON.stringify({ error: "Payment not completed", status: session.payment_status }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -103,8 +133,7 @@ serve(async (req) => {
       );
     }
 
-    // Idempotency check — look for our own key AND any webhook-created ledger entry
-    // for the same payment_intent to prevent double-crediting
+    // Idempotency check
     const paymentIntentId = typeof session.payment_intent === 'string' 
       ? session.payment_intent 
       : session.payment_intent?.id;
@@ -115,7 +144,6 @@ serve(async (req) => {
       .eq("id", `checkout_${sessionId}`)
       .maybeSingle();
 
-    // Also check if the webhook already credited this payment_intent via the ledger
     let webhookAlreadyHandled = false;
     if (!existingEvent && paymentIntentId) {
       const { data: existingLedger } = await supabaseAdmin
@@ -139,13 +167,21 @@ serve(async (req) => {
         .eq("email", customerEmail)
         .maybeSingle();
       
+      logMonitoringEvent({
+        function_name: "verify-checkout",
+        event_type: "already_processed",
+        status: 200,
+        latency_ms: Date.now() - startTime,
+        conflict: true,
+      }).catch(() => {});
+
       return new Response(
         JSON.stringify({ success: true, alreadyProcessed: true, credits: member?.credits || 0 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Determine user_id to write: prefer caller's auth uid, fallback to existing
+    // Determine user_id to write
     const userId = callerUserId || await resolveAuthUserId(customerEmail);
 
     // Update or create vault_members
@@ -231,8 +267,18 @@ serve(async (req) => {
         reference: ledgerReference,
       });
 
+    const ledgerWritten = !ledgerError;
+
     if (ledgerError) {
       logStep("Error creating ledger entry", { error: ledgerError.message });
+      logMonitoringEvent({
+        function_name: "verify-checkout",
+        event_type: "ledger_error",
+        status: 200,
+        latency_ms: Date.now() - startTime,
+        ledger_written: false,
+        error_message: ledgerError.message,
+      }).catch(() => {});
     } else {
       logStep("Ledger entry created", { email: customerEmail, credits_delta: credits });
     }
@@ -289,6 +335,15 @@ serve(async (req) => {
       }
     }
 
+    logMonitoringEvent({
+      function_name: "verify-checkout",
+      event_type: "success",
+      status: 200,
+      latency_ms: Date.now() - startTime,
+      ledger_written: ledgerWritten,
+      metadata: { credits, is_subscription: isSubscription },
+    }).catch(() => {});
+
     return new Response(
       JSON.stringify({ success: true, credits: newCredits, added: credits }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -296,6 +351,13 @@ serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logStep("ERROR", { message: errorMessage });
+    logMonitoringEvent({
+      function_name: "verify-checkout",
+      event_type: "error",
+      status: 500,
+      latency_ms: Date.now() - startTime,
+      error_message: errorMessage,
+    }).catch(() => {});
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
