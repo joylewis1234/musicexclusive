@@ -140,10 +140,11 @@ export const CinematicArtistPhoto = ({
         }}>
           Music Exclusive
         </h2>
-        <p className="font-semibold italic" style={{
-          fontSize: "38px", color: "hsl(42, 65%, 62%)", marginTop: "2px",
+        <p className="font-extrabold italic uppercase" style={{
+          fontSize: "46px", color: "hsl(42, 65%, 62%)", marginTop: "2px",
           maxWidth: "800px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          fontFamily: "'Georgia', 'Times New Roman', serif",
+          fontFamily: "'Georgia', 'Times New Roman', serif", letterSpacing: "0.12em",
+          textShadow: "0 0 20px hsla(42, 70%, 50%, 0.25)",
         }}>
           {artistName || "Artist Name"}
         </p>
