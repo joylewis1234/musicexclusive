@@ -80,25 +80,25 @@ export const CinematicArtistPhoto = ({
       {/* ——— CONTENT ——— */}
 
       {/* Top badge */}
-      <div className="relative z-10 mt-[44px] flex items-center gap-3 px-10 py-3" style={{
-        border: "1.5px solid hsla(42, 70%, 50%, 0.6)",
+      <div className="relative z-10 mt-[36px] flex items-center gap-4 px-12 py-4" style={{
+        border: "2px solid hsla(42, 70%, 50%, 0.6)",
         background: "hsla(0, 0%, 0%, 0.6)",
         borderRadius: "4px",
       }}>
-        <Flame className="w-7 h-7" style={{ color: "hsl(25, 95%, 55%)" }} />
-        <span className="font-bold uppercase" style={{ fontSize: "24px", color: "hsl(42, 75%, 55%)", letterSpacing: "0.4em" }}>
+        <Flame className="w-9 h-9" style={{ color: "hsl(25, 95%, 55%)" }} />
+        <span className="font-bold uppercase" style={{ fontSize: "30px", color: "hsl(42, 75%, 55%)", letterSpacing: "0.4em" }}>
           Exclusive Music Release
         </span>
       </div>
 
       {/* Hero image with cinematic frame */}
-      <div className="relative z-10 mt-[28px]">
-        <div className="absolute -inset-6" style={{
+      <div className="relative z-10 mt-[20px]">
+        <div className="absolute -inset-8" style={{
           background: "radial-gradient(ellipse at center, hsla(42, 80%, 50%, 0.35) 0%, hsla(42, 80%, 50%, 0.05) 60%, transparent 80%)",
-          filter: "blur(25px)",
+          filter: "blur(30px)",
         }} />
         <div className="relative overflow-hidden" style={{
-          width: "440px", height: "440px", borderRadius: "16px",
+          width: "500px", height: "500px", borderRadius: "16px",
           border: "3px solid hsla(42, 70%, 50%, 0.5)",
           boxShadow: "0 0 80px hsla(42, 80%, 50%, 0.25), 0 0 40px hsla(42, 80%, 50%, 0.15), 0 30px 80px hsla(0, 0%, 0%, 0.7), inset 0 0 30px hsla(0, 0%, 0%, 0.3)",
         }}>
@@ -164,17 +164,17 @@ export const CinematicArtistPhoto = ({
       </div>
 
       {/* Footer brand lockup */}
-      <div className="relative z-10 mt-auto mb-[36px] flex flex-col items-center gap-[6px]">
+      <div className="relative z-10 mt-auto mb-[30px] flex flex-col items-center gap-[8px]">
         <div className="flex items-center gap-3">
-          <Crown className="w-6 h-6" style={{ color: "hsl(42, 75%, 55%)" }} />
-          <span className="font-extrabold uppercase" style={{ fontSize: "28px", color: "hsl(0, 0%, 92%)", letterSpacing: "0.25em" }}>
+          <Crown className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
+          <span className="font-extrabold uppercase" style={{ fontSize: "32px", color: "hsl(0, 0%, 92%)", letterSpacing: "0.25em" }}>
             Music Exclusive
           </span>
-          <Crown className="w-6 h-6" style={{ color: "hsl(42, 75%, 55%)" }} />
+          <Crown className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
         </div>
-        <span className="uppercase font-bold px-6 py-1.5" style={{
-          fontSize: "16px", color: "hsl(0, 70%, 50%)", letterSpacing: "0.3em",
-          border: "1px solid hsla(42, 70%, 50%, 0.3)", borderRadius: "2px", background: "hsla(0, 0%, 0%, 0.4)",
+        <span className="uppercase font-extrabold px-8 py-2" style={{
+          fontSize: "28px", color: "hsl(0, 70%, 50%)", letterSpacing: "0.25em",
+          border: "2px solid hsla(42, 70%, 50%, 0.4)", borderRadius: "4px", background: "hsla(0, 0%, 0%, 0.5)",
         }}>
           {ctaLine}
         </span>
