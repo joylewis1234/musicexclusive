@@ -6,6 +6,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// ── Monitoring helper (fire-and-forget) ──
+async function logMonitoringEvent(
+  client: any,
+  event: {
+    function_name: string;
+    event_type: string;
+    status: number;
+    latency_ms?: number;
+    stage?: string;
+    error_code?: string;
+    error_message?: string;
+    conflict?: boolean;
+    retry_count?: number;
+    contention_count?: number;
+    ledger_written?: boolean;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  try {
+    await client.from("monitoring_events").insert(event);
+  } catch (_) { /* never block main flow */ }
+}
+
 /* ── In-memory IP rate limiter: 10 requests per 10 minutes ── */
 
 const rateLimitMap = new Map<string, { count: number; windowStart: number }>();
@@ -96,6 +119,13 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+
+  // Service-role client for monitoring only
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const monitorClient = createClient(supabaseUrl, serviceRoleKey);
+
   try {
     // Rate limit by IP
     const ip =
@@ -104,6 +134,12 @@ Deno.serve(async (req) => {
       "unknown";
 
     if (!checkRateLimit(ip)) {
+      logMonitoringEvent(monitorClient, {
+        function_name: "mint-playback-url-public-preview",
+        event_type: "rate_limited",
+        status: 429,
+        latency_ms: Date.now() - startTime,
+      }).catch(() => {});
       return new Response(
         JSON.stringify({ error: "Rate limit exceeded. Try again later." }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -119,7 +155,6 @@ Deno.serve(async (req) => {
     }
 
     // Use ANON key — NOT service role
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     const client = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -132,6 +167,15 @@ Deno.serve(async (req) => {
 
     if (rpcError) {
       console.error("[mint-playback-url-public-preview] RPC error:", rpcError);
+      logMonitoringEvent(monitorClient, {
+        function_name: "mint-playback-url-public-preview",
+        event_type: "rpc_error",
+        status: 500,
+        latency_ms: Date.now() - startTime,
+        error_code: rpcError.code,
+        error_message: rpcError.message,
+        metadata: { track_id: trackId },
+      }).catch(() => {});
       return new Response(JSON.stringify({ error: "Track lookup failed" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -139,6 +183,13 @@ Deno.serve(async (req) => {
     }
 
     if (!previewKey) {
+      logMonitoringEvent(monitorClient, {
+        function_name: "mint-playback-url-public-preview",
+        event_type: "no_preview_available",
+        status: 404,
+        latency_ms: Date.now() - startTime,
+        metadata: { track_id: trackId },
+      }).catch(() => {});
       return new Response(JSON.stringify({ error: "No preview available" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -148,6 +199,14 @@ Deno.serve(async (req) => {
     // Presign with R2 credentials (NOT Supabase service role)
     const ttl = 45;
     const signedUrl = await presignR2Url(previewKey, ttl);
+
+    logMonitoringEvent(monitorClient, {
+      function_name: "mint-playback-url-public-preview",
+      event_type: "success",
+      status: 200,
+      latency_ms: Date.now() - startTime,
+      metadata: { track_id: trackId },
+    }).catch(() => {});
 
     return new Response(
       JSON.stringify({
