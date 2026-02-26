@@ -1,4 +1,5 @@
 import { Lock, Crown } from "lucide-react";
+import type { ImagePosition } from "../TemplateCanvas";
 
 interface Props {
   imageUrl: string | null;
@@ -6,6 +7,7 @@ interface Props {
   trackTitle: string;
   releaseDate?: string;
   ctaLine: string;
+  imagePosition?: ImagePosition;
 }
 
 export const MinimalLuxury = ({
@@ -14,7 +16,11 @@ export const MinimalLuxury = ({
   trackTitle,
   releaseDate,
   ctaLine,
+  imagePosition,
 }: Props) => {
+  const imgStyle: React.CSSProperties = imagePosition
+    ? { objectFit: "cover" as const, objectPosition: imagePosition.objectPosition, transform: `scale(${imagePosition.scale})` }
+    : { objectFit: "cover" as const };
   return (
     <div
       className="relative w-[1080px] h-[1080px] overflow-hidden flex flex-col items-center justify-center"
@@ -76,7 +82,7 @@ export const MinimalLuxury = ({
             boxShadow: "0 0 40px hsla(45, 80%, 50%, 0.1)",
           }}
         >
-          <img src={imageUrl} alt="Cover" className="w-full h-full object-cover" crossOrigin="anonymous" />
+          <img src={imageUrl} alt="Cover" className="w-full h-full" crossOrigin="anonymous" style={imgStyle} />
         </div>
       ) : (
         <div
