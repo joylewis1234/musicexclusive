@@ -1,5 +1,6 @@
 import { Flame, Crown, Globe } from "lucide-react";
 import type { ImagePosition } from "../TemplateCanvas";
+import { ACCENT_COLORS, type AccentColorKey } from "../TemplateCanvas";
 
 interface Props {
   imageUrl: string | null;
@@ -8,6 +9,8 @@ interface Props {
   releaseDate?: string;
   ctaLine: string;
   imagePosition?: ImagePosition;
+  artistNameColor?: AccentColorKey;
+  ctaColor?: AccentColorKey;
 }
 
 export const CinematicArtistPhoto = ({
@@ -17,7 +20,11 @@ export const CinematicArtistPhoto = ({
   releaseDate,
   ctaLine,
   imagePosition,
+  artistNameColor = "gold",
+  ctaColor = "red",
 }: Props) => {
+  const nameHsl = ACCENT_COLORS[artistNameColor].hsl;
+  const ctaHsl = ACCENT_COLORS[ctaColor].hsl;
   const imgStyle: React.CSSProperties = imagePosition
     ? { objectFit: "cover" as const, objectPosition: imagePosition.objectPosition, transform: `scale(${imagePosition.scale})` }
     : { objectFit: "cover" as const };
@@ -143,7 +150,7 @@ export const CinematicArtistPhoto = ({
           Music Exclusive
         </h2>
         <p className="font-extrabold italic uppercase" style={{
-          fontSize: "46px", color: "hsl(42, 65%, 62%)", marginTop: "2px",
+          fontSize: "46px", color: nameHsl, marginTop: "2px",
           maxWidth: "800px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           fontFamily: "'Georgia', 'Times New Roman', serif", letterSpacing: "0.12em",
           textShadow: "0 0 20px hsla(42, 70%, 50%, 0.25)",
@@ -180,7 +187,7 @@ export const CinematicArtistPhoto = ({
           <Crown className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
         </div>
         <span className="uppercase font-extrabold px-8 py-2" style={{
-          fontSize: "28px", color: "hsl(0, 70%, 50%)", letterSpacing: "0.25em",
+          fontSize: "28px", color: ctaHsl, letterSpacing: "0.25em",
           border: "2px solid hsla(42, 70%, 50%, 0.4)", borderRadius: "4px", background: "hsla(0, 0%, 0%, 0.5)",
           animation: "marketing-glow-cta-red 3s ease-in-out infinite",
         }}>
