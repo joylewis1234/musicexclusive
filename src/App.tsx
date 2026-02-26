@@ -1,3 +1,4 @@
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import AdminTestTools from "./pages/admin/AdminTestTools";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -93,7 +94,18 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
+const App = () => {
+  // Global safety net for unhandled promise rejections (prevents white screen)
+  React.useEffect(() => {
+    const handler = (e: PromiseRejectionEvent) => {
+      console.error("[App] Unhandled rejection:", e.reason);
+      e.preventDefault();
+    };
+    window.addEventListener("unhandledrejection", handler);
+    return () => window.removeEventListener("unhandledrejection", handler);
+  }, []);
+
+  return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <PlayerProvider>
@@ -264,6 +276,7 @@ const App = () => (
       </PlayerProvider>
     </AuthProvider>
   </QueryClientProvider>
-);
+  );
+};
 
 export default App;
