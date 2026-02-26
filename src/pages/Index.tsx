@@ -107,9 +107,11 @@ const Index = () => {
             <span className="text-muted-foreground">THE FUTURE OF MUSIC IS HERE.</span>
           </h1>
           
-          <p className="text-muted-foreground text-base md:text-lg mb-8 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto">
-            Unlock early access to exclusive music before it hits Spotify and Apple Music.
-          </p>
+          <div className="text-muted-foreground text-base md:text-lg mb-8 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3">
+            <p>First access. First listen. Before anywhere else.</p>
+            <p>Exclusive music from your favorite artists, only on Music Exclusive.</p>
+            <p>Enter the Vault Lottery for a chance to unlock exclusive access.</p>
+          </div>
           
           {/* Primary CTA */}
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
