@@ -2,11 +2,13 @@ import { useState, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
 import { TemplateCanvas, TemplateType, TEMPLATE_DIMENSIONS } from "@/components/artist/marketing/TemplateCanvas";
 import { useTemplateExport } from "@/hooks/useTemplateExport";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
-import { Download, Upload, Sparkles, Image, Lock, ShieldCheck, Crown, Layers } from "lucide-react";
+import { Download, Upload, Sparkles, Image, Lock, ShieldCheck, Crown, Layers, Move } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const TEMPLATES: { id: TemplateType; label: string; icon: React.ReactNode; desc: string }[] = [
   { id: "artist-photo", label: "Cinematic Photo", icon: <Image className="w-5 h-5" />, desc: "Artist portrait with bokeh glow" },
@@ -27,6 +29,11 @@ const MarketingStudio = () => {
   const [ctaLine, setCtaLine] = useState("Available Now");
   const [localImageUrl, setLocalImageUrl] = useState<string | null>(null);
 
+  // Image position controls
+  const [imageScale, setImageScale] = useState(100);
+  const [imageOffsetX, setImageOffsetX] = useState(50);
+  const [imageOffsetY, setImageOffsetY] = useState(50);
+
   // Pre-fill artist name when profile loads
   useState(() => {
     if (artistProfile?.artist_name && !artistName) {
@@ -37,8 +44,28 @@ const MarketingStudio = () => {
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setLocalImageUrl(url);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) {
+          setLocalImageUrl(ev.target.result as string);
+          // Reset position for new image
+          setImageScale(100);
+          setImageOffsetX(50);
+          setImageOffsetY(50);
+        }
+      };
+      reader.onerror = () => {
+        toast.error("Failed to read image file.");
+        setLocalImageUrl(null);
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      toast.error("Failed to upload image. Please try again.");
+      setLocalImageUrl(null);
+    }
   }, []);
 
   const dims = TEMPLATE_DIMENSIONS[template];
@@ -49,6 +76,11 @@ const MarketingStudio = () => {
     const safeName = `${(artistName || "promo").replace(/\s+/g, "-")}-${(trackTitle || "track").replace(/\s+/g, "-")}`.toLowerCase();
     exportPng({ width: dims.width, height: dims.height, fileName: `${safeName}-${dims.width}x${dims.height}.png` });
   }, [exportPng, dims, artistName, trackTitle]);
+
+  const imagePosition = {
+    scale: imageScale / 100,
+    objectPosition: `${imageOffsetX}% ${imageOffsetY}%`,
+  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -116,6 +148,63 @@ const MarketingStudio = () => {
               <img src={localImageUrl} alt="Preview" className="w-20 h-20 rounded-lg object-cover border border-border" />
             )}
           </div>
+
+          {/* Image Position Controls */}
+          {localImageUrl && (
+            <div className="space-y-3 p-3 rounded-lg border border-border bg-card">
+              <div className="flex items-center gap-2">
+                <Move className="w-4 h-4 text-muted-foreground" />
+                <Label className="text-xs text-muted-foreground">Adjust Image Position</Label>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Zoom</span>
+                  <span className="text-xs text-muted-foreground">{imageScale}%</span>
+                </div>
+                <Slider
+                  value={[imageScale]}
+                  onValueChange={(v) => setImageScale(v[0])}
+                  min={100}
+                  max={200}
+                  step={5}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Horizontal</span>
+                  <span className="text-xs text-muted-foreground">{imageOffsetX}%</span>
+                </div>
+                <Slider
+                  value={[imageOffsetX]}
+                  onValueChange={(v) => setImageOffsetX(v[0])}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Vertical</span>
+                  <span className="text-xs text-muted-foreground">{imageOffsetY}%</span>
+                </div>
+                <Slider
+                  value={[imageOffsetY]}
+                  onValueChange={(v) => setImageOffsetY(v[0])}
+                  min={0}
+                  max={100}
+                  step={1}
+                />
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs"
+                onClick={() => { setImageScale(100); setImageOffsetX(50); setImageOffsetY(50); }}
+              >
+                Reset Position
+              </Button>
+            </div>
+          )}
 
           {/* Artist Name */}
           <div className="space-y-2">
@@ -188,6 +277,7 @@ const MarketingStudio = () => {
                 trackTitle={trackTitle}
                 releaseDate={releaseDate || undefined}
                 ctaLine={ctaLine}
+                imagePosition={imagePosition}
               />
             </div>
           </div>
