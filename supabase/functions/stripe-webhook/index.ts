@@ -17,6 +17,28 @@ const supabaseAdmin = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
 );
 
+// ── Monitoring helper (fire-and-forget) ──
+async function logMonitoringEvent(
+  event: {
+    function_name: string;
+    event_type: string;
+    status: number;
+    latency_ms?: number;
+    stage?: string;
+    error_code?: string;
+    error_message?: string;
+    conflict?: boolean;
+    retry_count?: number;
+    contention_count?: number;
+    ledger_written?: boolean;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  try {
+    await supabaseAdmin.from("monitoring_events").insert(event);
+  } catch (_) { /* never block main flow */ }
+}
+
 const rollbackStripeEvent = async (eventId: string, reason: string) => {
   const { error } = await supabaseAdmin
     .from("stripe_events")
@@ -33,6 +55,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     logStep("Webhook received");
@@ -65,6 +89,12 @@ serve(async (req) => {
 
     if (!signature) {
       logStep("Missing stripe-signature header");
+      logMonitoringEvent({
+        function_name: "stripe-webhook",
+        event_type: "signature_missing",
+        status: 403,
+        latency_ms: Date.now() - startTime,
+      }).catch(() => {});
       return new Response(JSON.stringify({ error: "Missing signature" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -76,6 +106,13 @@ serve(async (req) => {
       logStep("Webhook signature verified");
     } catch (err) {
       logStep("Invalid webhook signature", { error: String(err) });
+      logMonitoringEvent({
+        function_name: "stripe-webhook",
+        event_type: "signature_invalid",
+        status: 400,
+        latency_ms: Date.now() - startTime,
+        error_message: String(err),
+      }).catch(() => {});
       return new Response(JSON.stringify({ error: "Invalid signature" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -117,7 +154,6 @@ serve(async (req) => {
           paymentIntent: session.payment_intent,
         });
 
-        // Get the customer email and credits from metadata
         const customerEmail = session.customer_email || session.metadata?.email;
         const credits = parseInt(session.metadata?.credits || "0", 10);
         const transactionType = session.metadata?.type || "CREDITS_PURCHASE";
@@ -150,6 +186,15 @@ serve(async (req) => {
           if (rpcError) {
             logStep("Error applying credits", { error: rpcError.message });
             await rollbackStripeEvent(event.id, "apply_credit_purchase failed");
+            logMonitoringEvent({
+              function_name: "stripe-webhook",
+              event_type: "credit_apply_error",
+              status: 500,
+              latency_ms: Date.now() - startTime,
+              ledger_written: false,
+              error_message: rpcError.message,
+              metadata: { stripe_event_type: "checkout.session.completed", email: customerEmail },
+            }).catch(() => {});
             return new Response(JSON.stringify({ error: "Credit processing failed" }), {
               status: 500,
               headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -195,20 +240,26 @@ serve(async (req) => {
               logStep("Error consuming invite", { error: String(err) });
             }
           }
+
+          logMonitoringEvent({
+            function_name: "stripe-webhook",
+            event_type: "checkout.session.completed",
+            status: 200,
+            latency_ms: Date.now() - startTime,
+            ledger_written: true,
+            metadata: { credits, is_subscription: isSubscription },
+          }).catch(() => {});
         }
         break;
       }
 
       case "invoice.payment_succeeded": {
-        // Handle subscription renewals
         const invoice = event.data.object as Stripe.Invoice;
         logStep("Invoice payment succeeded", { invoiceId: invoice.id });
 
-        // Check if this is a subscription invoice (not first payment)
         if (invoice.billing_reason === "subscription_cycle") {
           const customerEmail = invoice.customer_email;
           if (customerEmail) {
-            // Grant monthly credits for Superfan subscription
             const subscriptionCredits = 25;
             const usdAmount = 5.00;
 
@@ -225,6 +276,15 @@ serve(async (req) => {
             if (rpcError) {
               logStep("Error applying subscription credits", { error: rpcError.message });
               await rollbackStripeEvent(event.id, "subscription credits failed");
+              logMonitoringEvent({
+                function_name: "stripe-webhook",
+                event_type: "credit_apply_error",
+                status: 500,
+                latency_ms: Date.now() - startTime,
+                ledger_written: false,
+                error_message: rpcError.message,
+                metadata: { stripe_event_type: "invoice.payment_succeeded", email: customerEmail },
+              }).catch(() => {});
               return new Response(JSON.stringify({ error: "Subscription credit processing failed" }), {
                 status: 500,
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -252,6 +312,15 @@ serve(async (req) => {
             } catch (err) {
               logStep("Error triggering monthly invite", { error: String(err) });
             }
+
+            logMonitoringEvent({
+              function_name: "stripe-webhook",
+              event_type: "invoice.payment_succeeded",
+              status: 200,
+              latency_ms: Date.now() - startTime,
+              ledger_written: true,
+              metadata: { credits: subscriptionCredits, billing_reason: "subscription_cycle" },
+            }).catch(() => {});
           }
         }
         break;
@@ -331,6 +400,13 @@ serve(async (req) => {
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     logStep("ERROR", { message: errorMessage });
+    logMonitoringEvent({
+      function_name: "stripe-webhook",
+      event_type: "error",
+      status: 500,
+      latency_ms: Date.now() - startTime,
+      error_message: errorMessage,
+    }).catch(() => {});
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

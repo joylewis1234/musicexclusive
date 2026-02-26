@@ -5,6 +5,29 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// ── Monitoring helper (fire-and-forget) ──
+async function logMonitoringEvent(
+  client: any,
+  event: {
+    function_name: string;
+    event_type: string;
+    status: number;
+    latency_ms?: number;
+    stage?: string;
+    error_code?: string;
+    error_message?: string;
+    conflict?: boolean;
+    retry_count?: number;
+    contention_count?: number;
+    ledger_written?: boolean;
+    metadata?: Record<string, unknown>;
+  }
+) {
+  try {
+    await client.from("monitoring_events").insert(event);
+  } catch (_) { /* never block main flow */ }
+}
+
 /* ── AWS Signature V4 presign helpers ── */
 
 async function hmacSha256(key: ArrayBuffer | Uint8Array, data: string): Promise<ArrayBuffer> {
@@ -107,6 +130,8 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const startTime = Date.now();
+
   try {
     // ── Auth ──
     const authHeader = req.headers.get("Authorization");
@@ -129,7 +154,16 @@ Deno.serve(async (req) => {
       data: { user },
       error: userErr,
     } = await userClient.auth.getUser();
+
+    const admin = createClient(supabaseUrl, supabaseServiceKey);
+
     if (userErr || !user) {
+      logMonitoringEvent(admin, {
+        function_name: "mint-playback-url",
+        event_type: "auth_failure",
+        status: 401,
+        latency_ms: Date.now() - startTime,
+      }).catch(() => {});
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -146,7 +180,6 @@ Deno.serve(async (req) => {
     }
 
     // ── Access check (service role to bypass RLS) ──
-    const admin = createClient(supabaseUrl, supabaseServiceKey);
     const userEmail = user.email?.toLowerCase() ?? "";
 
     // Look up the track
@@ -157,6 +190,13 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (trackErr || !track) {
+      logMonitoringEvent(admin, {
+        function_name: "mint-playback-url",
+        event_type: "track_not_found",
+        status: 404,
+        latency_ms: Date.now() - startTime,
+        metadata: { track_id: trackId },
+      }).catch(() => {});
       return new Response(JSON.stringify({ error: "Track not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -194,6 +234,13 @@ Deno.serve(async (req) => {
       }
 
       if (!isAdmin && !isOwner && !isVaultActive) {
+        logMonitoringEvent(admin, {
+          function_name: "mint-playback-url",
+          event_type: "access_denied",
+          status: 403,
+          latency_ms: Date.now() - startTime,
+          metadata: { track_id: trackId, file_type: fileType },
+        }).catch(() => {});
         return new Response(JSON.stringify({ error: "Access denied" }), {
           status: 403,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -263,6 +310,14 @@ Deno.serve(async (req) => {
 
     if (sessionInsertError) {
       console.error("[mint-playback-url] Session insert error:", sessionInsertError);
+      logMonitoringEvent(admin, {
+        function_name: "mint-playback-url",
+        event_type: "session_insert_error",
+        status: 500,
+        latency_ms: Date.now() - startTime,
+        error_message: sessionInsertError.message,
+        metadata: { track_id: trackId },
+      }).catch(() => {});
       return new Response(
         JSON.stringify({ error: "Failed to store playback session" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -288,6 +343,14 @@ Deno.serve(async (req) => {
     const signedUrl = await presignR2Url(key, ttl);
 
     const hlsUrl = `${hlsWorkerBaseUrl}/${trackId}/master.m3u8?token=${encodeURIComponent(sessionToken)}`;
+
+    logMonitoringEvent(admin, {
+      function_name: "mint-playback-url",
+      event_type: "success",
+      status: 200,
+      latency_ms: Date.now() - startTime,
+      metadata: { track_id: trackId, file_type: fileType },
+    }).catch(() => {});
 
     return new Response(
       JSON.stringify({
