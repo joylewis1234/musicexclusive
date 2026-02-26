@@ -1,4 +1,4 @@
-import { Lock, Crown, Globe } from "lucide-react";
+import { Flame, Crown, Globe } from "lucide-react";
 import type { ImagePosition } from "../TemplateCanvas";
 
 interface Props {
@@ -85,9 +85,9 @@ export const CinematicArtistPhoto = ({
         background: "hsla(0, 0%, 0%, 0.6)",
         borderRadius: "4px",
       }}>
-        <Lock className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
+        <Flame className="w-7 h-7" style={{ color: "hsl(25, 95%, 55%)" }} />
         <span className="font-bold uppercase" style={{ fontSize: "24px", color: "hsl(42, 75%, 55%)", letterSpacing: "0.4em" }}>
-          Exclusive Release
+          Exclusive Music Release
         </span>
       </div>
 
