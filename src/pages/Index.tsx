@@ -107,7 +107,7 @@ const Index = () => {
             <span className="text-muted-foreground">THE FUTURE OF MUSIC IS HERE.</span>
           </h1>
           
-          <div className="text-muted-foreground text-base md:text-lg mb-8 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3">
+          <div className="text-muted-foreground text-base md:text-lg mb-8 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3" style={{ textShadow: '0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.15)' }}>
             <p>First access. First listen. Before anywhere else.</p>
             <p>Exclusive music from your favorite artists, only on Music Exclusive.</p>
             <p>Enter the Vault Lottery for a chance to unlock exclusive access.</p>
