@@ -42,31 +42,55 @@ const PreviewDiscovery = () => {
     staleTime: 60_000,
   });
 
-  // ── Upsell modal logic: 60s after first preview play ──
+  // ── Upsell modal logic: 25s of cumulative preview playback ──
   const [showUpsell, setShowUpsell] = useState(false);
-  const firstPlayTimeRef = useRef<number | null>(null);
-  const upsellTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const cumulativePlayRef = useRef<number>(0);
+  const playStartRef = useRef<number | null>(null);
+  const upsellIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Track cumulative playback and trigger upsell at 25s
   useEffect(() => {
-    if (isPlaying && firstPlayTimeRef.current === null) {
-      firstPlayTimeRef.current = Date.now();
-      upsellTimerRef.current = setTimeout(() => {
-        setShowUpsell(true);
-      }, 60_000);
+    if (isPlaying) {
+      playStartRef.current = Date.now();
+      upsellIntervalRef.current = setInterval(() => {
+        if (playStartRef.current === null) return;
+        const elapsed = (Date.now() - playStartRef.current) / 1000;
+        const total = cumulativePlayRef.current + elapsed;
+        if (total >= 25) {
+          setShowUpsell(true);
+          stopPreview();
+          if (upsellIntervalRef.current) clearInterval(upsellIntervalRef.current);
+          // bank the time
+          cumulativePlayRef.current = total;
+          playStartRef.current = null;
+        }
+      }, 250);
+    } else {
+      // bank elapsed time when playback stops
+      if (playStartRef.current !== null) {
+        cumulativePlayRef.current += (Date.now() - playStartRef.current) / 1000;
+        playStartRef.current = null;
+      }
+      if (upsellIntervalRef.current) {
+        clearInterval(upsellIntervalRef.current);
+        upsellIntervalRef.current = null;
+      }
     }
-  }, [isPlaying]);
+    return () => {
+      if (upsellIntervalRef.current) clearInterval(upsellIntervalRef.current);
+    };
+  }, [isPlaying, stopPreview]);
 
   const handleDismissUpsell = useCallback(() => {
     setShowUpsell(false);
-    upsellTimerRef.current = setTimeout(() => {
-      setShowUpsell(true);
-    }, 60_000);
+    // Reset cumulative counter so modal reappears after another 25s of playback
+    cumulativePlayRef.current = 0;
   }, []);
 
   useEffect(() => {
     return () => {
       stopPreview();
-      if (upsellTimerRef.current) clearTimeout(upsellTimerRef.current);
+      if (upsellIntervalRef.current) clearInterval(upsellIntervalRef.current);
     };
   }, [stopPreview]);
 

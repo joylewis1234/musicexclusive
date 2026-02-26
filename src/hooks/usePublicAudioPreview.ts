@@ -11,7 +11,7 @@ interface UsePublicAudioPreviewReturn {
   stopPreview: () => void;
 }
 
-const PREVIEW_DURATION = 15;
+const PREVIEW_DURATION = 25;
 
 /**
  * Public audio preview hook — calls mint-playback-url-public-preview
