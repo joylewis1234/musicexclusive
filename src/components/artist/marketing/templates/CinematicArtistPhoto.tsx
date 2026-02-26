@@ -80,13 +80,13 @@ export const CinematicArtistPhoto = ({
       {/* ——— CONTENT ——— */}
 
       {/* Top badge */}
-      <div className="relative z-10 mt-[48px] flex items-center gap-3 px-10 py-3" style={{
+      <div className="relative z-10 mt-[44px] flex items-center gap-3 px-10 py-3" style={{
         border: "1.5px solid hsla(42, 70%, 50%, 0.6)",
         background: "hsla(0, 0%, 0%, 0.6)",
         borderRadius: "4px",
       }}>
-        <Lock className="w-6 h-6" style={{ color: "hsl(42, 75%, 55%)" }} />
-        <span className="text-[20px] font-bold uppercase" style={{ color: "hsl(42, 75%, 55%)", letterSpacing: "0.35em" }}>
+        <Lock className="w-7 h-7" style={{ color: "hsl(42, 75%, 55%)" }} />
+        <span className="font-bold uppercase" style={{ fontSize: "24px", color: "hsl(42, 75%, 55%)", letterSpacing: "0.4em" }}>
           Exclusive Release
         </span>
       </div>
@@ -113,31 +113,32 @@ export const CinematicArtistPhoto = ({
       </div>
 
       {/* Text block */}
-      <div className="relative z-10 flex flex-col items-center text-center mt-[20px] px-[80px]">
-        <p className="font-semibold italic" style={{ fontSize: "26px", color: "hsl(42, 55%, 65%)", letterSpacing: "0.05em" }}>
+      <div className="relative z-10 flex flex-col items-center text-center mt-[16px] px-[80px]">
+        <p className="font-semibold italic" style={{ fontSize: "34px", color: "hsl(42, 55%, 65%)", letterSpacing: "0.05em" }}>
           Now Streaming On
         </p>
         <h2 className="font-extrabold uppercase" style={{
-          fontSize: "58px", color: "hsl(0, 0%, 96%)", letterSpacing: "0.14em", lineHeight: 1.05,
-          textShadow: "0 0 30px hsla(42, 70%, 50%, 0.3), 0 2px 4px hsla(0, 0%, 0%, 0.5)", marginTop: "2px",
+          fontSize: "76px", color: "hsl(0, 0%, 96%)", letterSpacing: "0.14em", lineHeight: 1.0,
+          textShadow: "0 0 40px hsla(42, 70%, 50%, 0.35), 0 2px 6px hsla(0, 0%, 0%, 0.6)", marginTop: "0px",
         }}>
           Music Exclusive
         </h2>
-        <p className="font-semibold" style={{
-          fontSize: "30px", color: "hsl(42, 65%, 62%)", marginTop: "6px",
-          maxWidth: "700px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        <p className="font-semibold italic" style={{
+          fontSize: "42px", color: "hsl(42, 65%, 62%)", marginTop: "4px",
+          maxWidth: "800px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          fontFamily: "'Georgia', 'Times New Roman', serif",
         }}>
           {artistName || "Artist Name"}
         </p>
         <h3 className="font-extrabold uppercase" style={{
-          fontSize: "42px", color: "hsl(0, 0%, 100%)", letterSpacing: "0.06em", lineHeight: 1.15,
-          maxWidth: "800px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          textShadow: "0 2px 8px hsla(0, 0%, 0%, 0.5)",
+          fontSize: "56px", color: "hsl(0, 0%, 100%)", letterSpacing: "0.06em", lineHeight: 1.1,
+          maxWidth: "900px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          textShadow: "0 2px 10px hsla(0, 0%, 0%, 0.6)",
         }}>
           {trackTitle || "Track Title"}
         </h3>
         {releaseDate && (
-          <p className="font-semibold italic" style={{ fontSize: "22px", color: "hsl(0, 70%, 55%)", marginTop: "2px" }}>
+          <p className="font-bold italic" style={{ fontSize: "36px", color: "hsl(0, 70%, 50%)", marginTop: "0px", fontFamily: "'Georgia', 'Times New Roman', serif" }}>
             {releaseDate}
           </p>
         )}
@@ -150,29 +151,29 @@ export const CinematicArtistPhoto = ({
       }} />
 
       {/* Domain line */}
-      <div className="relative z-10 flex flex-col items-center mt-[12px] gap-[2px]">
-        <span className="uppercase font-semibold" style={{ fontSize: "14px", color: "hsl(0, 0%, 50%)", letterSpacing: "0.2em" }}>
+      <div className="relative z-10 flex flex-col items-center mt-[10px] gap-[2px]">
+        <span className="uppercase font-semibold" style={{ fontSize: "18px", color: "hsl(0, 0%, 50%)", letterSpacing: "0.25em" }}>
           Only Exclusively Released On
         </span>
         <div className="flex items-center gap-2">
-          <Globe className="w-4 h-4" style={{ color: "hsl(0, 0%, 60%)" }} />
-          <span className="font-bold" style={{ fontSize: "21px", color: "hsl(0, 0%, 88%)" }}>
+          <Globe className="w-5 h-5" style={{ color: "hsl(0, 0%, 60%)" }} />
+          <span className="font-bold" style={{ fontSize: "26px", color: "hsl(0, 0%, 90%)" }}>
             www.TheMusicIsExclusive.com
           </span>
         </div>
       </div>
 
       {/* Footer brand lockup */}
-      <div className="relative z-10 mt-auto mb-[40px] flex flex-col items-center gap-[6px]">
+      <div className="relative z-10 mt-auto mb-[36px] flex flex-col items-center gap-[6px]">
         <div className="flex items-center gap-3">
-          <Crown className="w-5 h-5" style={{ color: "hsl(42, 75%, 55%)" }} />
-          <span className="font-extrabold uppercase" style={{ fontSize: "22px", color: "hsl(0, 0%, 92%)", letterSpacing: "0.25em" }}>
+          <Crown className="w-6 h-6" style={{ color: "hsl(42, 75%, 55%)" }} />
+          <span className="font-extrabold uppercase" style={{ fontSize: "28px", color: "hsl(0, 0%, 92%)", letterSpacing: "0.25em" }}>
             Music Exclusive
           </span>
-          <Crown className="w-5 h-5" style={{ color: "hsl(42, 75%, 55%)" }} />
+          <Crown className="w-6 h-6" style={{ color: "hsl(42, 75%, 55%)" }} />
         </div>
-        <span className="uppercase font-bold px-5 py-1" style={{
-          fontSize: "13px", color: "hsl(0, 70%, 50%)", letterSpacing: "0.3em",
+        <span className="uppercase font-bold px-6 py-1.5" style={{
+          fontSize: "16px", color: "hsl(0, 70%, 50%)", letterSpacing: "0.3em",
           border: "1px solid hsla(42, 70%, 50%, 0.3)", borderRadius: "2px", background: "hsla(0, 0%, 0%, 0.4)",
         }}>
           {ctaLine}
