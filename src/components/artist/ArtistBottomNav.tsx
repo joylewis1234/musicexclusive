@@ -1,11 +1,12 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { LayoutDashboard, User, DollarSign, Send } from "lucide-react";
+import { LayoutDashboard, User, DollarSign, Send, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { path: "/artist/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { path: "/artist/invites", label: "Invites", icon: Send },
-  { path: "/artist/profile/edit", label: "My Profile", icon: User },
+  { path: "/artist/marketing-studio", label: "Studio", icon: Sparkles },
+  { path: "/artist/profile/edit", label: "Profile", icon: User },
   { path: "/artist/earnings", label: "Earnings", icon: DollarSign },
 ];
 
