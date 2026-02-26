@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { TemplateCanvas, TemplateType, TEMPLATE_DIMENSIONS } from "@/components/artist/marketing/TemplateCanvas";
 import { useTemplateExport } from "@/hooks/useTemplateExport";
+import { useVideoExport } from "@/hooks/useVideoExport";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
-import { Download, Upload, Sparkles, Image, Layers, Move } from "lucide-react";
+import { Download, Upload, Sparkles, Image, Layers, Move, Video } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -18,6 +19,7 @@ const TEMPLATES: { id: TemplateType; label: string; icon: React.ReactNode; desc:
 const MarketingStudio = () => {
   const { artistProfile } = useArtistProfile();
   const { canvasRef, exportPng, isExporting } = useTemplateExport();
+  const { exportVideo, isExportingVideo } = useVideoExport();
 
   const [template, setTemplate] = useState<TemplateType>("artist-photo");
   const [artistName, setArtistName] = useState(artistProfile?.artist_name || "");
@@ -69,15 +71,24 @@ const MarketingStudio = () => {
   const previewMaxW = 400;
   const previewScale = previewMaxW / dims.width;
 
+  const imagePosition = {
+    scale: imageScale / 100,
+    objectPosition: `${imageOffsetX}% ${imageOffsetY}%`,
+  };
+
   const handleExport = useCallback(() => {
     const safeName = `${(artistName || "promo").replace(/\s+/g, "-")}-${(trackTitle || "track").replace(/\s+/g, "-")}`.toLowerCase();
     exportPng({ width: dims.width, height: dims.height, fileName: `${safeName}-${dims.width}x${dims.height}.png` });
   }, [exportPng, dims, artistName, trackTitle]);
 
-  const imagePosition = {
-    scale: imageScale / 100,
-    objectPosition: `${imageOffsetX}% ${imageOffsetY}%`,
-  };
+  const handleVideoExport = useCallback(() => {
+    exportVideo({
+      width: dims.width, height: dims.height, template,
+      imageUrl: localImageUrl, artistName, trackTitle,
+      releaseDate: releaseDate || undefined, ctaLine,
+      imagePosition,
+    });
+  }, [exportVideo, dims, template, localImageUrl, artistName, trackTitle, releaseDate, ctaLine, imagePosition]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -252,6 +263,17 @@ const MarketingStudio = () => {
           >
             <Download className="w-4 h-4" />
             {isExporting ? "Exporting…" : `Download PNG (${dims.width}×${dims.height})`}
+          </Button>
+
+          <Button
+            onClick={handleVideoExport}
+            disabled={isExportingVideo || !localImageUrl}
+            variant="outline"
+            className="w-full gap-2"
+            size="lg"
+          >
+            <Video className="w-4 h-4" />
+            {isExportingVideo ? "Recording Video…" : `Download Video (${dims.width}×${dims.height})`}
           </Button>
         </div>
 
