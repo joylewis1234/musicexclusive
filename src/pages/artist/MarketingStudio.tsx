@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -32,11 +32,11 @@ const MarketingStudio = () => {
   const [imageOffsetY, setImageOffsetY] = useState(50);
 
   // Pre-fill artist name when profile loads
-  useState(() => {
+  useEffect(() => {
     if (artistProfile?.artist_name && !artistName) {
       setArtistName(artistProfile.artist_name);
     }
-  });
+  }, [artistProfile?.artist_name]);
 
   const handleImageUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
