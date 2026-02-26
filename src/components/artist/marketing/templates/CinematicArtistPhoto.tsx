@@ -1,6 +1,6 @@
 import { Flame, Crown, Globe } from "lucide-react";
 import type { ImagePosition } from "../TemplateCanvas";
-import { ACCENT_COLORS, type AccentColorKey } from "../TemplateCanvas";
+import { ACCENT_COLORS, type AccentColorKey } from "../colors";
 
 interface Props {
   imageUrl: string | null;
