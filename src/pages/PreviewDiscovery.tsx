@@ -1,20 +1,30 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { PreviewHeader } from "@/components/preview/PreviewHeader";
 import { SearchFilterBar } from "@/components/discovery/SearchFilterBar";
-import { PreviewTrackCard } from "@/components/preview/PreviewTrackCard";
+import { PreviewTrackCard, PreviewTrack } from "@/components/preview/PreviewTrackCard";
 import { PreviewUpsellModal } from "@/components/preview/PreviewUpsellModal";
 import { usePublicAudioPreview } from "@/hooks/usePublicAudioPreview";
-import { useTracks, DbTrack } from "@/hooks/useTracks";
-import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
-import { Genre } from "@/data/discoveryArtists";
+import { supabase } from "@/integrations/supabase/client";
+import { DiscoveryGenre } from "@/data/genres";
 import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
+
+/** Fetch preview-public tracks via the SECURITY DEFINER RPC */
+const fetchPublicPreviewTracks = async (): Promise<PreviewTrack[]> => {
+  const { data, error } = await supabase.rpc("get_public_preview_tracks");
+  if (error) {
+    console.error("[PreviewDiscovery] RPC error:", error);
+    return [];
+  }
+  return (data ?? []) as PreviewTrack[];
+};
 
 const PreviewDiscovery = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedGenre, setSelectedGenre] = useState<Genre>("All Genres");
+  const [selectedGenre, setSelectedGenre] = useState<DiscoveryGenre>("All Genres");
 
   const {
     currentPreviewId,
@@ -26,17 +36,17 @@ const PreviewDiscovery = () => {
     stopPreview,
   } = usePublicAudioPreview();
 
-  const { tracks, isLoading: isLoadingTracks } = useTracks();
-
-  const trackIds = useMemo(() => tracks.map((t) => t.id), [tracks]);
-  const { getLikeState } = useTrackLikesBatch(trackIds, null);
+  const { data: tracks = [], isLoading: isLoadingTracks } = useQuery({
+    queryKey: ["public-preview-tracks"],
+    queryFn: fetchPublicPreviewTracks,
+    staleTime: 60_000,
+  });
 
   // ── Upsell modal logic: 60s after first preview play ──
   const [showUpsell, setShowUpsell] = useState(false);
   const firstPlayTimeRef = useRef<number | null>(null);
   const upsellTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Track when first preview starts
   useEffect(() => {
     if (isPlaying && firstPlayTimeRef.current === null) {
       firstPlayTimeRef.current = Date.now();
@@ -48,7 +58,6 @@ const PreviewDiscovery = () => {
 
   const handleDismissUpsell = useCallback(() => {
     setShowUpsell(false);
-    // Show again after another 60 seconds
     upsellTimerRef.current = setTimeout(() => {
       setShowUpsell(true);
     }, 60_000);
@@ -78,12 +87,11 @@ const PreviewDiscovery = () => {
     });
   }, [tracks, searchQuery, selectedGenre]);
 
-  const handlePreview = (track: DbTrack) => {
+  const handlePreview = (track: PreviewTrack) => {
     if (currentPreviewId === track.id && isPlaying) {
       stopPreview();
     } else {
-      const startSeconds = track.preview_start_seconds || 0;
-      startPreview(track.id, startSeconds);
+      startPreview(track.id, track.preview_start_seconds || 0);
     }
   };
 
@@ -134,7 +142,6 @@ const PreviewDiscovery = () => {
                 isPreviewLoading={currentPreviewId === track.id && isPreviewLoading}
                 previewProgress={currentPreviewId === track.id ? previewProgress : 0}
                 previewError={currentPreviewId === track.id ? previewError : null}
-                likeCount={getLikeState(track.id).count}
                 onPreview={() => handlePreview(track)}
                 onGetAccess={handleGetAccess}
               />
@@ -145,7 +152,6 @@ const PreviewDiscovery = () => {
 
       <Footer />
 
-      {/* Upsell modal */}
       <PreviewUpsellModal open={showUpsell} onDismiss={handleDismissUpsell} />
     </div>
   );

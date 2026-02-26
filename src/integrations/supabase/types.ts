@@ -1117,6 +1117,7 @@ export type Database = {
           full_audio_url: string | null
           genre: string | null
           id: string
+          is_preview_public: boolean
           like_count: number
           preview_audio_key: string | null
           preview_audio_url: string | null
@@ -1138,6 +1139,7 @@ export type Database = {
           full_audio_url?: string | null
           genre?: string | null
           id?: string
+          is_preview_public?: boolean
           like_count?: number
           preview_audio_key?: string | null
           preview_audio_url?: string | null
@@ -1159,6 +1161,7 @@ export type Database = {
           full_audio_url?: string | null
           genre?: string | null
           id?: string
+          is_preview_public?: boolean
           like_count?: number
           preview_audio_key?: string | null
           preview_audio_url?: string | null
@@ -1402,6 +1405,25 @@ export type Database = {
           artist_name: string
           avatar_url: string
           like_count: number
+        }[]
+      }
+      get_public_preview_audio_key: {
+        Args: { p_track_id: string }
+        Returns: string
+      }
+      get_public_preview_tracks: {
+        Args: never
+        Returns: {
+          artist_avatar_url: string
+          artist_id: string
+          artist_name: string
+          artwork_url: string
+          genre: string
+          has_preview: boolean
+          id: string
+          like_count: number
+          preview_start_seconds: number
+          title: string
         }[]
       }
       get_user_role: {
