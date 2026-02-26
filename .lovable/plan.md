@@ -1,123 +1,71 @@
 
 
-# Monitoring + Guardrail Layer Plan
+# Monitoring Layer: Shared Helper, Metrics Endpoint & Playback Telemetry
 
-## Summary
-Add a `monitoring_events` table with strict service-role-only access, instrument the 5 critical edge functions with lightweight structured event logging, and create documentation.
-
----
-
-## 1. Database Migration
-
-Create `monitoring_events` table with the exact SQL from the request, plus:
-- RLS enabled, all privileges revoked from `anon`/`authenticated`
-- Single service-role-only policy for ALL operations
-- Two indexes: `created_at DESC` and composite `(function_name, event_type, created_at DESC)`
-
-```sql
-CREATE TABLE IF NOT EXISTS public.monitoring_events (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  created_at timestamptz NOT NULL DEFAULT now(),
-  function_name text NOT NULL,
-  event_type text NOT NULL,
-  status integer NOT NULL,
-  latency_ms integer,
-  stage text,
-  error_code text,
-  error_message text,
-  conflict boolean NOT NULL DEFAULT false,
-  retry_count integer NOT NULL DEFAULT 0,
-  contention_count integer NOT NULL DEFAULT 0,
-  ledger_written boolean,
-  metadata jsonb
-);
-
-CREATE INDEX IF NOT EXISTS monitoring_events_created_at_idx
-  ON public.monitoring_events (created_at DESC);
-CREATE INDEX IF NOT EXISTS monitoring_events_function_type_idx
-  ON public.monitoring_events (function_name, event_type, created_at DESC);
-
-ALTER TABLE public.monitoring_events ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON TABLE public.monitoring_events FROM anon, authenticated;
-
--- Service-role-only policy
-CREATE POLICY "Service role can manage monitoring events"
-  ON public.monitoring_events FOR ALL
-  USING ((auth.jwt() ->> 'role') = 'service_role')
-  WITH CHECK ((auth.jwt() ->> 'role') = 'service_role');
-
--- Admin read-only policy
-CREATE POLICY "Admins can view monitoring events"
-  ON public.monitoring_events FOR SELECT
-  USING (has_role(auth.uid(), 'admin'::app_role));
-```
+## Current State
+- All 5 critical functions (`charge-stream`, `mint-playback-url`, `mint-playback-url-public-preview`, `verify-checkout`, `stripe-webhook`) have **inline** `logMonitoringEvent` helpers — duplicated across each file.
+- No shared monitoring module exists (only `_shared/verify-admin.ts`).
+- No `monitoring-metrics` or `playback-telemetry` functions exist yet.
 
 ---
 
-## 2. Edge Function Instrumentation
+## Changes
 
-Add a non-blocking `logMonitoringEvent()` helper call at the end of these 5 critical functions. The helper uses the existing service-role client (already present in each function) to insert one row. It is fire-and-forget (`.catch(() => {})`) so it never blocks or fails the main response.
+### 1. Create `supabase/functions/_shared/monitoring.ts`
+Shared helper with `recordMonitoringEvent()` that:
+- Creates its own service-role client (lazy singleton)
+- Normalizes fields (`error_message` truncation, boolean coercion, default `0` for retry/contention counts)
+- Console-logs the event payload for diagnostics
+- Inserts into `monitoring_events` with error swallowing
 
-### Functions to instrument:
+### 2. Create `supabase/functions/monitoring-metrics/index.ts`
+Admin-only endpoint using `verifyAdmin()` from `_shared/verify-admin.ts`:
+- Accepts `?window=24h` (default 24h, max 7d)
+- Queries `monitoring_events` for the window
+- Returns aggregated metrics per function: `p95`, `p99` latency, `5xx` rate, `conflict/retry/contention` rates, `ledgerWritten` rate, status code distribution
+- Add `[functions.monitoring-metrics] verify_jwt = false` to config.toml
 
-| Function | Key events to capture |
-|---|---|
-| `charge-stream` | success, idempotency duplicate, contention/409, insufficient credits, auth failure |
-| `mint-playback-url` | success, access denied, track not found, session insert error |
-| `mint-playback-url-public-preview` | success, rate limited, no preview available, RPC error |
-| `verify-checkout` | success, already processed, payment not completed, ledger error |
-| `stripe-webhook` | checkout.session.completed, invoice.payment_succeeded, credit apply error, signature invalid |
+### 3. Create `supabase/functions/playback-telemetry/index.ts`
+Authenticated endpoint (validates JWT via `getUser()`):
+- Accepts POST with `{ trackId, sessionId, status, latencyMs, range, cacheStatus, originStatus, originLatencyMs }`
+- Validates/sanitizes all fields
+- Writes to `monitoring_events` with `function_name = "playback"`, `event_type = "playback_error" | "playback_request"`
+- Includes client IP, user agent, CF headers in metadata
+- Add `[functions.playback-telemetry] verify_jwt = false` to config.toml
 
-### Helper pattern (added inline at top of each function file):
+### 4. Refactor 5 existing functions to use shared helper
+Replace inline `logMonitoringEvent` in each function with:
 ```typescript
-async function logMonitoringEvent(
-  client: SupabaseClient,
-  event: {
-    function_name: string;
-    event_type: string;
-    status: number;
-    latency_ms?: number;
-    stage?: string;
-    error_code?: string;
-    error_message?: string;
-    conflict?: boolean;
-    retry_count?: number;
-    contention_count?: number;
-    ledger_written?: boolean;
-    metadata?: Record<string, unknown>;
-  }
-) {
-  try {
-    await client.from("monitoring_events").insert(event);
-  } catch (_) { /* never block main flow */ }
-}
+import { recordMonitoringEvent } from "../_shared/monitoring.ts";
 ```
+- **charge-stream**: Switch to `performance.now()`, add `stage` tracking, pass `conflict`/`retry_count`/`contention_count`/`ledger_written` fields
+- **mint-playback-url**: Switch to `performance.now()`, add `stage` tracking, include `session_id`/`r2_key`/`session_ttl_seconds` in metadata
+- **mint-playback-url-public-preview**: Replace `logMonitoringEvent(monitorClient, ...)` with `recordMonitoringEvent(...)`
+- **verify-checkout**: Replace inline helper with shared import
+- **stripe-webhook**: Replace inline helper with shared import
 
-Each function captures `startTime = Date.now()` at entry, then calls `logMonitoringEvent(adminClient, { ... latency_ms: Date.now() - startTime ... })` just before returning. No structural changes to the function logic.
+### 5. Update `docs/monitoring-guardrails.md`
+Add documentation for:
+- `monitoring-metrics` endpoint (query params, response shape)
+- `playback-telemetry` endpoint (request body schema)
+- Shared helper module reference
 
 ---
 
-## 3. Documentation
-
-Create `docs/monitoring-guardrails.md` covering:
-- Table schema and access rules
-- Which functions are instrumented and what events they emit
-- Example queries for ops (error rate, p50/p95 latency, contention rate, ledger write failures)
-- Retention guidance (manual cleanup of rows older than 30 days)
-
----
-
-## 4. Files Changed
+## Files Changed
 
 | File | Change |
 |---|---|
-| `supabase/migrations/...` | New migration for `monitoring_events` table |
-| `supabase/functions/charge-stream/index.ts` | Add helper + 4 event log points |
-| `supabase/functions/mint-playback-url/index.ts` | Add helper + 3 event log points |
-| `supabase/functions/mint-playback-url-public-preview/index.ts` | Add helper + 3 event log points |
-| `supabase/functions/verify-checkout/index.ts` | Add helper + 3 event log points |
-| `supabase/functions/stripe-webhook/index.ts` | Add helper + 3 event log points |
-| `docs/monitoring-guardrails.md` | New documentation file |
+| `supabase/functions/_shared/monitoring.ts` | **New** — shared helper |
+| `supabase/functions/monitoring-metrics/index.ts` | **New** — admin metrics endpoint |
+| `supabase/functions/playback-telemetry/index.ts` | **New** — playback telemetry endpoint |
+| `supabase/config.toml` | Add 2 new function entries |
+| `supabase/functions/charge-stream/index.ts` | Replace inline helper with shared import |
+| `supabase/functions/mint-playback-url/index.ts` | Replace inline helper with shared import |
+| `supabase/functions/mint-playback-url-public-preview/index.ts` | Replace inline helper with shared import |
+| `supabase/functions/verify-checkout/index.ts` | Replace inline helper with shared import |
+| `supabase/functions/stripe-webhook/index.ts` | Replace inline helper with shared import |
+| `docs/monitoring-guardrails.md` | Add new endpoint docs |
 
-No frontend changes. No new dependencies. No architecture changes.
+No database changes. No frontend changes. No new dependencies.
 
