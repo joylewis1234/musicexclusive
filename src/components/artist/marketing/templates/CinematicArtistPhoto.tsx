@@ -38,6 +38,23 @@ export const CinematicArtistPhoto = ({
           "radial-gradient(ellipse at 50% 70%, hsla(0, 50%, 20%, 0.10) 0%, transparent 50%)",
       }} />
 
+      {/* Red smoke clouds */}
+      <div className="absolute pointer-events-none" style={{
+        top: "15%", left: "-5%", width: "55%", height: "50%",
+        background: "radial-gradient(ellipse at center, hsla(0, 70%, 30%, 0.22) 0%, hsla(0, 60%, 25%, 0.08) 50%, transparent 75%)",
+        filter: "blur(50px)",
+      }} />
+      <div className="absolute pointer-events-none" style={{
+        top: "35%", right: "-8%", width: "50%", height: "45%",
+        background: "radial-gradient(ellipse at center, hsla(355, 65%, 28%, 0.20) 0%, hsla(0, 55%, 22%, 0.06) 55%, transparent 80%)",
+        filter: "blur(55px)",
+      }} />
+      <div className="absolute pointer-events-none" style={{
+        bottom: "10%", left: "20%", width: "60%", height: "35%",
+        background: "radial-gradient(ellipse at center, hsla(5, 60%, 25%, 0.18) 0%, transparent 70%)",
+        filter: "blur(45px)",
+      }} />
+
       {/* Gold light burst behind hero */}
       <div className="absolute pointer-events-none" style={{
         top: "80px", left: "50%", transform: "translateX(-50%)",
