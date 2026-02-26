@@ -3,13 +3,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { TemplateCanvas, TemplateType, TEMPLATE_DIMENSIONS } from "@/components/artist/marketing/TemplateCanvas";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TemplateCanvas, TemplateType, TEMPLATE_DIMENSIONS, ACCENT_COLORS, type AccentColorKey } from "@/components/artist/marketing/TemplateCanvas";
 import { useTemplateExport } from "@/hooks/useTemplateExport";
 import { useVideoExport } from "@/hooks/useVideoExport";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
-import { Download, Upload, Sparkles, Image, Layers, Move, Video } from "lucide-react";
+import { Download, Upload, Sparkles, Image, Layers, Move, Video, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const COLOR_KEYS = Object.keys(ACCENT_COLORS) as AccentColorKey[];
 
 const TEMPLATES: { id: TemplateType; label: string; icon: React.ReactNode; desc: string }[] = [
   { id: "artist-photo", label: "Cinematic Photo", icon: <Image className="w-5 h-5" />, desc: "Artist portrait with bokeh glow" },
@@ -32,6 +35,10 @@ const MarketingStudio = () => {
   const [imageScale, setImageScale] = useState(100);
   const [imageOffsetX, setImageOffsetX] = useState(50);
   const [imageOffsetY, setImageOffsetY] = useState(50);
+
+  // Color selections
+  const [artistNameColor, setArtistNameColor] = useState<AccentColorKey>("gold");
+  const [ctaColor, setCtaColor] = useState<AccentColorKey>("red");
 
   // Pre-fill artist name when profile loads
   useEffect(() => {
@@ -87,8 +94,10 @@ const MarketingStudio = () => {
       imageUrl: localImageUrl, artistName, trackTitle,
       releaseDate: releaseDate || undefined, ctaLine,
       imagePosition,
+      artistNameColor: ACCENT_COLORS[artistNameColor].hsl,
+      ctaColorHsl: ACCENT_COLORS[ctaColor].hsl,
     });
-  }, [exportVideo, dims, template, localImageUrl, artistName, trackTitle, releaseDate, ctaLine, imagePosition]);
+  }, [exportVideo, dims, template, localImageUrl, artistName, trackTitle, releaseDate, ctaLine, imagePosition, artistNameColor, ctaColor]);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -254,6 +263,56 @@ const MarketingStudio = () => {
             />
           </div>
 
+          {/* Color Options */}
+          <div className="space-y-3 p-3 rounded-lg border border-border bg-card">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-muted-foreground" />
+              <Label className="text-xs text-muted-foreground">Text Colors</Label>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Artist Name Color</Label>
+              <Select value={artistNameColor} onValueChange={(v) => setArtistNameColor(v as AccentColorKey)}>
+                <SelectTrigger>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full border border-border" style={{ background: ACCENT_COLORS[artistNameColor].hsl }} />
+                    <SelectValue />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {COLOR_KEYS.map((k) => (
+                    <SelectItem key={k} value={k}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full border border-border" style={{ background: ACCENT_COLORS[k].hsl }} />
+                        {ACCENT_COLORS[k].label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs">Available Now Color</Label>
+              <Select value={ctaColor} onValueChange={(v) => setCtaColor(v as AccentColorKey)}>
+                <SelectTrigger>
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full border border-border" style={{ background: ACCENT_COLORS[ctaColor].hsl }} />
+                    <SelectValue />
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  {COLOR_KEYS.map((k) => (
+                    <SelectItem key={k} value={k}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full border border-border" style={{ background: ACCENT_COLORS[k].hsl }} />
+                        {ACCENT_COLORS[k].label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           {/* Download */}
           <Button
             onClick={handleExport}
@@ -297,6 +356,8 @@ const MarketingStudio = () => {
                 releaseDate={releaseDate || undefined}
                 ctaLine={ctaLine}
                 imagePosition={imagePosition}
+                artistNameColor={artistNameColor}
+                ctaColor={ctaColor}
               />
             </div>
           </div>
