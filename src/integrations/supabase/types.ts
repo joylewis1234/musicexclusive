@@ -659,6 +659,57 @@ export type Database = {
           },
         ]
       }
+      monitoring_events: {
+        Row: {
+          conflict: boolean
+          contention_count: number
+          created_at: string
+          error_code: string | null
+          error_message: string | null
+          event_type: string
+          function_name: string
+          id: string
+          latency_ms: number | null
+          ledger_written: boolean | null
+          metadata: Json | null
+          retry_count: number
+          stage: string | null
+          status: number
+        }
+        Insert: {
+          conflict?: boolean
+          contention_count?: number
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          event_type: string
+          function_name: string
+          id?: string
+          latency_ms?: number | null
+          ledger_written?: boolean | null
+          metadata?: Json | null
+          retry_count?: number
+          stage?: string | null
+          status: number
+        }
+        Update: {
+          conflict?: boolean
+          contention_count?: number
+          created_at?: string
+          error_code?: string | null
+          error_message?: string | null
+          event_type?: string
+          function_name?: string
+          id?: string
+          latency_ms?: number | null
+          ledger_written?: boolean | null
+          metadata?: Json | null
+          retry_count?: number
+          stage?: string | null
+          status?: number
+        }
+        Relationships: []
+      }
       payout_batches: {
         Row: {
           artist_user_id: string
