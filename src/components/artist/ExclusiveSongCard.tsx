@@ -61,9 +61,10 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   const [isSavingPreview, setIsSavingPreview] = useState(false);
   const [detectedDuration, setDetectedDuration] = useState<number>(song.duration || 180);
   const [showDebug, setShowDebug] = useState(false);
+  const [previewAudioUrl, setPreviewAudioUrl] = useState<string | null>(null);
 
   // Audio readiness state
-  const [audioReady, setAudioReady] = useState<boolean | null>(null); // null = not checked
+  const [audioReady, setAudioReady] = useState<boolean | null>(null);
   const [audioChecking, setAudioChecking] = useState(false);
 
   const isFailed = song.status === "failed";
@@ -76,16 +77,53 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   const [isPlayingFull, setIsPlayingFull] = useState(false);
   const [isPlayingHook, setIsPlayingHook] = useState(false);
 
-  // Audio is ready if track has a full_audio_key and is not finalizing
-  // (actual playback uses mint-playback-url to get signed URLs)
-  useEffect(() => {
-    if (isFinalizing || !song.full_audio_key) {
-      setAudioReady(false);
-    } else {
-      setAudioReady(true);
+  // Signed URL helper
+  const getSignedAudioUrl = useCallback(async () => {
+    const { data, error } = await supabase.functions.invoke("mint-playback-url", {
+      body: { trackId: song.id, fileType: "audio" },
+    });
+    if (error || !data?.url) {
+      console.error("[ExclusiveSongCard] mint-playback-url failed:", error);
+      toast.error("Failed to fetch playback URL");
+      return null;
     }
-    setAudioChecking(false);
-  }, [song.full_audio_key, isFinalizing]);
+    return data.url as string;
+  }, [song.id]);
+
+  // Audio readiness check via HEAD request against signed URL
+  useEffect(() => {
+    if (!song.full_audio_key || isFinalizing) {
+      setAudioReady(false);
+      return;
+    }
+    let cancelled = false;
+    setAudioChecking(true);
+    (async () => {
+      const signedUrl = await getSignedAudioUrl();
+      if (!signedUrl || cancelled) {
+        setAudioReady(false);
+        setAudioChecking(false);
+        return;
+      }
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+      try {
+        const resp = await fetch(signedUrl, { method: "HEAD", signal: controller.signal });
+        clearTimeout(timer);
+        if (!cancelled) {
+          setAudioReady(resp.ok);
+          setAudioChecking(false);
+        }
+      } catch {
+        clearTimeout(timer);
+        if (!cancelled) {
+          setAudioReady(false);
+          setAudioChecking(false);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [song.full_audio_key, isFinalizing, getSignedAudioUrl]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -113,7 +151,7 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
 
   const canPlay = !!song.full_audio_key && audioReady === true && !isFinalizing;
 
-  const handlePlayFull = () => {
+  const handlePlayFull = async () => {
     if (isPlayingFull) {
       stopPlayback();
       return;
@@ -125,21 +163,27 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     }
     stopPlayback();
 
-    const audio = new Audio(song.full_audio_url!);
+    const audio = new Audio();
     audioRef.current = audio;
-    audio.onended = () => {
+
+    const signedUrl = await getSignedAudioUrl();
+    if (!signedUrl) {
       setIsPlayingFull(false);
-    };
+      return;
+    }
+
+    audio.src = signedUrl;
+    audio.onended = () => setIsPlayingFull(false);
     audio.onerror = () => {
       toast.error("Failed to load audio");
       setIsPlayingFull(false);
     };
-    audio.play().then(() => setIsPlayingFull(true)).catch(() => {
-      toast.error("Playback failed");
-    });
+    audio.play()
+      .then(() => setIsPlayingFull(true))
+      .catch(() => toast.error("Playback failed"));
   };
 
-  const handlePlayHook = () => {
+  const handlePlayHook = async () => {
     if (isPlayingHook) {
       stopPlayback();
       return;
@@ -152,9 +196,16 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     stopPlayback();
 
     const start = song.preview_start_seconds || 0;
-    const audio = new Audio(song.full_audio_url!);
+    const audio = new Audio();
     audioRef.current = audio;
 
+    const signedUrl = await getSignedAudioUrl();
+    if (!signedUrl) {
+      setIsPlayingHook(false);
+      return;
+    }
+
+    audio.src = signedUrl;
     audio.onloadedmetadata = () => {
       audio.currentTime = start;
     };
@@ -168,17 +219,19 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
         audio.pause();
         setIsPlayingHook(false);
       }, 15000);
-    }).catch(() => {
-      toast.error("Playback failed");
-    });
+    }).catch(() => toast.error("Playback failed"));
   };
 
-  // When the Hook dialog opens, detect actual audio duration from the URL
+  // Duration detection via signed URL
   useEffect(() => {
-    if (!isPreviewEditOpen || !song.full_audio_url) return;
+    if (!isPreviewEditOpen || !song.full_audio_key) return;
 
     let cancelled = false;
-    getAudioDurationFromUrl(song.full_audio_url, song.duration || 180).then((dur) => {
+    (async () => {
+      const signedUrl = await getSignedAudioUrl();
+      if (!signedUrl || cancelled) return;
+
+      const dur = await getAudioDurationFromUrl(signedUrl, song.duration || 180);
       if (!cancelled && dur > 0) {
         setDetectedDuration(dur);
         if (dur !== (song.duration || 180)) {
@@ -191,10 +244,20 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
             });
         }
       }
-    });
+    })();
     return () => { cancelled = true; };
-  }, [isPreviewEditOpen, song.full_audio_url, song.duration, song.id]);
+  }, [isPreviewEditOpen, song.full_audio_key, song.duration, song.id, getSignedAudioUrl]);
 
+  // Fetch signed URL for PreviewTimeSelector when dialog opens
+  useEffect(() => {
+    if (!isPreviewEditOpen) return;
+    let cancelled = false;
+    (async () => {
+      const signedUrl = await getSignedAudioUrl();
+      if (!cancelled) setPreviewAudioUrl(signedUrl);
+    })();
+    return () => { cancelled = true; };
+  }, [isPreviewEditOpen, getSignedAudioUrl]);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -263,7 +326,7 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
             <div className="relative flex-shrink-0 ml-2">
               <div className="absolute -inset-1 rounded-xl bg-primary/20 blur-md opacity-0 group-hover:opacity-50 transition-opacity" />
               <div className="relative w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden bg-muted/20 border border-white/[0.08] shadow-lg">
-                {song.artwork_url ? (
+                {song.artwork_key ? (
                   <SignedArtwork
                     trackId={song.id}
                     alt={song.title}
@@ -405,8 +468,8 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
               <div className="mt-1 p-2 rounded-lg bg-black/30 text-[9px] text-muted-foreground/60 font-mono space-y-0.5 break-all">
                 <p>trackId: {song.id}</p>
                 <p>status: {song.status || "unknown"}</p>
-                <p>artwork_url: {song.artwork_url || "null"}</p>
-                <p>full_audio_url: {song.full_audio_url ? song.full_audio_url.slice(0, 60) + "…" : "null"}</p>
+                <p>artwork_key: {song.artwork_key || "null"}</p>
+                <p>full_audio_key: {song.full_audio_key || "null"}</p>
                 <p>audioReady: {String(audioReady)} | checking: {String(audioChecking)}</p>
                 <p>isFinalizing: {String(isFinalizing)}</p>
               </div>
@@ -464,7 +527,7 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
 
           <div className="py-4">
             <PreviewTimeSelector
-              audioUrl={song.full_audio_url}
+              audioUrl={previewAudioUrl}
               audioDuration={detectedDuration}
               previewStartSeconds={previewStartSeconds}
               onPreviewStartChange={setPreviewStartSeconds}
