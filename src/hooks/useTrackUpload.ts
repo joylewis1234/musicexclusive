@@ -365,6 +365,20 @@ export function useTrackUpload() {
           throw new Error(msg);
         }
 
+        // ── Auto-cleanup stale "uploading" drafts (>10 min, no keys) ──
+        try {
+          const cleanupUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${artistId}&status=eq.uploading&full_audio_key=is.null&artwork_key=is.null&created_at=lt.${new Date(Date.now() - 10 * 60 * 1000).toISOString()}`;
+          const cleanupResp = await fetch(cleanupUrl, {
+            method: "DELETE",
+            headers: {
+              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              Authorization: `Bearer ${currentAccessToken}`,
+              Prefer: "return=minimal",
+            },
+          });
+          if (cleanupResp.ok) console.log("[Upload] Cleaned up stale uploading drafts");
+        } catch { /* best-effort */ }
+
         // ── Step 3: Create track draft via Edge Function ──
         let trackId = state.trackId;
         if (!trackId || !resumeFrom || resumeFrom === "session_check" || resumeFrom === "db_insert") {
