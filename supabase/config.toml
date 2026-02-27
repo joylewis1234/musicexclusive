@@ -93,10 +93,7 @@ verify_jwt = false
 [functions.create-track-draft]
 verify_jwt = false
 
-[functions.initiate-multipart-upload]
-verify_jwt = false
-
-[functions.sign-upload-part]
+[functions.upload-part-proxy]
 verify_jwt = false
 
 [functions.complete-multipart-upload]
