@@ -26,7 +26,7 @@ type SetupFormData = z.infer<typeof setupSchema>;
 
 const ArtistSetupAccount = () => {
   const navigate = useNavigate();
-  const { refreshRole } = useAuth();
+  const { refreshRole, setActiveRole } = useAuth();
   const [searchParams] = useSearchParams();
   
   const [isLoading, setIsLoading] = useState(true);
@@ -369,18 +369,22 @@ const ArtistSetupAccount = () => {
 
       console.log("[ArtistSetupAccount] ✅ Finalize succeeded — role, profile, and link all confirmed:", finalizeData);
 
-      // Step 4: Navigate to dashboard immediately.
-      // The edge function is the SOLE AUTHORITY — it confirmed role + profile + link.
-      // We fire refreshRole in the background so AuthContext catches up, but we do NOT
-      // block navigation on it. The onAuthStateChange listener and the dashboard's own
-      // auth check (getAuthedUserOrFail) will pick up the role independently.
-      console.log("[ArtistSetupAccount] Step 5: Navigating to /artist/dashboard (edge function confirmed success)");
+      // Step 4: Refresh role BEFORE navigating so the route guard sees "artist"
+      console.log("[ArtistSetupAccount] Step 5: Refreshing role before navigation...");
       toast.success("Account setup complete! Welcome aboard.");
 
-      // Fire-and-forget: refresh role in AuthContext so route guards update
-      refreshRole().catch((err) => {
-        console.warn("[ArtistSetupAccount] Background refreshRole failed (non-blocking):", err);
-      });
+      try {
+        const refreshedRole = await refreshRole();
+        console.log("[ArtistSetupAccount] refreshRole returned:", refreshedRole);
+        // If refreshRole didn't pick artist (e.g. pickActiveRole chose admin),
+        // explicitly switch since finalize-artist-setup confirmed the role exists.
+        if (refreshedRole && refreshedRole !== "artist") {
+          setActiveRole("artist");
+        }
+      } catch (err) {
+        // Edge function confirmed success, so navigate anyway
+        console.warn("[ArtistSetupAccount] refreshRole failed, navigating anyway (edge fn confirmed):", err);
+      }
 
       navigate("/artist/dashboard", { replace: true });
     } catch (error) {
