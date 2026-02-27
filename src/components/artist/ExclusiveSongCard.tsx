@@ -90,40 +90,15 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     return data.url as string;
   }, [song.id]);
 
-  // Audio readiness check via HEAD request against signed URL
+  // Audio readiness: trust key presence (signed URLs are minted fresh at play time)
   useEffect(() => {
     if (!song.full_audio_key || isFinalizing) {
       setAudioReady(false);
-      return;
+    } else {
+      setAudioReady(true);
     }
-    let cancelled = false;
-    setAudioChecking(true);
-    (async () => {
-      const signedUrl = await getSignedAudioUrl();
-      if (!signedUrl || cancelled) {
-        setAudioReady(false);
-        setAudioChecking(false);
-        return;
-      }
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
-      try {
-        const resp = await fetch(signedUrl, { method: "HEAD", signal: controller.signal });
-        clearTimeout(timer);
-        if (!cancelled) {
-          setAudioReady(resp.ok);
-          setAudioChecking(false);
-        }
-      } catch {
-        clearTimeout(timer);
-        if (!cancelled) {
-          setAudioReady(false);
-          setAudioChecking(false);
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [song.full_audio_key, isFinalizing, getSignedAudioUrl]);
+    setAudioChecking(false);
+  }, [song.full_audio_key, isFinalizing]);
 
   // Cleanup audio on unmount
   useEffect(() => {
