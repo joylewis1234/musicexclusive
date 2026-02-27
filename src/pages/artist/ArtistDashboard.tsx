@@ -96,7 +96,7 @@ const ArtistDashboard = () => {
 
   const startPollingForFinalizingTracks = useCallback((profileId: string, currentSongs: ExclusiveSong[]) => {
     const hasFinalizing = currentSongs.some(
-      s => s.status !== "ready" || !s.full_audio_url || !s.artwork_url
+      s => s.status === "processing" || s.status === "uploading" || (!s.full_audio_url && s.status !== "failed") || (!s.artwork_url && s.status !== "failed")
     );
     if (!hasFinalizing) return;
 
@@ -104,7 +104,7 @@ const ArtistDashboard = () => {
     pollStartRef.current = Date.now();
 
     pollIntervalRef.current = window.setInterval(async () => {
-      if (Date.now() - pollStartRef.current > 60000) {
+      if (Date.now() - pollStartRef.current > 120000) {
         stopPolling();
         return;
       }
@@ -129,16 +129,58 @@ const ArtistDashboard = () => {
         clearTimeout(timer);
         if (!resp.ok) return;
         const rows = await resp.json();
-        if (Array.isArray(rows)) {
-          const filtered = rows.filter((r: any) => r.status !== "uploading");
-          setSongs(filtered);
-          const stillFinalizing = filtered.some(
-            (s: any) => s.status !== "ready" || !s.full_audio_url || !s.artwork_url
-          );
-          if (!stillFinalizing) stopPolling();
+        if (!Array.isArray(rows)) return;
+
+        const filtered = rows.filter((r: any) => r.status !== "uploading");
+
+        // For any "processing" tracks with keys, call verify-r2-objects and transition to ready
+        for (const track of filtered) {
+          if (track.status === "processing" && track.full_audio_key && track.artwork_key) {
+            try {
+              const verifyResp = await fetch(
+                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-r2-objects`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${session.access_token}`,
+                    apikey: anonKey,
+                  },
+                  body: JSON.stringify({
+                    fullKey: track.full_audio_key,
+                    artworkKey: track.artwork_key,
+                    previewKey: track.preview_audio_key || undefined,
+                  }),
+                }
+              );
+              const verifyData = await verifyResp.json();
+              if (verifyData?.ok) {
+                await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${track.id}`, {
+                  method: "PATCH",
+                  headers: {
+                    "Content-Type": "application/json",
+                    Prefer: "return=minimal",
+                    apikey: anonKey,
+                    Authorization: `Bearer ${session.access_token}`,
+                  },
+                  body: JSON.stringify({ status: "ready" }),
+                });
+                track.status = "ready";
+                console.log("[Dashboard] ✅ Track verified & set to ready:", track.id.slice(0, 8));
+              }
+            } catch (verifyErr) {
+              console.warn("[Dashboard] verify-r2-objects poll failed (retrying):", verifyErr);
+            }
+          }
         }
+
+        setSongs(filtered);
+        const stillFinalizing = filtered.some(
+          (s: any) => s.status === "processing" || (s.status !== "ready" && s.status !== "failed")
+        );
+        if (!stillFinalizing) stopPolling();
       } catch { /* ignore poll errors */ }
-    }, 2000);
+    }, 3000);
   }, [stopPolling]);
 
   // Cleanup polling on unmount
