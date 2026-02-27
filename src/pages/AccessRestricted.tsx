@@ -13,10 +13,12 @@ const AccessRestricted = () => {
   const requiredRole = state?.requiredRole;
 
   const handleGoBack = () => {
-    if (role === "fan") {
-      navigate("/fan/profile");
-    } else if (role === "artist") {
-      navigate("/artist/profile");
+    if (role === "artist") {
+      navigate("/artist/dashboard");
+    } else if (role === "fan") {
+      navigate("/discovery");
+    } else if (role === "admin") {
+      navigate("/admin");
     } else {
       navigate("/");
     }
