@@ -90,47 +90,55 @@ async function callEdgeFn(
   }
 }
 
-async function uploadPartWithRetry(
-  presignedUrl: string,
-  chunk: Blob,
-  partNumber: number,
-  tag: string
-): Promise<string> {
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-    try {
-      const resp = await fetch(presignedUrl, {
-        method: "PUT",
-        body: chunk,
-      });
+async function uploadPartWithRetry(params: {
+  uploadId: string;
+  key: string;
+  partNumber: number;
+  body: Blob;
+  token: string;
+  tag: string;
+  attempt?: number;
+}): Promise<string> {
+  const { uploadId, key, partNumber, body, token, tag, attempt = 1 } = params;
 
-      if (!resp.ok) {
-        const bodyText = await resp.text().catch(() => "");
-        throw new Error(`PUT part ${partNumber} failed: ${resp.status} ${bodyText.slice(0, 200)}`);
-      }
+  try {
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-part-proxy?uploadId=${encodeURIComponent(uploadId)}&key=${encodeURIComponent(key)}&partNumber=${partNumber}`;
 
-      // ETag comes from the response header
-      const etag = resp.headers.get("ETag") || resp.headers.get("etag") || "";
-      if (!etag) {
-        throw new Error(`PUT part ${partNumber} succeeded but no ETag in response`);
-      }
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/octet-stream",
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body,
+    });
 
-      debugLog(`${tag} ✅ Part ${partNumber} uploaded, etag=${etag}`);
-      console.log(tag, `Part ${partNumber} uploaded, etag=${etag}`);
-      return etag;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      debugLog(`${tag} ⚠️ Part ${partNumber} attempt ${attempt + 1}/${MAX_RETRIES} failed: ${msg}`);
-      console.warn(tag, `Part ${partNumber} attempt ${attempt + 1}/${MAX_RETRIES} failed:`, msg);
-
-      if (attempt < MAX_RETRIES - 1) {
-        const delay = BASE_DELAY_MS * Math.pow(2, attempt);
-        await new Promise((r) => setTimeout(r, delay));
-      } else {
-        throw new Error(`Part ${partNumber} failed after ${MAX_RETRIES} attempts: ${msg}`);
-      }
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      throw new Error(`upload-part-proxy failed: ${resp.status} ${text.slice(0, 200)}`);
     }
+
+    const data = await resp.json();
+    if (!data?.etag) {
+      throw new Error("Missing ETag from upload-part-proxy");
+    }
+
+    debugLog(`${tag} ✅ Part ${partNumber} uploaded, etag=${data.etag}`);
+    console.log(tag, `Part ${partNumber} uploaded, etag=${data.etag}`);
+    return data.etag as string;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    debugLog(`${tag} ⚠️ Part ${partNumber} attempt ${attempt}/${MAX_RETRIES} failed: ${msg}`);
+    console.warn(tag, `Part ${partNumber} attempt ${attempt}/${MAX_RETRIES} failed:`, msg);
+
+    if (attempt >= MAX_RETRIES) {
+      throw new Error(`Part ${partNumber} failed after ${MAX_RETRIES} attempts: ${msg}`);
+    }
+
+    await new Promise((r) => setTimeout(r, 250 * attempt));
+    return uploadPartWithRetry({ ...params, attempt: attempt + 1 });
   }
-  throw new Error("Unreachable");
 }
 
 export interface R2UploadResult {
@@ -215,20 +223,20 @@ export async function r2MultipartUpload(params: {
   for (let partNum = 1; partNum <= totalParts; partNum++) {
     if (completedSet.has(partNum)) continue;
 
-    // Get presigned URL
-    const signResult = await callEdgeFn("sign-upload-part", {
-      uploadId,
-      key,
-      partNumber: partNum,
-    }, accessToken);
-
     // Slice the chunk
     const start = (partNum - 1) * PART_SIZE;
     const end = Math.min(start + PART_SIZE, file.size);
     const chunk = file.slice(start, end);
 
-    // Upload with retries
-    const etag = await uploadPartWithRetry(signResult.url, chunk, partNum, tag);
+    // Upload through proxy with retries
+    const etag = await uploadPartWithRetry({
+      uploadId,
+      key,
+      partNumber: partNum,
+      body: chunk,
+      token: accessToken,
+      tag,
+    });
 
     // Track completion
     completedParts.push({ partNumber: partNum, etag });
