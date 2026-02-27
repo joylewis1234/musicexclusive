@@ -96,7 +96,7 @@ const ArtistDashboard = () => {
 
   const startPollingForFinalizingTracks = useCallback((profileId: string, currentSongs: ExclusiveSong[]) => {
     const hasFinalizing = currentSongs.some(
-      s => s.status === "processing" || s.status === "uploading" || (!s.full_audio_url && s.status !== "failed") || (!s.artwork_url && s.status !== "failed")
+      s => s.status === "processing" || s.status === "uploading" || (s.status !== "ready" && s.status !== "failed")
     );
     if (!hasFinalizing) return;
 
