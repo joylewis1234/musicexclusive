@@ -1,32 +1,73 @@
 
 
-## Plan: Update Three Documentation Files
+## Plan: Full Account Cleanup
 
-Recent changes to `ExclusiveSongCard.tsx` migrated artist-side playback from legacy public URLs (`full_audio_url`, `artwork_url`) to R2 storage keys (`full_audio_key`, `artwork_key`) with on-demand signed URL minting. Fan-side streaming was validated end-to-end. These docs need to reflect that.
+Retain **4 accounts** and their data; delete everything else.
 
-### 1. `docs/final-audit-report.md`
+### Accounts to keep
 
-**Completed Work section** — Add a new bullet:
-- Artist dashboard playback (`ExclusiveSongCard`) migrated from legacy public URLs to signed R2 URLs via `mint-playback-url`. Fan streaming validated end-to-end (credit deduction, ledger entry, playback confirmed for track `2887e61c`). HEAD-based readiness checks removed due to R2 CORS restrictions; readiness now determined by key presence.
+| Email | User ID | Role | Artist Profile ID |
+|---|---|---|---|
+| test-artist+validation@example.com | b429eeb1 | artist | b5ce51ad (Validation Artist) |
+| joylewismusic+testdemo1@gmail.com | ba5df0b2 | artist | 435b37fd (JL - Demo 1) |
+| demo-fan@test.com | db9c713b | fan | — |
+| support@musicexclusive.co | 558ee15a | admin | — |
 
-**Appendix: Key Files** — Add:
-- `src/components/artist/ExclusiveSongCard.tsx`
+**Note:** `tinytunesmusic@gmail.com` (the second admin email in the allowlist) is **not** in your keep list. It has an artist profile ("New Artist") but no tracks. Deleting it means that admin email won't have an auth account — the allowlist still recognizes it, so re-creating the account later will auto-grant admin. Proceeding as requested.
 
-### 2. `docs/playback-protection-architecture.md`
+### Tracks to keep
+- artist_id = `b5ce51ad...` (Validation Artist): 1 track
+- artist_id = `435b37fd...` (JL - Demo 1): 5 tracks
 
-**Components section** — Add `ExclusiveSongCard` alongside `useAudioPlayer` as a client consumer:
-- `ExclusiveSongCard` (artist dashboard: full track + hook preview playback)
+All other tracks (slug-based like `echo`/`nova`/`aura` + other UUID artists) will be deleted.
 
-**Playback Flow section** — Add a note after step 5:
-- Artist dashboard uses the same `mint-playback-url` flow for on-demand playback of full tracks and 15-second hook previews. Audio elements are created synchronously (user-gesture compliance) with signed URLs assigned asynchronously.
+### Cleanup edge function: `cleanup-accounts`
 
-**Enforcement section** — Add:
-- No public audio URLs are stored or exposed to the client; all playback resolves R2 keys to short-lived signed URLs at play time.
+A new edge function that performs deletions in dependency order using service role:
 
-### 3. `docs/trust-boundary-map.md`
+1. **Delete dependent track data** for tracks NOT belonging to kept artists:
+   - `fan_playlists` (by track_id)
+   - `track_likes` (by track_id)
+   - `shared_tracks` (by track_id)
+   - `stream_charges` (by track_id)
+   - `stream_ledger` (by track_id)
+   - `marketing_assets` (by track_id — joined via artist_id)
+   - `playback_sessions` (by track_id)
 
-**Section 6 (Client → Cloudflare R2)** — Expand mitigation:
-- Add: "Client components (`useAudioPlayer`, `ExclusiveSongCard`) never store or cache public URLs; R2 object keys are resolved to signed URLs on demand with short TTLs (90s audio, 300s artwork)."
+2. **Delete tracks** where `artist_id` NOT IN kept artist profile IDs
 
-No structural changes to the trust boundary model — the existing boundaries already cover this flow.
+3. **Delete credit_ledger entries** for emails NOT in keep list
+
+4. **Delete vault_members** for emails NOT in keep list
+
+5. **Delete artist-specific tables** for non-kept users:
+   - `artist_agreement_acceptances`
+   - `artist_profiles`
+   - `artist_applications` (for non-kept contact_email)
+   - `application_action_tokens` (for deleted applications)
+   - `email_logs` (for deleted applications)
+
+6. **Delete general user tables**:
+   - `user_roles` (non-kept user_ids)
+   - `profiles` (non-kept user_ids)
+   - `fan_terms_acceptances` (non-kept user_ids)
+   - `agreement_acceptances` (non-kept emails)
+   - `app_error_logs` (non-kept user_ids)
+
+7. **Delete vault_codes** for non-kept emails
+
+8. **Delete auth users** via `supabase.auth.admin.deleteUser()` for each non-kept user
+
+9. **Return summary** with counts of deleted records per table
+
+### Safety measures
+- Admin-protected (JWT + role check)
+- Hardcoded keep-list inside the function
+- Dry-run mode available (log what would be deleted without deleting)
+- `artist_id` compared as TEXT throughout (UUID-safe)
+
+### Implementation: 1 new file
+- `supabase/functions/cleanup-accounts/index.ts`
+
+After deploying, invoke it once, verify the summary, then delete the function.
 
