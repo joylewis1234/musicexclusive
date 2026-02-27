@@ -34,7 +34,8 @@ async function checkObjectExists(
   accessKeyId: string,
   secretAccessKey: string,
 ): Promise<boolean> {
-  const url = `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${key}`;
+  const encodedKey = key.split("/").map(encodeURIComponent).join("/");
+  const url = `https://${accountId}.r2.cloudflarestorage.com/${bucket}/${encodedKey}`;
   const now = new Date();
   const amzDate = now.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const dateStamp = amzDate.slice(0, 8);
@@ -49,7 +50,7 @@ async function checkObjectExists(
 
   const canonicalRequest = [
     "HEAD",
-    `/${bucket}/${key}`,
+    `/${bucket}/${encodedKey}`,
     "",
     canonicalHeaders,
     signedHeaders,
