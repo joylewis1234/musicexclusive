@@ -76,7 +76,7 @@ This document maps the trust boundaries between Supabase, Edge Functions, Cloudf
 
 **Risk:** URL sharing or replay.  
 
-**Mitigation:** Short TTLs and session tracking for playback.
+**Mitigation:** Short TTLs and session tracking for playback. Client components (`useAudioPlayer`, `ExclusiveSongCard`) never store or cache public URLs; R2 object keys are resolved to signed URLs on demand with short TTLs (90s audio, 300s artwork).
 
 ### 7) Stripe → Edge Functions (Webhooks)
 
