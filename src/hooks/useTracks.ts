@@ -34,7 +34,7 @@ export const useTracks = (artistId?: string) => {
       // relationship in the schema cache. Instead, fetch tracks first, then fetch the artist
       // profiles in a second query using an `in()` filter.
       let query = supabase.from("tracks").select("*")
-        .not("status", "in", '("uploading","disabled")');
+        .not("status", "in", '("uploading","disabled","processing","failed")');
       if (artistId) query = query.eq("artist_id", artistId);
 
       const { data, error: fetchError } = await query.order("created_at", { ascending: false });

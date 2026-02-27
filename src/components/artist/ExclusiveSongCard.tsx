@@ -23,7 +23,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Trash2, Lock, Loader2, Music, Clock, Play, Square, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, Lock, Loader2, Music, Clock, Play, Square, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDurationFromUrl } from "@/utils/audioDuration";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
@@ -39,6 +39,7 @@ export interface ExclusiveSong {
   preview_start_seconds?: number;
   duration?: number;
   status?: string;
+  processing_error?: string | null;
   exclusivity_expires_at?: string;
   exclusivity_decision?: string | null;
 }
@@ -63,7 +64,9 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   const [audioReady, setAudioReady] = useState<boolean | null>(null); // null = not checked
   const [audioChecking, setAudioChecking] = useState(false);
 
-  const isFinalizing = song.status !== "ready" || !song.full_audio_url || !song.artwork_url;
+  const isFailed = song.status === "failed";
+  const isProcessing = song.status === "processing";
+  const isFinalizing = (!isFailed && !isProcessing) && (song.status !== "ready" || !song.full_audio_url || !song.artwork_url);
 
   // --- Local playback state ---
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -312,7 +315,12 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
                 )}
               </div>
               <p className="text-[10px] text-muted-foreground/50 mt-0.5">
-                {isFinalizing ? (
+                {isFailed ? (
+                  <span className="text-destructive flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3" />
+                    Failed
+                  </span>
+                ) : isProcessing || isFinalizing ? (
                   <span className="text-amber-400 flex items-center gap-1">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     Processing…
@@ -321,6 +329,11 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
                   <>Uploaded {format(new Date(song.created_at), "MMM d, yyyy")}</>
                 )}
               </p>
+              {isFailed && song.processing_error && (
+                <p className="text-[10px] text-destructive/80 mt-1 leading-tight">
+                  {song.processing_error}
+                </p>
+              )}
             </div>
 
             {/* Actions */}

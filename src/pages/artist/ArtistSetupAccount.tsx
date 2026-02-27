@@ -369,24 +369,43 @@ const ArtistSetupAccount = () => {
 
       console.log("[ArtistSetupAccount] ✅ Finalize succeeded — role, profile, and link all confirmed:", finalizeData);
 
-      // Step 4: Refresh role BEFORE navigating so the route guard sees "artist"
-      console.log("[ArtistSetupAccount] Step 5: Refreshing role before navigation...");
-      toast.success("Account setup complete! Welcome aboard.");
+      // Step 4: Poll DB for artist role (up to 10s) before navigating
+      console.log("[ArtistSetupAccount] Step 5: Polling for artist role in DB...");
+      toast.success("Account setup complete! Verifying your role…");
 
-      try {
-        const refreshedRole = await refreshRole();
-        console.log("[ArtistSetupAccount] refreshRole returned:", refreshedRole);
-        // If refreshRole didn't pick artist (e.g. pickActiveRole chose admin),
-        // explicitly switch since finalize-artist-setup confirmed the role exists.
-        if (refreshedRole && refreshedRole !== "artist") {
-          setActiveRole("artist");
+      const ROLE_POLL_TIMEOUT = 10_000;
+      const ROLE_POLL_INTERVAL = 1_000;
+      const rolePollStart = Date.now();
+      let artistRoleConfirmed = false;
+
+      while (Date.now() - rolePollStart < ROLE_POLL_TIMEOUT) {
+        try {
+          const { data: roleRows } = await supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", signInData.user!.id)
+            .eq("role", "artist");
+
+          if (roleRows && roleRows.length > 0) {
+            artistRoleConfirmed = true;
+            console.log("[ArtistSetupAccount] ✅ Artist role confirmed in DB");
+            break;
+          }
+        } catch (err) {
+          console.warn("[ArtistSetupAccount] Role poll error (retrying):", err);
         }
-      } catch (err) {
-        // Edge function confirmed success, so navigate anyway
-        console.warn("[ArtistSetupAccount] refreshRole failed, navigating anyway (edge fn confirmed):", err);
+        await new Promise(r => setTimeout(r, ROLE_POLL_INTERVAL));
       }
 
-      navigate("/artist/dashboard", { replace: true });
+      if (artistRoleConfirmed) {
+        // Refresh AuthContext so route guard sees the role
+        await refreshRole();
+        setActiveRole("artist");
+        navigate("/artist/dashboard", { replace: true });
+      } else {
+        console.warn("[ArtistSetupAccount] Artist role not confirmed after 10s, sending to pending");
+        navigate("/artist/pending", { replace: true });
+      }
     } catch (error) {
       console.error("[ArtistSetupAccount] Unexpected setup error:", error);
       setSetupError("An unexpected error occurred. Please try again or go to Artist Login.");

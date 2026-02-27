@@ -69,6 +69,7 @@ import ArtistDashboard from "./pages/artist/ArtistDashboard";
 import ArtistEarnings from "./pages/artist/ArtistEarnings";
 import ArtistInvites from "./pages/artist/ArtistInvites";
 import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
+import ArtistPendingActivation from "./pages/artist/ArtistPendingActivation";
 import ArtistAgreementAccept from "./pages/artist/ArtistAgreementAccept";
 import EditArtistProfile from "./pages/artist/EditArtistProfile";
 import MarketingStudio from "./pages/artist/MarketingStudio";
@@ -186,6 +187,7 @@ const App = () => {
                 {/* Public: artists who were approved but don't have an account yet */}
                 <Route path="/artist/setup-account" element={<ArtistSetupAccount />} />
                 <Route path="/artist/signup" element={<ArtistSetupAccount />} />
+                <Route path="/artist/pending" element={<ArtistPendingActivation />} />
                 
                 {/* Artist protected routes with bottom nav */}
                 <Route element={
