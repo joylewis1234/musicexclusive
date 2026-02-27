@@ -1173,6 +1173,7 @@ export type Database = {
           preview_audio_key: string | null
           preview_audio_url: string | null
           preview_start_seconds: number
+          processing_error: string | null
           status: string
           title: string
           updated_at: string
@@ -1195,6 +1196,7 @@ export type Database = {
           preview_audio_key?: string | null
           preview_audio_url?: string | null
           preview_start_seconds?: number
+          processing_error?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -1217,6 +1219,7 @@ export type Database = {
           preview_audio_key?: string | null
           preview_audio_url?: string | null
           preview_start_seconds?: number
+          processing_error?: string | null
           status?: string
           title?: string
           updated_at?: string

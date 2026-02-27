@@ -722,6 +722,68 @@ export function useTrackUpload() {
             throw new Error(`Finalize failed (${updateResp.status}): ${errText.slice(0, 200)}`);
           }
 
+          // ── Poll to confirm track status reached "ready" ──
+          addDiagnostic({ step: "db_update", status: "pending", message: "Verifying track status...", timestamp: new Date() });
+          const pollStart = Date.now();
+          const POLL_TIMEOUT_MS = 120_000; // 120 seconds
+          const POLL_INTERVAL_MS = 2_000;  // 2 seconds
+
+          while (Date.now() - pollStart < POLL_TIMEOUT_MS) {
+            try {
+              const pollUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}&select=status,processing_error`;
+              const pollResp = await fetch(pollUrl, {
+                headers: {
+                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  Authorization: `Bearer ${currentAccessToken}`,
+                  Accept: "application/json",
+                },
+              });
+              if (pollResp.ok) {
+                const rows = await pollResp.json();
+                const trackStatus = rows?.[0]?.status;
+                const processingError = rows?.[0]?.processing_error;
+
+                if (trackStatus === "ready") {
+                  console.log("[Upload:DIAG] ✅ Track confirmed ready");
+                  break;
+                }
+                if (trackStatus === "failed") {
+                  const failMsg = processingError || "Track processing failed on the server.";
+                  console.error("[Upload:DIAG] ❌ Track status=failed:", failMsg);
+                  addDiagnostic({ step: "db_update", status: "error", message: failMsg, timestamp: new Date() });
+                  throw new Error(failMsg);
+                }
+              }
+            } catch (pollErr: any) {
+              // If this is a "failed" error we threw, re-throw it
+              if (pollErr?.message?.includes("processing failed") || pollErr?.message?.includes("Track processing failed")) {
+                throw pollErr;
+              }
+              console.warn("[Upload:DIAG] Poll check failed (non-critical):", pollErr);
+            }
+            await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
+          }
+
+          // If we exited the loop due to timeout, mark as failed
+          if (Date.now() - pollStart >= POLL_TIMEOUT_MS) {
+            console.error("[Upload:DIAG] ❌ Track status poll timed out after 120s");
+            // Mark track as failed in DB
+            try {
+              await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
+                method: "PATCH",
+                headers: {
+                  "Content-Type": "application/json",
+                  Prefer: "return=minimal",
+                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  Authorization: `Bearer ${currentAccessToken}`,
+                },
+                body: JSON.stringify({ status: "failed", processing_error: "Processing timed out after 120 seconds" }),
+              });
+            } catch { /* best-effort */ }
+            addDiagnostic({ step: "db_update", status: "error", message: "Track processing timed out after 120s", timestamp: new Date() });
+            throw new Error("Track processing timed out. Please try again or contact support.");
+          }
+
           addDiagnostic({ step: "db_update", status: "success", message: "Track finalized", timestamp: new Date() });
         } catch (err: any) {
           if (err?.name === "AbortError") {
