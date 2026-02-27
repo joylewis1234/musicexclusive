@@ -102,31 +102,38 @@ async function uploadPartWithRetry(params: {
   const { uploadId, key, partNumber, body, token, tag, attempt = 1 } = params;
 
   try {
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-part-proxy?uploadId=${encodeURIComponent(uploadId)}&key=${encodeURIComponent(key)}&partNumber=${partNumber}`;
+    // 1. Get presigned URL from sign-upload-part edge function
+    const signResult = await callEdgeFn("sign-upload-part", {
+      uploadId,
+      key,
+      partNumber,
+    }, token);
 
-    const resp = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/octet-stream",
-        Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-      },
+    const presignedUrl = signResult?.presignedUrl;
+    if (!presignedUrl) {
+      throw new Error("Missing presignedUrl from sign-upload-part");
+    }
+
+    // 2. PUT chunk directly to R2 via presigned URL
+    const putResp = await fetch(presignedUrl, {
+      method: "PUT",
       body,
     });
 
-    if (!resp.ok) {
-      const text = await resp.text().catch(() => "");
-      throw new Error(`upload-part-proxy failed: ${resp.status} ${text.slice(0, 200)}`);
+    if (!putResp.ok) {
+      const text = await putResp.text().catch(() => "");
+      throw new Error(`R2 PUT failed: ${putResp.status} ${text.slice(0, 200)}`);
     }
 
-    const data = await resp.json();
-    if (!data?.etag) {
-      throw new Error("Missing ETag from upload-part-proxy");
+    // 3. Extract ETag from response headers
+    const etag = putResp.headers.get("ETag") || putResp.headers.get("etag");
+    if (!etag) {
+      throw new Error("Missing ETag from R2 PUT response");
     }
 
-    debugLog(`${tag} ✅ Part ${partNumber} uploaded, etag=${data.etag}`);
-    console.log(tag, `Part ${partNumber} uploaded, etag=${data.etag}`);
-    return data.etag as string;
+    debugLog(`${tag} ✅ Part ${partNumber} uploaded, etag=${etag}`);
+    console.log(tag, `Part ${partNumber} uploaded, etag=${etag}`);
+    return etag;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     debugLog(`${tag} ⚠️ Part ${partNumber} attempt ${attempt}/${MAX_RETRIES} failed: ${msg}`);
