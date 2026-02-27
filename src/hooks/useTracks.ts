@@ -11,6 +11,7 @@ export interface DbTrack {
   preview_audio_url: string | null;
   preview_start_seconds: number;
   artwork_url: string | null;
+  artwork_key: string | null;
   genre: string | null;
   created_at: string;
   // Joined artist info

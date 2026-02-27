@@ -50,7 +50,8 @@ export const DiscoveryTrackCard = ({
         <SignedArtwork
           trackId={track.id}
           alt={track.title}
-          fallbackSrc={track.artist_avatar_url || artist1}
+          skipSigning={!track.artwork_key}
+          fallbackSrc={track.artwork_url || track.artist_avatar_url || artist1}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
