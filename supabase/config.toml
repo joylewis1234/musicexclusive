@@ -125,3 +125,6 @@ verify_jwt = false
 
 [functions.verify-r2-objects]
 verify_jwt = false
+
+[functions.sign-upload-part]
+verify_jwt = false
