@@ -1,38 +1,36 @@
 
 
-## Root Cause
+## Implementation Plan: Signed URL Playback for ExclusiveSongCard
 
-The `ExclusiveSongCard` component determines if a track is still "finalizing" (shown as Processing) using this check:
+All changes are in **`src/components/artist/ExclusiveSongCard.tsx`**. The 8 modifications you specified will be applied exactly as described:
 
-```typescript
-const isFinalizing = (!isFailed && !isProcessing) && 
-  (song.status !== "ready" || !song.full_audio_url || !song.artwork_url);
-```
+### Changes
 
-Since the R2 migration, `full_audio_url` and `artwork_url` are **always null**. The app now stores `full_audio_key` and `artwork_key` instead. So `!song.full_audio_url` is always `true`, making every `ready` track appear as "Processing".
+1. **Interface** — `full_audio_key` and `artwork_key` already exist in the interface (added in prior edit). No change needed.
 
-The same stale check exists in the dashboard polling logic.
+2. **`isFinalizing`** — Already uses `full_audio_key`/`artwork_key` from prior edit. No change needed.
 
-## Fix
+3. **Add `getSignedAudioUrl` helper** — New `useCallback` that calls `mint-playback-url` edge function to get a signed URL for the track.
 
-### 1. Update `ExclusiveSongCard.tsx` line 69
-Change the `isFinalizing` check to use keys instead of URLs:
+4. **Replace audio readiness `useEffect`** — Instead of the simple key-presence check, perform a HEAD request against a signed URL with 5s timeout to verify audio is actually accessible.
 
-```typescript
-const isFinalizing = (!isFailed && !isProcessing) && 
-  (song.status !== "ready" || !song.full_audio_key || !song.artwork_key);
-```
+5. **`canPlay`** — Already uses `full_audio_key` from prior edit. No change needed.
 
-Also update the audio readiness check (line 78-79) since it depends on `full_audio_url` which is now always null — it should use the key-based playback system instead.
+6. **`handlePlayFull`** — Make `async`, create `Audio()` element immediately (user gesture), then fetch signed URL and set `audio.src`.
 
-### 2. Update dashboard polling `hasFinalizing` check
-In `ArtistDashboard.tsx`, the polling condition at line 98-100 also references `full_audio_url`/`artwork_url` indirectly. Confirm the filtered check at line 178-180 only uses `status`, which it already does — no change needed there.
+7. **`handlePlayHook`** — Same pattern as handlePlayFull but seeks to `preview_start_seconds` and auto-stops after 15s.
 
-### 3. Clean up orphaned `uploading` draft
-Delete the remaining orphaned draft `65771175` that was missed by the earlier cleanup (it's now >30 min old with no keys).
+8. **Duration detection `useEffect`** — Change dependency from `song.full_audio_url` to `song.full_audio_key`, fetch signed URL before calling `getAudioDurationFromUrl`.
+
+9. **Add `previewAudioUrl` state + effect** — New state variable and effect that fetches a signed URL when the hook edit dialog opens, passed to `<PreviewTimeSelector>`.
+
+10. **Artwork condition** — Change `song.artwork_url` to `song.artwork_key` for the cover art rendering conditional.
+
+11. **Debug panel** — Update to show `artwork_key` and `full_audio_key` instead of the legacy URL fields.
 
 ### Technical Details
-- **Files changed**: `src/components/artist/ExclusiveSongCard.tsx`
-- **Database**: Delete 1 orphaned row from `tracks` table
-- The `ExclusiveSong` type interface needs `full_audio_key` and `artwork_key` if not already present — verify and add to the type.
+- File: `src/components/artist/ExclusiveSongCard.tsx`
+- No new dependencies
+- The `mint-playback-url` edge function is already deployed and handles `fileType: "audio"` requests
+- Audio element is created before the async signed URL fetch to satisfy browser user-gesture requirements (especially iOS)
 
