@@ -80,6 +80,8 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - Edge function load testing: executed on safe public endpoints and authenticated endpoints.
 
+- Artist dashboard playback (`ExclusiveSongCard`) migrated from legacy public URLs to signed R2 URLs via `mint-playback-url`. Fan streaming validated end-to-end (credit deduction, ledger entry, playback confirmed for track `2887e61c`). HEAD-based readiness checks removed due to R2 CORS restrictions; readiness now determined by key presence.
+
 ## Failure Handling Validation (Raw Payloads)
 
 - `mint-playback-url` (missing auth): `401 {"error":"Unauthorized"}`
@@ -159,3 +161,5 @@ The `charge-stream` edge function was updated to close the gap where ledger entr
 - `docs/trust-boundary-map.md`
 
 - `docs/auth-jwt-review.md`
+
+- `src/components/artist/ExclusiveSongCard.tsx`
