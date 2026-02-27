@@ -15,6 +15,7 @@ export interface PlaybackDiagnostics {
   canPlay: boolean;
   readyState: number;
   hlsActive: boolean;
+  sessionId?: string | null;
 }
 
 export interface LoadTrackParams {
@@ -44,12 +45,22 @@ interface CachedEntry {
   url: string;
   hlsUrl?: string;
   expiresAt: number;
+  sessionId?: string | null;
 }
 
 export function useAudioPlayer(): UseAudioPlayerReturn {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
   const signedUrlCacheRef = useRef(new Map<string, CachedEntry>());
+  const loadStartRef = useRef<number | null>(null);
+  const telemetrySentRef = useRef(false);
+  const playbackSessionRef = useRef<string | null>(null);
+
+  const currentTrackRef = useRef<{
+    trackId: string;
+    fileType: PlaybackFileType;
+    trackTitle?: string;
+  } | null>(null);
 
   const [currentTrack, setCurrentTrack] = useState<{
     trackId: string;
@@ -109,6 +120,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         url: data.url as string,
         hlsUrl: (data.hlsUrl as string) || undefined,
         expiresAt,
+        sessionId: (data.session?.session_id as string) ?? null,
       };
     },
     []
@@ -129,11 +141,31 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         url: minted.url,
         hlsUrl: minted.hlsUrl,
         expiresAt: minted.expiresAt,
+        sessionId: minted.sessionId,
       };
       signedUrlCacheRef.current.set(cacheKey, entry);
       return entry;
     },
     [mintSignedUrl]
+  );
+  const sendPlaybackTelemetry = useCallback(
+    async (status: number, latencyMs?: number) => {
+      const track = currentTrackRef.current;
+      if (!track) return;
+      try {
+        await supabase.functions.invoke("playback-telemetry", {
+          body: {
+            trackId: track.trackId,
+            sessionId: playbackSessionRef.current,
+            status,
+            latencyMs,
+          },
+        });
+      } catch {
+        // swallow telemetry errors
+      }
+    },
+    []
   );
 
   // Initialize audio element
@@ -166,13 +198,27 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         }
       }
       console.error("[AudioPlayer] Error:", errorMessage, audioEl.error);
+      const latencyMs = loadStartRef.current
+        ? Math.round(performance.now() - loadStartRef.current)
+        : undefined;
+      void sendPlaybackTelemetry(500, latencyMs);
       setError(errorMessage);
       setIsLoading(false);
       setIsPlaying(false);
       setDiagnostics((prev) => ({ ...prev, lastError: errorMessage, canPlay: false, readyState: audioEl.readyState }));
     };
     const handleWaiting = () => setIsLoading(true);
-    const handlePlaying = () => { setIsLoading(false); setIsPlaying(true); };
+    const handlePlaying = () => {
+      setIsLoading(false);
+      setIsPlaying(true);
+      if (!telemetrySentRef.current) {
+        telemetrySentRef.current = true;
+        const latencyMs = loadStartRef.current
+          ? Math.round(performance.now() - loadStartRef.current)
+          : undefined;
+        void sendPlaybackTelemetry(200, latencyMs);
+      }
+    };
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
     audio.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -214,6 +260,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setDuration(0);
       setIsLoading(true);
       setCurrentTrack({ trackId, fileType, trackTitle });
+      currentTrackRef.current = { trackId, fileType, trackTitle };
       setDiagnostics({
         trackTitle: trackTitle || null,
         trackId,
@@ -229,6 +276,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
       try {
         const entry = await loadSignedUrl(trackId, fileType, !!forceRefresh);
+        loadStartRef.current = performance.now();
+        telemetrySentRef.current = false;
+        playbackSessionRef.current = entry.sessionId ?? null;
+        setDiagnostics((prev) => ({ ...prev, sessionId: entry.sessionId ?? null }));
         const audio = audioRef.current!;
 
         // Prefer HLS when available
