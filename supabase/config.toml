@@ -128,3 +128,6 @@ verify_jwt = false
 
 [functions.sign-upload-part]
 verify_jwt = false
+
+[functions.cleanup-accounts]
+verify_jwt = false
