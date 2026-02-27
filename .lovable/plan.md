@@ -1,20 +1,25 @@
 
 
-## Plan
+## Plan: Replace direct R2 uploads with edge function proxy
 
-### 1. Create `docs/moderate-concurrency-stress-test-report.md`
+### Step 1: Create `supabase/functions/upload-part-proxy/index.ts`
+New edge function that receives binary chunk data + metadata via query params, authenticates the caller, and uploads the part to R2 server-side using `UploadPartCommand`. Returns `{ etag }`.
 
-New file with full results from the 150-concurrency run:
+### Step 2: Update `src/utils/r2MultipartUpload.ts`
+- Replace `uploadPartWithRetry` to call `upload-part-proxy` instead of fetching a presigned URL and PUTting directly to R2
+- Remove the `sign-upload-part` call in the upload loop — chunks go directly through the proxy
+- Pass `uploadId`, `key`, `partNumber` as query params; send raw binary as POST body
 
-- **Edge tests**: mint-playback-url (400 req, 150 concurrency, 200×400, p95 5030ms, p99 5940ms, 34.21 RPS) and charge-stream (400 req, 150 concurrency, 200×400, p95 3289ms, p99 6076ms, 22.32 RPS)
-- **Ledger test**: 300 req, 150 concurrency, 300/300 success, 31.02 RPS, p95 4373ms, p99 5087ms, credits 1242→942 (expected 942), STREAM_DEBIT +242, stream_ledger +242
-- **Investigation note**: Ledger deltas (242) lower than total requests (300); likely due to idempotency deduplication or 402 insufficient-credit responses consuming requests without writing ledger entries — needs further investigation
+### Step 3: Delete `supabase/functions/sign-upload-part/index.ts`
+No longer needed since parts are uploaded through the proxy.
 
-### 2. Append to `docs/load-testing-summary.md`
+### Step 4: Update `supabase/config.toml`
+- Add `[functions.upload-part-proxy]` with `verify_jwt = false`
+- Remove `[functions.sign-upload-part]` entry
 
-Add a new `## Moderate Concurrency Run (2026-02-26)` section at the end with:
-
-- mint-playback-url: 400 req, concurrency 150, 200×400, p95 5030ms, p99 5940ms, 34.21 RPS
-- charge-stream: 400 req, concurrency 150, 200×400, p95 3289ms, p99 6076ms, 22.32 RPS
-- Ledger stress test: 300 req, concurrency 150, 300/300 success, credits matched expected (1242→942), ledger deltas +242 (lower than 300 requests — under investigation)
+### Technical notes
+- `initiate-multipart-upload` and `complete-multipart-upload` remain unchanged
+- Resume support (localStorage) unchanged — same `completedParts` tracking
+- Retry logic preserved with exponential backoff (250ms × attempt)
+- Edge functions accept up to ~100MB bodies; 5MB chunks are safe
 
