@@ -1,28 +1,27 @@
+## Update `.lovable/plan.md` with completed cleanup results
 
+Update the current plan doc content by adding a completed report documenting everything that was cleaned, the final row counts, and the canonical accounts retained.
 
-## Fix Report Data After Account Cleanup
+### Content to write:
 
-The account cleanup missed several tables that feed into admin reports. Here's what remains orphaned and the cleanup steps:
+- **Header**: "Report Data Cleanup — Completed"
+- **Date**: 2026-02-27
+- **Summary of what was deleted** (with row counts):
+  - `artist_payouts`: 4 rows (orphaned references to deleted artists)
+  - `payout_batches`: 5 rows (referenced deleted `artist_user_id` values)
+  - `stream_ledger`: ~1,000 rows (load-test fans `*@test.internal` + deleted artist IDs)
+  - `report_email_logs`: 43 rows (stale report history)
+  - `credit_ledger`: ~3,800 rows (orphaned `STREAM_DEBIT`, `ARTIST_EARNING`, `PLATFORM_EARNING` entries referencing deleted streams)
+- **Final verified row counts**:
+  - `stream_ledger`: 6
+  - `stream_charges`: 6
+  - `credit_ledger`: 12 (6 `STREAM_DEBIT` + 6 `PLATFORM_EARNING`)
+  - `payout_batches`: 0
+  - `artist_payouts`: 0
+  - `report_email_logs`: 0
+  - `playback_sessions`: 0
+- **Canonical accounts retained**: list the 4 accounts (admin, fan, 2 artists)
+- **Execution order**: document the dependency-ordered steps taken
+- **Note**: all remaining data ties back to `demo-fan@test.com` and valid tracks
 
-### Orphaned Data Found
-
-| Table | Orphaned Rows | Issue |
-|-------|--------------|-------|
-| `stream_ledger` | ~1,000 | Load-test fans (`*@test.internal`) + deleted artist IDs |
-| `payout_batches` | 5 | Reference deleted `artist_user_id` values |
-| `artist_payouts` | 4 | Linked to orphaned payout batches |
-| `report_email_logs` | 43 | Old report logs (safe to clear) |
-| `credit_ledger` | 0 | Already clean |
-| `playback_sessions` | 0 | Already clean |
-| `stream_charges` | 6 | All `demo-fan@test.com` — valid, keep |
-
-### Cleanup Steps (dependency order)
-
-1. **Delete orphaned `artist_payouts`** — references payout_batches for deleted artists
-2. **Delete orphaned `payout_batches`** — 5 rows referencing deleted user IDs
-3. **Delete orphaned `stream_ledger`** — ~1,000 rows from load-test fans and deleted artists
-4. **Clear `report_email_logs`** — stale report history
-5. **Verify** remaining data is consistent with the 4 canonical accounts
-
-Each step will be executed via the data tool with your approval before proceeding.
-
+Single file change to `.lovable/plan.md`.
