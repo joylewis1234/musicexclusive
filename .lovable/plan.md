@@ -1,23 +1,38 @@
 
 
-## Investigation Results
+## Root Cause
 
-The latest upload **actually succeeded**. Track `2887e61c` is `status: ready` in the database with both `artwork_key` and `full_audio_key` populated. The "stuck on processing" was likely what you saw before the 120s verification polling loop completed — or you navigated away before it finished.
+The `ExclusiveSongCard` component determines if a track is still "finalizing" (shown as Processing) using this check:
 
-### Issues Found
+```typescript
+const isFinalizing = (!isFailed && !isProcessing) && 
+  (song.status !== "ready" || !song.full_audio_url || !song.artwork_url);
+```
 
-1. **3 orphaned "uploading" drafts** from earlier failed attempts are cluttering the database (IDs: `65771175`, `0b840e4b`, `08f58516`). The dashboard filters these out, but they're dead weight.
+Since the R2 migration, `full_audio_url` and `artwork_url` are **always null**. The app now stores `full_audio_key` and `artwork_key` instead. So `!song.full_audio_url` is always `true`, making every `ready` track appear as "Processing".
 
-2. **No user feedback during polling** — after R2 uploads complete, the track goes to `processing` and the client polls for up to 120s. If the user navigates away during this window, they'll see "processing" on the dashboard until they return and the dashboard's own polling kicks in.
+The same stale check exists in the dashboard polling logic.
 
-### Fix
+## Fix
 
-#### Step 1: Clean up orphaned drafts
-Run a SQL migration to delete the 3 stuck `uploading` drafts for this artist that have no keys and are older than 30 minutes.
+### 1. Update `ExclusiveSongCard.tsx` line 69
+Change the `isFinalizing` check to use keys instead of URLs:
 
-#### Step 2: Improve dashboard polling for "processing" tracks
-The dashboard already has `startPollingForFinalizingTracks` — verify it handles `processing` status tracks (not just ones missing URLs). If a track is `processing`, the dashboard should poll `verify-r2-objects` and transition to `ready` itself, so the user doesn't have to stay on the upload page.
+```typescript
+const isFinalizing = (!isFailed && !isProcessing) && 
+  (song.status !== "ready" || !song.full_audio_key || !song.artwork_key);
+```
 
-#### Step 3: Add auto-cleanup of stale "uploading" drafts
-In the upload hook's error/cleanup path, ensure orphaned drafts older than 10 minutes with no keys are deleted automatically on next upload attempt.
+Also update the audio readiness check (line 78-79) since it depends on `full_audio_url` which is now always null — it should use the key-based playback system instead.
+
+### 2. Update dashboard polling `hasFinalizing` check
+In `ArtistDashboard.tsx`, the polling condition at line 98-100 also references `full_audio_url`/`artwork_url` indirectly. Confirm the filtered check at line 178-180 only uses `status`, which it already does — no change needed there.
+
+### 3. Clean up orphaned `uploading` draft
+Delete the remaining orphaned draft `65771175` that was missed by the earlier cleanup (it's now >30 min old with no keys).
+
+### Technical Details
+- **Files changed**: `src/components/artist/ExclusiveSongCard.tsx`
+- **Database**: Delete 1 orphaned row from `tracks` table
+- The `ExclusiveSong` type interface needs `full_audio_key` and `artwork_key` if not already present — verify and add to the type.
 
