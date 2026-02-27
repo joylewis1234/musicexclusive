@@ -1,36 +1,32 @@
 
 
-## Implementation Plan: Signed URL Playback for ExclusiveSongCard
+## Plan: Update Three Documentation Files
 
-All changes are in **`src/components/artist/ExclusiveSongCard.tsx`**. The 8 modifications you specified will be applied exactly as described:
+Recent changes to `ExclusiveSongCard.tsx` migrated artist-side playback from legacy public URLs (`full_audio_url`, `artwork_url`) to R2 storage keys (`full_audio_key`, `artwork_key`) with on-demand signed URL minting. Fan-side streaming was validated end-to-end. These docs need to reflect that.
 
-### Changes
+### 1. `docs/final-audit-report.md`
 
-1. **Interface** — `full_audio_key` and `artwork_key` already exist in the interface (added in prior edit). No change needed.
+**Completed Work section** — Add a new bullet:
+- Artist dashboard playback (`ExclusiveSongCard`) migrated from legacy public URLs to signed R2 URLs via `mint-playback-url`. Fan streaming validated end-to-end (credit deduction, ledger entry, playback confirmed for track `2887e61c`). HEAD-based readiness checks removed due to R2 CORS restrictions; readiness now determined by key presence.
 
-2. **`isFinalizing`** — Already uses `full_audio_key`/`artwork_key` from prior edit. No change needed.
+**Appendix: Key Files** — Add:
+- `src/components/artist/ExclusiveSongCard.tsx`
 
-3. **Add `getSignedAudioUrl` helper** — New `useCallback` that calls `mint-playback-url` edge function to get a signed URL for the track.
+### 2. `docs/playback-protection-architecture.md`
 
-4. **Replace audio readiness `useEffect`** — Instead of the simple key-presence check, perform a HEAD request against a signed URL with 5s timeout to verify audio is actually accessible.
+**Components section** — Add `ExclusiveSongCard` alongside `useAudioPlayer` as a client consumer:
+- `ExclusiveSongCard` (artist dashboard: full track + hook preview playback)
 
-5. **`canPlay`** — Already uses `full_audio_key` from prior edit. No change needed.
+**Playback Flow section** — Add a note after step 5:
+- Artist dashboard uses the same `mint-playback-url` flow for on-demand playback of full tracks and 15-second hook previews. Audio elements are created synchronously (user-gesture compliance) with signed URLs assigned asynchronously.
 
-6. **`handlePlayFull`** — Make `async`, create `Audio()` element immediately (user gesture), then fetch signed URL and set `audio.src`.
+**Enforcement section** — Add:
+- No public audio URLs are stored or exposed to the client; all playback resolves R2 keys to short-lived signed URLs at play time.
 
-7. **`handlePlayHook`** — Same pattern as handlePlayFull but seeks to `preview_start_seconds` and auto-stops after 15s.
+### 3. `docs/trust-boundary-map.md`
 
-8. **Duration detection `useEffect`** — Change dependency from `song.full_audio_url` to `song.full_audio_key`, fetch signed URL before calling `getAudioDurationFromUrl`.
+**Section 6 (Client → Cloudflare R2)** — Expand mitigation:
+- Add: "Client components (`useAudioPlayer`, `ExclusiveSongCard`) never store or cache public URLs; R2 object keys are resolved to signed URLs on demand with short TTLs (90s audio, 300s artwork)."
 
-9. **Add `previewAudioUrl` state + effect** — New state variable and effect that fetches a signed URL when the hook edit dialog opens, passed to `<PreviewTimeSelector>`.
-
-10. **Artwork condition** — Change `song.artwork_url` to `song.artwork_key` for the cover art rendering conditional.
-
-11. **Debug panel** — Update to show `artwork_key` and `full_audio_key` instead of the legacy URL fields.
-
-### Technical Details
-- File: `src/components/artist/ExclusiveSongCard.tsx`
-- No new dependencies
-- The `mint-playback-url` edge function is already deployed and handles `fileType: "audio"` requests
-- Audio element is created before the async signed URL fetch to satisfy browser user-gesture requirements (especially iOS)
+No structural changes to the trust boundary model — the existing boundaries already cover this flow.
 
