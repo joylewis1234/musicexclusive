@@ -33,6 +33,8 @@ export interface ExclusiveSong {
   title: string;
   artwork_url: string | null;
   full_audio_url: string | null;
+  artwork_key: string | null;
+  full_audio_key: string | null;
   genre: string | null;
   created_at: string;
   updated_at?: string;
@@ -66,7 +68,7 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
 
   const isFailed = song.status === "failed";
   const isProcessing = song.status === "processing";
-  const isFinalizing = (!isFailed && !isProcessing) && (song.status !== "ready" || !song.full_audio_url || !song.artwork_url);
+  const isFinalizing = (!isFailed && !isProcessing) && (song.status !== "ready" || !song.full_audio_key || !song.artwork_key);
 
   // --- Local playback state ---
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -74,35 +76,16 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
   const [isPlayingFull, setIsPlayingFull] = useState(false);
   const [isPlayingHook, setIsPlayingHook] = useState(false);
 
-  // HEAD check for audio readiness when URL exists
+  // Audio is ready if track has a full_audio_key and is not finalizing
+  // (actual playback uses mint-playback-url to get signed URLs)
   useEffect(() => {
-    if (!song.full_audio_url || isFinalizing) {
+    if (isFinalizing || !song.full_audio_key) {
       setAudioReady(false);
-      return;
+    } else {
+      setAudioReady(true);
     }
-    let cancelled = false;
-    setAudioChecking(true);
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 5000);
-
-    fetch(song.full_audio_url, { method: "HEAD", signal: controller.signal })
-      .then(resp => {
-        clearTimeout(timer);
-        if (!cancelled) {
-          setAudioReady(resp.ok);
-          setAudioChecking(false);
-        }
-      })
-      .catch(() => {
-        clearTimeout(timer);
-        if (!cancelled) {
-          setAudioReady(false);
-          setAudioChecking(false);
-        }
-      });
-
-    return () => { cancelled = true; controller.abort(); };
-  }, [song.full_audio_url, isFinalizing]);
+    setAudioChecking(false);
+  }, [song.full_audio_key, isFinalizing]);
 
   // Cleanup audio on unmount
   useEffect(() => {
@@ -128,7 +111,7 @@ export const ExclusiveSongCard = ({ song, artistId, artistName, onDeleted }: Exc
     setIsPlayingHook(false);
   }, []);
 
-  const canPlay = !!song.full_audio_url && audioReady === true && !isFinalizing;
+  const canPlay = !!song.full_audio_key && audioReady === true && !isFinalizing;
 
   const handlePlayFull = () => {
     if (isPlayingFull) {
