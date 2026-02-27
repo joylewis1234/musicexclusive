@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { S3Client, UploadPartCommand } from "npm:@aws-sdk/client-s3@3.700.0";
 
 const corsHeaders = {
