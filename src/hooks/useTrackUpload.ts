@@ -692,7 +692,7 @@ export function useTrackUpload() {
             artwork_key: r2CoverKey,
             full_audio_key: r2AudioKey,
             preview_audio_key: r2PreviewKey,
-            status: "ready",
+            status: "processing",
             duration: audioDuration,
             preview_start_seconds: previewStartSeconds ?? 0,
           };
@@ -722,15 +722,17 @@ export function useTrackUpload() {
             throw new Error(`Finalize failed (${updateResp.status}): ${errText.slice(0, 200)}`);
           }
 
-          // ── Poll to confirm track status reached "ready" ──
-          addDiagnostic({ step: "db_update", status: "pending", message: "Verifying track status...", timestamp: new Date() });
+          // ── Poll to verify R2 objects exist and set status to "ready" ──
+          addDiagnostic({ step: "db_update", status: "pending", message: "Verifying uploaded files…", timestamp: new Date() });
           const pollStart = Date.now();
-          const POLL_TIMEOUT_MS = 120_000; // 120 seconds
-          const POLL_INTERVAL_MS = 2_000;  // 2 seconds
+          const POLL_TIMEOUT_MS = 120_000;
+          const POLL_INTERVAL_MS = 2_000;
+          let verified = false;
 
           while (Date.now() - pollStart < POLL_TIMEOUT_MS) {
             try {
-              const pollUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}&select=status,processing_error`;
+              // 1) Check DB has the keys persisted
+              const pollUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}&select=status,processing_error,full_audio_key,artwork_key,preview_audio_key`;
               const pollResp = await fetch(pollUrl, {
                 headers: {
                   apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
@@ -740,22 +742,63 @@ export function useTrackUpload() {
               });
               if (pollResp.ok) {
                 const rows = await pollResp.json();
-                const trackStatus = rows?.[0]?.status;
-                const processingError = rows?.[0]?.processing_error;
+                const row = rows?.[0];
 
-                if (trackStatus === "ready") {
-                  console.log("[Upload:DIAG] ✅ Track confirmed ready");
-                  break;
-                }
-                if (trackStatus === "failed") {
-                  const failMsg = processingError || "Track processing failed on the server.";
-                  console.error("[Upload:DIAG] ❌ Track status=failed:", failMsg);
+                if (row?.status === "failed") {
+                  const failMsg = row.processing_error || "Track processing failed on the server.";
                   addDiagnostic({ step: "db_update", status: "error", message: failMsg, timestamp: new Date() });
                   throw new Error(failMsg);
                 }
+
+                const hasAudio = !!row?.full_audio_key;
+                const hasArtwork = !!row?.artwork_key;
+                const hasPreview = !r2PreviewKey || !!row?.preview_audio_key;
+
+                if (hasAudio && hasArtwork && hasPreview) {
+                  // 2) Call verify-r2-objects edge function
+                  try {
+                    const verifyResp = await fetch(
+                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-r2-objects`,
+                      {
+                        method: "POST",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Authorization: `Bearer ${currentAccessToken}`,
+                          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                        },
+                        body: JSON.stringify({
+                          fullKey: row.full_audio_key,
+                          artworkKey: row.artwork_key,
+                          previewKey: row.preview_audio_key || undefined,
+                        }),
+                      }
+                    );
+                    const verifyData = await verifyResp.json();
+
+                    if (verifyData?.ok) {
+                      // Set status to ready
+                      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
+                        method: "PATCH",
+                        headers: {
+                          "Content-Type": "application/json",
+                          Prefer: "return=minimal",
+                          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                          Authorization: `Bearer ${currentAccessToken}`,
+                        },
+                        body: JSON.stringify({ status: "ready" }),
+                      });
+                      verified = true;
+                      console.log("[Upload:DIAG] ✅ R2 objects verified, track set to ready");
+                      break;
+                    } else {
+                      console.warn("[Upload:DIAG] R2 verify returned missing:", verifyData?.missing);
+                    }
+                  } catch (verifyErr) {
+                    console.warn("[Upload:DIAG] verify-r2-objects call failed (retrying):", verifyErr);
+                  }
+                }
               }
             } catch (pollErr: any) {
-              // If this is a "failed" error we threw, re-throw it
               if (pollErr?.message?.includes("processing failed") || pollErr?.message?.includes("Track processing failed")) {
                 throw pollErr;
               }
@@ -764,10 +807,8 @@ export function useTrackUpload() {
             await new Promise(r => setTimeout(r, POLL_INTERVAL_MS));
           }
 
-          // If we exited the loop due to timeout, mark as failed
-          if (Date.now() - pollStart >= POLL_TIMEOUT_MS) {
-            console.error("[Upload:DIAG] ❌ Track status poll timed out after 120s");
-            // Mark track as failed in DB
+          if (!verified) {
+            console.error("[Upload:DIAG] ❌ Track verification timed out after 120s");
             try {
               await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
                 method: "PATCH",
@@ -777,11 +818,11 @@ export function useTrackUpload() {
                   apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
                   Authorization: `Bearer ${currentAccessToken}`,
                 },
-                body: JSON.stringify({ status: "failed", processing_error: "Processing timed out after 120 seconds" }),
+                body: JSON.stringify({ status: "failed", processing_error: "File verification timed out after 120 seconds. Please retry." }),
               });
             } catch { /* best-effort */ }
-            addDiagnostic({ step: "db_update", status: "error", message: "Track processing timed out after 120s", timestamp: new Date() });
-            throw new Error("Track processing timed out. Please try again or contact support.");
+            addDiagnostic({ step: "db_update", status: "error", message: "File verification timed out after 120s", timestamp: new Date() });
+            throw new Error("Track verification timed out. Please try again or contact support.");
           }
 
           addDiagnostic({ step: "db_update", status: "success", message: "Track finalized", timestamp: new Date() });
@@ -811,7 +852,7 @@ export function useTrackUpload() {
         // Clean up orphaned track draft so it doesn't appear as a ghost on the dashboard
         if (state.trackId) {
           try {
-            await supabase.from("tracks").delete().eq("id", state.trackId).eq("status", "uploading");
+            await supabase.from("tracks").delete().eq("id", state.trackId).in("status", ["uploading"]);
             console.log("[Upload] Cleaned up orphaned track draft:", state.trackId);
           } catch (cleanupErr) {
             console.warn("[Upload] Failed to clean up draft:", cleanupErr);
