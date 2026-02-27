@@ -6,7 +6,7 @@ Protect audio from direct download by using short‑lived playback sessions, HLS
 
 ## Components
 
-- **Client**: `useAudioPlayer` with `hls.js` (or native HLS on Safari)
+- **Client**: `useAudioPlayer` with `hls.js` (or native HLS on Safari), `ExclusiveSongCard` (artist dashboard: full track + hook preview playback)
 - **Edge Function**: `mint-playback-url`
 - **Worker**: `playback-guard` (Cloudflare Worker)
 - **Storage**: R2 bucket
@@ -30,7 +30,8 @@ Protect audio from direct download by using short‑lived playback sessions, HLS
    - `sessionToken` + session metadata
    - signed fallback URL (non‑HLS)
 5. Client loads `hlsUrl` using `hls.js` or native HLS.
-6. Worker validates JWT and serves playlist.
+6. Artist dashboard uses the same `mint-playback-url` flow for on-demand playback of full tracks and 15-second hook previews. Audio elements are created synchronously (user-gesture compliance) with signed URLs assigned asynchronously.
+7. Worker validates JWT and serves playlist.
 7. Worker rewrites playlist entries so each segment URL includes `?token=`.
 
 ## Enforcement
@@ -38,6 +39,7 @@ Protect audio from direct download by using short‑lived playback sessions, HLS
 - JWT expiry enforces time‑limited access.
 - R2 bucket is private; only Worker can read segments.
 - Signed URL fallback exists but is secondary to HLS.
+- No public audio URLs are stored or exposed to the client; all playback resolves R2 keys to short-lived signed URLs at play time.
 
 ## Validation Checklist
 
