@@ -1,73 +1,47 @@
 
 
-## Plan: Full Account Cleanup
+## Account Cleanup — Remaining Steps
 
-Retain **4 accounts** and their data; delete everything else.
+### Current State
+- `fan_playlists` already empty (done previously)
+- 33 tracks to delete (keeping 6 for the two kept artists)
+- Large volumes in: `stream_charges` (4512), `stream_ledger` (2948), `playback_sessions` (4174), `credit_ledger` (5806), `monitoring_events` (7012)
+- 44 vault_members (keeping 3), 24 artist_profiles (keeping 2), 72 user_roles (keeping ~4), 77 profiles (keeping ~4)
 
-### Accounts to keep
+### Keep Lists (verified from DB)
+- **Artist Profile IDs**: `b5ce51ad-acf4-4e2d-a378-083fb2c32be2`, `435b37fd-9d4d-43db-aba3-ae55427c1e41`
+- **User IDs**: `b429eeb1-88c3-48df-a023-f345fee49912`, `ba5df0b2-8bb9-41f2-b1ad-4e2c97868448`, plus demo-fan and admin (need to confirm exact UUIDs)
+- **Vault Member Emails**: `demo-fan@test.com`, `joylewismusic+testdemo1@gmail.com`, `support@musicexclusive.co`, `platform@musicexclusive.com`
 
-| Email | User ID | Role | Artist Profile ID |
-|---|---|---|---|
-| test-artist+validation@example.com | b429eeb1 | artist | b5ce51ad (Validation Artist) |
-| joylewismusic+testdemo1@gmail.com | ba5df0b2 | artist | 435b37fd (JL - Demo 1) |
-| demo-fan@test.com | db9c713b | fan | — |
-| support@musicexclusive.co | 558ee15a | admin | — |
+### Execution Steps (all via data tool, in dependency order)
 
-**Note:** `tinytunesmusic@gmail.com` (the second admin email in the allowlist) is **not** in your keep list. It has an artist profile ("New Artist") but no tracks. Deleting it means that admin email won't have an auth account — the allowlist still recognizes it, so re-creating the account later will auto-grant admin. Proceeding as requested.
+1. **Delete track dependencies** for tracks where `artist_id NOT IN` kept artist IDs:
+   - `track_likes` (27 rows)
+   - `stream_charges` (~4500 rows, batched)
+   - `stream_ledger` (~2900 rows, batched)
+   - `playback_sessions` (~4100 rows, batched)
+   - `shared_tracks` (10 rows)
 
-### Tracks to keep
-- artist_id = `b5ce51ad...` (Validation Artist): 1 track
-- artist_id = `435b37fd...` (JL - Demo 1): 5 tracks
+2. **Delete tracks** not belonging to kept artists (33 rows)
 
-All other tracks (slug-based like `echo`/`nova`/`aura` + other UUID artists) will be deleted.
+3. **Delete credit_ledger** for emails not in keep list (~5800 rows, batched)
 
-### Cleanup edge function: `cleanup-accounts`
+4. **Delete shared_artist_profiles** referencing non-kept vault members
 
-A new edge function that performs deletions in dependency order using service role:
+5. **Delete vault_members** for emails not in keep list (~41 rows)
 
-1. **Delete dependent track data** for tracks NOT belonging to kept artists:
-   - `fan_playlists` (by track_id)
-   - `track_likes` (by track_id)
-   - `shared_tracks` (by track_id)
-   - `stream_charges` (by track_id)
-   - `stream_ledger` (by track_id)
-   - `marketing_assets` (by track_id — joined via artist_id)
-   - `playback_sessions` (by track_id)
+6. **Delete artist-specific tables**: `artist_agreement_acceptances`, `artist_profiles` (non-kept), `application_action_tokens`, `email_logs`, `artist_applications` (non-kept emails)
 
-2. **Delete tracks** where `artist_id` NOT IN kept artist profile IDs
+7. **Delete general user tables**: `user_roles`, `profiles`, `fan_terms_acceptances`, `agreement_acceptances`, `app_error_logs` for non-kept user IDs
 
-3. **Delete credit_ledger entries** for emails NOT in keep list
+8. **Delete vault_codes** for non-kept emails
 
-4. **Delete vault_members** for emails NOT in keep list
+9. **Clear ancillary tables**: `monitoring_events`, `request_rate_limits`
 
-5. **Delete artist-specific tables** for non-kept users:
-   - `artist_agreement_acceptances`
-   - `artist_profiles`
-   - `artist_applications` (for non-kept contact_email)
-   - `application_action_tokens` (for deleted applications)
-   - `email_logs` (for deleted applications)
+10. **Delete auth users** — will need the edge function for this step (admin.deleteUser API)
 
-6. **Delete general user tables**:
-   - `user_roles` (non-kept user_ids)
-   - `profiles` (non-kept user_ids)
-   - `fan_terms_acceptances` (non-kept user_ids)
-   - `agreement_acceptances` (non-kept emails)
-   - `app_error_logs` (non-kept user_ids)
-
-7. **Delete vault_codes** for non-kept emails
-
-8. **Delete auth users** via `supabase.auth.admin.deleteUser()` for each non-kept user
-
-9. **Return summary** with counts of deleted records per table
-
-### Safety measures
-- Admin-protected (JWT + role check)
-- Hardcoded keep-list inside the function
-- Dry-run mode available (log what would be deleted without deleting)
-- `artist_id` compared as TEXT throughout (UUID-safe)
-
-### Implementation: 1 new file
-- `supabase/functions/cleanup-accounts/index.ts`
-
-After deploying, invoke it once, verify the summary, then delete the function.
+### Implementation
+- Steps 1–9: Direct SQL via data tool (each step needs approval)
+- Step 10: Call the already-deployed `cleanup-accounts` edge function, or execute auth deletions individually
+- After completion: delete the `cleanup-accounts` edge function
 
