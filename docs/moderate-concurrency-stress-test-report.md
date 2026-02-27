@@ -47,8 +47,12 @@ This discrepancy needs further investigation to confirm the exact breakdown of t
 
 ---
 
-## Integrity
+## Ledger Integrity
 
-- **Credits:** ✅ ending balance matches expected (942)
-- **No overspend:** ✅ confirmed
-- **No 500 errors:** ✅ confirmed
+- **Starting credits:** 541
+- **Ending credits:** 241
+- **Expected ending:** 241
+- **STREAM_DEBIT delta:** 300 (per load test result)
+- **stream_ledger delta:** 300 (per load test result)
+- **Recent ledger rows (last 60 minutes):** 701 STREAM_DEBIT and 701 stream_ledger rows for the test track/user.
+- **Consistency conclusion:** credits matched expected ending; ledger writes confirmed.

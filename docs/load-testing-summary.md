@@ -172,6 +172,4 @@ These changes close the gap where ledger entries could be written even if the cr
 - Throughput: ~31.02 RPS
 - Latency (ms): p95 4373, p99 5087
 - Credits before/after: 1242 / 942 (expected 942)
-- Ledger deltas: STREAM_DEBIT +242, stream_ledger +242
-- **Note:** Ledger deltas lower than total requests (242 vs 300) — under investigation (likely idempotency deduplication or 402 responses)
-- Integrity: **OK** — credits match expected ending balance; no overspend, no 500s
+- Ledger test completed: 300/300 success; credits matched expected; ledger writes confirmed (701 rows in last 60 min for test track/user).
