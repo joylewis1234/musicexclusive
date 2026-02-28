@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Play, Pause, Square, Heart, Share2, Loader2, AlertCircle, Crown } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
+import { Play, Pause, Heart, Share2, Loader2, AlertCircle, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
@@ -54,7 +53,6 @@ export const CompactVaultPlayer = ({
     play,
     pause,
     stop,
-    seek,
     loadTrack,
   } = useAudioPlayer();
 
@@ -125,26 +123,6 @@ export const CompactVaultPlayer = ({
     setHasCalledOnPlay(true);
   };
 
-  const handleStop = () => {
-    stop();
-    setHasCalledOnPlay(false);
-  };
-
-  const handleSeek = (value: number[]) => {
-    if (duration) {
-      const newTime = (value[0] / 100) * duration;
-      seek(newTime);
-    }
-  };
-
-  const formatTime = (seconds: number) => {
-    if (!isFinite(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
-
-  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
   // Empty state - Compact card
   if (!track) {
@@ -300,36 +278,8 @@ export const CompactVaultPlayer = ({
             </div>
           )}
 
-          {/* Progress bar */}
-          <div className="mb-3">
-            <Slider
-              value={[progressPercent]}
-              onValueChange={handleSeek}
-              max={100}
-              step={0.1}
-              className="cursor-pointer"
-              disabled={!hasVaultAccess || isLoading}
-            />
-            <div className="flex justify-between mt-1.5 text-xs text-muted-foreground font-mono">
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-          </div>
-
-          {/* Bottom controls: Stop, Like, Share */}
-          <div className="flex items-center justify-between">
-            {/* Stop button */}
-            <button
-              onClick={handleStop}
-              disabled={isLoading}
-              className="p-2.5 rounded-full bg-muted/30 text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors disabled:opacity-50"
-              aria-label="Stop"
-            >
-              <Square className="w-4 h-4" />
-            </button>
-
-            {/* Like + Share */}
-            <div className="flex items-center gap-2">
+          {/* Like + Share */}
+          <div className="flex items-center justify-end gap-2 mt-1">
               {onLike && (
                 <button
                   onClick={onLike}
@@ -354,7 +304,6 @@ export const CompactVaultPlayer = ({
                   <Share2 className="w-5 h-5" />
                 </button>
               )}
-            </div>
           </div>
 
           {/* Vault access message */}
