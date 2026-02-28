@@ -1484,7 +1484,7 @@ export type Database = {
         Returns: {
           already_charged: boolean
           new_credits: number
-          stream_id: string
+          out_stream_id: string
           stream_ledger_id: string
         }[]
       }
