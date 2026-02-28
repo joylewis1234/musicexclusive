@@ -258,21 +258,44 @@ async function generateReport(supabase: any, reportDate: string): Promise<Report
 // ── Email HTML ────────────────────────────────────────────────────────────
 
 function generateEmailHtml(report: ReportData): string {
+  // ── Formatting helpers (display only, no calculation changes) ──
+  const fmtNum = (n: number | null | undefined): string => {
+    return (n ?? 0).toLocaleString("en-US");
+  };
+  const fmtMoney = (n: number | null | undefined): string => {
+    return "$" + (n ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  // ── Reusable row builder ──
+  const labelStyle = "white-space:nowrap;word-break:keep-all;overflow-wrap:normal;font-size:12px;color:#a1a1aa;padding:8px 0;border-bottom:1px solid #222;";
+  const valueStyle = "white-space:nowrap;text-align:right;font-weight:700;font-size:16px;color:#fff;padding:8px 0;border-bottom:1px solid #222;";
+  const greenValueStyle = valueStyle.replace("color:#fff", "color:#22c55e");
+
+  const metricRow = (label: string, value: string, green = false) =>
+    `<tr><td style="${labelStyle}">${label}</td><td style="${green ? greenValueStyle : valueStyle}"><span style="white-space:nowrap;">${value}</span></td></tr>`;
+
+  const tableWrap = (rows: string) =>
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${rows}</table>`;
+
+  // ── Top lists with 2-col table inside each li ──
+  const listItemRow = (left: string, right: string) =>
+    `<li style="padding:6px 0;border-bottom:1px solid #333;font-size:14px;color:#ddd;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:0;width:99%;padding-right:12px;">${left}</td><td style="white-space:nowrap;text-align:right;font-weight:700;color:#fff;"><span style="white-space:nowrap;">${right}</span></td></tr></table></li>`;
+
   const topArtistsList = report.topArtists.length > 0
     ? `<ol style="margin:0;padding-left:20px;">${report.topArtists.map(a =>
-        `<li style="padding:6px 0;border-bottom:1px solid #333;">${escapeHtml(a.name)} — <strong>${a.streams}</strong> stream${a.streams !== 1 ? 's' : ''}</li>`
+        listItemRow(escapeHtml(a.name), `${fmtNum(a.streams)} stream${a.streams !== 1 ? "s" : ""}`)
       ).join("")}</ol>`
     : `<p style="color:#888;">No streams today</p>`;
 
   const topTracksList = report.topTracks.length > 0
     ? `<ol style="margin:0;padding-left:20px;">${report.topTracks.map(t =>
-        `<li style="padding:6px 0;border-bottom:1px solid #333;"><strong>${escapeHtml(t.title)}</strong> by ${escapeHtml(t.artist)} — ${t.streams} stream${t.streams !== 1 ? 's' : ''}</li>`
+        listItemRow(`<strong>${escapeHtml(t.title)}</strong> <span style="color:#888;">by ${escapeHtml(t.artist)}</span>`, `${fmtNum(t.streams)} stream${t.streams !== 1 ? "s" : ""}`)
       ).join("")}</ol>`
     : `<p style="color:#888;">No streams today</p>`;
 
   const topFansList = report.topFans.length > 0
     ? `<ol style="margin:0;padding-left:20px;">${report.topFans.map(f =>
-        `<li style="padding:4px 0;">${escapeHtml(f.email)} — ${f.streams} stream${f.streams !== 1 ? 's' : ''}</li>`
+        listItemRow(escapeHtml(f.email), `${fmtNum(f.streams)} stream${f.streams !== 1 ? "s" : ""}`)
       ).join("")}</ol>`
     : `<p style="color:#888;">No streams today</p>`;
 
@@ -282,73 +305,87 @@ function generateEmailHtml(report: ReportData): string {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Report - ${escapeHtml(report.reportDate)}</title>
-<style>
-body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0a0a; color: #fff; margin: 0; padding: 40px 20px; }
-.container { max-width: 600px; margin: 0 auto; }
-.header { text-align: center; margin-bottom: 30px; }
-.header h1 { color: #a855f7; margin: 0 0 8px 0; font-size: 28px; }
-.header p { color: #888; margin: 0; font-size: 14px; }
-.card { background: #111; border: 1px solid #333; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
-.card h2 { color: #a855f7; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 16px 0; }
-.stats-grid { display: flex; flex-wrap: wrap; gap: 12px; }
-.stat { flex: 1 1 40%; min-width: 0; max-width: 48%; text-align: center; box-sizing: border-box; }
-.stat-value { font-size: 24px; font-weight: bold; color: #fff; }
-.stat-label { font-size: 12px; color: #888; margin-top: 4px; }
-.highlight { color: #22c55e; }
-ol { color: #ddd; }
-ol li { font-size: 14px; }
-.footer { text-align: center; color: #666; font-size: 12px; margin-top: 30px; }
-.footer a { color: #a855f7; }
-</style>
 </head>
-<body>
-<div class="container">
-  <div class="header">
-    <h1>Music Exclusive&#8482;</h1>
-    <p>Daily Company Report &mdash; ${escapeHtml(report.reportDate)} (Central Time)</p>
-  </div>
+<body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0a0a0a;color:#fff;margin:0;padding:40px 20px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;">
 
-  <div class="card">
-    <h2>&#128202; Streaming Activity</h2>
-    <div class="stats-grid">
-      <div class="stat"><div class="stat-value">${report.streaming.totalStreams}</div><div class="stat-label">Total Streams</div></div>
-      <div class="stat"><div class="stat-value">${report.streaming.totalCreditsUsed}</div><div class="stat-label">Credits Used</div></div>
-      <div class="stat"><div class="stat-value highlight">$${report.streaming.grossRevenue.toFixed(2)}</div><div class="stat-label">Gross Revenue</div></div>
-      <div class="stat"><div class="stat-value highlight">$${report.streaming.platformRevenue.toFixed(2)}</div><div class="stat-label">Platform Revenue</div></div>
-      <div class="stat"><div class="stat-value">$${report.streaming.artistEarnings.toFixed(2)}</div><div class="stat-label">Artist Earnings</div></div>
-      <div class="stat"><div class="stat-value">${report.streaming.pendingStreams} / ${report.streaming.paidStreams}</div><div class="stat-label">Pending / Paid</div></div>
-    </div>
-  </div>
+  <!-- Header -->
+  <tr><td style="text-align:center;padding-bottom:30px;">
+    <h1 style="color:#a855f7;margin:0 0 8px 0;font-size:28px;">Music Exclusive&#8482;</h1>
+    <p style="color:#888;margin:0;font-size:14px;">Daily Company Report &mdash; ${escapeHtml(report.reportDate)} (Central Time)</p>
+  </td></tr>
 
-  <div class="card">
-    <h2>&#128200; Growth</h2>
-    <div class="stats-grid">
-      <div class="stat"><div class="stat-value">${report.growth.newVaultWinners}</div><div class="stat-label">New Vault Winners</div></div>
-      <div class="stat"><div class="stat-value">${report.growth.newArtists}</div><div class="stat-label">New Artists</div></div>
-      <div class="stat"><div class="stat-value">${report.growth.newTracks}</div><div class="stat-label">New Tracks</div></div>
-    </div>
-  </div>
+  <!-- Streaming Activity -->
+  <tr><td style="padding-bottom:20px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#111;border:1px solid #333;border-radius:12px;">
+      <tr><td style="padding:20px;">
+        <h2 style="color:#a855f7;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px 0;">&#128202; Streaming Activity</h2>
+        ${tableWrap(
+          metricRow("Total Streams", fmtNum(report.streaming.totalStreams)) +
+          metricRow("Credits Used", fmtNum(report.streaming.totalCreditsUsed)) +
+          metricRow("Gross Revenue", fmtMoney(report.streaming.grossRevenue), true) +
+          metricRow("Platform Revenue", fmtMoney(report.streaming.platformRevenue), true) +
+          metricRow("Artist Earnings", fmtMoney(report.streaming.artistEarnings)) +
+          metricRow("Pending Streams", fmtNum(report.streaming.pendingStreams)) +
+          metricRow("Paid Streams", fmtNum(report.streaming.paidStreams))
+        )}
+      </td></tr>
+    </table>
+  </td></tr>
 
-  <div class="card">
-    <h2>&#127908; Top 5 Artists</h2>
-    ${topArtistsList}
-  </div>
+  <!-- Growth -->
+  <tr><td style="padding-bottom:20px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#111;border:1px solid #333;border-radius:12px;">
+      <tr><td style="padding:20px;">
+        <h2 style="color:#a855f7;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px 0;">&#128200; Growth</h2>
+        ${tableWrap(
+          metricRow("New Vault Winners", fmtNum(report.growth.newVaultWinners)) +
+          metricRow("New Artists", fmtNum(report.growth.newArtists)) +
+          metricRow("New Tracks", fmtNum(report.growth.newTracks))
+        )}
+      </td></tr>
+    </table>
+  </td></tr>
 
-  <div class="card">
-    <h2>&#127925; Top 5 Tracks</h2>
-    ${topTracksList}
-  </div>
+  <!-- Top 5 Artists -->
+  <tr><td style="padding-bottom:20px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#111;border:1px solid #333;border-radius:12px;">
+      <tr><td style="padding:20px;">
+        <h2 style="color:#a855f7;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px 0;">&#127908; Top 5 Artists</h2>
+        ${topArtistsList}
+      </td></tr>
+    </table>
+  </td></tr>
 
-  <div class="card">
-    <h2>&#128101; Top 10 Fans</h2>
-    ${topFansList}
-  </div>
+  <!-- Top 5 Tracks -->
+  <tr><td style="padding-bottom:20px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#111;border:1px solid #333;border-radius:12px;">
+      <tr><td style="padding:20px;">
+        <h2 style="color:#a855f7;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px 0;">&#127925; Top 5 Tracks</h2>
+        ${topTracksList}
+      </td></tr>
+    </table>
+  </td></tr>
 
-  <div class="footer">
+  <!-- Top 10 Fans -->
+  <tr><td style="padding-bottom:20px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#111;border:1px solid #333;border-radius:12px;">
+      <tr><td style="padding:20px;">
+        <h2 style="color:#a855f7;font-size:14px;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px 0;">&#128101; Top 10 Fans</h2>
+        ${topFansList}
+      </td></tr>
+    </table>
+  </td></tr>
+
+  <!-- Footer -->
+  <tr><td style="text-align:center;color:#666;font-size:12px;padding-top:10px;">
     <p>This report was automatically generated by Music Exclusive.</p>
-    <p><a href="https://themusicisexclusive.com/admin/reports/daily?date=${report.reportDate}">Open Dashboard</a></p>
-  </div>
-</div>
+    <p><a href="https://themusicisexclusive.com/admin/reports/daily?date=${report.reportDate}" style="color:#a855f7;">Open Dashboard</a></p>
+  </td></tr>
+
+</table>
+</td></tr></table>
 </body>
 </html>`;
 }
