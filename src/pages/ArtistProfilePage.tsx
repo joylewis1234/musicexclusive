@@ -82,7 +82,7 @@ const ArtistProfilePage = () => {
   // Track IDs for batch like fetching
   const trackIds = tracks.map(t => t.id);
   const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
-  const { chargeStream, hasBeenCharged, isProcessing: isCharging, clearCharged } = useStreamCharge(user?.email);
+  const { chargeStream, isProcessing: isCharging } = useStreamCharge(user?.email);
   const { credits, refetch: refetchCredits } = useCredits();
   const { addToPlaylist, isInPlaylist } = usePlaylist(fanId);
 
@@ -261,30 +261,21 @@ const ArtistProfilePage = () => {
   const handlePlayRequest = useCallback(() => {
     if (!selectedTrack) return;
     
-    // If already charged in this session, just play (no modal)
-    if (hasBeenCharged(selectedTrack.id)) {
-      return; // Let the player play without modal
-    }
-    
-    // Show confirmation modal
+    // Always show confirmation modal for every play
     setPendingPlayTrack(selectedTrack);
     setShowStreamConfirm(true);
-  }, [selectedTrack, hasBeenCharged]);
+  }, [selectedTrack]);
 
   // Called when user confirms the stream in the modal
   const handleStreamConfirm = useCallback(async () => {
     if (!pendingPlayTrack) return;
 
-    // chargeStream now fetches artist_id from the track itself
     const result = await chargeStream(pendingPlayTrack.id);
     
     if (result.success) {
-      // Refresh credits to show updated balance
       refetchCredits();
-      // Trigger auto-play after modal closes
       setShouldAutoPlay(true);
     } else if (result.requiresCredits) {
-      // Modal will handle this via the "Add Credits" button
       throw new Error("Insufficient credits");
     } else {
       throw new Error(result.error || "Failed to process stream");
@@ -295,12 +286,10 @@ const ArtistProfilePage = () => {
     navigate("/fan/add-credits");
   }, [navigate]);
 
-  // When song finishes, clear charged status so next play charges again
+  // Track ended — no-op now (every play requires a new charge)
   const handleTrackEnded = useCallback(() => {
-    if (selectedTrack) {
-      clearCharged(selectedTrack.id);
-    }
-  }, [selectedTrack, clearCharged]);
+    // Nothing to clear — every play charges fresh
+  }, []);
 
   const handleBack = () => {
     if (viewerContext === "artist-own" || viewerContext === "artist-preview") {
@@ -389,7 +378,7 @@ const ArtistProfilePage = () => {
           onPlay={handlePlayRequest}
           onLike={handlePlayerLike}
           onShare={handlePlayerShare}
-          skipPlayConfirm={selectedTrack ? hasBeenCharged(selectedTrack.id) : false}
+          skipPlayConfirm={false}
           autoPlay={shouldAutoPlay}
           onAutoPlayConsumed={() => setShouldAutoPlay(false)}
           onTrackEnded={handleTrackEnded}

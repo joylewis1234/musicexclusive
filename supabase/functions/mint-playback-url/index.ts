@@ -252,28 +252,9 @@ Deno.serve(async (req) => {
       playbackJwtSecret
     );
 
-    // ── Record session ──
-    stage = "session_insert";
-    const ipAddress = req.headers.get("cf-connecting-ip");
-    const userAgent = req.headers.get("user-agent");
-
-    const { error: sessionInsertError } = await admin
-      .from("playback_sessions")
-      .insert({
-        session_id: sessionId,
-        user_id: user.id,
-        track_id: trackId,
-        expires_at: sessionExpiresAtIso,
-        ip_address: ipAddress,
-        user_agent: userAgent,
-        watermark_id: watermarkId,
-      });
-
-    if (sessionInsertError) {
-      console.error("[mint-playback-url] Session insert error:", sessionInsertError);
-      errorMessage = sessionInsertError.message;
-      return await respond(500, { error: "Failed to store playback session" });
-    }
+    // ── Session recording moved to charge-stream ──
+    // mint-playback-url no longer creates playback_sessions to avoid inflation.
+    // Sessions are created once per paid stream in charge-stream.
 
     // ── Resolve key & presign ──
     stage = "presign";
