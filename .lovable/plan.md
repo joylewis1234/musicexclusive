@@ -1,35 +1,20 @@
 
 
-## Fix: Ambiguous `stream_id` in `debit_stream_credit` RPC
+## Remove Progress Bar and Stop Button from Vault Player
 
-The `charge-stream` edge function is failing with error `42702: column reference "stream_id" is ambiguous`. The RPC's `RETURNS TABLE` declares `stream_id uuid` as an output column, which collides with the `stream_charges.stream_id` column name in the `UPDATE ... WHERE stream_id = v_stream_id` statement.
+Remove two UI elements from the `CompactVaultPlayer` component used on the fan-facing artist profile page:
 
-### Database Migration
+1. **Progress bar** -- the `Slider` element and time labels (currentTime / duration)
+2. **Stop button** -- the square icon button in the bottom-left controls area
 
-Replace the RPC, renaming the output column from `stream_id` to `out_stream_id` to avoid the ambiguity:
+### Changes
 
-```sql
-CREATE OR REPLACE FUNCTION public.debit_stream_credit(...)
-RETURNS TABLE (
-  new_credits integer,
-  already_charged boolean,
-  stream_ledger_id uuid,
-  out_stream_id uuid          -- renamed from stream_id
-)
-```
+**File: `src/components/profile/CompactVaultPlayer.tsx`**
 
-All internal logic stays the same. The final `RETURN QUERY` lines change to use the new alias:
-- `RETURN QUERY SELECT updated_credits, true, NULL::uuid, NULL::uuid;` (unchanged)
-- `RETURN QUERY SELECT updated_credits, false, v_stream_ledger_id, v_stream_id;` (unchanged)
+- Delete the entire "Progress bar" section (lines ~224-237): the `Slider`, the time display `div` with `formatTime(currentTime)` and `formatTime(duration)`.
+- Delete the "Stop button" (lines ~242-250): the `<button>` wrapping the `<Square>` icon.
+- Remove unused imports: `Square` from lucide-react, `Slider` from ui/slider.
+- Remove the now-unused `handleSeek`, `handleStop`, `formatTime`, and `progressPercent` helpers since nothing references them after the deletion.
 
-### Edge Function Update
-
-In `charge-stream/index.ts`, update the RPC result field access from `rpcData.stream_id` to `rpcData.out_stream_id` (line 230).
-
-### Validation After Fix
-
-1. Call `charge-stream` with a test idempotency key — expect 200 with `hlsUrl`
-2. Verify exactly 1 new `playback_sessions` row and 1 new `playback_tokens` row
-3. Verify `stream_ledger` incremented by 1
-4. Verify credits decremented by 1
+No other files are affected. The play/pause, like, share, and vault-access-gate behaviors remain unchanged.
 
