@@ -45,7 +45,7 @@ export const PreviewTimeSelector = ({
   const handleSliderChange = useCallback((value: number[]) => {
     const newStart = value[0];
     // Ensure preview doesn't extend beyond track duration
-    const maxStart = Math.max(0, audioDuration - 15);
+    const maxStart = Math.max(0, audioDuration - 25);
     const clampedStart = Math.min(newStart, maxStart);
     onPreviewStartChange(clampedStart);
   }, [audioDuration, onPreviewStartChange]);
@@ -56,7 +56,7 @@ export const PreviewTimeSelector = ({
     
     const parsed = parseTime(value);
     if (parsed !== null && parsed >= 0) {
-      const maxStart = Math.max(0, audioDuration - 15);
+      const maxStart = Math.max(0, audioDuration - 25);
       const clampedStart = Math.min(parsed, maxStart);
       onPreviewStartChange(clampedStart);
     }
@@ -78,8 +78,8 @@ export const PreviewTimeSelector = ({
     }
   };
 
-  const previewEndSeconds = Math.min(previewStartSeconds + 15, audioDuration);
-  const maxStart = Math.max(0, audioDuration - 15);
+  const previewEndSeconds = Math.min(previewStartSeconds + 25, audioDuration);
+  const maxStart = Math.max(0, audioDuration - 25);
 
   return (
     <div className="space-y-4">
@@ -153,7 +153,7 @@ export const PreviewTimeSelector = ({
         ) : (
           <>
             <Play className="w-4 h-4 mr-2" />
-            Preview 15s
+            Preview 25s
           </>
         )}
       </Button>
@@ -162,7 +162,7 @@ export const PreviewTimeSelector = ({
       {isPlaying && (
         <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-accent/10 border border-accent/30">
           <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-          <span className="text-sm text-accent">Playing preview (15 seconds)…</span>
+          <span className="text-sm text-accent">Playing preview (25 seconds)…</span>
         </div>
       )}
     </div>
