@@ -1,4 +1,4 @@
-import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, Loader2, Music, Crown, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,6 @@ import { useCredits } from "@/hooks/useCredits";
 import { usePlaylist } from "@/hooks/usePlaylist";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
 import { toast } from "sonner";
 
 import artist1 from "@/assets/artist-1.jpg";
@@ -43,16 +42,21 @@ interface TrackData {
   artist_id: string;
 }
 
+interface PlayerTrack {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string;
+}
+
 type ViewerContext = "fan" | "artist-own" | "artist-preview";
 
 const ArtistProfilePage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const { artistId } = useParams<{ artistId: string }>();
   const [searchParams] = useSearchParams();
   const { user, role } = useAuth();
-  const player = usePlayer();
-
+  
   const isPreviewMode = searchParams.get("view") === "fan";
   const highlightTrackId = searchParams.get("track");
 
@@ -71,40 +75,19 @@ const ArtistProfilePage = () => {
   const [artistEmail, setArtistEmail] = useState<string>("");
   const [showStreamConfirm, setShowStreamConfirm] = useState(false);
   const [pendingPlayTrack, setPendingPlayTrack] = useState<PlayerTrack | null>(null);
+  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const [chargedForSession, setChargedForSession] = useState(false);
-
+  
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
-  const autoplayConsumedRef = useRef(false);
-
-  const trackIds = tracks.map((t) => t.id);
+  // Track IDs for batch like fetching
+  const trackIds = tracks.map(t => t.id);
   const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
   const { chargeStream, isProcessing: isCharging } = useStreamCharge(user?.email);
   const { credits, refetch: refetchCredits } = useCredits();
   const { addToPlaylist, isInPlaylist } = usePlaylist(fanId);
 
-  // Wire onEndedRef: when paid track ends or is taken over, reset charge flag
-  useEffect(() => {
-    player.onEndedRef.current = () => setChargedForSession(false);
-    return () => {
-      player.onEndedRef.current = null;
-    };
-  }, [player.onEndedRef]);
-
-  // Helper to build PlayerTrack from TrackData
-  const buildPlayerTrack = useCallback(
-    (track: TrackData, profileOverride?: ArtistProfile | null): PlayerTrack => {
-      const profile = profileOverride || artistProfile;
-      return {
-        id: track.id,
-        title: track.title,
-        artist: profile?.artist_name || "Unknown Artist",
-        artworkUrl: track.artwork_url || profile?.avatar_url || artist1,
-        artistId: artistId || "",
-      };
-    },
-    [artistProfile, artistId],
-  );
+  // No more ensurePublicUrl — audio is now served via signed URLs from mint-playback-url
 
   // Load artist profile and tracks
   useEffect(() => {
@@ -116,6 +99,7 @@ const ArtistProfilePage = () => {
       }
 
       try {
+        // Use public view to avoid exposing sensitive fields (stripe_account_id, payout_status)
         const { data: profile, error: profileError } = await supabase
           .from("public_artist_profiles")
           .select("id, user_id, artist_name, genre, bio, avatar_url")
@@ -130,12 +114,14 @@ const ArtistProfilePage = () => {
 
         setArtistProfile(profile);
 
+        // Try to get artist email from applications first, then fall back to user lookup
         const { data: userData } = await supabase
           .from("artist_applications")
           .select("contact_email")
           .eq("artist_name", profile.artist_name)
           .maybeSingle();
 
+        // If no application found, use artist profile id as fallback reference
         setArtistEmail(userData?.contact_email || `artist_${profile.id}@musicexclusive.com`);
 
         const { data: trackData } = await supabase
@@ -149,17 +135,11 @@ const ArtistProfilePage = () => {
 
         if (trackData && trackData.length > 0) {
           setTracks(trackData);
+
           if (highlightTrackId) {
-            const highlightedTrack = trackData.find((t) => t.id === highlightTrackId);
+            const highlightedTrack = trackData.find(t => t.id === highlightTrackId);
             if (highlightedTrack) {
-              setChargedForSession(false);
-              setSelectedTrack({
-                id: highlightedTrack.id,
-                title: highlightedTrack.title,
-                artist: profile.artist_name,
-                artworkUrl: highlightedTrack.artwork_url || profile.avatar_url || artist1,
-                artistId: artistId || "",
-              });
+              handleSelectTrack(highlightedTrack, profile);
             }
           }
         } else {
@@ -180,22 +160,28 @@ const ArtistProfilePage = () => {
   useEffect(() => {
     const checkAccess = async () => {
       if (!artistProfile) return;
+
       const isOwner = user?.id === artistProfile.user_id;
+
       if (role === "artist" && isOwner) {
         setViewerContext(isPreviewMode ? "artist-preview" : "artist-own");
         setHasVaultAccess(true);
         return;
       }
+
       setViewerContext("fan");
+
       if (!user?.email) {
         setHasVaultAccess(false);
         return;
       }
+
       const { data: vaultMember } = await supabase
         .from("vault_members")
         .select("id, vault_access_active")
         .eq("email", user.email)
         .maybeSingle();
+
       if (vaultMember?.vault_access_active) {
         setHasVaultAccess(true);
         setFanId(vaultMember.id);
@@ -203,6 +189,7 @@ const ArtistProfilePage = () => {
         setHasVaultAccess(false);
       }
     };
+
     checkAccess();
   }, [artistProfile, user, role, isPreviewMode]);
 
@@ -219,27 +206,15 @@ const ArtistProfilePage = () => {
     }
   }, [highlightTrackId, tracks]);
 
-  // Handle autoplayTrackId from Discovery stream modal
-  useEffect(() => {
-    const autoplayTrackId = (location.state as any)?.autoplayTrackId;
-    if (!autoplayTrackId || tracks.length === 0 || !artistProfile || autoplayConsumedRef.current) return;
-
-    autoplayConsumedRef.current = true;
-    const matchedTrack = tracks.find((t) => t.id === autoplayTrackId);
-    if (matchedTrack) {
-      const pt = buildPlayerTrack(matchedTrack);
-      setChargedForSession(false);
-      setSelectedTrack(pt);
-      setPendingPlayTrack(pt);
-      setShowStreamConfirm(true);
-    }
-
-    navigate(location.pathname + location.search, { replace: true, state: {} });
-  }, [tracks, artistProfile, location.state, navigate, location.pathname, location.search, buildPlayerTrack]);
-
   const handleSelectTrack = (track: TrackData, profileOverride?: ArtistProfile | null) => {
+    const profile = profileOverride || artistProfile;
     setChargedForSession(false);
-    setSelectedTrack(buildPlayerTrack(track, profileOverride));
+    setSelectedTrack({
+      id: track.id,
+      title: track.title,
+      artist: profile?.artist_name || "Unknown Artist",
+      artworkUrl: track.artwork_url || profile?.avatar_url || artist1,
+    });
   };
 
   const handlePlayAll = () => {
@@ -277,14 +252,18 @@ const ArtistProfilePage = () => {
 
   const handlePlayerShare = () => {
     if (selectedTrack) {
-      const track = tracks.find((t) => t.id === selectedTrack.id);
-      if (track) handleShareTrack(track);
+      const track = tracks.find(t => t.id === selectedTrack.id);
+      if (track) {
+        handleShareTrack(track);
+      }
     }
   };
 
-  // Called when user clicks play on the player — shows confirmation modal
+  // Called when user clicks play on the player - shows confirmation modal
   const handlePlayRequest = useCallback(() => {
     if (!selectedTrack) return;
+    
+    // Always show confirmation modal for every play
     setPendingPlayTrack(selectedTrack);
     setShowStreamConfirm(true);
   }, [selectedTrack]);
@@ -294,24 +273,26 @@ const ArtistProfilePage = () => {
     if (!pendingPlayTrack) return;
 
     const result = await chargeStream(pendingPlayTrack.id);
-
+    
     if (result.success) {
       refetchCredits();
       setChargedForSession(true);
-      // Load and play via global audio engine
-      if (result.hlsUrl) {
-        player.loadAndPlayPaid(pendingPlayTrack, result.hlsUrl, result.sessionId ?? null);
-      }
+      setShouldAutoPlay(true);
     } else if (result.requiresCredits) {
       throw new Error("Insufficient credits");
     } else {
       throw new Error(result.error || "Failed to process stream");
     }
-  }, [pendingPlayTrack, chargeStream, refetchCredits, player]);
+  }, [pendingPlayTrack, chargeStream, refetchCredits]);
 
   const handleAddCredits = useCallback(() => {
     navigate("/fan/add-credits");
   }, [navigate]);
+
+  // Track ended — reset charge flag so next play charges again
+  const handleTrackEnded = useCallback(() => {
+    setChargedForSession(false);
+  }, []);
 
   const handleBack = () => {
     if (viewerContext === "artist-own" || viewerContext === "artist-preview") {
@@ -322,7 +303,9 @@ const ArtistProfilePage = () => {
   };
 
   const getBackLabel = () => {
-    if (viewerContext === "artist-own" || viewerContext === "artist-preview") return "Dashboard";
+    if (viewerContext === "artist-own" || viewerContext === "artist-preview") {
+      return "Dashboard";
+    }
     return "Discovery";
   };
 
@@ -347,8 +330,8 @@ const ArtistProfilePage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden" style={{ isolation: "isolate" }}>
-      {/* Back navigation */}
+    <div className="min-h-screen bg-background flex flex-col overflow-x-hidden" style={{ isolation: 'isolate' }}>
+      {/* Back navigation - Floating */}
       <header className="fixed top-0 left-0 right-0 z-30 px-4 py-4">
         <div className="w-full max-w-lg mx-auto flex items-center justify-between">
           <button
@@ -359,10 +342,13 @@ const ArtistProfilePage = () => {
             <span className="text-sm font-medium">{getBackLabel()}</span>
           </button>
 
+          {/* Preview mode badge */}
           {viewerContext === "artist-preview" && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/40">
               <Eye className="w-3.5 h-3.5 text-amber-400" />
-              <span className="text-amber-400 text-xs font-display uppercase tracking-wider">Preview</span>
+              <span className="text-amber-400 text-xs font-display uppercase tracking-wider">
+                Preview
+              </span>
             </div>
           )}
         </div>
@@ -371,7 +357,7 @@ const ArtistProfilePage = () => {
       {/* Hero Section */}
       <ArtistProfileHero
         name={artistProfile.artist_name}
-        genre={tracks.length > 0 && tracks[0].genre ? tracks[0].genre : artistProfile.genre || "Music"}
+        genre={(tracks.length > 0 && tracks[0].genre) ? tracks[0].genre : (artistProfile.genre || "Music")}
         imageUrl={artistProfile.avatar_url || artist1}
         onPlayAll={handlePlayAll}
         onShareArtist={handleShareArtist}
@@ -381,11 +367,11 @@ const ArtistProfilePage = () => {
       />
 
       {/* About Section */}
-      <ArtistAboutSection
-        bio={artistProfile.bio || "Exclusive artist on Music Exclusive™. Experience premium, unreleased music only available inside the Vault."}
+      <ArtistAboutSection 
+        bio={artistProfile.bio || `Exclusive artist on Music Exclusive™. Experience premium, unreleased music only available inside the Vault.`} 
       />
 
-      {/* Vault Player */}
+      {/* Vault Player - wrapped in error boundary */}
       <PlayerErrorBoundary onRetry={() => setSelectedTrack(null)}>
         <CompactVaultPlayer
           track={selectedTrack}
@@ -396,20 +382,37 @@ const ArtistProfilePage = () => {
           onLike={handlePlayerLike}
           onShare={handlePlayerShare}
           skipPlayConfirm={chargedForSession}
+          autoPlay={shouldAutoPlay}
+          onAutoPlayConsumed={() => setShouldAutoPlay(false)}
+          onTrackEnded={handleTrackEnded}
         />
       </PlayerErrorBoundary>
 
       {/* Track List Section */}
       <section className="px-5 pb-6">
         <div className="flex items-center gap-2 mb-4">
-          <h2 className="font-display text-lg font-semibold text-foreground">Top Songs</h2>
-          <div className="relative px-2.5 py-1 rounded-full" style={{ background: "hsla(280, 80%, 50%, 0.12)" }}>
-            <Crown
+          <h2 className="font-display text-lg font-semibold text-foreground">
+            Top Songs
+          </h2>
+          {/* Section badge with crown */}
+          <div 
+            className="relative px-2.5 py-1 rounded-full"
+            style={{
+              background: 'hsla(280, 80%, 50%, 0.12)',
+            }}
+          >
+            <Crown 
               className="absolute -top-1.5 -left-0.5 w-3 h-3 rotate-[-12deg]"
-              style={{ color: "hsl(45, 90%, 55%)", filter: "drop-shadow(0 0 3px hsla(45, 90%, 55%, 0.8))" }}
+              style={{
+                color: 'hsl(45, 90%, 55%)',
+                filter: 'drop-shadow(0 0 3px hsla(45, 90%, 55%, 0.8))'
+              }}
               fill="hsl(45, 90%, 55%)"
             />
-            <span className="text-[10px] font-display uppercase tracking-wider pl-1" style={{ color: "hsl(280, 80%, 70%)" }}>
+            <span 
+              className="text-[10px] font-display uppercase tracking-wider pl-1"
+              style={{ color: 'hsl(280, 80%, 70%)' }}
+            >
               Exclusive
             </span>
           </div>
@@ -418,7 +421,9 @@ const ArtistProfilePage = () => {
         {tracks.length === 0 ? (
           <div className="rounded-xl bg-muted/20 p-8 text-center border border-border/30">
             <Music className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground text-sm">No exclusive tracks available yet.</p>
+            <p className="text-muted-foreground text-sm">
+              No exclusive tracks available yet.
+            </p>
           </div>
         ) : (
           <TrackListErrorBoundary>
@@ -428,9 +433,7 @@ const ArtistProfilePage = () => {
                 return (
                   <AppleMusicTrackRow
                     key={track.id}
-                    ref={(el) => {
-                      trackRefs.current[track.id] = el;
-                    }}
+                    ref={(el) => { trackRefs.current[track.id] = el; }}
                     track={{
                       id: track.id,
                       title: track.title,
@@ -461,19 +464,29 @@ const ArtistProfilePage = () => {
       </section>
 
       {/* Share Artist Section */}
-      <ShareArtistSection artistName={artistProfile.artist_name} onShareToInbox={handleShareArtist} />
+      <ShareArtistSection
+        artistName={artistProfile.artist_name}
+        onShareToInbox={handleShareArtist}
+      />
 
       {/* Discover More CTA */}
       <section className="px-5 pb-8">
-        <Button variant="outline" className="w-full rounded-xl" onClick={() => navigate("/discovery")}>
+        <Button
+          variant="outline"
+          className="w-full rounded-xl"
+          onClick={() => navigate("/discovery")}
+        >
           Discover More Artists
         </Button>
       </section>
 
+      {/* Bottom spacing */}
       <div className="h-8" />
 
       {/* Vault Access Gate Modal */}
-      {showAccessGate && <VaultAccessGate onClose={() => setShowAccessGate(false)} />}
+      {showAccessGate && (
+        <VaultAccessGate onClose={() => setShowAccessGate(false)} />
+      )}
 
       {/* Share Track Modal */}
       {shareModalOpen && trackToShare && artistProfile && (
@@ -500,7 +513,7 @@ const ArtistProfilePage = () => {
         artistProfileId={artistProfile.id}
         artistName={artistProfile.artist_name}
         artistAvatarUrl={artistProfile.avatar_url}
-        artistGenre={tracks.length > 0 && tracks[0].genre ? tracks[0].genre : artistProfile.genre}
+        artistGenre={(tracks.length > 0 && tracks[0].genre) ? tracks[0].genre : artistProfile.genre}
       />
 
       {/* Stream Confirmation Modal */}

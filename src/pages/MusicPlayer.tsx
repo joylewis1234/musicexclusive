@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { usePlayer, tracksLibrary, type Track } from "@/contexts/PlayerContext";
+import { usePlayer, tracksLibrary } from "@/contexts/PlayerContext";
 import { ShareTrackModal } from "@/components/ShareTrackModal";
 
 const formatTime = (seconds: number): string => {
@@ -56,15 +56,7 @@ const MusicPlayer = () => {
 
   // Use current track or fallback
   const track = currentTrack || tracksLibrary["1"];
-  const legacyTrack: Track = {
-    id: track.id,
-    title: track.title,
-    artist: track.artist,
-    album: track.album || "",
-    artwork: track.artwork || ("artworkUrl" in track ? (track as any).artworkUrl : "") || "",
-    duration: track.duration || 0,
-  };
-  const progress = legacyTrack.duration ? (currentTime / legacyTrack.duration) * 100 : 0;
+  const progress = track ? (currentTime / track.duration) * 100 : 0;
 
   // Simulate progress when playing
   useEffect(() => {
@@ -72,7 +64,7 @@ const MusicPlayer = () => {
     
     const interval = setInterval(() => {
       setCurrentTime(currentTime + 1);
-      if (currentTime >= legacyTrack.duration) {
+      if (currentTime >= track.duration) {
         togglePlayPause();
         setCurrentTime(0);
       }
@@ -83,7 +75,7 @@ const MusicPlayer = () => {
 
   const handleProgressChange = (value: number[]) => {
     if (track) {
-      setCurrentTime((value[0] / 100) * legacyTrack.duration);
+      setCurrentTime((value[0] / 100) * track.duration);
     }
   };
 
@@ -157,8 +149,8 @@ const MusicPlayer = () => {
           />
           <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-2xl overflow-hidden shadow-2xl">
             <img
-              src={legacyTrack.artwork}
-              alt={`${legacyTrack.album} by ${legacyTrack.artist}`}
+              src={track.artwork}
+              alt={`${track.album} by ${track.artist}`}
               className={cn(
                 "w-full h-full object-cover transition-transform duration-1000",
                 isPlaying && "scale-105"
@@ -183,7 +175,7 @@ const MusicPlayer = () => {
             {track.artist}
           </p>
           <p className="text-muted-foreground text-xs mt-1">
-            {legacyTrack.album}
+            {track.album}
           </p>
         </div>
 
@@ -198,7 +190,7 @@ const MusicPlayer = () => {
           />
           <div className="flex justify-between mt-2 text-xs text-muted-foreground font-mono">
             <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(legacyTrack.duration)}</span>
+            <span>{formatTime(track.duration)}</span>
           </div>
         </div>
 
@@ -278,7 +270,7 @@ const MusicPlayer = () => {
       <ShareTrackModal
         open={isShareModalOpen}
         onOpenChange={setIsShareModalOpen}
-        track={legacyTrack}
+        track={track}
       />
     </div>
   );
