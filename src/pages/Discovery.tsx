@@ -1,10 +1,11 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DiscoveryHeader } from "@/components/discovery/DiscoveryHeader";
 import { SearchFilterBar } from "@/components/discovery/SearchFilterBar";
 import { HotNewTracks } from "@/components/discovery/HotNewTracks";
 import { DiscoveryTrackCard } from "@/components/discovery/DiscoveryTrackCard";
 import { ShareTrackModal } from "@/components/ShareTrackModal";
+import { PreviewStreamModal } from "@/components/discovery/PreviewStreamModal";
 import { useAudioPreview } from "@/hooks/useAudioPreview";
 import { useTracks, DbTrack, getArtistName } from "@/hooks/useTracks";
 import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
@@ -29,6 +30,13 @@ const Discovery = () => {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [selectedTrackForShare, setSelectedTrackForShare] = useState<Track | null>(null);
 
+  // Stream modal state
+  const [showStreamModal, setShowStreamModal] = useState(false);
+  const [streamModalTrack, setStreamModalTrack] = useState<DbTrack | null>(null);
+
+  // Ref-based callback for preview limit reached
+  const onPreviewLimitReachedRef = useRef<((trackId: string) => void) | null>(null);
+
   const {
     currentPreviewId,
     previewProgress,
@@ -37,12 +45,36 @@ const Discovery = () => {
     error: previewError,
     startPreview,
     stopPreview,
-  } = useAudioPreview();
+  } = useAudioPreview(onPreviewLimitReachedRef);
 
   const { tracks, isLoading: isLoadingTracks } = useTracks();
 
   const trackIds = useMemo(() => tracks.map((t) => t.id), [tracks]);
   const { getLikeState } = useTrackLikesBatch(trackIds, null);
+
+  // Wire up preview limit callback — find the track and show modal
+  useEffect(() => {
+    onPreviewLimitReachedRef.current = (trackId: string) => {
+      const track = tracks.find((t) => t.id === trackId);
+      if (track) {
+        setStreamModalTrack(track);
+        setShowStreamModal(true);
+      }
+    };
+  }, [tracks]);
+
+  const handleStreamRedirect = useCallback(() => {
+    if (!streamModalTrack) return;
+    setShowStreamModal(false);
+    navigate(`/artist/${streamModalTrack.artist_id}`, {
+      state: { autoplayTrackId: streamModalTrack.id },
+    });
+  }, [streamModalTrack, navigate]);
+
+  const handleDismissStreamModal = useCallback(() => {
+    setShowStreamModal(false);
+    setStreamModalTrack(null);
+  }, []);
 
   const [featuredTrackIds, setFeaturedTrackIds] = useState<string[]>([]);
 
@@ -205,6 +237,15 @@ const Discovery = () => {
         open={isShareModalOpen}
         onOpenChange={setIsShareModalOpen}
         track={selectedTrackForShare}
+      />
+
+      {/* Preview Stream Modal */}
+      <PreviewStreamModal
+        open={showStreamModal}
+        trackTitle={streamModalTrack?.title || ""}
+        artistName={streamModalTrack ? getArtistName(streamModalTrack) : ""}
+        onStream={handleStreamRedirect}
+        onDismiss={handleDismissStreamModal}
       />
     </div>
   );
