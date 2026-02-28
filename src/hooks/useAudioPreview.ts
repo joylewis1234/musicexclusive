@@ -11,7 +11,7 @@ interface UseAudioPreviewReturn {
   stopPreview: () => void;
 }
 
-const PREVIEW_DURATION = 15;
+const PREVIEW_DURATION = 25;
 
 export const useAudioPreview = (): UseAudioPreviewReturn => {
   const [currentPreviewId, setCurrentPreviewId] = useState<string | null>(null);
