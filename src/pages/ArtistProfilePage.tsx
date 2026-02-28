@@ -1,4 +1,4 @@
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChevronLeft, Loader2, Music, Crown, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,7 @@ type ViewerContext = "fan" | "artist-own" | "artist-preview";
 
 const ArtistProfilePage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { artistId } = useParams<{ artistId: string }>();
   const [searchParams] = useSearchParams();
   const { user, role } = useAuth();
@@ -80,6 +81,7 @@ const ArtistProfilePage = () => {
   
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
+  const autoplayConsumedRef = useRef(false);
   // Track IDs for batch like fetching
   const trackIds = tracks.map(t => t.id);
   const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
@@ -205,6 +207,30 @@ const ArtistProfilePage = () => {
       }
     }
   }, [highlightTrackId, tracks]);
+
+  // Handle autoplayTrackId from Discovery stream modal
+  useEffect(() => {
+    const autoplayTrackId = (location.state as any)?.autoplayTrackId;
+    if (!autoplayTrackId || tracks.length === 0 || !artistProfile || autoplayConsumedRef.current) return;
+
+    autoplayConsumedRef.current = true;
+    const matchedTrack = tracks.find((t) => t.id === autoplayTrackId);
+    if (matchedTrack) {
+      const playerTrack: PlayerTrack = {
+        id: matchedTrack.id,
+        title: matchedTrack.title,
+        artist: artistProfile.artist_name,
+        artworkUrl: matchedTrack.artwork_url || artistProfile.avatar_url || artist1,
+      };
+      setChargedForSession(false);
+      setSelectedTrack(playerTrack);
+      setPendingPlayTrack(playerTrack);
+      setShowStreamConfirm(true);
+    }
+
+    // Clear location state to prevent re-triggering
+    navigate(location.pathname + location.search, { replace: true, state: {} });
+  }, [tracks, artistProfile, location.state, navigate, location.pathname, location.search]);
 
   const handleSelectTrack = (track: TrackData, profileOverride?: ArtistProfile | null) => {
     const profile = profileOverride || artistProfile;
