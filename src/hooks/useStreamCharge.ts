@@ -7,7 +7,9 @@ interface StreamChargeResult {
   error?: string;
   requiresCredits?: boolean;
   newCredits?: number;
-  alreadyCharged?: boolean;
+  hlsUrl?: string;
+  sessionId?: string;
+  streamId?: string;
 }
 
 const MAX_RETRIES = 5;
@@ -29,7 +31,6 @@ function sleep(ms: number): Promise<void> {
 
 export const useStreamCharge = (userEmail: string | null | undefined) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [chargedTracks, setChargedTracks] = useState<Set<string>>(new Set());
 
   const chargeStream = useCallback(async (
     trackId: string
@@ -41,7 +42,6 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
     setIsProcessing(true);
 
     try {
-      // Generate idempotency key once — preserved across retries
       const idempotencyKey = crypto.randomUUID();
       let lastError: string | undefined;
 
@@ -53,11 +53,9 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
 
         const { data, error } = await invokeChargeStream(trackId, idempotencyKey);
 
-        // Handle edge function invocation errors
         if (error) {
           const message = error.message || "Something went wrong";
 
-          // Check if it's a 409 (concurrent update) — retry
           if (message.includes("Concurrent update") || message.includes("409")) {
             lastError = message;
             console.warn(`[StreamCharge] 409 contention, retry ${attempt + 1}/${MAX_RETRIES}`);
@@ -75,9 +73,7 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
           return { success: false, error: message };
         }
 
-        // Handle structured error responses from edge function
         if (data?.error) {
-          // 409 contention — retry with same idempotency key
           if (data.error === "Concurrent update, retry") {
             lastError = data.error;
             console.warn(`[StreamCharge] 409 contention, retry ${attempt + 1}/${MAX_RETRIES}`);
@@ -100,16 +96,15 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
           toast.success("1 credit used • Enjoy 🎶");
         }
 
-        setChargedTracks(prev => new Set(prev).add(trackId));
-
         return {
           success: true,
           newCredits: data?.newCredits,
-          alreadyCharged: data?.alreadyCharged,
+          hlsUrl: data?.hlsUrl,
+          sessionId: data?.sessionId,
+          streamId: data?.streamId,
         };
       }
 
-      // Exhausted retries
       console.error(`[StreamCharge] Exhausted ${MAX_RETRIES} retries for 409 contention`);
       toast.error("Stream failed", {
         description: "Server is busy. Please try again in a moment.",
@@ -126,18 +121,8 @@ export const useStreamCharge = (userEmail: string | null | undefined) => {
     }
   }, [userEmail]);
 
-  const clearCharged = useCallback((trackId: string) => {
-    setChargedTracks(prev => {
-      const next = new Set(prev);
-      next.delete(trackId);
-      return next;
-    });
-  }, []);
-
   return {
     chargeStream,
     isProcessing,
-    hasBeenCharged: useCallback((trackId: string) => chargedTracks.has(trackId), [chargedTracks]),
-    clearCharged,
   };
 };

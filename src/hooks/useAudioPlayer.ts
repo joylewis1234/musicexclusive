@@ -25,6 +25,12 @@ export interface LoadTrackParams {
   forceRefresh?: boolean;
 }
 
+export interface LoadPaidStreamParams {
+  trackId: string;
+  hlsUrl: string;
+  sessionId?: string | null;
+}
+
 export interface UseAudioPlayerReturn {
   isPlaying: boolean;
   currentTime: number;
@@ -39,6 +45,7 @@ export interface UseAudioPlayerReturn {
   seek: (time: number) => void;
   setVolume: (vol: number) => void;
   loadTrack: (params: LoadTrackParams) => Promise<void>;
+  loadPaidStream: (params: LoadPaidStreamParams) => void;
 }
 
 interface CachedEntry {
@@ -407,8 +414,71 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     setVolumeState(Math.max(0, Math.min(100, vol)));
   }, []);
 
+  const loadPaidStream = useCallback(
+    (params: LoadPaidStreamParams) => {
+      if (!audioRef.current) return;
+
+      destroyHls();
+      setError(null);
+      setIsPlaying(false);
+      setCurrentTime(0);
+      setDuration(0);
+      setIsLoading(true);
+      loadStartRef.current = performance.now();
+      telemetrySentRef.current = false;
+      playbackSessionRef.current = params.sessionId ?? null;
+
+      const audio = audioRef.current;
+
+      if (Hls.isSupported()) {
+        const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+        hlsRef.current = hls;
+
+        hls.on(Hls.Events.ERROR, (_event, data) => {
+          console.error("[AudioPlayer] HLS error (paid):", data.type, data.details);
+          if (data.fatal) {
+            destroyHls();
+            setError("Playback error — please retry");
+            setIsLoading(false);
+          }
+        });
+
+        hls.loadSource(params.hlsUrl);
+        hls.attachMedia(audio);
+
+        setDiagnostics((prev) => ({
+          ...prev,
+          trackId: params.trackId,
+          audioUrl: params.hlsUrl,
+          hlsActive: true,
+          sessionId: params.sessionId ?? null,
+          canPlay: false,
+          readyState: 0,
+          lastError: null,
+        }));
+      } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
+        audio.src = params.hlsUrl;
+        audio.load();
+        setDiagnostics((prev) => ({
+          ...prev,
+          trackId: params.trackId,
+          audioUrl: params.hlsUrl,
+          hlsActive: true,
+          sessionId: params.sessionId ?? null,
+          canPlay: false,
+          readyState: 0,
+          lastError: null,
+        }));
+      } else {
+        setError("HLS not supported on this browser");
+        setIsLoading(false);
+      }
+    },
+    [destroyHls]
+  );
+
   return {
     isPlaying, currentTime, duration, volume, isLoading, error, diagnostics,
-    play, pause, stop, seek, setVolume, loadTrack,
+    play, pause, stop, seek, setVolume, loadTrack, loadPaidStream,
   };
 }
