@@ -225,10 +225,7 @@ const ArtistProfile = () => {
       title: track.title,
       artist: artist?.name || "Unknown Artist",
       artworkUrl: track.artwork_url || artist?.imageUrl || artist1,
-      artistId: artist?.userId || "",
-      album: "",
-      artwork: track.artwork_url || artist?.imageUrl || artist1,
-      duration: track.duration,
+      artistId: artist?.id || "",
     });
   };
 
