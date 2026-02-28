@@ -46,7 +46,7 @@ export const PlaylistSection = ({
   onResume,
 }: PlaylistSectionProps) => {
   const navigate = useNavigate();
-  const { chargeStream, hasBeenCharged } = useStreamCharge(userEmail);
+  const { chargeStream } = useStreamCharge(userEmail);
 
   const [showStreamConfirm, setShowStreamConfirm] = useState(false);
   const [pendingTrack, setPendingTrack] = useState<PlaylistTrack | null>(null);
@@ -61,22 +61,16 @@ export const PlaylistSection = ({
       }
 
       // If this track is paused (already loaded), resume
-      if (activeTrackId === track.track_id && !isPlaying && hasBeenCharged(track.track_id)) {
+      if (activeTrackId === track.track_id && !isPlaying) {
         onResume();
         return;
       }
 
-      // New track or needs charge — show confirmation
-      if (!hasBeenCharged(track.track_id)) {
-        setPendingTrack(track);
-        setShowStreamConfirm(true);
-        return;
-      }
-
-      // Already charged, load and play
-      onPlayTrack(track);
+      // New track — always show confirmation
+      setPendingTrack(track);
+      setShowStreamConfirm(true);
     },
-    [activeTrackId, isPlaying, hasBeenCharged, onPause, onResume, onPlayTrack]
+    [activeTrackId, isPlaying, onPause, onResume]
   );
 
   const handleStreamConfirm = useCallback(async () => {
