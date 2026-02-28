@@ -802,6 +802,38 @@ export type Database = {
           },
         ]
       }
+      playback_tokens: {
+        Row: {
+          consumed_at: string | null
+          created_at: string
+          expires_at: string
+          stream_id: string
+          token_id: string
+        }
+        Insert: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at: string
+          stream_id: string
+          token_id: string
+        }
+        Update: {
+          consumed_at?: string | null
+          created_at?: string
+          expires_at?: string
+          stream_id?: string
+          token_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "playback_tokens_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "stream_charges"
+            referencedColumns: ["stream_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1441,32 +1473,21 @@ export type Database = {
         }
         Returns: undefined
       }
-      debit_stream_credit:
-        | {
-            Args: {
-              p_artist_id: string
-              p_fan_email: string
-              p_fan_id: string
-              p_idempotency_key: string
-              p_track_id: string
-            }
-            Returns: {
-              already_charged: boolean
-              new_credits: number
-              stream_ledger_id: string
-            }[]
-          }
-        | {
-            Args: {
-              p_artist_id: string
-              p_fan_email: string
-              p_fan_user_id: string
-              p_idempotency_key: string
-              p_stream_charge_id: string
-              p_track_id: string
-            }
-            Returns: Json
-          }
+      debit_stream_credit: {
+        Args: {
+          p_artist_id: string
+          p_fan_email: string
+          p_fan_id: string
+          p_idempotency_key: string
+          p_track_id: string
+        }
+        Returns: {
+          already_charged: boolean
+          new_credits: number
+          stream_id: string
+          stream_ledger_id: string
+        }[]
+      }
       get_fan_top_artists: {
         Args: { p_fan_id: string; p_limit?: number }
         Returns: {
