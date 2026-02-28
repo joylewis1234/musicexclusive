@@ -13,7 +13,6 @@ import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
-import type { PlayerTrack } from "@/contexts/PlayerContext";
 
 import artist1 from "@/assets/artist-1.jpg";
 
@@ -42,7 +41,12 @@ interface ArtistData {
   };
 }
 
-// PlayerTrack imported from context
+interface PlayerTrack {
+  id: string;
+  title: string;
+  artist: string;
+  artworkUrl: string;
+}
 
 type ViewContext = "fan" | "artist-own" | "artist-other";
 
@@ -225,7 +229,6 @@ const ArtistProfile = () => {
       title: track.title,
       artist: artist?.name || "Unknown Artist",
       artworkUrl: track.artwork_url || artist?.imageUrl || artist1,
-      artistId: artist?.id || "",
     });
   };
 
