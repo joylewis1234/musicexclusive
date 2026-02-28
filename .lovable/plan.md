@@ -1,46 +1,35 @@
-# Unified Stream-Charge + Playback Session Architecture
 
-**Date:** 2026-02-28  
-**Status:** Implemented
 
-## Problem (Resolved)
-- `mint-playback-url` was creating a new `playback_sessions` row every time it was called (URL refresh, HLS fallback, etc.), inflating session counts
-- Frontend cached "already charged" state, allowing free replays within a session
-- Platform earning email was `platform@musicexclusive.com` but should be `support@musicexclusive.co`
+## Fix: Ambiguous `stream_id` in `debit_stream_credit` RPC
 
-## Changes Applied
+The `charge-stream` edge function is failing with error `42702: column reference "stream_id" is ambiguous`. The RPC's `RETURNS TABLE` declares `stream_id uuid` as an output column, which collides with the `stream_charges.stream_id` column name in the `UPDATE ... WHERE stream_id = v_stream_id` statement.
 
-### 1. Database Migration ✅
-- Dropped 6-param `debit_stream_credit` overload
-- Replaced 5-param version to return `TABLE(new_credits, already_charged, stream_ledger_id, stream_id)`
-- Platform email updated to `support@musicexclusive.co`
-- Revoked PUBLIC access, granted only to `service_role`
-- Created `playback_tokens` table with RLS (service_role only)
+### Database Migration
 
-### 2. Edge Function: `charge-stream/index.ts` ✅
-- Removed manual `stream_charges` insert + idempotency check (RPC handles it)
-- Calls 5-param `debit_stream_credit` RPC
-- After successful debit: mints playback JWT, upserts `playback_sessions`, inserts `playback_tokens`
-- Returns `{ success, newCredits, streamId, sessionId, hlsUrl }`
+Replace the RPC, renaming the output column from `stream_id` to `out_stream_id` to avoid the ambiguity:
 
-### 3. Edge Function: `mint-playback-url/index.ts` ✅
-- Removed `playback_sessions` insert block (lines 255-276)
-- Still serves artist dashboard playback and URL refreshes
+```sql
+CREATE OR REPLACE FUNCTION public.debit_stream_credit(...)
+RETURNS TABLE (
+  new_credits integer,
+  already_charged boolean,
+  stream_ledger_id uuid,
+  out_stream_id uuid          -- renamed from stream_id
+)
+```
 
-### 4. Frontend: `useStreamCharge.ts` ✅
-- Returns `hlsUrl`, `sessionId`, `streamId` from successful response
-- Removed `chargedTracks` Set, `hasBeenCharged`, `clearCharged` exports
+All internal logic stays the same. The final `RETURN QUERY` lines change to use the new alias:
+- `RETURN QUERY SELECT updated_credits, true, NULL::uuid, NULL::uuid;` (unchanged)
+- `RETURN QUERY SELECT updated_credits, false, v_stream_ledger_id, v_stream_id;` (unchanged)
 
-### 5. Frontend: `useAudioPlayer.ts` ✅
-- Added `loadPaidStream` method for direct HLS playback from charge result
+### Edge Function Update
 
-### 6. Frontend: `ArtistProfilePage.tsx` ✅
-- Always shows confirm modal (removed `hasBeenCharged` check)
-- Removed `clearCharged` usage
+In `charge-stream/index.ts`, update the RPC result field access from `rpcData.stream_id` to `rpcData.out_stream_id` (line 230).
 
-### 7. Frontend: `CompactVaultPlayer.tsx` ✅
-- `skipPlayConfirm` always `false` (every play requires confirmation)
+### Validation After Fix
 
-### 8. Frontend: `PlaylistSection.tsx` ✅
-- Removed `hasBeenCharged` dependency
-- Always shows confirmation modal for new tracks
+1. Call `charge-stream` with a test idempotency key — expect 200 with `hlsUrl`
+2. Verify exactly 1 new `playback_sessions` row and 1 new `playback_tokens` row
+3. Verify `stream_ledger` incremented by 1
+4. Verify credits decremented by 1
+
