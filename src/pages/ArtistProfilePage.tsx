@@ -101,9 +101,6 @@ const ArtistProfilePage = () => {
         artist: profile?.artist_name || "Unknown Artist",
         artworkUrl: track.artwork_url || profile?.avatar_url || artist1,
         artistId: artistId || "",
-        album: "",
-        artwork: track.artwork_url || profile?.avatar_url || artist1,
-        duration: track.duration,
       };
     },
     [artistProfile, artistId],
@@ -162,9 +159,6 @@ const ArtistProfilePage = () => {
                 artist: profile.artist_name,
                 artworkUrl: highlightedTrack.artwork_url || profile.avatar_url || artist1,
                 artistId: artistId || "",
-                album: "",
-                artwork: highlightedTrack.artwork_url || profile.avatar_url || artist1,
-                duration: highlightedTrack.duration,
               });
             }
           }
