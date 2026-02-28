@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { Play, Pause, Heart, Share2, Loader2, AlertCircle, Crown } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { Play, Pause, Heart, Share2, Loader2, AlertCircle, Crown, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
@@ -232,9 +232,20 @@ export const CompactVaultPlayer = ({
                   fill="hsl(45, 90%, 55%)"
                 />
               </div>
-              <p className="text-sm text-muted-foreground truncate">
-                {track.artist}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground truncate">
+                  {track.artist}
+                </p>
+                {duration > 0 && (
+                  <span 
+                    className="flex items-center gap-1 flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono text-muted-foreground/70"
+                    style={{ background: 'hsla(var(--muted), 0.3)' }}
+                  >
+                    <Clock className="w-2.5 h-2.5" />
+                    {Math.floor(duration / 60)}:{Math.floor(duration % 60).toString().padStart(2, '0')}
+                  </span>
+                )}
+              </div>
               {isLoading && (
                 <div className="flex items-center gap-1.5 mt-1">
                   <Loader2 className="w-3 h-3 animate-spin text-primary" />
