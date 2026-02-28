@@ -168,7 +168,7 @@ Deno.serve(async (req) => {
     stage = "debit";
     const RPC_MAX_RETRIES = 3;
     const RPC_BACKOFF_MS = [50, 100, 200];
-    let rpcData: { new_credits: number; already_charged: boolean; stream_ledger_id: string | null; stream_id: string | null } | null = null;
+    let rpcData: { new_credits: number; already_charged: boolean; stream_ledger_id: string | null; out_stream_id: string | null } | null = null;
 
     for (let attempt = 0; attempt < RPC_MAX_RETRIES; attempt++) {
       const { data, error: rpcError } = await adminClient.rpc("debit_stream_credit", {
@@ -227,7 +227,7 @@ Deno.serve(async (req) => {
 
     // ── Mint playback session + token ──
     stage = "mint_session";
-    const streamId = rpcData.stream_id;
+    const streamId = rpcData.out_stream_id;
     if (!streamId) {
       errorCode = "missing_stream_id";
       errorMessage = "Failed to create stream";
