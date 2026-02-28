@@ -6,13 +6,14 @@ import { HotNewTracks } from "@/components/discovery/HotNewTracks";
 import { DiscoveryTrackCard } from "@/components/discovery/DiscoveryTrackCard";
 import { ShareTrackModal } from "@/components/ShareTrackModal";
 import { PreviewStreamModal } from "@/components/discovery/PreviewStreamModal";
-import { useAudioPreview } from "@/hooks/useAudioPreview";
 import { useTracks, DbTrack, getArtistName } from "@/hooks/useTracks";
 import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
-import { Genre } from "@/data/discoveryArtists";
+import { usePlayer, type PlayerTrack } from "@/contexts/PlayerContext";
 import { Track } from "@/contexts/PlayerContext";
+import { Genre } from "@/data/discoveryArtists";
+import { supabase } from "@/integrations/supabase/client";
 
-// Convert DbTrack to Track for sharing
+// Convert DbTrack to legacy Track for ShareTrackModal
 const dbTrackToTrack = (dbTrack: DbTrack): Track => ({
   id: dbTrack.id,
   title: dbTrack.title,
@@ -24,6 +25,8 @@ const dbTrackToTrack = (dbTrack: DbTrack): Track => ({
 
 const Discovery = () => {
   const navigate = useNavigate();
+  const player = usePlayer();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedGenre, setSelectedGenre] = useState<Genre>("All Genres");
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -34,34 +37,26 @@ const Discovery = () => {
   const [showStreamModal, setShowStreamModal] = useState(false);
   const [streamModalTrack, setStreamModalTrack] = useState<DbTrack | null>(null);
 
-  // Ref-based callback for preview limit reached
-  const onPreviewLimitReachedRef = useRef<((trackId: string) => void) | null>(null);
-
-  const {
-    currentPreviewId,
-    previewProgress,
-    isPlaying,
-    isLoading: isPreviewLoading,
-    error: previewError,
-    startPreview,
-    stopPreview,
-  } = useAudioPreview(onPreviewLimitReachedRef);
+  // Preview URL fetch state
+  const [previewLoadingId, setPreviewLoadingId] = useState<string | null>(null);
+  const [previewErrors, setPreviewErrors] = useState<Record<string, string>>({});
 
   const { tracks, isLoading: isLoadingTracks } = useTracks();
 
   const trackIds = useMemo(() => tracks.map((t) => t.id), [tracks]);
   const { getLikeState } = useTrackLikesBatch(trackIds, null);
 
-  // Wire up preview limit callback — find the track and show modal
+  // Wire preview-limit callback — only fires when 25 s cumulative is reached
   useEffect(() => {
-    onPreviewLimitReachedRef.current = (trackId: string) => {
+    player.onPreviewLimitReachedRef.current = (trackId: string) => {
       const track = tracks.find((t) => t.id === trackId);
       if (track) {
         setStreamModalTrack(track);
         setShowStreamModal(true);
       }
     };
-  }, [tracks]);
+    return () => { player.onPreviewLimitReachedRef.current = null; };
+  }, [tracks, player.onPreviewLimitReachedRef]);
 
   const handleStreamRedirect = useCallback(() => {
     if (!streamModalTrack) return;
@@ -97,11 +92,9 @@ const Discovery = () => {
         track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (track.genre?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-
       const matchesGenre =
         selectedGenre === "All Genres" ||
         track.genre?.toLowerCase() === selectedGenre.toLowerCase();
-
       return matchesSearch && matchesGenre;
     });
   }, [tracks, searchQuery, selectedGenre]);
@@ -114,11 +107,9 @@ const Discovery = () => {
           track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
           artistName.toLowerCase().includes(searchQuery.toLowerCase()) ||
           (track.genre?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-
         const matchesGenre =
           selectedGenre === "All Genres" ||
           track.genre?.toLowerCase() === selectedGenre.toLowerCase();
-
         return matchesSearch && matchesGenre;
       });
     }
@@ -150,25 +141,69 @@ const Discovery = () => {
     handleStreamTrack(track);
   };
 
-  const handlePreview = (track: DbTrack) => {
-    if (currentPreviewId === track.id && isPlaying) {
-      stopPreview();
-    } else {
-      const startSeconds = track.preview_start_seconds || 0;
-      startPreview(track.id, startSeconds);
+  // ---- Preview handler (uses PlayerContext single audio engine) ----
+  const handlePreview = useCallback(async (track: DbTrack) => {
+    const isThisPreview = player.currentTrack?.id === track.id && player.playbackMode === "preview";
+
+    // Toggle pause/resume for current preview
+    if (isThisPreview && player.isPlaying) {
+      player.pause();
+      return;
     }
-  };
+    if (isThisPreview && !player.isPlaying) {
+      player.play();
+      return;
+    }
+
+    // New preview — fetch signed URL then play (takes over any current audio)
+    setPreviewLoadingId(track.id);
+    setPreviewErrors((prev) => {
+      const next = { ...prev };
+      delete next[track.id];
+      return next;
+    });
+
+    const { data, error: fnError } = await supabase.functions.invoke("mint-playback-url", {
+      body: { trackId: track.id, fileType: "preview" },
+    });
+
+    setPreviewLoadingId(null);
+
+    if (fnError || !data?.url) {
+      setPreviewErrors((prev) => ({ ...prev, [track.id]: "Preview not available. Tap Stream to listen." }));
+      return;
+    }
+
+    const artistName = getArtistName(track);
+    const pt: PlayerTrack = {
+      id: track.id,
+      title: track.title,
+      artist: artistName,
+      artworkUrl: track.artwork_url || track.artist_avatar_url || "",
+      artistId: track.artist_id,
+      album: track.album || "Single",
+      artwork: track.artwork_url || track.artist_avatar_url || "",
+      duration: track.duration,
+    };
+
+    player.loadAndPlayPreview(pt, data.url, track.preview_start_seconds || 0, 25);
+  }, [player]);
 
   const handleShare = (track: DbTrack) => {
     setSelectedTrackForShare(dbTrackToTrack(track));
     setIsShareModalOpen(true);
   };
 
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
-      stopPreview();
+      // If a preview is playing when leaving Discovery, stop it
+      if (player.playbackMode === "preview") {
+        player.stopCurrent("manualStop");
+      }
     };
-  }, [stopPreview]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">
@@ -213,21 +248,29 @@ const Discovery = () => {
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 animate-fade-in">
-            {filteredTracks.map((track) => (
-              <DiscoveryTrackCard
-                key={track.id}
-                track={track}
-                isPreviewPlaying={currentPreviewId === track.id && isPlaying}
-                isPreviewLoading={currentPreviewId === track.id && isPreviewLoading}
-                previewProgress={currentPreviewId === track.id ? previewProgress : 0}
-                previewError={currentPreviewId === track.id ? previewError : null}
-                likeCount={getLikeState(track.id).count}
-                onPreview={() => handlePreview(track)}
-                onStream={() => handleStreamTrack(track)}
-                onShare={() => handleShare(track)}
-                onArtistClick={() => handleArtistClick(track.artist_id)}
-              />
-            ))}
+            {filteredTracks.map((track) => {
+              const isThisPreview = player.currentTrack?.id === track.id && player.playbackMode === "preview";
+              const isPreviewPlaying = isThisPreview && player.isPlaying;
+              const isPreviewLoading = previewLoadingId === track.id || (isThisPreview && player.isLoading);
+              const previewProgressVal = isThisPreview ? player.previewProgress : 0;
+              const previewErrorVal = previewErrors[track.id] || (isThisPreview ? player.error : null);
+
+              return (
+                <DiscoveryTrackCard
+                  key={track.id}
+                  track={track}
+                  isPreviewPlaying={isPreviewPlaying}
+                  isPreviewLoading={isPreviewLoading}
+                  previewProgress={previewProgressVal}
+                  previewError={previewErrorVal}
+                  likeCount={getLikeState(track.id).count}
+                  onPreview={() => handlePreview(track)}
+                  onStream={() => handleStreamTrack(track)}
+                  onShare={() => handleShare(track)}
+                  onArtistClick={() => handleArtistClick(track.artist_id)}
+                />
+              );
+            })}
           </div>
         )}
       </div>
