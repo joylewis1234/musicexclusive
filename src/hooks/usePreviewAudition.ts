@@ -8,7 +8,7 @@ interface UsePreviewAuditionReturn {
   stopAudition: () => void;
 }
 
-const PREVIEW_DURATION = 15; // 15 seconds
+const PREVIEW_DURATION = 25; // 25 seconds
 
 export const usePreviewAudition = (): UsePreviewAuditionReturn => {
   const [isPlaying, setIsPlaying] = useState(false);
