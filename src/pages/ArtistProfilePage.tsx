@@ -76,6 +76,7 @@ const ArtistProfilePage = () => {
   const [showStreamConfirm, setShowStreamConfirm] = useState(false);
   const [pendingPlayTrack, setPendingPlayTrack] = useState<PlayerTrack | null>(null);
   const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
+  const [chargedForSession, setChargedForSession] = useState(false);
   
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
@@ -207,6 +208,7 @@ const ArtistProfilePage = () => {
 
   const handleSelectTrack = (track: TrackData, profileOverride?: ArtistProfile | null) => {
     const profile = profileOverride || artistProfile;
+    setChargedForSession(false);
     setSelectedTrack({
       id: track.id,
       title: track.title,
@@ -274,6 +276,7 @@ const ArtistProfilePage = () => {
     
     if (result.success) {
       refetchCredits();
+      setChargedForSession(true);
       setShouldAutoPlay(true);
     } else if (result.requiresCredits) {
       throw new Error("Insufficient credits");
@@ -286,9 +289,9 @@ const ArtistProfilePage = () => {
     navigate("/fan/add-credits");
   }, [navigate]);
 
-  // Track ended — no-op now (every play requires a new charge)
+  // Track ended — reset charge flag so next play charges again
   const handleTrackEnded = useCallback(() => {
-    // Nothing to clear — every play charges fresh
+    setChargedForSession(false);
   }, []);
 
   const handleBack = () => {
@@ -378,7 +381,7 @@ const ArtistProfilePage = () => {
           onPlay={handlePlayRequest}
           onLike={handlePlayerLike}
           onShare={handlePlayerShare}
-          skipPlayConfirm={false}
+          skipPlayConfirm={chargedForSession}
           autoPlay={shouldAutoPlay}
           onAutoPlayConsumed={() => setShouldAutoPlay(false)}
           onTrackEnded={handleTrackEnded}
