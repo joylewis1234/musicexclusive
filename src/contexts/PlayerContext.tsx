@@ -15,17 +15,17 @@ export interface Track {
   duration: number;
 }
 
-// New PlayerTrack – superset of Track so legacy consumers still compile
+// PlayerTrack – used by global audio engine
 export interface PlayerTrack {
   id: string;
   title: string;
   artist: string;
   artworkUrl: string;
   artistId: string;
-  // Legacy compat fields (used by MusicPlayer.tsx)
-  album: string;
-  artwork: string;
-  duration: number;
+  // Optional legacy compat fields
+  album?: string;
+  artwork?: string;
+  duration?: number;
 }
 
 type PlaybackMode = "preview" | "paid";

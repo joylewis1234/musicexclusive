@@ -181,9 +181,6 @@ const Discovery = () => {
       artist: artistName,
       artworkUrl: track.artwork_url || track.artist_avatar_url || "",
       artistId: track.artist_id,
-      album: track.album || "Single",
-      artwork: track.artwork_url || track.artist_avatar_url || "",
-      duration: track.duration,
     };
 
     player.loadAndPlayPreview(pt, data.url, track.preview_start_seconds || 0, 25);
