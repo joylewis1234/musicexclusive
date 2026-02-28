@@ -11,9 +11,11 @@ interface UseAudioPreviewReturn {
   stopPreview: () => void;
 }
 
-const PREVIEW_DURATION = 15;
+const PREVIEW_DURATION = 25;
 
-export const useAudioPreview = (): UseAudioPreviewReturn => {
+export const useAudioPreview = (
+  onPreviewLimitReachedRef?: React.MutableRefObject<((trackId: string) => void) | null>
+): UseAudioPreviewReturn => {
   const [currentPreviewId, setCurrentPreviewId] = useState<string | null>(null);
   const [previewProgress, setPreviewProgress] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -90,11 +92,13 @@ export const useAudioPreview = (): UseAudioPreviewReturn => {
             const progress = Math.min((elapsed / PREVIEW_DURATION) * 100, 100);
             setPreviewProgress(progress);
             if (elapsed >= PREVIEW_DURATION) {
+              onPreviewLimitReachedRef?.current?.(trackId);
               stopPreview();
             }
           }, 100);
 
           stopTimeoutRef.current = setTimeout(() => {
+            onPreviewLimitReachedRef?.current?.(trackId);
             stopPreview();
           }, PREVIEW_DURATION * 1000);
         },
