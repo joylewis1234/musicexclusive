@@ -102,8 +102,8 @@ serve(async (req) => {
     // Send admin notification email (fire-and-forget)
     try {
       const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
-      if (RESEND_API_KEY) {
-        await fetch("https://api.resend.com/emails", {
+        if (RESEND_API_KEY) {
+        const adminRes = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -127,6 +127,8 @@ serve(async (req) => {
             `,
           }),
         });
+        const adminBody = await adminRes.text();
+        console.log("[submit-waitlist] Admin email response:", adminRes.status, adminBody);
       }
     } catch (e) {
       console.error("[submit-waitlist] Admin email failed:", e);
@@ -136,7 +138,7 @@ serve(async (req) => {
     try {
       const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
       if (RESEND_API_KEY) {
-        await fetch("https://api.resend.com/emails", {
+        const artistRes = await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -180,6 +182,8 @@ serve(async (req) => {
             `,
           }),
         });
+        const artistBody = await artistRes.text();
+        console.log("[submit-waitlist] Artist confirmation email response:", artistRes.status, artistBody);
       }
     } catch (e) {
       console.error("[submit-waitlist] Artist confirmation email failed:", e);
