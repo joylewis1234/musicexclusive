@@ -111,9 +111,6 @@ const Index = () => {
             <p>First access. First listen. Before anywhere else.</p>
             <p>Exclusive music from your favorite artists, only on Music Exclusive.</p>
           </div>
-          <p className="text-muted-foreground/70 text-sm font-body mb-8 animate-fade-up [animation-delay:250ms] opacity-0 max-w-sm mx-auto">
-            Preview 15-second hooks, then play the Vault Lottery to win full access.
-          </p>
           
           {/* Primary CTA */}
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
