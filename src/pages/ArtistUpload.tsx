@@ -52,6 +52,7 @@ import { UploadDebugConsole } from "@/components/artist/UploadDebugConsole";
 import { UploadErrorBoundary } from "@/components/artist/UploadErrorBoundary";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDuration } from "@/utils/audioDuration";
+import { extractPreviewClip } from "@/utils/extractPreviewClip";
 import {
   SAFE_UPLOADS,
   processCoverArt,
@@ -512,11 +513,21 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     setShowDiagnostics(true);
 
     try {
+      // Extract the 25s preview/hook clip from the full audio
+      let previewFile: File | null = null;
+      try {
+        previewFile = await extractPreviewClip(audioFileRef.current!, previewStartSeconds);
+        console.log("[Upload] Preview clip extracted:", previewFile.name, formatBytes(previewFile.size));
+      } catch (clipErr) {
+        console.warn("[Upload] Preview clip extraction failed, uploading without preview:", clipErr);
+      }
+
       await upload({
         title: safeTitle,
         genre: safeGenre,
         coverFile: coverFile!,
         audioFile: audioFileRef.current!,
+        previewFile,
         previewStartSeconds,
         userId: user.id,
       });
@@ -525,14 +536,23 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     if (!user?.id || !coverFile || !audioFileRef.current) return;
     setShowDiagnostics(true);
+
+    let previewFile: File | null = null;
+    try {
+      previewFile = await extractPreviewClip(audioFileRef.current!, previewStartSeconds);
+    } catch {
+      console.warn("[Upload] Preview clip extraction failed on retry");
+    }
+
     retry({
       title: safeTitle,
       genre: safeGenre,
       coverFile,
       audioFile: audioFileRef.current,
+      previewFile,
       previewStartSeconds,
       userId: user.id,
     }).catch((err) => console.error("[Upload] Retry error:", err));
