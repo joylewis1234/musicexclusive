@@ -1,0 +1,1 @@
+ALTER TABLE public.tracks ALTER COLUMN is_preview_public SET DEFAULT true;
