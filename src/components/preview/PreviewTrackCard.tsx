@@ -1,4 +1,5 @@
 import { Play, Pause, Lock, Loader2, AlertCircle, Heart } from "lucide-react";
+import { usePublicSignedArtwork } from "@/hooks/usePublicSignedArtwork";
 import artist1 from "@/assets/artist-1.jpg";
 
 interface PreviewTrack {
@@ -40,6 +41,9 @@ export const PreviewTrackCard = ({
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
 
+  const { url: signedArtworkUrl } = usePublicSignedArtwork(track.id);
+  const artworkSrc = signedArtworkUrl || track.artwork_url || artist1;
+
   return (
     <div
       className="group relative rounded-xl overflow-hidden bg-card/40 border border-border/30 transition-all duration-300 hover:border-primary/40"
@@ -55,7 +59,7 @@ export const PreviewTrackCard = ({
         onClick={hasPreviewAudio && !isPreviewDisabled ? onPreview : undefined}
       >
         <img
-          src={track.artwork_url || track.artist_avatar_url || artist1}
+          src={artworkSrc}
           alt={track.title}
           className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
           loading="lazy"
