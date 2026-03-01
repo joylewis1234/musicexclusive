@@ -86,7 +86,13 @@ import AdminArtistApplications from "./pages/admin/AdminArtistApplications";
 import ArtistApplicationAction from "./pages/admin/ArtistApplicationAction";
 import AdminInvitations from "./pages/admin/AdminInvitations";
 import AdminHealthCheck from "./pages/admin/AdminHealthCheck";
+import AdminWaitlist from "./pages/admin/AdminWaitlist";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
+
+// Artist Waitlist pages (public)
+import ArtistWaitlist from "./pages/ArtistWaitlist";
+import ArtistWaitlistForm from "./pages/ArtistWaitlistForm";
+import ArtistWaitlistSubmitted from "./pages/ArtistWaitlistSubmitted";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -140,6 +146,9 @@ const App = () => {
                 <Route path="/artist-agreement" element={<ArtistAgreement />} />
                 <Route path="/test-sounds" element={<TestSounds />} />
                 <Route path="/preview" element={<PreviewDiscovery />} />
+                <Route path="/artist-waitlist" element={<ArtistWaitlist />} />
+                <Route path="/artist-waitlist/apply" element={<ArtistWaitlistForm />} />
+                <Route path="/artist-waitlist/submitted" element={<ArtistWaitlistSubmitted />} />
                 
                 {/* Login selector page */}
                 <Route path="/login" element={<Login />} />
@@ -263,6 +272,11 @@ const App = () => {
                 <Route path="/health-check" element={
                   <AdminProtectedRoute>
                     <AdminHealthCheck />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/admin/waitlist" element={
+                  <AdminProtectedRoute>
+                    <AdminWaitlist />
                   </AdminProtectedRoute>
                 } />
                 {/* Token-based actions from email links */}

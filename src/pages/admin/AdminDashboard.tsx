@@ -36,6 +36,14 @@ const AdminDashboard = () => {
 
   const adminLinks = [
     {
+      title: "Artist Waitlist",
+      description: "Review and manage Founding Artist waitlist applications",
+      icon: UserPlus,
+      path: "/admin/waitlist",
+      color: "text-amber-400",
+      tooltip: "View waitlist applications. Approve to send onboarding email or reject.",
+    },
+    {
       title: "Artist Applications",
       description: "Review, approve, or deny new artist applications",
       icon: UserPlus,

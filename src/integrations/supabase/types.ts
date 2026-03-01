@@ -396,6 +396,54 @@ export type Database = {
         }
         Relationships: []
       }
+      artist_waitlist: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          artist_name: string
+          created_at: string
+          email: string
+          genre: string | null
+          id: string
+          instagram: string | null
+          location: string
+          monthly_listeners: string | null
+          music_link: string
+          other_social: string | null
+          status: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          artist_name: string
+          created_at?: string
+          email: string
+          genre?: string | null
+          id?: string
+          instagram?: string | null
+          location: string
+          monthly_listeners?: string | null
+          music_link: string
+          other_social?: string | null
+          status?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          artist_name?: string
+          created_at?: string
+          email?: string
+          genre?: string | null
+          id?: string
+          instagram?: string | null
+          location?: string
+          monthly_listeners?: string | null
+          music_link?: string
+          other_social?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
       credit_ledger: {
         Row: {
           created_at: string
