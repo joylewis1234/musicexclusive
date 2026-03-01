@@ -131,3 +131,12 @@ verify_jwt = false
 
 [functions.cleanup-accounts]
 verify_jwt = false
+
+[functions.submit-waitlist-application]
+verify_jwt = false
+
+[functions.approve-waitlist-artist]
+verify_jwt = false
+
+[functions.reject-waitlist-artist]
+verify_jwt = false
