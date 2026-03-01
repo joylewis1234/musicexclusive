@@ -94,8 +94,11 @@ const Index = () => {
         <div className="container max-w-lg md:max-w-2xl mx-auto">
           {/* Micro-Explainer */}
           <p 
-            className="text-base md:text-lg font-display uppercase tracking-[0.25em] mb-6 animate-fade-up opacity-0 gradient-text"
-            style={{ textShadow: '0 0 40px hsl(var(--primary) / 0.5)' }}
+            className="text-lg md:text-2xl font-display uppercase tracking-[0.3em] mb-6 animate-fade-up opacity-0 gradient-text animate-glow-pulse"
+            style={{ 
+              textShadow: '0 0 10px hsl(var(--primary) / 0.8), 0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.3), 0 0 100px hsl(var(--primary) / 0.15)',
+              filter: 'brightness(1.15)',
+            }}
           >
             Music. Released here first.
           </p>
