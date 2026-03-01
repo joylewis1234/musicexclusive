@@ -59,7 +59,7 @@ const ArtistProfilePage = () => {
   
   const isPreviewMode = searchParams.get("view") === "fan";
   const highlightTrackId = searchParams.get("track");
-  const autoStream = searchParams.get("stream") === "1";
+  const wantsStreamConfirm = searchParams.get("stream") === "1";
 
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [tracks, setTracks] = useState<TrackData[]>([]);
@@ -77,7 +77,8 @@ const ArtistProfilePage = () => {
   const [showStreamConfirm, setShowStreamConfirm] = useState(false);
   const [pendingPlayTrack, setPendingPlayTrack] = useState<PlayerTrack | null>(null);
   const [chargedForSession, setChargedForSession] = useState(false);
-  const [paidStreamData, setPaidStreamData] = useState<{ hlsUrl: string; sessionId?: string | null } | null>(null);
+  const [autoPlay, setAutoPlay] = useState(false);
+  const [autoStreamRequested, setAutoStreamRequested] = useState(false);
   
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
@@ -157,6 +158,12 @@ const ArtistProfilePage = () => {
     fetchData();
   }, [artistId, highlightTrackId]);
 
+  useEffect(() => {
+    if (wantsStreamConfirm) {
+      setAutoStreamRequested(true);
+    }
+  }, [wantsStreamConfirm]);
+
   // Determine viewer context and vault access
   useEffect(() => {
     const checkAccess = async () => {
@@ -207,22 +214,10 @@ const ArtistProfilePage = () => {
     }
   }, [highlightTrackId, tracks]);
 
-  // Auto-open stream confirm when stream=1 param is present
-  useEffect(() => {
-    if (autoStream && selectedTrack && !showStreamConfirm) {
-      setPendingPlayTrack(selectedTrack);
-      setShowStreamConfirm(true);
-      // Remove stream param so it fires only once
-      const newParams = new URLSearchParams(searchParams);
-      newParams.delete("stream");
-      setSearchParams(newParams, { replace: true });
-    }
-  }, [autoStream, selectedTrack, showStreamConfirm, searchParams, setSearchParams]);
-
   const handleSelectTrack = (track: TrackData, profileOverride?: ArtistProfile | null) => {
     const profile = profileOverride || artistProfile;
     setChargedForSession(false);
-    setPaidStreamData(null);
+    setAutoPlay(false);
     setSelectedTrack({
       id: track.id,
       title: track.title,
@@ -230,6 +225,18 @@ const ArtistProfilePage = () => {
       artworkUrl: track.artwork_url || profile?.avatar_url || artist1,
     });
   };
+
+  useEffect(() => {
+    if (autoStreamRequested && selectedTrack) {
+      setPendingPlayTrack(selectedTrack);
+      setShowStreamConfirm(true);
+      setAutoStreamRequested(false);
+
+      const next = new URLSearchParams(searchParams);
+      next.delete("stream");
+      setSearchParams(next, { replace: true });
+    }
+  }, [autoStreamRequested, selectedTrack, searchParams, setSearchParams]);
 
   const handlePlayAll = () => {
     if (tracks.length > 0 && !selectedTrack) {
@@ -291,10 +298,7 @@ const ArtistProfilePage = () => {
     if (result.success) {
       refetchCredits();
       setChargedForSession(true);
-      // Pass the hlsUrl from charge-stream directly to the player — no extra mint call
-      if (result.hlsUrl) {
-        setPaidStreamData({ hlsUrl: result.hlsUrl, sessionId: result.sessionId });
-      }
+      setAutoPlay(true);
     } else if (result.requiresCredits) {
       throw new Error("Insufficient credits");
     } else {
@@ -399,8 +403,8 @@ const ArtistProfilePage = () => {
           onLike={handlePlayerLike}
           onShare={handlePlayerShare}
           skipPlayConfirm={chargedForSession}
-          paidStreamData={paidStreamData}
-          onPaidStreamConsumed={() => setPaidStreamData(null)}
+          autoPlay={autoPlay}
+          onAutoPlayConsumed={() => setAutoPlay(false)}
           onTrackEnded={handleTrackEnded}
         />
       </PlayerErrorBoundary>

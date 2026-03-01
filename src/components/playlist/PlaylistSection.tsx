@@ -23,7 +23,7 @@ interface PlaylistSectionProps {
   onPlayTrack: (track: PlaylistTrack) => void;
   onPause: () => void;
   onResume: () => void;
-  lastEndedTrackId?: string | null;
+  canResumeActive: boolean;
 }
 
 const formatDuration = (seconds: number) => {
@@ -45,7 +45,7 @@ export const PlaylistSection = ({
   onPlayTrack,
   onPause,
   onResume,
-  lastEndedTrackId,
+  canResumeActive,
 }: PlaylistSectionProps) => {
   const navigate = useNavigate();
   const { chargeStream } = useStreamCharge(userEmail);
@@ -62,9 +62,14 @@ export const PlaylistSection = ({
         return;
       }
 
-      // If this track is paused (already loaded) and NOT ended, resume
-      if (activeTrackId === track.track_id && !isPlaying && lastEndedTrackId !== track.track_id) {
-        onResume();
+      // If this track is paused (already loaded), resume if allowed
+      if (activeTrackId === track.track_id && !isPlaying) {
+        if (canResumeActive) {
+          onResume();
+        } else {
+          setPendingTrack(track);
+          setShowStreamConfirm(true);
+        }
         return;
       }
 
@@ -72,7 +77,7 @@ export const PlaylistSection = ({
       setPendingTrack(track);
       setShowStreamConfirm(true);
     },
-    [activeTrackId, isPlaying, onPause, onResume, lastEndedTrackId]
+    [activeTrackId, isPlaying, onPause, onResume, canResumeActive]
   );
 
   const handleStreamConfirm = useCallback(async () => {

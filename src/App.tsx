@@ -1,13 +1,12 @@
 import React from "react";
 import { Toaster } from "@/components/ui/toaster";
-import AdminTestTools from "./pages/admin/AdminTestTools";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PlayerProvider } from "@/contexts/PlayerContext";
-import { AuthProvider } from "@/contexts/AuthContext";
 import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ArtistProtectedRoute } from "@/components/auth/ArtistProtectedRoute";
 import { FanLayout } from "@/layouts/FanLayout";
@@ -15,90 +14,9 @@ import { ArtistLayout } from "@/layouts/ArtistLayout";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { PaymentErrorBoundary } from "@/components/error-boundaries/PaymentErrorBoundary";
 import { ScrollToTop } from "@/components/ScrollToTop";
-
-// Public pages
-import Index from "./pages/Index";
-import ArtistBenefits from "./pages/ArtistBenefits";
-import EnterVault from "./pages/EnterVault";
-import SubmitVaultCode from "./pages/SubmitVaultCode";
-import VaultStatus from "./pages/VaultStatus";
-import VaultWinCongrats from "./pages/VaultWinCongrats";
-import Agreements from "./pages/Agreements";
-import ChooseAccess from "./pages/ChooseAccess";
-import Subscribe from "./pages/Subscribe";
-import LoadCredits from "./pages/LoadCredits";
-import Payment from "./pages/Payment";
-import CheckoutReturn from "./pages/CheckoutReturn";
-import NotFound from "./pages/NotFound";
-import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Terms from "./pages/Terms";
-import ArtistAgreement from "./pages/ArtistAgreement";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import CopyrightDmca from "./pages/CopyrightDmca";
-import RefundPolicy from "./pages/RefundPolicy";
-import FanAgreementStep from "./pages/FanAgreementStep";
-import PatentNotice from "./pages/PatentNotice";
-import InviteLanding from "./pages/InviteLanding";
-import TestSounds from "./pages/TestSounds";
-import PreviewDiscovery from "./pages/PreviewDiscovery";
-
-// Auth pages
-import FanAuth from "./pages/auth/FanAuth";
-import ArtistAuth from "./pages/auth/ArtistAuth";
-import ArtistLogin from "./pages/auth/ArtistLogin";
-import AdminLogin from "./pages/auth/AdminLogin";
-import AccessRestricted from "./pages/AccessRestricted";
-
-// Fan pages (protected)
-// FanDashboard removed – /fan/profile is now the fan landing page
-import FanProfile from "./pages/FanProfile";
-import FanInbox from "./pages/FanInbox";
-import Discovery from "./pages/Discovery";
-import MusicPlayer from "./pages/MusicPlayer";
-import AddCredits from "./pages/AddCredits";
-
-// Artist pages
-import ArtistApply from "./pages/ArtistApply";
-import ArtistApplicationForm from "./pages/ArtistApplicationForm";
-import ArtistApplicationStatus from "./pages/ArtistApplicationStatus";
-import ArtistApplicationSubmitted from "./pages/ArtistApplicationSubmitted";
-import ArtistProfilePage from "./pages/ArtistProfilePage";
-import ArtistUpload from "./pages/ArtistUpload";
-import ArtistDashboard from "./pages/artist/ArtistDashboard";
-import ArtistEarnings from "./pages/artist/ArtistEarnings";
-import ArtistInvites from "./pages/artist/ArtistInvites";
-import ArtistSetupAccount from "./pages/artist/ArtistSetupAccount";
-import ArtistPendingActivation from "./pages/artist/ArtistPendingActivation";
-import ArtistAgreementAccept from "./pages/artist/ArtistAgreementAccept";
-import EditArtistProfile from "./pages/artist/EditArtistProfile";
-import MarketingStudio from "./pages/artist/MarketingStudio";
-
-
-// Admin pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminReports from "./pages/admin/AdminReports";
-import AdminFanStreamDetail from "./pages/admin/AdminFanStreamDetail";
-import AdminFanDetail from "./pages/admin/AdminFanDetail";
-import AdminDailyReport from "./pages/admin/AdminDailyReport";
-import AdminPayouts from "./pages/admin/AdminPayouts";
-import AdminArtistApplications from "./pages/admin/AdminArtistApplications";
-import ArtistApplicationAction from "./pages/admin/ArtistApplicationAction";
-import AdminInvitations from "./pages/admin/AdminInvitations";
-import AdminHealthCheck from "./pages/admin/AdminHealthCheck";
-import AdminWaitlist from "./pages/admin/AdminWaitlist";
-import AdminFanWaitlist from "./pages/admin/AdminFanWaitlist";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
 // Founding Superfan pages
-import FoundingSuperfan from "./pages/FoundingSuperfan";
-import FoundingSuperfanConfirmed from "./pages/FoundingSuperfanConfirmed";
-
-// Artist Waitlist pages (public)
-import ArtistWaitlist from "./pages/ArtistWaitlist";
-import ArtistWaitlistForm from "./pages/ArtistWaitlistForm";
-import ArtistWaitlistSubmitted from "./pages/ArtistWaitlistSubmitted";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +25,114 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Lazy-load route pages to split large bundles.
+const Index = React.lazy(() => import("./pages/Index"));
+const ArtistBenefits = React.lazy(() => import("./pages/ArtistBenefits"));
+const EnterVault = React.lazy(() => import("./pages/EnterVault"));
+const SubmitVaultCode = React.lazy(() => import("./pages/SubmitVaultCode"));
+const VaultStatus = React.lazy(() => import("./pages/VaultStatus"));
+const VaultWinCongrats = React.lazy(() => import("./pages/VaultWinCongrats"));
+const Agreements = React.lazy(() => import("./pages/Agreements"));
+const ChooseAccess = React.lazy(() => import("./pages/ChooseAccess"));
+const Subscribe = React.lazy(() => import("./pages/Subscribe"));
+const LoadCredits = React.lazy(() => import("./pages/LoadCredits"));
+const Payment = React.lazy(() => import("./pages/Payment"));
+const CheckoutReturn = React.lazy(() => import("./pages/CheckoutReturn"));
+const NotFound = React.lazy(() => import("./pages/NotFound"));
+const Login = React.lazy(() => import("./pages/Login"));
+const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
+const Terms = React.lazy(() => import("./pages/Terms"));
+const ArtistAgreement = React.lazy(() => import("./pages/ArtistAgreement"));
+const PrivacyPolicy = React.lazy(() => import("./pages/PrivacyPolicy"));
+const CopyrightDmca = React.lazy(() => import("./pages/CopyrightDmca"));
+const RefundPolicy = React.lazy(() => import("./pages/RefundPolicy"));
+const FanAgreementStep = React.lazy(() => import("./pages/FanAgreementStep"));
+const PatentNotice = React.lazy(() => import("./pages/PatentNotice"));
+const InviteLanding = React.lazy(() => import("./pages/InviteLanding"));
+const TestSounds = React.lazy(() => import("./pages/TestSounds"));
+const PreviewDiscovery = React.lazy(() => import("./pages/PreviewDiscovery"));
+const FoundingSuperfan = React.lazy(() => import("./pages/FoundingSuperfan"));
+const FoundingSuperfanConfirmed = React.lazy(
+  () => import("./pages/FoundingSuperfanConfirmed")
+);
+const ArtistWaitlist = React.lazy(() => import("./pages/ArtistWaitlist"));
+const ArtistWaitlistForm = React.lazy(() => import("./pages/ArtistWaitlistForm"));
+const ArtistWaitlistSubmitted = React.lazy(
+  () => import("./pages/ArtistWaitlistSubmitted")
+);
+
+const FanAuth = React.lazy(() => import("./pages/auth/FanAuth"));
+const ArtistAuth = React.lazy(() => import("./pages/auth/ArtistAuth"));
+const ArtistLogin = React.lazy(() => import("./pages/auth/ArtistLogin"));
+const AdminLogin = React.lazy(() => import("./pages/auth/AdminLogin"));
+const AccessRestricted = React.lazy(() => import("./pages/AccessRestricted"));
+
+// Fan pages (protected)
+// FanDashboard removed – /fan/profile is now the fan landing page
+const FanProfile = React.lazy(() => import("./pages/FanProfile"));
+const FanInbox = React.lazy(() => import("./pages/FanInbox"));
+const Discovery = React.lazy(() => import("./pages/Discovery"));
+const MusicPlayer = React.lazy(() => import("./pages/MusicPlayer"));
+const AddCredits = React.lazy(() => import("./pages/AddCredits"));
+const ArtistProfilePage = React.lazy(() => import("./pages/ArtistProfilePage"));
+
+// Artist pages
+const ArtistApply = React.lazy(() => import("./pages/ArtistApply"));
+const ArtistApplicationForm = React.lazy(
+  () => import("./pages/ArtistApplicationForm")
+);
+const ArtistApplicationStatus = React.lazy(
+  () => import("./pages/ArtistApplicationStatus")
+);
+const ArtistApplicationSubmitted = React.lazy(
+  () => import("./pages/ArtistApplicationSubmitted")
+);
+const ArtistUpload = React.lazy(() => import("./pages/ArtistUpload"));
+const ArtistDashboard = React.lazy(() => import("./pages/artist/ArtistDashboard"));
+const ArtistEarnings = React.lazy(() => import("./pages/artist/ArtistEarnings"));
+const ArtistInvites = React.lazy(() => import("./pages/artist/ArtistInvites"));
+const ArtistSetupAccount = React.lazy(
+  () => import("./pages/artist/ArtistSetupAccount")
+);
+const ArtistPendingActivation = React.lazy(
+  () => import("./pages/artist/ArtistPendingActivation")
+);
+const ArtistAgreementAccept = React.lazy(
+  () => import("./pages/artist/ArtistAgreementAccept")
+);
+const EditArtistProfile = React.lazy(
+  () => import("./pages/artist/EditArtistProfile")
+);
+const MarketingStudio = React.lazy(() => import("./pages/artist/MarketingStudio"));
+
+// Admin pages
+const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminReports = React.lazy(() => import("./pages/admin/AdminReports"));
+const AdminFanStreamDetail = React.lazy(
+  () => import("./pages/admin/AdminFanStreamDetail")
+);
+const AdminFanDetail = React.lazy(() => import("./pages/admin/AdminFanDetail"));
+const AdminDailyReport = React.lazy(
+  () => import("./pages/admin/AdminDailyReport")
+);
+const AdminPayouts = React.lazy(() => import("./pages/admin/AdminPayouts"));
+const AdminArtistApplications = React.lazy(
+  () => import("./pages/admin/AdminArtistApplications")
+);
+const ArtistApplicationAction = React.lazy(
+  () => import("./pages/admin/ArtistApplicationAction")
+);
+const AdminInvitations = React.lazy(
+  () => import("./pages/admin/AdminInvitations")
+);
+const AdminHealthCheck = React.lazy(
+  () => import("./pages/admin/AdminHealthCheck")
+);
+const AdminTestTools = React.lazy(() => import("./pages/admin/AdminTestTools"));
+const AdminWaitlist = React.lazy(() => import("./pages/admin/AdminWaitlist"));
+const AdminFanWaitlist = React.lazy(() => import("./pages/admin/AdminFanWaitlist"));
 
 const App = () => {
   // Global safety net for unhandled promise rejections (prevents white screen)
@@ -120,17 +146,18 @@ const App = () => {
   }, []);
 
   return (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <AudioPlayerProvider>
-      <PlayerProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <ScrollToTop />
-            <ErrorBoundary>
-              <Routes>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <AudioPlayerProvider>
+          <PlayerProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <ScrollToTop />
+                <ErrorBoundary>
+                  <React.Suspense fallback={null}>
+                    <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
                 <Route path="/artist-benefits" element={<ArtistBenefits />} />
@@ -301,14 +328,15 @@ const App = () => {
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </ErrorBoundary>
-          </BrowserRouter>
-        </TooltipProvider>
-      </PlayerProvider>
-      </AudioPlayerProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+                    </Routes>
+                  </React.Suspense>
+                </ErrorBoundary>
+              </BrowserRouter>
+            </TooltipProvider>
+          </PlayerProvider>
+        </AudioPlayerProvider>
+      </AuthProvider>
+    </QueryClientProvider>
   );
 };
 

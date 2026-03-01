@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Play, Pause, Volume2, Loader2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
@@ -40,16 +40,29 @@ export const VaultMusicPlayer = ({
     play,
     pause,
     setVolume,
-    loadTrack,
-  } = useAudioPlayer();
+    startPaidTrack,
+    lastEndedTrackId,
+  } = useSharedAudioPlayer();
 
   // Load track when it changes — fetch signed URL via edge function
   useEffect(() => {
     if (track?.id) {
-      void loadTrack({ trackId: track.id, fileType: "audio", trackTitle: track.title });
+      void startPaidTrack({
+        trackId: track.id,
+        fileType: "audio",
+        trackTitle: track.title,
+        artistName: track.artist,
+        artworkUrl: track.artworkUrl,
+      });
       setHasCalledOnPlay(false);
     }
-  }, [track?.id, loadTrack, track?.title]);
+  }, [track?.id, track?.title, track?.artist, track?.artworkUrl, startPaidTrack]);
+
+  useEffect(() => {
+    if (track?.id && lastEndedTrackId === track.id) {
+      setHasCalledOnPlay(false);
+    }
+  }, [lastEndedTrackId, track?.id]);
 
   const handlePlayPause = async () => {
     if (!track) return;
