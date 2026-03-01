@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    // fileType: "audio" (default) or "cover"
-    const resolvedFileType = fileType === "cover" ? "cover" : "audio";
+    // fileType: "audio" (default), "cover", or "preview"
+    const resolvedFileType = fileType === "cover" ? "cover" : fileType === "preview" ? "preview" : "audio";
 
     // ── Verify artist owns track ──
     const adminClient = createClient(
@@ -96,7 +96,9 @@ Deno.serve(async (req) => {
     const bucket = Deno.env.get("R2_BUCKET_NAME")!;
     const ext = fileName.split(".").pop()?.toLowerCase() || (resolvedFileType === "cover" ? "jpg" : "mp3");
     const subFolder = resolvedFileType === "cover" ? "covers" : "audio";
-    const key = `artists/${profile.id}/${subFolder}/${trackId}.${ext}`;
+    const key = resolvedFileType === "preview"
+      ? `artists/${profile.id}/${trackId}_preview.${ext}`
+      : `artists/${profile.id}/${subFolder}/${trackId}.${ext}`;
 
     const cmd = new CreateMultipartUploadCommand({
       Bucket: bucket,
