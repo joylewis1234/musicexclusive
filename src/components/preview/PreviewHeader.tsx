@@ -1,12 +1,12 @@
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, Lock } from "lucide-react";
+import { ChevronLeft, Lock, Unlock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const PreviewHeader = () => {
   const navigate = useNavigate();
 
   return (
-    <header className="w-full max-w-5xl mx-auto mb-6">
+    <header className="w-full max-w-5xl mx-auto mb-8">
       {/* Top nav row */}
       <div className="flex items-center justify-between mb-6">
         <button
@@ -16,29 +16,48 @@ export const PreviewHeader = () => {
           <ChevronLeft className="w-4 h-4" />
           <span className="text-xs uppercase tracking-wider">Home</span>
         </button>
-        <Button
-          size="sm"
-          onClick={() => navigate("/vault/enter")}
-          className="text-xs"
-        >
-          <Lock className="w-3 h-3 mr-1.5" />
-          Enter the Vault
-        </Button>
       </div>
 
-      {/* Title */}
-      <div className="mb-2">
+      {/* Headline */}
+      <div className="mb-6 text-center max-w-2xl mx-auto">
         <h1
-          className="font-display text-xl md:text-2xl uppercase tracking-[0.08em] text-foreground font-bold"
+          className="font-display text-xl md:text-2xl lg:text-3xl uppercase tracking-[0.06em] text-foreground font-bold leading-relaxed mb-6"
           style={{
             textShadow: "0 0 20px hsl(var(--primary) / 0.3)",
           }}
         >
-          Preview
+          Discover the hottest emerging and exclusive artists. Unlock the full Music Exclusive experience to stream without limits.
         </h1>
-        <p className="text-muted-foreground text-xs uppercase tracking-wider mt-1">
-          15-second hooks — no sign-in required
-        </p>
+
+        {/* CTAs */}
+        <div className="flex flex-col items-center gap-3">
+          {/* Vault Lottery */}
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => navigate("/vault/enter")}
+            className="w-full max-w-xs"
+          >
+            <Unlock className="w-4 h-4 mr-2" />
+            Enter the Vault Lottery
+          </Button>
+
+          {/* Skip text */}
+          <span className="text-[10px] uppercase tracking-[0.2em] text-primary/70 font-display mt-2">
+            Skip the lottery — get access now
+          </span>
+
+          {/* Superfan */}
+          <Button
+            size="lg"
+            variant="accent"
+            onClick={() => navigate("/auth/fan", { state: { flow: "superfan" } })}
+            className="w-full max-w-xs"
+          >
+            <Zap className="w-4 h-4 mr-2" />
+            Become a Superfan
+          </Button>
+        </div>
       </div>
     </header>
   );
