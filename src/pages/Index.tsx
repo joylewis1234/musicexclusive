@@ -322,24 +322,6 @@ const Index = () => {
         </div>
       </section>
 
-      {/* Mid-page Preview CTA */}
-      <section className="px-4 py-12">
-        <div className="container max-w-lg md:max-w-md mx-auto text-center">
-          <h2 className="text-foreground mb-3 font-display text-xl md:text-2xl uppercase tracking-wider">
-            Still curious?
-          </h2>
-          <p className="text-muted-foreground text-sm font-body mb-6">
-            Hear 15-second hooks from exclusive tracks. No sign-in required.
-          </p>
-          <Button 
-            size="lg" 
-            className="w-full max-w-xs"
-            onClick={() => navigate("/preview")}
-          >
-            Preview Exclusive Music
-          </Button>
-        </div>
-      </section>
 
       {/* Bottom CTA Section */}
       <section className="px-4 py-16">
