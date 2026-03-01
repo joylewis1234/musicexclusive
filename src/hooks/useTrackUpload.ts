@@ -626,11 +626,11 @@ export function useTrackUpload() {
           previewPath = `artists/${artistId}/${trackId}_preview.${previewExt}`;
           previewPromise = (async () => {
             const result = await r2MultipartUpload({
-              trackId: `${trackId}_preview`,
+              trackId,
               file: processedPreviewFile!,
               contentType: previewContentType,
               accessToken: currentAccessToken,
-              fileType: "audio",
+              fileType: "preview",
               onProgress: () => {},
             });
             if (result.ok) {
