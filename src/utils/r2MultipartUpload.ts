@@ -162,7 +162,7 @@ export async function r2MultipartUpload(params: {
   file: File;
   contentType: string;
   accessToken: string;
-  fileType?: "audio" | "cover";
+  fileType?: "audio" | "cover" | "preview";
   onProgress?: (pct: number) => void;
 }): Promise<R2UploadResult> {
   const { trackId, file, contentType, accessToken, fileType = "audio", onProgress } = params;
