@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const { trackId } = await req.json();
+    const { trackId, fileType } = await req.json();
     if (!trackId || typeof trackId !== "string") {
       return new Response(JSON.stringify({ error: "Missing trackId" }), {
         status: 400,
@@ -127,50 +127,73 @@ Deno.serve(async (req) => {
       });
     }
 
+    const isArtwork = fileType === "artwork";
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const client = createClient(supabaseUrl, supabaseAnonKey);
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const client = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: previewKey, error: rpcError } = await client.rpc(
-      "get_public_preview_audio_key",
-      { p_track_id: trackId }
-    );
+    let r2Key: string | null = null;
 
-    if (rpcError) {
-      console.error("[mint-playback-url-public-preview] RPC error:", rpcError);
-      const latencyMs = Math.round(performance.now() - requestStart);
-      recordMonitoringEvent({
-        function_name: "mint-playback-url-public-preview",
-        event_type: "rpc_error",
-        status: 500,
-        latency_ms: latencyMs,
-        error_code: rpcError.code,
-        error_message: rpcError.message,
-        metadata: { track_id: trackId },
-      }).catch(() => {});
-      return new Response(JSON.stringify({ error: "Track lookup failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (isArtwork) {
+      // Look up artwork_key directly from the tracks table for public preview tracks
+      const { data, error: dbError } = await client
+        .from("tracks")
+        .select("artwork_key")
+        .eq("id", trackId)
+        .eq("is_preview_public", true)
+        .maybeSingle();
+
+      if (dbError) {
+        console.error("[mint-playback-url-public-preview] artwork lookup error:", dbError);
+        return new Response(JSON.stringify({ error: "Artwork lookup failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      r2Key = data?.artwork_key ?? null;
+    } else {
+      const { data: previewKey, error: rpcError } = await client.rpc(
+        "get_public_preview_audio_key",
+        { p_track_id: trackId }
+      );
+      if (rpcError) {
+        console.error("[mint-playback-url-public-preview] RPC error:", rpcError);
+        const latencyMs = Math.round(performance.now() - requestStart);
+        recordMonitoringEvent({
+          function_name: "mint-playback-url-public-preview",
+          event_type: "rpc_error",
+          status: 500,
+          latency_ms: latencyMs,
+          error_code: rpcError.code,
+          error_message: rpcError.message,
+          metadata: { track_id: trackId },
+        }).catch(() => {});
+        return new Response(JSON.stringify({ error: "Track lookup failed" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      r2Key = previewKey;
     }
 
-    if (!previewKey) {
+    if (!r2Key) {
       const latencyMs = Math.round(performance.now() - requestStart);
       recordMonitoringEvent({
         function_name: "mint-playback-url-public-preview",
-        event_type: "no_preview_available",
+        event_type: isArtwork ? "no_artwork_available" : "no_preview_available",
         status: 404,
         latency_ms: latencyMs,
         metadata: { track_id: trackId },
       }).catch(() => {});
-      return new Response(JSON.stringify({ error: "No preview available" }), {
+      return new Response(JSON.stringify({ error: isArtwork ? "No artwork available" : "No preview available" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const ttl = 45;
-    const signedUrl = await presignR2Url(previewKey, ttl);
+    const ttl = isArtwork ? 300 : 45;
+    const signedUrl = await presignR2Url(r2Key, ttl);
 
     const latencyMs = Math.round(performance.now() - requestStart);
     recordMonitoringEvent({
