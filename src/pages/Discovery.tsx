@@ -5,19 +5,19 @@ import { SearchFilterBar } from "@/components/discovery/SearchFilterBar";
 import { HotNewTracks } from "@/components/discovery/HotNewTracks";
 import { DiscoveryTrackCard } from "@/components/discovery/DiscoveryTrackCard";
 import { ShareTrackModal } from "@/components/ShareTrackModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useAudioPreview } from "@/hooks/useAudioPreview";
 import { useTracks, DbTrack, getArtistName } from "@/hooks/useTracks";
 import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { Genre } from "@/data/discoveryArtists";
 import { Track } from "@/contexts/PlayerContext";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { Headphones, X } from "lucide-react";
 
 // Convert DbTrack to Track for sharing
@@ -122,6 +122,7 @@ const Discovery = () => {
   };
 
   const handleStreamTrack = (track: DbTrack) => {
+    stopPreview();
     navigate(`/artist/${track.artist_id}?track=${track.id}&stream=1`);
   };
 

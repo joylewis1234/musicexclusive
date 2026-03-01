@@ -10,9 +10,11 @@ import { useFanTopArtists } from "@/hooks/useFanTopArtists";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCredits } from "@/hooks/useCredits";
 import { usePlaylist, PlaylistTrack } from "@/hooks/usePlaylist";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { useStreamCharge } from "@/hooks/useStreamCharge";
+import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { PlaylistSection } from "@/components/playlist/PlaylistSection";
 import { PlaylistPlayerBar } from "@/components/playlist/PlaylistPlayerBar";
+import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,18 +40,19 @@ const FanProfile = () => {
 
   const { user } = useAuth();
   const { credits, refetch: refetchCredits, refetchWithRetry } = useCredits();
+  const { chargeStream } = useStreamCharge(user?.email);
   const {
     isPlaying,
-    currentTime,
-    duration,
     isLoading: audioLoading,
-    lastEndedTrackId,
     play,
     pause,
-    seek,
-    loadTrack,
-  } = useAudioPlayer();
+    startPaidTrack,
+    lastEndedTrackId,
+  } = useSharedAudioPlayer();
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
+  const [hasSessionEnded, setHasSessionEnded] = useState(false);
+  const [showBarStreamConfirm, setShowBarStreamConfirm] = useState(false);
+  const [pendingBarTrack, setPendingBarTrack] = useState<PlaylistTrack | null>(null);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -123,20 +126,35 @@ const FanProfile = () => {
 
   const handlePlayTrack = useCallback(
     (track: PlaylistTrack) => {
-      void loadTrack({ trackId: track.track_id, fileType: "audio", trackTitle: track.title });
+      void startPaidTrack({
+        trackId: track.track_id,
+        fileType: "audio",
+        trackTitle: track.title,
+        artistName: track.artist_name,
+        artworkUrl: track.artwork_url || undefined,
+      });
       setActiveTrackId(track.track_id);
+      setHasSessionEnded(false);
       setTimeout(() => play(), 100);
     },
-    [loadTrack, play]
+    [startPaidTrack, play]
   );
 
   const handlePlayerPlayPause = useCallback(() => {
     if (isPlaying) {
       pause();
     } else {
+      if (activeTrackId && hasSessionEnded) {
+        const track = playlist.find((t) => t.track_id === activeTrackId) || null;
+        if (track) {
+          setPendingBarTrack(track);
+          setShowBarStreamConfirm(true);
+          return;
+        }
+      }
       play();
     }
-  }, [isPlaying, pause, play]);
+  }, [isPlaying, pause, play, activeTrackId, hasSessionEnded, playlist]);
 
   const handleNext = useCallback(() => {
     if (!activeTrackId) return;
@@ -154,10 +172,11 @@ const FanProfile = () => {
     }
   }, [activeTrackId, playlist, handlePlayTrack]);
 
-  const handleReplay = useCallback(() => {
-    seek(0);
-    play();
-  }, [seek, play]);
+  useEffect(() => {
+    if (activeTrackId && lastEndedTrackId === activeTrackId) {
+      setHasSessionEnded(true);
+    }
+  }, [activeTrackId, lastEndedTrackId]);
 
   useEffect(() => {
     const fetchSuperfanStatus = async () => {
@@ -238,6 +257,21 @@ const FanProfile = () => {
     setIsEditingName(false);
     setEditedName("");
   };
+
+  const handleBarStreamConfirm = useCallback(async () => {
+    if (!pendingBarTrack) return;
+
+    const result = await chargeStream(pendingBarTrack.track_id);
+
+    if (result.success) {
+      refetchCredits();
+      handlePlayTrack(pendingBarTrack);
+    } else if (result.requiresCredits) {
+      throw new Error("Insufficient credits");
+    } else {
+      throw new Error(result.error || "Failed to process stream");
+    }
+  }, [pendingBarTrack, chargeStream, refetchCredits, handlePlayTrack]);
 
   // Get display image URL
   const displayImageUrl = processedImage?.previewUrl || profile?.avatar_url;
@@ -503,7 +537,7 @@ const FanProfile = () => {
             onPlayTrack={handlePlayTrack}
             onPause={pause}
             onResume={play}
-            lastEndedTrackId={lastEndedTrackId}
+            canResumeActive={!hasSessionEnded}
           />
         </section>
 
@@ -530,12 +564,22 @@ const FanProfile = () => {
       {/* Playlist Player Bar */}
       <PlaylistPlayerBar
         activeTrack={activeTrack}
-        playlist={playlist}
         isPlaying={isPlaying}
         isLoading={audioLoading}
-        currentTime={currentTime}
-        duration={duration}
         onPlayPause={handlePlayerPlayPause}
+      />
+
+      <StreamConfirmModal
+        open={showBarStreamConfirm}
+        onOpenChange={(open) => {
+          setShowBarStreamConfirm(open);
+          if (!open) setPendingBarTrack(null);
+        }}
+        artistName={pendingBarTrack?.artist_name || ""}
+        trackTitle={pendingBarTrack?.title || ""}
+        userCredits={credits}
+        onConfirm={handleBarStreamConfirm}
+        onAddCredits={() => navigate("/fan/add-credits")}
       />
     </div>
   );

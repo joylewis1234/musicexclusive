@@ -1,5 +1,4 @@
-import { useCallback } from "react";
-import { useSharedAudioPlayer, PreviewState } from "@/contexts/AudioPlayerContext";
+import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
 
 interface UseAudioPreviewReturn {
   currentPreviewId: string | null;
@@ -12,15 +11,16 @@ interface UseAudioPreviewReturn {
 }
 
 export const useAudioPreview = (): UseAudioPreviewReturn => {
-  const { startPreview, stopPreview, previewState } = useSharedAudioPlayer();
+  const { previewState, startPreview, stopPreview } = useSharedAudioPlayer();
 
   return {
     currentPreviewId: previewState.currentPreviewId,
     previewProgress: previewState.previewProgress,
-    isPlaying: previewState.isPlaying,
-    isLoading: previewState.isLoading,
-    error: previewState.error,
-    startPreview,
+    isPlaying: previewState.isPreviewPlaying,
+    isLoading: previewState.isPreviewLoading,
+    error: previewState.previewError,
+    startPreview: (trackId, startSeconds, onComplete) =>
+      void startPreview({ trackId, startSeconds, onComplete }),
     stopPreview,
   };
 };

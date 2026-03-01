@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback } from "react";
 import { Play, Pause, Heart, Share2, Loader2, AlertCircle, Crown, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
+import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 interface Track {
@@ -9,11 +9,6 @@ interface Track {
   title: string;
   artist: string;
   artworkUrl: string;
-}
-
-interface PaidStreamData {
-  hlsUrl: string;
-  sessionId?: string | null;
 }
 
 interface CompactVaultPlayerProps {
@@ -24,12 +19,12 @@ interface CompactVaultPlayerProps {
   onPlay?: () => void; // Called BEFORE playback starts (for confirmation modal)
   onLike?: () => void;
   onShare?: () => void;
-  /** If true, skip the onPlay callback and play directly (already charged) */
+  /** If true, skip the onPlay callback and play directly */
   skipPlayConfirm?: boolean;
-  /** Paid stream data from charge-stream — triggers loadPaidStream + auto-play */
-  paidStreamData?: PaidStreamData | null;
-  /** Called when paidStreamData has been consumed */
-  onPaidStreamConsumed?: () => void;
+  /** Trigger auto-play after confirmation */
+  autoPlay?: boolean;
+  /** Called when autoPlay has been consumed */
+  onAutoPlayConsumed?: () => void;
   /** Called when the track finishes playing (song completed) */
   onTrackEnded?: () => void;
 }
@@ -43,53 +38,49 @@ export const CompactVaultPlayer = ({
   onLike,
   onShare,
   skipPlayConfirm = false,
-  paidStreamData,
-  onPaidStreamConsumed,
+  autoPlay = false,
+  onAutoPlayConsumed,
   onTrackEnded,
 }: CompactVaultPlayerProps) => {
   const {
     isPlaying,
-    currentTime,
     duration,
     isLoading,
     error,
     play,
     pause,
-    stop,
-    loadTrack,
-    loadPaidStream,
-  } = useAudioPlayer();
+    startPaidTrack,
+    lastEndedTrackId,
+  } = useSharedAudioPlayer();
 
-  const prevIsPlayingRef = useRef(isPlaying);
-
-  // NO eager loadTrack on track selection — audio is only loaded after payment
-
-  // Detect song completion: was playing, now stopped, and currentTime is at/near end
+  // Load track when it changes — fetch signed URL via edge function
   useEffect(() => {
-    if (prevIsPlayingRef.current && !isPlaying && duration > 0 && currentTime >= duration - 0.5) {
+    if (track?.id) {
+      void startPaidTrack({
+        trackId: track.id,
+        fileType: "audio",
+        trackTitle: track.title,
+        artistName: track.artist,
+        artworkUrl: track.artworkUrl,
+      });
+    }
+  }, [track?.id, track?.title, track?.artist, track?.artworkUrl, startPaidTrack]);
+
+  // Detect song completion from the shared audio engine
+  useEffect(() => {
+    if (track?.id && lastEndedTrackId === track.id) {
       onTrackEnded?.();
     }
-    prevIsPlayingRef.current = isPlaying;
-  }, [isPlaying, currentTime, duration, onTrackEnded]);
+  }, [lastEndedTrackId, onTrackEnded, track?.id]);
 
-  // Handle paid stream data from parent (after charge-stream succeeds)
+  // Handle auto-play trigger from parent (after confirmation modal)
   useEffect(() => {
-    if (paidStreamData && track?.id && hasVaultAccess) {
-      // Load the HLS URL directly from the charge result — no extra mint call
-      loadPaidStream({
-        trackId: track.id,
-        hlsUrl: paidStreamData.hlsUrl,
-        sessionId: paidStreamData.sessionId,
+    if (autoPlay && track?.id && hasVaultAccess) {
+      play().then(() => {
+        onAutoPlayConsumed?.();
       });
-      // Auto-play after loading
-      // Small delay to let HLS attach before play()
-      const timer = setTimeout(() => {
-        play().catch((err) => console.error("[VaultPlayer] Auto-play failed:", err));
-      }, 200);
-      onPaidStreamConsumed?.();
-      return () => clearTimeout(timer);
     }
-  }, [paidStreamData, track?.id, hasVaultAccess, loadPaidStream, play, onPaidStreamConsumed]);
+  }, [autoPlay, track?.id, hasVaultAccess, play, onAutoPlayConsumed]);
 
   const handlePlayPause = async () => {
     if (!track) return;
@@ -110,12 +101,10 @@ export const CompactVaultPlayer = ({
       // If not already charged this session, call onPlay to show confirmation modal
       if (!skipPlayConfirm && onPlay) {
         onPlay(); // This opens the confirmation modal
-        // Don't play yet - playback only starts via paidStreamData prop after successful transaction
+        // Don't play yet - playback only starts after successful confirmation
         return;
       }
       
-      // skipPlayConfirm is true — already charged, need to load via mint-playback-url for replay
-      await loadTrack({ trackId: track.id, fileType: "audio", trackTitle: track.title });
       await play();
     }
   };
