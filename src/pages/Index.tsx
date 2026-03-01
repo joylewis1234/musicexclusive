@@ -363,14 +363,14 @@ const Index = () => {
               </span>
             </Button>
             
-            {/* Artist CTA */}
+            {/* Artist Waitlist CTA */}
             <Button 
               variant="outline" 
               size="default" 
               className="mt-4 text-xs tracking-widest"
-              onClick={() => navigate("/artist/apply")}
+              onClick={() => navigate("/artist-waitlist")}
             >
-              Music Artists Apply Here
+              Join the Artist Waitlist
             </Button>
           </div>
         </div>
