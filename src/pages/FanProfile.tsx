@@ -43,9 +43,9 @@ const FanProfile = () => {
     currentTime,
     duration,
     isLoading: audioLoading,
+    lastEndedTrackId,
     play,
     pause,
-    stop,
     seek,
     loadTrack,
   } = useAudioPlayer();
@@ -503,6 +503,7 @@ const FanProfile = () => {
             onPlayTrack={handlePlayTrack}
             onPause={pause}
             onResume={play}
+            lastEndedTrackId={lastEndedTrackId}
           />
         </section>
 
@@ -535,8 +536,6 @@ const FanProfile = () => {
         currentTime={currentTime}
         duration={duration}
         onPlayPause={handlePlayerPlayPause}
-        onStop={stop}
-        onSeek={seek}
       />
     </div>
   );

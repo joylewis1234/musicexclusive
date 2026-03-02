@@ -1,4 +1,4 @@
-import { Play, Pause, Share2, Headphones, Loader2, AlertCircle, Heart } from "lucide-react";
+import { Play, Share2, Headphones, Loader2, AlertCircle, Heart } from "lucide-react";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
 import artist1 from "@/assets/artist-1.jpg";
@@ -32,6 +32,7 @@ export const DiscoveryTrackCard = ({
   const hasPreviewAudio = !!track.preview_audio_url || !!track.full_audio_url;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
+  const isPreviewActive = isPreviewPlaying || isPreviewLoading;
 
   return (
     <div
@@ -45,7 +46,7 @@ export const DiscoveryTrackCard = ({
       {/* Artwork */}
       <div
         className="relative aspect-square overflow-hidden cursor-pointer"
-        onClick={hasPreviewAudio && !isPreviewDisabled ? onPreview : onStream}
+        onClick={hasPreviewAudio && !isPreviewDisabled && !isPreviewActive ? onPreview : (!isPreviewActive ? onStream : undefined)}
       >
         <SignedArtwork
           trackId={track.id}
@@ -69,7 +70,8 @@ export const DiscoveryTrackCard = ({
               className="w-12 h-12 rounded-full bg-primary/30 backdrop-blur-sm flex items-center justify-center opacity-100"
               style={{ boxShadow: "0 0 30px hsl(var(--primary) / 0.5)" }}
             >
-              <Pause className="w-6 h-6 text-primary" />
+              {/* Play icon only — no pause for previews */}
+              <Play className="w-6 h-6 text-primary ml-0.5" />
             </div>
           ) : (
             <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -141,19 +143,17 @@ export const DiscoveryTrackCard = ({
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                onPreview();
+                if (!isPreviewActive) onPreview();
               }}
-              disabled={isPreviewDisabled}
+              disabled={isPreviewDisabled || isPreviewActive}
               className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-display uppercase tracking-wider font-semibold text-accent border border-accent/40 bg-accent/10 hover:bg-accent/20 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {isPreviewLoading ? (
                 <Loader2 className="w-3 h-3 animate-spin" />
-              ) : isPreviewPlaying ? (
-                <Pause className="w-3 h-3" />
               ) : (
                 <Play className="w-3 h-3" />
               )}
-              {isPreviewPlaying ? "Stop" : "Preview"}
+              {isPreviewActive ? "Previewing" : "Preview"}
             </button>
             <button
               onClick={(e) => {

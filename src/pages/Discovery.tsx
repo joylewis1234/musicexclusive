@@ -10,6 +10,15 @@ import { useTracks, DbTrack, getArtistName } from "@/hooks/useTracks";
 import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { Genre } from "@/data/discoveryArtists";
 import { Track } from "@/contexts/PlayerContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Headphones, X } from "lucide-react";
 
 // Convert DbTrack to Track for sharing
 const dbTrackToTrack = (dbTrack: DbTrack): Track => ({
@@ -28,6 +37,8 @@ const Discovery = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [selectedTrackForShare, setSelectedTrackForShare] = useState<Track | null>(null);
+  const [showStreamUpsell, setShowStreamUpsell] = useState(false);
+  const [upsellTrack, setUpsellTrack] = useState<DbTrack | null>(null);
 
   const {
     currentPreviewId,
@@ -111,26 +122,48 @@ const Discovery = () => {
   };
 
   const handleStreamTrack = (track: DbTrack) => {
-    navigate(`/artist/${track.artist_id}?track=${track.id}`);
+    navigate(`/artist/${track.artist_id}?track=${track.id}&stream=1`);
   };
 
   const handleTrackClick = (track: DbTrack) => {
     handleStreamTrack(track);
   };
 
-  const handlePreview = (track: DbTrack) => {
-    if (currentPreviewId === track.id && isPlaying) {
+  // Preview callback: when 25s completes, show upsell modal
+  const handlePreviewComplete = useCallback((track: DbTrack) => {
+    setUpsellTrack(track);
+    setShowStreamUpsell(true);
+  }, []);
+
+  const handlePreview = useCallback((track: DbTrack) => {
+    // If already previewing this track, ignore (no pause/stop allowed)
+    if (currentPreviewId === track.id) return;
+
+    // If previewing another track, stop it first
+    if (currentPreviewId && currentPreviewId !== track.id) {
       stopPreview();
-    } else {
-      const startSeconds = track.preview_start_seconds || 0;
-      startPreview(track.id, startSeconds);
     }
-  };
+
+    const startSeconds = track.preview_start_seconds || 0;
+    startPreview(track.id, startSeconds, () => handlePreviewComplete(track));
+  }, [currentPreviewId, startPreview, stopPreview, handlePreviewComplete]);
 
   const handleShare = (track: DbTrack) => {
     setSelectedTrackForShare(dbTrackToTrack(track));
     setIsShareModalOpen(true);
   };
+
+  const handleUpsellStream = useCallback(() => {
+    if (!upsellTrack) return;
+    setShowStreamUpsell(false);
+    handleStreamTrack(upsellTrack);
+    setUpsellTrack(null);
+  }, [upsellTrack, navigate]);
+
+  const handleUpsellDismiss = useCallback(() => {
+    setShowStreamUpsell(false);
+    setUpsellTrack(null);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -206,6 +239,43 @@ const Discovery = () => {
         onOpenChange={setIsShareModalOpen}
         track={selectedTrackForShare}
       />
+
+      {/* Stream Upsell Modal (after 25s preview completes) */}
+      <Dialog open={showStreamUpsell} onOpenChange={(o) => { if (!o) handleUpsellDismiss(); }}>
+        <DialogContent className="sm:max-w-[380px] border-border/50 bg-card">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg text-foreground">
+              Want to stream this track?
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground text-sm">
+              {upsellTrack ? (
+                <>
+                  <span className="font-semibold text-foreground">{upsellTrack.title}</span>
+                  {" by "}
+                  <span className="text-primary">{getArtistName(upsellTrack)}</span>
+                </>
+              ) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-2">
+            <Button
+              onClick={handleUpsellStream}
+              className="w-full gap-2"
+            >
+              <Headphones className="w-4 h-4" />
+              Stream Full Track
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={handleUpsellDismiss}
+              className="w-full gap-2 text-muted-foreground"
+            >
+              <X className="w-4 h-4" />
+              Not Now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

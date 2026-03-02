@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { PlayerProvider } from "@/contexts/PlayerContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AudioPlayerProvider } from "@/contexts/AudioPlayerContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { ArtistProtectedRoute } from "@/components/auth/ArtistProtectedRoute";
 import { FanLayout } from "@/layouts/FanLayout";
@@ -121,6 +122,7 @@ const App = () => {
   return (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
+      <AudioPlayerProvider>
       <PlayerProvider>
         <TooltipProvider>
           <Toaster />
@@ -304,6 +306,7 @@ const App = () => {
           </BrowserRouter>
         </TooltipProvider>
       </PlayerProvider>
+      </AudioPlayerProvider>
     </AuthProvider>
   </QueryClientProvider>
   );

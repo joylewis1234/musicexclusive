@@ -39,6 +39,9 @@ export interface UseAudioPlayerReturn {
   isLoading: boolean;
   error: string | null;
   diagnostics: PlaybackDiagnostics;
+  currentTrack: { trackId: string; fileType: PlaybackFileType; trackTitle?: string } | null;
+  lastEndedTrackId: string | null;
+  lastEndedAt: number | null;
   play: () => Promise<void>;
   pause: () => void;
   stop: () => void;
@@ -81,6 +84,8 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const [volume, setVolumeState] = useState(75);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastEndedTrackId, setLastEndedTrackId] = useState<string | null>(null);
+  const [lastEndedAt, setLastEndedAt] = useState<number | null>(null);
 
   const [diagnostics, setDiagnostics] = useState<PlaybackDiagnostics>({
     trackTitle: null,
@@ -155,6 +160,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     },
     [mintSignedUrl]
   );
+
   const sendPlaybackTelemetry = useCallback(
     async (status: number, latencyMs?: number) => {
       const track = currentTrackRef.current;
@@ -192,7 +198,16 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setIsLoading(false);
       setDiagnostics((prev) => ({ ...prev, canPlay: true, readyState: audio.readyState }));
     };
-    const handleEnded = () => { setIsPlaying(false); setCurrentTime(0); };
+    const handleEnded = () => {
+      setIsPlaying(false);
+      setCurrentTime(0);
+      // Track end state for replay-charge enforcement
+      const track = currentTrackRef.current;
+      if (track) {
+        setLastEndedTrackId(track.trackId);
+        setLastEndedAt(Date.now());
+      }
+    };
     const handleError = (e: Event) => {
       const audioEl = e.target as HTMLAudioElement;
       let errorMessage = "Unknown playback error";
@@ -266,6 +281,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setCurrentTime(0);
       setDuration(0);
       setIsLoading(true);
+      // Clear ended state when loading a new track
+      setLastEndedTrackId(null);
+      setLastEndedAt(null);
       setCurrentTrack({ trackId, fileType, trackTitle });
       currentTrackRef.current = { trackId, fileType, trackTitle };
       setDiagnostics({
@@ -300,7 +318,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
               if (data.fatal) {
                 console.warn("[AudioPlayer] Fatal HLS error, falling back to signed URL");
                 destroyHls();
-                // Fallback to signed R2 URL
                 audio.src = entry.url;
                 audio.load();
                 setDiagnostics((prev) => ({
@@ -323,7 +340,6 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
             console.log("[AudioPlayer] HLS active for track:", { trackTitle, trackId, fileType });
           } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
-            // Safari native HLS
             audio.src = entry.hlsUrl;
             audio.load();
             setDiagnostics((prev) => ({
@@ -333,14 +349,12 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
             }));
             console.log("[AudioPlayer] Native HLS (Safari) for track:", { trackTitle, trackId });
           } else {
-            // No HLS support at all — direct signed URL
             audio.src = entry.url;
             audio.load();
             setDiagnostics((prev) => ({ ...prev, audioUrl: entry.url }));
             console.log("[AudioPlayer] No HLS support, using signed URL:", { trackTitle, trackId });
           }
         } else {
-          // No hlsUrl returned — direct signed URL fallback
           audio.src = entry.url;
           audio.load();
           setDiagnostics((prev) => ({ ...prev, audioUrl: entry.url }));
@@ -361,8 +375,14 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     const audio = audioRef.current;
     if (!audio.src || !currentTrack) { setError("No audio source loaded"); return; }
 
+    // If at end, reset to beginning
+    if (duration > 0 && audio.currentTime >= duration - 0.1) {
+      audio.currentTime = 0;
+      setCurrentTime(0);
+    }
+
     try {
-      // Only refresh signed URL if NOT using HLS (HLS tokens are in the playlist)
+      // Only refresh signed URL if NOT using HLS
       if (!hlsRef.current) {
         const cacheKey = getCacheKey(currentTrack.trackId, currentTrack.fileType);
         const cached = signedUrlCacheRef.current.get(cacheKey);
@@ -387,7 +407,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     } finally {
       setIsLoading(false);
     }
-  }, [currentTrack, loadSignedUrl]);
+  }, [currentTrack, loadSignedUrl, duration]);
 
   const pause = useCallback(() => {
     if (audioRef.current) { audioRef.current.pause(); setIsPlaying(false); }
@@ -424,6 +444,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setCurrentTime(0);
       setDuration(0);
       setIsLoading(true);
+      // Clear ended state when loading a new paid stream
+      setLastEndedTrackId(null);
+      setLastEndedAt(null);
       loadStartRef.current = performance.now();
       telemetrySentRef.current = false;
       playbackSessionRef.current = params.sessionId ?? null;
@@ -479,6 +502,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
 
   return {
     isPlaying, currentTime, duration, volume, isLoading, error, diagnostics,
+    currentTrack, lastEndedTrackId, lastEndedAt,
     play, pause, stop, seek, setVolume, loadTrack, loadPaidStream,
   };
 }
