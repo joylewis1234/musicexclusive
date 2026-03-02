@@ -29,7 +29,7 @@ export const DiscoveryTrackCard = ({
   onArtistClick,
 }: DiscoveryTrackCardProps) => {
   const artistName = getArtistName(track);
-  const hasPreviewAudio = !!track.preview_audio_url || !!track.full_audio_url;
+  const hasPreviewAudio = !!track.preview_audio_url || !!track.preview_audio_key || !!track.full_audio_url || !!track.full_audio_key;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
   const isPreviewActive = isPreviewPlaying || isPreviewLoading;
