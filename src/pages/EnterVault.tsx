@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
@@ -23,6 +23,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { FanCommentBubble } from "@/components/vault/FanCommentBubble";
 import { ReturningFanLogin } from "@/components/vault/ReturningFanLogin";
 import vaultPortal from "@/assets/vault-portal.png";
+import { VaultLockedModal } from "@/components/vault/VaultLockedModal";
 
 // Fan testimonials for floating comments around the vault
 const fanComments = [
@@ -70,7 +71,13 @@ const EnterVault = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [vaultLocked, setVaultLocked] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setVaultLocked(true), 5000);
+    return () => clearTimeout(timer);
+  }, []);
   const { signUp } = useAuth();
 
   const form = useForm<FormValues>({
@@ -612,6 +619,7 @@ const EnterVault = () => {
       <section className="mb-8">
         <ReturningFanLogin />
       </section>
+      <VaultLockedModal open={vaultLocked} onOpenChange={setVaultLocked} />
     </div>
   );
 };
