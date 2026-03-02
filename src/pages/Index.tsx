@@ -1,6 +1,8 @@
+import { useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
+import { VaultLockedModal } from "@/components/vault/VaultLockedModal"
 import Footer from "@/components/Footer"
 import { ArtistCard } from "@/components/ArtistCard"
 import { ArtistPreviewStrip } from "@/components/ArtistPreviewStrip"
@@ -79,10 +81,12 @@ const benefits = [
 
 const Index = () => {
   const navigate = useNavigate()
+  const [vaultLocked, setVaultLocked] = useState(false)
   
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <VaultLockedModal open={vaultLocked} onOpenChange={setVaultLocked} />
       
       {/* Artist Preview Strip - Social Proof */}
       <section className="pt-20 pb-4 overflow-hidden">
@@ -127,7 +131,7 @@ const Index = () => {
             <Button 
               size="lg" 
               className="w-full max-w-xs text-sm md:text-base whitespace-normal h-auto py-3"
-              onClick={() => navigate("/vault/enter")}
+              onClick={() => setVaultLocked(true)}
             >
               Try Your Luck, Enter the Lottery Vault
             </Button>
@@ -194,7 +198,7 @@ const Index = () => {
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => navigate("/vault/enter")}
+              onClick={() => setVaultLocked(true)}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
             >
               Enter the Vault
@@ -279,7 +283,7 @@ const Index = () => {
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => navigate("/vault/enter")}
+              onClick={() => setVaultLocked(true)}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
             >
               Enter the Vault
@@ -348,7 +352,7 @@ const Index = () => {
               size="lg" 
               variant="outline"
               className="w-full animate-glow-pulse"
-              onClick={() => navigate("/vault/enter")}
+              onClick={() => setVaultLocked(true)}
             >
               Enter the Vault
             </Button>
