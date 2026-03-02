@@ -9,6 +9,8 @@ export interface DbTrack {
   duration: number;
   full_audio_url: string | null;
   preview_audio_url: string | null;
+  preview_audio_key: string | null;
+  full_audio_key: string | null;
   preview_start_seconds: number;
   artwork_url: string | null;
   artwork_key: string | null;
