@@ -54,11 +54,12 @@ type ViewerContext = "fan" | "artist-own" | "artist-preview";
 const ArtistProfilePage = () => {
   const navigate = useNavigate();
   const { artistId } = useParams<{ artistId: string }>();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, role } = useAuth();
   
   const isPreviewMode = searchParams.get("view") === "fan";
   const highlightTrackId = searchParams.get("track");
+  const autoStream = searchParams.get("stream") === "1";
 
   const [artistProfile, setArtistProfile] = useState<ArtistProfile | null>(null);
   const [tracks, setTracks] = useState<TrackData[]>([]);
@@ -205,6 +206,18 @@ const ArtistProfilePage = () => {
       }
     }
   }, [highlightTrackId, tracks]);
+
+  // Auto-open stream confirm when stream=1 param is present
+  useEffect(() => {
+    if (autoStream && selectedTrack && !showStreamConfirm) {
+      setPendingPlayTrack(selectedTrack);
+      setShowStreamConfirm(true);
+      // Remove stream param so it fires only once
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete("stream");
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [autoStream, selectedTrack, showStreamConfirm, searchParams, setSearchParams]);
 
   const handleSelectTrack = (track: TrackData, profileOverride?: ArtistProfile | null) => {
     const profile = profileOverride || artistProfile;

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Play, Pause, Square, Volume2, Loader2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, Pause, Volume2, Loader2, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import { useAudioPlayer } from "@/hooks/useAudioPlayer";
@@ -39,8 +39,6 @@ export const VaultMusicPlayer = ({
     diagnostics,
     play,
     pause,
-    stop,
-    seek,
     setVolume,
     loadTrack,
   } = useAudioPlayer();
@@ -78,26 +76,12 @@ export const VaultMusicPlayer = ({
     }
   };
 
-  const handleStop = () => {
-    stop();
-    setHasCalledOnPlay(false);
-  };
-
-  const handleSeek = (value: number[]) => {
-    if (duration) {
-      const newTime = (value[0] / 100) * duration;
-      seek(newTime);
-    }
-  };
-
   const formatTime = (seconds: number) => {
     if (!isFinite(seconds)) return "0:00";
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
-
-  const progressPercent = duration ? (currentTime / duration) * 100 : 0;
 
   // Empty state
   if (!track) {
@@ -121,7 +105,6 @@ export const VaultMusicPlayer = ({
         
         <div className="relative bg-card/95 backdrop-blur-sm rounded-2xl p-6 border border-transparent">
           <div className="text-center py-8">
-            {/* Vault icon placeholder */}
             <div 
               className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
               style={{
@@ -198,34 +181,14 @@ export const VaultMusicPlayer = ({
           </div>
         )}
 
-        {/* Progress bar */}
-        <div className="mb-4">
-          <Slider
-            value={[progressPercent]}
-            onValueChange={handleSeek}
-            max={100}
-            step={0.1}
-            className="cursor-pointer"
-            disabled={!hasVaultAccess || isLoading}
-          />
-          <div className="flex justify-between mt-1.5 text-xs text-muted-foreground font-mono">
-            <span>{formatTime(currentTime)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
+        {/* Time display (no seek bar) */}
+        <div className="mb-4 flex justify-between text-xs text-muted-foreground font-mono">
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
         </div>
 
-        {/* Controls */}
+        {/* Controls: Play/Pause + Volume only (no Stop, no Seek) */}
         <div className="flex items-center justify-center gap-4">
-          {/* Stop button */}
-          <button
-            onClick={handleStop}
-            disabled={isLoading}
-            className="w-10 h-10 rounded-full bg-muted/30 flex items-center justify-center hover:bg-muted/50 transition-colors disabled:opacity-50"
-            aria-label="Stop"
-          >
-            <Square className="w-4 h-4 text-muted-foreground" />
-          </button>
-
           {/* Play/Pause button */}
           <button
             onClick={handlePlayPause}
