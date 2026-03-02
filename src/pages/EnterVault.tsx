@@ -412,8 +412,8 @@ const EnterVault = () => {
                   {/* Form */}
                   <Form {...form}>
                     <form
-                      onSubmit={form.handleSubmit(onSubmit)}
-                      className="space-y-6"
+                      onSubmit={(e) => e.preventDefault()}
+                      className="space-y-6 opacity-50 pointer-events-none"
                     >
                       <FormField
                         control={form.control}
