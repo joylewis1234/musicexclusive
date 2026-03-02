@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
 import { useIsAdmin } from "@/hooks/useIsAdmin"
+import { VaultLockedModal } from "@/components/vault/VaultLockedModal"
 
 const mainNavItems: { title: string; href: string; icon: typeof Home; disabled?: boolean }[] = [
   { title: "Home", href: "/", icon: Home },
   { title: "How It Works", href: "/#how-it-works", icon: HelpCircle },
   { title: "Artist Benefits", href: "/artist-benefits", icon: Crown },
   { title: "Enter the Vault", href: "/vault/enter", icon: KeyRound },
-  { title: "Become a Superfan", href: "/auth/fan?flow=superfan", icon: Star },
+  { title: "Become a Superfan", href: "#vault-locked", icon: Star },
   { title: "Artist Application", href: "/artist/apply", icon: Music, disabled: true },
   { title: "Terms of Use", href: "/terms", icon: FileText },
   { title: "Privacy Policy", href: "/privacy", icon: Shield },
@@ -25,11 +26,17 @@ const adminNavItems = [
 
 const Header = () => {
   const [open, setOpen] = useState(false)
+  const [vaultLocked, setVaultLocked] = useState(false)
   const navigate = useNavigate()
   const { isAdmin } = useIsAdmin()
 
   const handleNavigation = (href: string) => {
     setOpen(false)
+    
+    if (href === "#vault-locked") {
+      setVaultLocked(true)
+      return
+    }
     
     // Handle hash links for same-page navigation
     if (href.startsWith("/#")) {
@@ -196,6 +203,7 @@ const Header = () => {
           Log In
         </Button>
       </div>
+      <VaultLockedModal open={vaultLocked} onOpenChange={setVaultLocked} />
     </header>
   )
 }
