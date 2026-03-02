@@ -147,33 +147,57 @@ serve(async (req) => {
           body: JSON.stringify({
             from: "Music Exclusive <noreply@themusicisexclusive.com>",
             to: [email],
-            subject: "You're on the Music Exclusive Artist Waitlist",
+            subject: "🎉 Congratulations - you're signed up on the waitlist.",
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0a0a0a; color: #ffffff; padding: 40px 20px;">
                 <h1 style="text-align: center; font-size: 28px; margin-bottom: 8px;">Welcome, Founding Artist.</h1>
-                <p style="text-align: center; color: #a0a0a0; font-size: 14px; margin-bottom: 32px;">You're on the Music Exclusive waitlist.</p>
+                <p style="text-align: center; color: #a0a0a0; font-size: 15px; margin-bottom: 32px;">You're officially on the Music Exclusive Artist Waitlist.</p>
+
+                <div style="color: #ccc; font-size: 14px; line-height: 1.8; margin-bottom: 28px;">
+                  <p>Music Exclusive is launching in 2026 with a new model — one built for artists first.</p>
+                  <p><strong style="color: #fff;">No ad-based pennies.</strong><br/>
+                  <strong style="color: #fff;">No diluted payouts.</strong><br/>
+                  <strong style="color: #fff;">No chasing algorithm scraps.</strong></p>
+                  <p>Instead, Music Exclusive connects artists directly with engaged superfans through a credit-powered streaming system where every stream carries real value.</p>
+                  <p>Inside Music Exclusive, you earn <strong style="color: #22c55e;">$0.10 per stream</strong>.</p>
+                  <p>That's significantly more than traditional streaming platforms.</p>
+                  <p>And you're paid <strong style="color: #22c55e;">weekly</strong>.</p>
+                  <p>Consistent earnings. Transparent payouts. Artist-first structure.</p>
+                  <p>As a Founding Artist candidate, you're being considered to enter the platform before public launch — positioning you at the forefront of a new monetization model.</p>
+                </div>
 
                 <div style="background: #111; border: 1px solid #222; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                  <h3 style="color: #22c55e; margin-top: 0;">Your Earning Potential</h3>
+                  <h3 style="color: #22c55e; margin-top: 0; text-align: center;">Your Earning Potential</h3>
                   <p style="color: #ccc; font-size: 14px; line-height: 1.6;">
-                    <strong>Scenario 1:</strong> 100 fans × 10 streams/week = 1,000 streams<br/>
+                    <strong style="color: #fff;">Scenario 1:</strong> 100 fans × 10 streams/week = 1,000 streams<br/>
                     1,000 × $0.10 = <strong style="color: #22c55e;">$100/week = $400/month</strong>
                   </p>
                   <p style="color: #ccc; font-size: 14px; line-height: 1.6;">
-                    <strong>Scenario 2:</strong> 600 fans × 10 streams/week = 6,000 streams<br/>
+                    <strong style="color: #fff;">Scenario 2:</strong> 600 fans × 10 streams/week = 6,000 streams<br/>
                     6,000 × $0.10 = <strong style="color: #22c55e;">$600/week = $2,400/month</strong>
                   </p>
                 </div>
 
-                <div style="background: #111; border: 1px solid #222; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                  <h3 style="margin-top: 0;">What Happens Next</h3>
-                  <ul style="color: #ccc; font-size: 14px; line-height: 1.8; padding-left: 20px;">
-                    <li>We review applications in waves</li>
-                    <li>Founding spots are limited</li>
-                    <li>Launching in 2026</li>
-                    <li>You'll receive an email when approved</li>
+                <div style="color: #ccc; font-size: 14px; line-height: 1.8; margin-bottom: 28px;">
+                  <p>We are reviewing artists in curated waves to ensure quality, alignment, and long-term success.</p>
+                  <p><strong style="color: #fff;">If selected, you'll receive:</strong></p>
+                  <ul style="padding-left: 20px;">
+                    <li>Early access before public launch</li>
+                    <li>Founding Artist recognition on your profile</li>
+                    <li>Priority visibility during rollout</li>
+                    <li>Direct fan monetization from day one</li>
+                    <li>Exclusive release opportunities inside the Vault</li>
                   </ul>
                 </div>
+
+                <div style="color: #ccc; font-size: 14px; line-height: 1.8; margin-bottom: 28px;">
+                  <p>This is more than another streaming platform.</p>
+                  <p>It's a new layer between artists and their most dedicated fans.</p>
+                  <p>We'll be in touch soon with next steps.</p>
+                  <p><strong style="color: #22c55e;">Founding spots are limited.</strong></p>
+                </div>
+
+                <p style="color: #a0a0a0; font-size: 14px; margin-bottom: 4px;">— The Music Exclusive Team</p>
 
                 <p style="text-align: center; color: #666; font-size: 12px; margin-top: 32px;">
                   © 2026 Music Exclusive. All rights reserved.
