@@ -1,158 +1,111 @@
-# Artist Waitlist System for Music Exclusive
 
-A controlled pre-launch intake funnel to collect, manage, and approve Founding Artist applications ahead of the 2026 launch.
 
----
+# Founding Superfan Lifetime Access Funnel
 
-## Overview
-
-This system creates a separate waitlist pipeline that sits in front of the existing artist onboarding flow. Artists apply via a public form, admins review and approve/reject from a new admin section, and approved artists receive an email linking them into the existing onboarding flow.
+This plan adds a complete fan waitlist funnel: a lock modal on "Enter the Vault", a landing page, a form, a confirmation screen, a backend table, an edge function with emails, and admin visibility.
 
 ---
 
 ## 1. Database
 
-### New table: `artist_waitlist`
+Create a new `fan_waitlist` table:
 
+| Column          | Type        | Notes                       |
+|-----------------|-------------|-----------------------------|
+| id              | uuid (PK)   | default gen_random_uuid()   |
+| first_name      | text        | NOT NULL                    |
+| email           | text        | NOT NULL, UNIQUE            |
+| favorite_genre  | text        | nullable                    |
+| favorite_artist | text        | nullable                    |
+| status          | text        | default 'lifetime_reserved' |
+| created_at      | timestamptz | default now()               |
 
-| Column                             | Type        | Notes                       |
-| ---------------------------------- | ----------- | --------------------------- |
-| id                                 | uuid (PK)   | default `gen_random_uuid()` |
-| artist_name                        | text        | NOT NULL                    |
-| email                              | text        | NOT NULL                    |
-| instagram                          | text        | nullable                    |
-| other_social                       | text        | nullable                    |
-| genre                              | text        | nullable                    |
-| monthly_listeners                  | text        | nullable                    |
-| What State/Country do you live?    | text        | NOT NULL                    |
-| Where can we listen to your music? | text        | NOT NULL                    |
-| status                             | text        | default `'pending'`         |
-| created_at                         | timestamptz | default `now()`             |
-| approved_at                        | timestamptz | nullable                    |
-| approved_by                        | uuid        | nullable                    |
-
-
-### RLS Policies
-
-- **SELECT**: admin only (`has_role(auth.uid(), 'admin')`) + service_role
-- **INSERT**: service_role only (submissions go through edge function)
-- **UPDATE**: admin + service_role
+RLS policies:
+- SELECT: admin + service_role
+- INSERT: service_role only
+- UPDATE: admin + service_role
 - No DELETE
 
 ---
 
-## 2. Edge Functions
+## 2. Edge Function: `submit-fan-waitlist`
 
-### A. `submit-waitlist-application`
-
-- Public endpoint (no JWT required)
-- Validates required fields (artist_name, email)
-- Rate-limits by email+IP (reuses `request_rate_limits` pattern)
-- Inserts into `artist_waitlist` with `status = 'pending'`
-- Sends admin notification email via Resend (to `support@musicexclusive.co`)
-- Sends artist confirmation email via Resend with Founding Artist messaging and earnings scenarios
-
-### B. `approve-waitlist-artist`
-
-- Admin-only (uses shared `verify-admin` utility)
-- Updates `artist_waitlist` row to `status = 'approved'`, sets `approved_at` and `approved_by`
-- Sends approval email via Resend with link to `/artist/apply` (existing onboarding)
-
-### C. `reject-waitlist-artist`
-
-- Admin-only
-- Updates status to `'rejected'`
-- Sends polite decline email via Resend
+- Public endpoint (no JWT)
+- Validates required fields (first_name, email)
+- Rate-limits by email+IP using existing `request_rate_limits` pattern
+- Inserts into `fan_waitlist` (duplicate email returns 409)
+- Sends **confirmation email** to the fan via Resend from `noreply@themusicisexclusive.com`:
+  - Subject: "You've Secured Lifetime Access to Music Exclusive"
+  - Body: Founding Superfan welcome with lifetime benefits list
+- Sends **admin notification email** to `support@musicexclusive.co`:
+  - Subject: "New Founding Superfan Signup"
+  - Body: Name, email, genre, artist, timestamp
 
 ---
 
-## 3. Frontend Pages
+## 3. Frontend Changes
 
-### A. Landing Page Button (`src/pages/Index.tsx`)
+### A. Vault Lock Modal (new component)
 
-- Add "Join the Artist Waitlist" button in the bottom CTA section (alongside existing artist CTA)
-- Routes to `/artist-waitlist`
+`src/components/vault/VaultLockedModal.tsx`
 
-### B. Waitlist Landing Page (`src/pages/ArtistWaitlist.tsx`)
+A modal overlay triggered when clicking "Enter the Vault" on the homepage. Contains:
+- "The Vault Is Locked." headline
+- 2026 launch messaging and exclusivity copy (as specified)
+- "Secure Lifetime Access" button navigates to `/founding-superfan`
+- "Not Now" button closes the modal
 
-New page at `/artist-waitlist` with these sections:
+### B. Modify Index.tsx
 
-1. **Hero**: "Become a Founding Artist" -- premium messaging about the platform
-2. **What Is Music Exclusive**: Artist-first model, exclusive music streaming platform (pre- release), $0.20 per stream, artist earns $0.10, no ads, direct fan monetization
-3. **Earnings Visual** (matching ArtistBenefits typography):
-  - Scenario 1: 100 fans x 10 streams/week = $100/week = $400/month
-  - Scenario 2: 600 fans x 10 streams/week = $600/week = $2,400/month
-  - Uses same `GlowCard`, `SectionHeader`, large number styling, green dollar highlights
-4. **Founding Artist Benefits**: Early access, badge, priority discovery, early monetization, exclusive release opportunities
-5. **CTA**: "Apply to Join the Waitlist" button scrolls to or navigates to form
+Replace the "Enter the Vault" button's `onClick` so it opens the VaultLockedModal instead of navigating to `/vault/enter`.
 
-### C. Waitlist Application Form (`src/pages/ArtistWaitlistForm.tsx`)
+### C. Founding Superfan Landing Page
 
-New page at `/artist-waitlist/apply` with simplified form:
+`src/pages/FoundingSuperfan.tsx` at route `/founding-superfan`
 
-- Artist Name, Email, Instagram, Other Social Links, Genre, Monthly Listener Estimate, Short Bio, "Why do you want to join?"
-- Terms checkbox
-- Submits via `submit-waitlist-application` edge function
-- On success, navigates to a confirmation page
+Four sections matching the spec:
+1. **Hero** -- "Become a Founding Superfan" with CTA scrolling to form
+2. **What Makes This Different** -- Artist-first messaging, bullet points
+3. **Lifetime Access Benefits** -- Benefits list with "You'll already be inside" subtext
+4. **Form Section** -- First Name, Email, optional Genre/Artist, "Reserve My Lifetime Access" button
 
-### D. Waitlist Confirmation Page (`src/pages/ArtistWaitlistSubmitted.tsx`)
+Submits via `supabase.functions.invoke("submit-fan-waitlist")`.
 
-- Thank you message with Founding Artist positioning
-- "We review applications in waves" messaging
+On success, navigates to `/founding-superfan/confirmed`.
 
-### E. Admin Waitlist Dashboard (`src/pages/admin/AdminWaitlist.tsx`)
+### D. Confirmation Page
 
-- New admin page at `/admin/waitlist`
-- Table view: Artist Name, Email, Instagram, Genre, Date Applied, Status
-- Approve / Reject buttons per row
-- Calls `approve-waitlist-artist` or `reject-waitlist-artist` edge functions
+`src/pages/FoundingSuperfanConfirmed.tsx` at route `/founding-superfan/confirmed`
 
-### F. Admin Dashboard Link (`src/pages/admin/AdminDashboard.tsx`)
+Displays the post-submission copy:
+- "You're On the Founding Superfan List."
+- Benefits recap
+- "The Vault opens soon."
+- Back to Home button
 
-- Add "Artist Waitlist" card to the admin dashboard grid
+### E. Admin Visibility
 
----
-
-## 4. Routing (`src/App.tsx`)
-
-Add routes:
-
-- `/artist-waitlist` -- public
-- `/artist-waitlist/apply` -- public
-- `/artist-waitlist/submitted` -- public
-- `/admin/waitlist` -- AdminProtectedRoute
+Add a "Fan Waitlist" card to `AdminDashboard.tsx` and create `src/pages/admin/AdminFanWaitlist.tsx` at route `/admin/fan-waitlist` (admin-protected) with a table showing Name, Email, Genre, Artist, Status, Date.
 
 ---
 
-## 5. Emails (via Resend)
+## 4. Routing (App.tsx)
 
-All three emails use the existing `RESEND_API_KEY` secret.
+Add three public routes:
+- `/founding-superfan`
+- `/founding-superfan/confirmed`
 
-**Admin Notification**: New application details (name, email, socials, genre, date)
-
-**Artist Confirmation**: Founding Artist positioning, earnings math ($100/week and $600/week scenarios), "launching 2026", "reviewed in waves", "founding spots are limited"
-
-**Approval Email**: Congratulations, selected as Founding Artist, link to `/artist/apply` to complete full onboarding
-
-**Rejection Email**: Polite decline, encouragement to reapply in the future
+Add one admin route:
+- `/admin/fan-waitlist`
 
 ---
 
-## 6. What Is NOT Modified
-
-- Existing artist onboarding flow (apply, application form, approval, setup)
-- Pricing structure
-- Payment architecture
-- Existing database tables
-
----
-
-## Technical Details
+## 5. Summary of Changes
 
 - 1 new database table with migration
-- 3 new edge functions
-- 5 new page components
-- 2 existing files modified (Index.tsx, AdminDashboard.tsx, App.tsx)
-- Follows existing patterns: GlowCard, SectionHeader, verify-admin, rate limiting, Resend emails
-- Dark luxury aesthetic matching current branding
-- Mobile responsive using existing max-w-lg/md:max-w-2xl patterns
+- 1 new edge function (`submit-fan-waitlist`)
+- 1 new modal component (`VaultLockedModal`)
+- 3 new page components (landing, confirmation, admin)
+- 3 existing files modified (Index.tsx, App.tsx, AdminDashboard.tsx)
+- Follows existing patterns: GlowCard, SectionHeader, rate limiting, Resend emails, dark luxury aesthetic
+
