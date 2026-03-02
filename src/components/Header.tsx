@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music, Crown, FileText, Shield, Copyright, RotateCcw, ShieldCheck } from "lucide-react"
+import { Menu, X, Home, HelpCircle, KeyRound, Star, LogIn, Music, Crown, FileText, Shield, Copyright, RotateCcw, ShieldCheck, Users, Heart } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
@@ -13,6 +13,8 @@ const mainNavItems: { title: string; href: string; icon: typeof Home; disabled?:
   { title: "Artist Benefits", href: "/artist-benefits", icon: Crown },
   { title: "Enter the Vault", href: "/vault/enter", icon: KeyRound },
   { title: "Become a Superfan", href: "#vault-locked", icon: Star },
+  { title: "Join Fan Waitlist", href: "/founding-superfan", icon: Heart },
+  { title: "Join Artist Waitlist", href: "/artist-waitlist", icon: Users },
   { title: "Artist Application", href: "/artist/apply", icon: Music, disabled: true },
   { title: "Terms of Use", href: "/terms", icon: FileText },
   { title: "Privacy Policy", href: "/privacy", icon: Shield },
