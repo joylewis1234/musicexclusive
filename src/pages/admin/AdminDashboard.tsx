@@ -100,6 +100,14 @@ const AdminDashboard = () => {
       tooltip: TOOLTIP_MESSAGES.dailyCompanyReport,
     },
     {
+      title: "Fan Waitlist",
+      description: "View Founding Superfan signups and lifetime access reservations",
+      icon: Users,
+      path: "/admin/fan-waitlist",
+      color: "text-rose-400",
+      tooltip: "View all Founding Superfan signups. These fans have reserved lifetime access before launch.",
+    },
+    {
       title: "Test Tools",
       description: "Create test accounts, simulate streams, debug tools",
       icon: Wrench,

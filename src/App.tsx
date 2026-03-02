@@ -87,7 +87,12 @@ import ArtistApplicationAction from "./pages/admin/ArtistApplicationAction";
 import AdminInvitations from "./pages/admin/AdminInvitations";
 import AdminHealthCheck from "./pages/admin/AdminHealthCheck";
 import AdminWaitlist from "./pages/admin/AdminWaitlist";
+import AdminFanWaitlist from "./pages/admin/AdminFanWaitlist";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
+
+// Founding Superfan pages
+import FoundingSuperfan from "./pages/FoundingSuperfan";
+import FoundingSuperfanConfirmed from "./pages/FoundingSuperfanConfirmed";
 
 // Artist Waitlist pages (public)
 import ArtistWaitlist from "./pages/ArtistWaitlist";
@@ -146,6 +151,8 @@ const App = () => {
                 <Route path="/artist-agreement" element={<ArtistAgreement />} />
                 <Route path="/test-sounds" element={<TestSounds />} />
                 <Route path="/preview" element={<PreviewDiscovery />} />
+                <Route path="/founding-superfan" element={<FoundingSuperfan />} />
+                <Route path="/founding-superfan/confirmed" element={<FoundingSuperfanConfirmed />} />
                 <Route path="/artist-waitlist" element={<ArtistWaitlist />} />
                 <Route path="/artist-waitlist/apply" element={<ArtistWaitlistForm />} />
                 <Route path="/artist-waitlist/submitted" element={<ArtistWaitlistSubmitted />} />
@@ -277,6 +284,11 @@ const App = () => {
                 <Route path="/admin/waitlist" element={
                   <AdminProtectedRoute>
                     <AdminWaitlist />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/admin/fan-waitlist" element={
+                  <AdminProtectedRoute>
+                    <AdminFanWaitlist />
                   </AdminProtectedRoute>
                 } />
                 {/* Token-based actions from email links */}
