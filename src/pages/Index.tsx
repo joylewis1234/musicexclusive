@@ -19,7 +19,7 @@ import artistZionChase from "@/assets/artist-zion-chase.jpg"
 import artistLunaVale from "@/assets/artist-luna-vale.jpg"
 import artistEdenReign from "@/assets/artist-eden-reign.jpg"
 import artistElectronic from "@/assets/artist-electronic.jpg"
-import artistRockFemale from "@/assets/artist-rock-female.jpg"
+import artistRavenCross from "@/assets/artist-raven-cross.jpg"
 import artistLatinMale from "@/assets/artist-latin-male.jpg"
 import artistCountryFemale from "@/assets/artist-country-female.jpg"
 import artistJazz from "@/assets/artist-jazz.jpg"
@@ -33,7 +33,7 @@ const artists = [
   { name: "Luna Vale", genre: "Indie Pop", imageUrl: artistLunaVale },
   { name: "Eden Reign", genre: "Christian", imageUrl: artistEdenReign },
   { name: "Axel Volt", genre: "Electronic", imageUrl: artistElectronic },
-  { name: "Raven Cross", genre: "Rock", imageUrl: artistRockFemale },
+  { name: "Raven Cross", genre: "Rock", imageUrl: artistRavenCross },
   { name: "Marco Sol", genre: "Latin", imageUrl: artistLatinMale },
   { name: "Cassidy Lane", genre: "Country", imageUrl: artistCountryFemale },
   { name: "Miles Ivory", genre: "Jazz", imageUrl: artistJazz },
