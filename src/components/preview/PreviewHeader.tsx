@@ -23,6 +23,14 @@ export const PreviewHeader = () => {
 
       {/* Headline */}
       <div className="mb-6 text-center max-w-2xl mx-auto">
+        <p
+          className="text-sm md:text-base uppercase tracking-[0.3em] text-white font-display font-semibold mb-4"
+          style={{
+            textShadow: "0 0 10px rgba(255,255,255,0.8), 0 0 30px rgba(255,255,255,0.5), 0 0 60px rgba(255,255,255,0.3)",
+          }}
+        >
+          Coming Soon
+        </p>
         <h1
           className="font-display text-xl md:text-2xl lg:text-3xl uppercase tracking-[0.06em] text-foreground font-bold leading-relaxed mb-6"
           style={{
