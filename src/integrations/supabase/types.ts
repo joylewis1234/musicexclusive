@@ -624,6 +624,36 @@ export type Database = {
         }
         Relationships: []
       }
+      fan_waitlist: {
+        Row: {
+          created_at: string
+          email: string
+          favorite_artist: string | null
+          favorite_genre: string | null
+          first_name: string
+          id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          favorite_artist?: string | null
+          favorite_genre?: string | null
+          first_name: string
+          id?: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          favorite_artist?: string | null
+          favorite_genre?: string | null
+          first_name?: string
+          id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       invitation_email_logs: {
         Row: {
           admin_user_id: string
