@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, Lock, Unlock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { VaultLockedModal } from "@/components/vault/VaultLockedModal";
 
 export const PreviewHeader = () => {
   const navigate = useNavigate();
+  const [vaultLocked, setVaultLocked] = useState(false);
 
   return (
     <header className="w-full max-w-5xl mx-auto mb-8">
@@ -51,7 +54,7 @@ export const PreviewHeader = () => {
           <Button
             size="lg"
             variant="accent"
-            onClick={() => navigate("/auth/fan", { state: { flow: "superfan" } })}
+            onClick={() => setVaultLocked(true)}
             className="w-full max-w-xs"
           >
             <Zap className="w-4 h-4 mr-2" />
@@ -59,6 +62,7 @@ export const PreviewHeader = () => {
           </Button>
         </div>
       </div>
+      <VaultLockedModal open={vaultLocked} onOpenChange={setVaultLocked} />
     </header>
   );
 };
