@@ -602,7 +602,7 @@ const EnterVault = () => {
             variant="secondary" 
             size="lg" 
             className="w-full"
-            onClick={() => navigate("/auth/fan", { state: { flow: "superfan" } })}
+            onClick={() => setVaultLocked(true)}
           >
             Unlock Superfan Access
           </Button>
