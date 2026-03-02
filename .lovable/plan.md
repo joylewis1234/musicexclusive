@@ -1,20 +1,7 @@
 
 
-## Update Plan: Discovery Preview Behavior
+## Discovery Preview Behavior
 
-The current code in `Discovery.tsx` and `DiscoveryTrackCard.tsx` already implements these rules correctly:
-- Tap preview → plays immediately, no pause/stop allowed, ignores re-taps on same track
-- Auto-stops at 25s → shows "Want to stream?" modal
-- Stream → navigates to artist profile with `stream=1`
-- Dismiss → user continues browsing freely
-
-**Only change needed:** Update `.lovable/plan.md` section 6 to spell out the exact rules as specified.
-
-### What changes
-
-**File:** `.lovable/plan.md` — Replace section 6 (lines 99-126) with:
-
-```markdown
 ### **6) Discovery Preview Behavior**
 
 File: src/pages/Discovery.tsx
@@ -38,7 +25,3 @@ File: src/components/discovery/DiscoveryTrackCard.tsx
   - Disabled while previewing
   - Label = "Previewing"
   - **Icon = Play only** (no pause icon anywhere)
-```
-
-No code changes required — the implementation already enforces all these rules.
-
