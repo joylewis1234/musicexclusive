@@ -6,13 +6,13 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
 import { useIsAdmin } from "@/hooks/useIsAdmin"
 
-const mainNavItems = [
+const mainNavItems: { title: string; href: string; icon: typeof Home; disabled?: boolean }[] = [
   { title: "Home", href: "/", icon: Home },
   { title: "How It Works", href: "/#how-it-works", icon: HelpCircle },
   { title: "Artist Benefits", href: "/artist-benefits", icon: Crown },
   { title: "Enter the Vault", href: "/vault/enter", icon: KeyRound },
   { title: "Become a Superfan", href: "/auth/fan?flow=superfan", icon: Star },
-  { title: "Artist Application", href: "/artist/apply", icon: Music },
+  { title: "Artist Application", href: "/artist/apply", icon: Music, disabled: true },
   { title: "Terms of Use", href: "/terms", icon: FileText },
   { title: "Privacy Policy", href: "/privacy", icon: Shield },
   { title: "Copyright & DMCA", href: "/dmca", icon: Copyright },
@@ -95,8 +95,9 @@ const Header = () => {
                 {mainNavItems.map((item) => (
                   <li key={item.title}>
                     <button
-                      onClick={() => handleNavigation(item.href)}
-                      className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200 font-body text-sm text-left"
+                      onClick={() => !item.disabled && handleNavigation(item.href)}
+                      disabled={item.disabled}
+                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 font-body text-sm text-left ${item.disabled ? 'text-muted-foreground/40 cursor-not-allowed' : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'}`}
                     >
                       <item.icon className="w-5 h-5" />
                       <span>{item.title}</span>
