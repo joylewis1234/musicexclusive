@@ -140,3 +140,6 @@ verify_jwt = false
 
 [functions.reject-waitlist-artist]
 verify_jwt = false
+
+[functions.submit-fan-waitlist]
+verify_jwt = false
