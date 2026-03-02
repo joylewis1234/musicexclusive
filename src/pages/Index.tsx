@@ -131,7 +131,7 @@ const Index = () => {
             <Button 
               size="lg" 
               className="w-full max-w-xs text-sm md:text-base whitespace-normal h-auto py-3"
-              onClick={() => setTimeout(() => setVaultLocked(true), 5000)}
+              onClick={() => navigate("/vault/enter")}
             >
               Try Your Luck, Enter the Lottery Vault
             </Button>
