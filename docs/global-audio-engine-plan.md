@@ -129,11 +129,12 @@ idle ──startPreview──▶ loading ──canplaythrough──▶ playing
 ### First Play
 
 1. Consumer calls `charge-stream` edge function (idempotent via `idempotency_key`).
-2. On success, consumer calls `startPaidTrack({ hlsUrl, ... })`.
-3. Any active preview is **immediately stopped**.
-4. HLS loads via `hls.js` (or native Safari HLS).
-5. Full playback controls available (play/pause/seek/stop).
-6. On track end or stop:
+2. `charge-stream` returns `hlsUrl` and `sessionId` directly in the response — **no separate `mint-playback-url` call needed**.
+3. Consumer calls `startPaidTrack({ hlsUrl, ... })` with the returned URL.
+4. Any active preview is **immediately stopped**.
+5. HLS loads via `hls.js` (or native Safari HLS).
+6. Full playback controls available (play/pause/seek/stop).
+7. On track end or stop:
    - `lastEndedTrackId` ← `currentTrackId`
    - `lastEndedAt` ← `Date.now()`
    - `playbackMode` → `"idle"`
@@ -249,8 +250,8 @@ if (playbackMode === "idle") return null;
 | Function | Used By | Purpose |
 |----------|---------|---------|
 | `mint-playback-url-public-preview` | `startPreview()` | Returns signed preview URL |
-| `mint-playback-url` | `startPaidTrack()` | Returns signed HLS URL |
-| `charge-stream` | Consumer (before `startPaidTrack`) | Deducts 1 credit, returns stream ID |
+| `charge-stream` | Consumer (before `startPaidTrack`) | Deducts 1 credit, mints session JWT, returns `hlsUrl` + `sessionId` directly |
+| `mint-playback-url` | Artist dashboard / replay | Returns signed HLS URL for on-demand playback (not used for initial fan paid streams) |
 | `playback-telemetry` | Context (on play/pause/end) | Reports usage metrics |
 
 ---
