@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useRef, useCallback, useState, useEffect } from "react";
 import { useAudioPlayer, UseAudioPlayerReturn, LoadPaidStreamParams } from "@/hooks/useAudioPlayer";
-import { supabase } from "@/integrations/supabase/client";
 
 const PREVIEW_DURATION = 25;
 
@@ -43,6 +42,8 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   const previewStartRef = useRef<number>(0);
   const previewOnCompleteRef = useRef<(() => void) | null>(null);
   const previewActiveRef = useRef(false);
+  // Use a ref for previewId to avoid dependency loops in stopPreview
+  const previewIdRef = useRef<string | null>(null);
 
   const clearPreviewTimers = useCallback(() => {
     if (previewTimerRef.current) {
@@ -51,18 +52,29 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   }, []);
 
+  // Keep ref in sync with state
+  useEffect(() => {
+    previewIdRef.current = previewId;
+  }, [previewId]);
+
+  // Use a ref for player.stop to break dependency chain
+  const playerStopRef = useRef(player.stop);
+  useEffect(() => {
+    playerStopRef.current = player.stop;
+  }, [player.stop]);
+
   const stopPreview = useCallback(() => {
     clearPreviewTimers();
     previewActiveRef.current = false;
-    if (previewId) {
-      player.stop();
+    if (previewIdRef.current) {
+      playerStopRef.current();
     }
     setPreviewId(null);
     setPreviewProgress(0);
     setPreviewLoading(false);
     setPreviewError(null);
     previewOnCompleteRef.current = null;
-  }, [previewId, player, clearPreviewTimers]);
+  }, [clearPreviewTimers]); // stable — no previewId or player deps
 
   const startPreview = useCallback(
     async (trackId: string, startSeconds: number = 0, onComplete?: () => void) => {
@@ -76,24 +88,10 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
       previewActiveRef.current = true;
 
       try {
-        // Mint a preview URL
-        const { data, error: fnError } = await supabase.functions.invoke(
-          "mint-playback-url",
-          { body: { trackId, fileType: "preview" } }
-        );
-
-        if (!previewActiveRef.current) return; // cancelled while fetching
-
-        if (fnError || !data?.url) {
-          setPreviewError("Preview not available. Tap STREAM to listen inside.");
-          setPreviewLoading(false);
-          return;
-        }
-
-        // Load and play via the shared audio player
+        // loadTrack already mints a signed URL internally — no separate mint needed
         await player.loadTrack({ trackId, fileType: "preview", trackTitle: "Preview" });
 
-        if (!previewActiveRef.current) return;
+        if (!previewActiveRef.current) return; // cancelled while loading
 
         // Seek to start position
         if (startSeconds > 0) {
@@ -113,7 +111,7 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
           if (elapsed >= PREVIEW_DURATION) {
             // Auto-stop preview
             clearPreviewTimers();
-            player.stop();
+            playerStopRef.current();
             previewActiveRef.current = false;
             setPreviewId(null);
             setPreviewProgress(0);
@@ -144,8 +142,13 @@ export const AudioPlayerProvider: React.FC<{ children: React.ReactNode }> = ({ c
   );
 
   // If audio ends while a preview is active, clean up preview state
+  // Only stop if the ended track matches the current preview track
   useEffect(() => {
-    if (player.lastEndedTrackId && previewActiveRef.current) {
+    if (
+      player.lastEndedTrackId &&
+      previewActiveRef.current &&
+      player.lastEndedTrackId === previewIdRef.current
+    ) {
       stopPreview();
     }
   }, [player.lastEndedTrackId, stopPreview]);
