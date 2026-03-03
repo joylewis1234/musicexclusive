@@ -76,8 +76,8 @@ const ArtistProfilePage = () => {
   const [artistEmail, setArtistEmail] = useState<string>("");
   const [showStreamConfirm, setShowStreamConfirm] = useState(false);
   const [pendingPlayTrack, setPendingPlayTrack] = useState<PlayerTrack | null>(null);
-  const [shouldAutoPlay, setShouldAutoPlay] = useState(false);
   const [chargedForSession, setChargedForSession] = useState(false);
+  const [paidStreamData, setPaidStreamData] = useState<{ hlsUrl: string; sessionId?: string | null } | null>(null);
   
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
@@ -222,6 +222,7 @@ const ArtistProfilePage = () => {
   const handleSelectTrack = (track: TrackData, profileOverride?: ArtistProfile | null) => {
     const profile = profileOverride || artistProfile;
     setChargedForSession(false);
+    setPaidStreamData(null);
     setSelectedTrack({
       id: track.id,
       title: track.title,
@@ -290,7 +291,10 @@ const ArtistProfilePage = () => {
     if (result.success) {
       refetchCredits();
       setChargedForSession(true);
-      setShouldAutoPlay(true);
+      // Pass the hlsUrl from charge-stream directly to the player — no extra mint call
+      if (result.hlsUrl) {
+        setPaidStreamData({ hlsUrl: result.hlsUrl, sessionId: result.sessionId });
+      }
     } else if (result.requiresCredits) {
       throw new Error("Insufficient credits");
     } else {
@@ -395,8 +399,8 @@ const ArtistProfilePage = () => {
           onLike={handlePlayerLike}
           onShare={handlePlayerShare}
           skipPlayConfirm={chargedForSession}
-          autoPlay={shouldAutoPlay}
-          onAutoPlayConsumed={() => setShouldAutoPlay(false)}
+          paidStreamData={paidStreamData}
+          onPaidStreamConsumed={() => setPaidStreamData(null)}
           onTrackEnded={handleTrackEnded}
         />
       </PlayerErrorBoundary>
