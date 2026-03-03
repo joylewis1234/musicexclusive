@@ -31,8 +31,6 @@ export const VaultMusicPlayer = ({
   
   const {
     isPlaying,
-    currentTime,
-    duration,
     volume,
     isLoading,
     error,
@@ -87,13 +85,6 @@ export const VaultMusicPlayer = ({
         setHasCalledOnPlay(true);
       }
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    if (!isFinite(seconds)) return "0:00";
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   // Empty state
@@ -193,12 +184,6 @@ export const VaultMusicPlayer = ({
             </div>
           </div>
         )}
-
-        {/* Time display (no seek bar) */}
-        <div className="mb-4 flex justify-between text-xs text-muted-foreground font-mono">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
-        </div>
 
         {/* Controls: Play/Pause + Volume only (no Stop, no Seek) */}
         <div className="flex items-center justify-center gap-4">

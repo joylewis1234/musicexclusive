@@ -14,7 +14,7 @@ export const useTrackLikesBatch = (trackIds: string[], fanId: string | null) => 
   const [isLoading, setIsLoading] = useState(false);
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
 
-  const trackIdsKey = useMemo(() => trackIds.sort().join(","), [trackIds]);
+  const trackIdsKey = useMemo(() => [...trackIds].sort().join(","), [trackIds]);
 
   const fetchAllLikeData = useCallback(async () => {
     if (trackIds.length === 0) {

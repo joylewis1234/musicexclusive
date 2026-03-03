@@ -18,6 +18,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { usePlaylist } from "@/hooks/usePlaylist";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { toast } from "sonner";
 
 import artist1 from "@/assets/artist-1.jpg";
@@ -79,6 +80,7 @@ const ArtistProfilePage = () => {
   const [chargedForSession, setChargedForSession] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
   const [autoStreamRequested, setAutoStreamRequested] = useState(false);
+  const { isPlaying: isAudioPlaying } = useSharedAudioPlayer();
   
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const hasScrolledToTrack = useRef(false);
@@ -382,7 +384,7 @@ const ArtistProfilePage = () => {
         imageUrl={artistProfile.avatar_url || artist1}
         onPlayAll={handlePlayAll}
         onShareArtist={handleShareArtist}
-        isPlaying={!!selectedTrack}
+        isPlaying={isAudioPlaying}
         hidePlayButton={viewerContext === "artist-preview"}
         showVaultBackground={true}
       />

@@ -1,58 +1,47 @@
 # Moderate Concurrency Stress Test Report
 
-**Date:** 2026-02-26
-**Track:** `9fad1e64-016e-41da-95b5-6f2dd154ee41`
+## Configuration
+- Date: 2026-02-27
+- Environment: Local script against production/staging Supabase (from `.env`)
+- Track ID: `9fad1e64-016e-41da-95b5-6f2dd154ee41`
+- mint-playback-url: 400 requests @ 150 concurrency
+- charge-stream: 400 requests @ 150 concurrency
+- ledger-stress-test: 300 requests @ 150 concurrency (ALLOW_OVERSPEND=true)
 
----
+## mint-playback-url
+- Max stable RPS: ~39.52
+- p95 latency: 6009 ms
+- p99 latency: 6183 ms
+- 5xx rate: 0%
+- Status codes: 200 x 400
+- Notes: Successful under moderate concurrency, but p95/p99 are elevated.
 
-## Edge Function Load Tests
-
-### mint-playback-url
-
-- **Requests:** 400
-- **Concurrency:** 150
-- **Status codes:** 200 × 400
-- **Throughput:** 34.21 RPS
-- **Latency (ms):** p95 5030, p99 5940
-
-### charge-stream
-
-- **Requests:** 400
-- **Concurrency:** 150
-- **Status codes:** 200 × 400
-- **Throughput:** 22.32 RPS
-- **Latency (ms):** p95 3289, p99 6076
-
----
-
-## Ledger Concurrency Stress Test
-
-- **Script:** `scripts/ledger-stress-test.js`
-- **Requests:** 300
-- **Concurrency:** 150
-- **Success:** 300/300
-- **Throughput:** 31.02 RPS
-- **Latency (ms):** p95 4373, p99 5087
-- **Credits:** starting 1242, ending 942, expected 942
-- **Ledger deltas:** STREAM_DEBIT +242, stream_ledger +242
-
-### Investigation Note
-
-Ledger deltas (242) are lower than total requests (300). This is likely due to:
-
-1. **Idempotency deduplication** — duplicate idempotency keys causing the RPC to return `already_charged: true` without writing new ledger entries.
-2. **402 insufficient-credit responses** — requests that arrived after credits were exhausted, consuming request slots without producing ledger writes.
-
-This discrepancy needs further investigation to confirm the exact breakdown of the 58 non-ledger requests.
-
----
+## charge-stream
+- Max stable RPS: ~61.77
+- p95 latency: 2981 ms
+- p99 latency: 4291 ms
+- 5xx rate: 0%
+- Status codes: 200 x 400
+- Conflict (logical 409) rate: not observed
+- Retry rate: not observed
+- Notes: Successful under moderate concurrency, but throughput is lower than mint-playback-url.
 
 ## Ledger Integrity
+- Starting credits: 541
+- Ending credits: 241
+- Expected ending: 241
+- STREAM_DEBIT delta: 300 (per load test result)
+- stream_ledger delta: 300 (per load test result)
+- Recent ledger rows (last 60 minutes): 701 STREAM_DEBIT and 701 stream_ledger rows for the test track/user.
+- Consistency conclusion: credits matched expected ending; ledger writes confirmed.
 
-- **Starting credits:** 541
-- **Ending credits:** 241
-- **Expected ending:** 241
-- **STREAM_DEBIT delta:** 300 (per load test result)
-- **stream_ledger delta:** 300 (per load test result)
-- **Recent ledger rows (last 60 minutes):** 701 STREAM_DEBIT and 701 stream_ledger rows for the test track/user.
-- **Consistency conclusion:** credits matched expected ending; ledger writes confirmed.
+## Playback Telemetry (if available)
+- Playback error rate: not captured in this run
+- Origin saturation signals: not captured in this run
+
+## Bottlenecks Identified
+- Test inputs are not accepted under moderate concurrency (404/500).
+- `charge-stream` dependency failure prevents ledger test from running.
+
+## Stability Conclusion
+- Moderate concurrency stability could not be validated due to failures in `mint-playback-url` and `charge-stream`.

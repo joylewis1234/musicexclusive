@@ -1,4 +1,4 @@
-import { Play, Share2, Headphones, Loader2, AlertCircle, Heart } from "lucide-react";
+import { Play, Share2, Loader2, AlertCircle, Heart, Headphones } from "lucide-react";
 import { DbTrack, getArtistName } from "@/hooks/useTracks";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
 import artist1 from "@/assets/artist-1.jpg";
@@ -29,7 +29,11 @@ export const DiscoveryTrackCard = ({
   onArtistClick,
 }: DiscoveryTrackCardProps) => {
   const artistName = getArtistName(track);
-  const hasPreviewAudio = !!track.preview_audio_url || !!track.preview_audio_key || !!track.full_audio_url || !!track.full_audio_key;
+  const hasPreviewAudio =
+    !!track.preview_audio_url ||
+    !!track.preview_audio_key ||
+    !!track.full_audio_url ||
+    !!track.full_audio_key;
   const showError = previewError && !isPreviewPlaying && !isPreviewLoading;
   const isPreviewDisabled = !hasPreviewAudio && !isPreviewPlaying;
   const isPreviewActive = isPreviewPlaying || isPreviewLoading;
@@ -46,7 +50,11 @@ export const DiscoveryTrackCard = ({
       {/* Artwork */}
       <div
         className="relative aspect-square overflow-hidden cursor-pointer"
-        onClick={hasPreviewAudio && !isPreviewDisabled && !isPreviewActive ? onPreview : (!isPreviewActive ? onStream : undefined)}
+        onClick={
+          hasPreviewAudio && !isPreviewDisabled && !isPreviewActive
+            ? onPreview
+            : (!isPreviewActive ? onStream : undefined)
+        }
       >
         <SignedArtwork
           trackId={track.id}

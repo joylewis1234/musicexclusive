@@ -183,7 +183,7 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
         console.error("[AudioPlayer] Preview start failed:", err);
         clearPreviewTimers();
         setPreviewState({
-          currentPreviewId: null,
+          currentPreviewId: trackId,
           previewProgress: 0,
           isPreviewPlaying: false,
           isPreviewLoading: false,
