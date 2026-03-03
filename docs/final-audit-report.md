@@ -82,6 +82,8 @@ The application's core security posture is substantially improved. RLS policy ex
 
 - Artist dashboard playback (`ExclusiveSongCard`) migrated from legacy public URLs to signed R2 URLs via `mint-playback-url`. Fan streaming validated end-to-end (credit deduction, ledger entry, playback confirmed for track `2887e61c`). HEAD-based readiness checks removed due to R2 CORS restrictions; readiness now determined by key presence.
 
+- **Double-mint elimination (2026-03-03)**: Eliminated redundant `mint-playback-url` calls during fan paid streams. `charge-stream` now mints the session JWT and returns `hlsUrl` directly; `CompactVaultPlayer` receives `paidStreamData` prop and calls `loadPaidStream()` — no separate mint call. Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`). Artist dashboard and replay paths continue to use `mint-playback-url` for on-demand signed URLs.
+
 ## Failure Handling Validation (Raw Payloads)
 
 - `mint-playback-url` (missing auth): `401 {"error":"Unauthorized"}`
