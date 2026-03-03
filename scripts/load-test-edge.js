@@ -1,51 +1,34 @@
 import { performance } from "node:perf_hooks";
+import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const ANON_KEY = process.env.SUPABASE_ANON_KEY;
-const TEST_FAN_EMAIL = process.env.TEST_FAN_EMAIL;
-const TEST_FAN_PASSWORD = process.env.TEST_FAN_PASSWORD;
-const TEST_TRACK_ID = process.env.TEST_TRACK_ID;
-
-const EDGE_REQUESTS = parseInt(process.env.EDGE_REQUESTS || "200", 10);
-const EDGE_CONCURRENCY = parseInt(process.env.EDGE_CONCURRENCY || "20", 10);
-const MINT_REQUESTS = parseInt(process.env.MINT_REQUESTS || "200", 10);
-const MINT_CONCURRENCY = parseInt(process.env.MINT_CONCURRENCY || "25", 10);
-const CHARGE_REQUESTS = parseInt(process.env.CHARGE_REQUESTS || "80", 10);
-const CHARGE_CONCURRENCY = parseInt(process.env.CHARGE_CONCURRENCY || "20", 10);
-
-if (!SUPABASE_URL || !ANON_KEY) {
-  console.error("Required env vars: SUPABASE_URL, SUPABASE_ANON_KEY");
-  process.exit(1);
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`Missing required env var: ${name}`);
+  }
+  return value;
 }
 
-const FUNCTIONS_URL = SUPABASE_URL.replace(/\/$/, "").replace(/\.supabase\.co$/, ".functions.supabase.co");
-
-async function authenticate() {
-  if (!TEST_FAN_EMAIL || !TEST_FAN_PASSWORD) {
-    return null;
-  }
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: {
-      apikey: ANON_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email: TEST_FAN_EMAIL, password: TEST_FAN_PASSWORD }),
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    console.error(`Auth failed (${res.status}): ${text}`);
-    process.exit(1);
-  }
-  const data = await res.json();
-  return data.access_token;
+function toInt(value, fallback) {
+  const parsed = Number.parseInt(value ?? "", 10);
+  return Number.isNaN(parsed) ? fallback : parsed;
 }
 
-async function runLoadTest({ name, url, body, bodyFn, headers, totalRequests, concurrency }) {
+async function runLoadTest({
+  name,
+  url,
+  body,
+  bodyFactory,
+  headers,
+  totalRequests,
+  concurrency,
+}) {
   const latencies = [];
   let success = 0;
   let failure = 0;
   const statusCounts = {};
+
   let inFlight = 0;
   let started = 0;
 
@@ -56,13 +39,13 @@ async function runLoadTest({ name, url, body, bodyFn, headers, totalRequests, co
       while (inFlight < concurrency && started < totalRequests) {
         started += 1;
         inFlight += 1;
-        const requestStart = performance.now();
-        const requestBody = bodyFn ? bodyFn() : body;
 
+        const requestStart = performance.now();
+        const payload = bodyFactory ? bodyFactory() : body;
         fetch(url, {
           method: "POST",
           headers,
-          body: JSON.stringify(requestBody),
+          body: JSON.stringify(payload),
         })
           .then((res) => {
             statusCounts[res.status] = (statusCounts[res.status] || 0) + 1;
@@ -94,7 +77,6 @@ async function runLoadTest({ name, url, body, bodyFn, headers, totalRequests, co
               });
               return;
             }
-
             launchNext();
           });
       }
@@ -134,74 +116,91 @@ function formatResult(result) {
 }
 
 async function main() {
-  const publicHeaders = { "Content-Type": "application/json" };
+  const supabaseUrl = requireEnv("SUPABASE_URL");
+  const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
+  const email = requireEnv("TEST_FAN_EMAIL");
+  const password = requireEnv("TEST_FAN_PASSWORD");
+  const trackId = requireEnv("TEST_TRACK_ID");
+
+  const base = supabaseUrl.replace(".supabase.co", ".functions.supabase.co");
+  const headers = {
+    "Content-Type": "application/json",
+  };
+
+  const totalRequests = toInt(process.env.EDGE_REQUESTS, 200);
+  const concurrency = toInt(process.env.EDGE_CONCURRENCY, 12);
+  const mintRequests = toInt(process.env.MINT_REQUESTS, 200);
+  const mintConcurrency = toInt(process.env.MINT_CONCURRENCY, 20);
+  const chargeRequests = toInt(process.env.CHARGE_REQUESTS, 200);
+  const chargeConcurrency = toInt(process.env.CHARGE_CONCURRENCY, 20);
+
+  const supabase = createClient(supabaseUrl, supabaseAnonKey);
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+  if (authError || !authData.session?.access_token) {
+    throw new Error(`Auth failed: ${authError?.message || "no token"}`);
+  }
+
+  const authHeaders = {
+    ...headers,
+    Authorization: `Bearer ${authData.session.access_token}`,
+  };
 
   const tests = [
     {
       name: "validate-fan-invite (invalid token)",
-      url: `${FUNCTIONS_URL}/validate-fan-invite`,
+      url: `${base}/validate-fan-invite`,
       body: { token: "load_test_invalid_token" },
-      headers: publicHeaders,
-      totalRequests: EDGE_REQUESTS,
-      concurrency: EDGE_CONCURRENCY,
+      headers,
+      totalRequests,
+      concurrency,
     },
     {
       name: "validate-vault-code (lookup, non-existent)",
-      url: `${FUNCTIONS_URL}/validate-vault-code`,
+      url: `${base}/validate-vault-code`,
       body: {
         email: "loadtest+missing@example.com",
         vaultCode: "ZZZZ",
         mode: "lookup",
       },
-      headers: publicHeaders,
-      totalRequests: EDGE_REQUESTS,
-      concurrency: EDGE_CONCURRENCY,
+      headers,
+      totalRequests,
+      concurrency,
+    },
+    {
+      name: "mint-playback-url (audio)",
+      url: `${base}/mint-playback-url`,
+      body: { trackId, fileType: "audio" },
+      headers: authHeaders,
+      totalRequests: mintRequests,
+      concurrency: mintConcurrency,
+    },
+    {
+      name: "charge-stream",
+      url: `${base}/charge-stream`,
+      bodyFactory: () => ({ trackId, idempotencyKey: randomUUID() }),
+      headers: authHeaders,
+      totalRequests: chargeRequests,
+      concurrency: chargeConcurrency,
     },
   ];
 
-  // Authenticated tests require credentials + track ID
-  const jwt = await authenticate();
-
-  if (jwt && TEST_TRACK_ID) {
-    const authHeaders = {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${jwt}`,
-      apikey: ANON_KEY,
-    };
-
-    tests.push({
-      name: "mint-playback-url (preview, authenticated)",
-      url: `${FUNCTIONS_URL}/mint-playback-url`,
-      body: { trackId: TEST_TRACK_ID, fileType: "preview" },
-      headers: authHeaders,
-      totalRequests: MINT_REQUESTS,
-      concurrency: MINT_CONCURRENCY,
-    });
-
-    tests.push({
-      name: "charge-stream (authenticated, unique idempotency keys)",
-      url: `${FUNCTIONS_URL}/charge-stream`,
-      bodyFn: () => ({ trackId: TEST_TRACK_ID, idempotencyKey: crypto.randomUUID() }),
-      headers: authHeaders,
-      totalRequests: CHARGE_REQUESTS,
-      concurrency: CHARGE_CONCURRENCY,
-    });
-  } else {
-    console.log("Skipping authenticated tests (missing TEST_FAN_EMAIL, TEST_FAN_PASSWORD, or TEST_TRACK_ID)");
-  }
-
   const results = [];
-
   for (const test of tests) {
+    // eslint-disable-next-line no-console
     console.log(`Running: ${test.name}`);
     const result = await runLoadTest(test);
     results.push(formatResult(result));
   }
 
+  // eslint-disable-next-line no-console
   console.log(JSON.stringify({ generatedAt: new Date().toISOString(), results }, null, 2));
 }
 
 main().catch((err) => {
+  // eslint-disable-next-line no-console
   console.error("Load test failed:", err);
   process.exit(1);
 });

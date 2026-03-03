@@ -7,28 +7,15 @@ import artist1 from "@/assets/artist-1.jpg";
 
 interface PlaylistPlayerBarProps {
   activeTrack: PlaylistTrack | null;
-  playlist: PlaylistTrack[];
   isPlaying: boolean;
   isLoading: boolean;
-  currentTime: number;
-  duration: number;
   onPlayPause: () => void;
 }
 
-const formatTime = (seconds: number) => {
-  if (!isFinite(seconds) || seconds < 0) return "0:00";
-  const mins = Math.floor(seconds / 60);
-  const secs = Math.floor(seconds % 60);
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
-};
-
 export const PlaylistPlayerBar = ({
   activeTrack,
-  playlist,
   isPlaying,
   isLoading,
-  currentTime,
-  duration,
   onPlayPause,
 }: PlaylistPlayerBarProps) => {
   if (!activeTrack) return null;
@@ -67,7 +54,7 @@ export const PlaylistPlayerBar = ({
               {activeTrack.title}
             </p>
             <p className="text-xs text-primary/80 truncate">
-              {activeTrack.artist_name} · {formatTime(currentTime)} / {formatTime(duration)}
+              {activeTrack.artist_name}
             </p>
           </div>
 

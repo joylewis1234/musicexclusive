@@ -159,7 +159,7 @@ const Discovery = () => {
     setShowStreamUpsell(false);
     handleStreamTrack(upsellTrack);
     setUpsellTrack(null);
-  }, [upsellTrack, navigate]);
+  }, [upsellTrack, handleStreamTrack]);
 
   const handleUpsellDismiss = useCallback(() => {
     setShowStreamUpsell(false);

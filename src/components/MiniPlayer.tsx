@@ -1,22 +1,21 @@
-import { useNavigate } from "react-router-dom";
 import { Play, Pause } from "lucide-react";
-import { usePlayer } from "@/contexts/PlayerContext";
 import { cn } from "@/lib/utils";
+import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
+import { SignedArtwork } from "@/components/ui/SignedArtwork";
 
 const MiniPlayer = () => {
-  const navigate = useNavigate();
-  const { currentTrack, isPlaying, togglePlayPause } = usePlayer();
+  const { currentTrackMeta, isPlaying, play, pause } = useSharedAudioPlayer();
 
   // Don't render if no track is playing
-  if (!currentTrack) return null;
-
-  const handleExpandPlayer = () => {
-    navigate(`/player/${currentTrack.id}`);
-  };
+  if (!currentTrackMeta) return null;
 
   const handlePlayPause = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent expanding when clicking play/pause
-    togglePlayPause();
+    e.stopPropagation();
+    if (isPlaying) {
+      pause();
+    } else {
+      void play();
+    }
   };
 
   return (
@@ -28,8 +27,7 @@ const MiniPlayer = () => {
       />
       
       {/* Main container */}
-      <button
-        onClick={handleExpandPlayer}
+      <div
         className={cn(
           "relative w-full flex items-center gap-3 p-3 rounded-t-xl",
           "bg-card/95 backdrop-blur-lg border border-border/50 border-b-0",
@@ -40,9 +38,10 @@ const MiniPlayer = () => {
       >
         {/* Album artwork */}
         <div className="relative w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
-          <img
-            src={currentTrack.artwork}
-            alt={currentTrack.album}
+          <SignedArtwork
+            trackId={currentTrackMeta.trackId}
+            alt={currentTrackMeta.trackTitle ?? "Track artwork"}
+            fallbackSrc={currentTrackMeta.artworkUrl}
             className="w-full h-full object-cover"
           />
           {/* Subtle glow on artwork */}
@@ -60,10 +59,10 @@ const MiniPlayer = () => {
               textShadow: "0 0 10px rgba(0, 255, 255, 0.2)"
             }}
           >
-            {currentTrack.title}
+            {currentTrackMeta.trackTitle ?? "Now Playing"}
           </p>
           <p className="text-xs text-primary/80 truncate">
-            {currentTrack.artist}
+            {currentTrackMeta.artistName ?? ""}
           </p>
         </div>
 
@@ -84,7 +83,7 @@ const MiniPlayer = () => {
             <Play className="w-5 h-5 ml-0.5" />
           )}
         </div>
-      </button>
+      </div>
     </div>
   );
 };
