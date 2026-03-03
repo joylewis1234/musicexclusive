@@ -274,7 +274,8 @@ Deno.serve(async (req) => {
 
     const ttl = requestedFileType === "artwork" ? 300 : 90;
     const signedUrl = await presignR2Url(key, ttl);
-    const hlsUrl = `${hlsWorkerBaseUrl}/${trackId}/master.m3u8?token=${encodeURIComponent(sessionToken)}`;
+    const hlsBase = hlsWorkerBaseUrl.startsWith("http") ? hlsWorkerBaseUrl : `https://${hlsWorkerBaseUrl}`;
+    const hlsUrl = `${hlsBase}/${trackId}/master.m3u8?token=${encodeURIComponent(sessionToken)}`;
 
     stage = "done";
     return await respond(200, {
