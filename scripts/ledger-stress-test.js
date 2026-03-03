@@ -1,175 +1,139 @@
-import { createClient } from "@supabase/supabase-js";
 import { performance } from "node:perf_hooks";
-import { randomUUID } from "node:crypto";
 
-function requireEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required env var: ${name}`);
-  }
-  return value;
+/**
+ * Ledger Concurrency Stress Test
+ *
+ * Sends concurrent charge-stream requests with unique idempotency keys
+ * to verify that credits, credit_ledger, and stream_ledger stay consistent
+ * under contention.
+ *
+ * Prerequisites:
+ *   - A test fan with vault access and known starting credits
+ *   - A valid track ID
+ *   - A valid JWT for the test fan
+ *
+ * Usage:
+ *   AUTH_TOKEN="<jwt>" TRACK_ID="<uuid>" FAN_EMAIL="<email>" \
+ *     node scripts/ledger-stress-test.js
+ *
+ * Tuning:
+ *   REQUESTS or TOTAL_REQUESTS (default 40)
+ *   CONCURRENCY (default 5)
+ *   ALLOW_OVERSPEND (logged; DB CHECK constraint prevents actual overspend)
+ */
+
+const BASE = process.env.SUPABASE_URL
+  ? process.env.SUPABASE_URL.replace(/\/$/, "").replace(/\.supabase\.co$/, ".functions.supabase.co")
+  : "https://yjytuglxpvdkyvjsdyfk.functions.supabase.co";
+
+const ANON_KEY =
+  process.env.SUPABASE_ANON_KEY ||
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlqeXR1Z2x4cHZka3l2anNkeWZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkzMzM3MzMsImV4cCI6MjA4NDkwOTczM30.NEs_fcWRbHfrDIVIySQHRs8xq9mrel9ZxBGg4YA95a0";
+
+const REST_BASE = process.env.SUPABASE_URL
+  ? process.env.SUPABASE_URL.replace(/\/$/, "")
+  : "https://yjytuglxpvdkyvjsdyfk.supabase.co";
+
+const AUTH_TOKEN = process.env.AUTH_TOKEN;
+const TRACK_ID = process.env.TRACK_ID;
+const FAN_EMAIL = process.env.FAN_EMAIL;
+const TOTAL_REQUESTS = parseInt(process.env.REQUESTS || process.env.TOTAL_REQUESTS || "40", 10);
+const CONCURRENCY = parseInt(process.env.CONCURRENCY || "5", 10);
+const ALLOW_OVERSPEND = process.env.ALLOW_OVERSPEND || "false";
+
+if (!AUTH_TOKEN || !TRACK_ID || !FAN_EMAIL) {
+  console.error("Required env vars: AUTH_TOKEN, TRACK_ID, FAN_EMAIL");
+  process.exit(1);
 }
 
-function toInt(value, fallback) {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-async function main() {
-  const supabaseUrl = requireEnv("SUPABASE_URL");
-  const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
-  const email = requireEnv("TEST_FAN_EMAIL");
-  const password = requireEnv("TEST_FAN_PASSWORD");
-  const trackId = requireEnv("TEST_TRACK_ID");
-
-  const totalRequests = toInt(process.env.REQUESTS, 40);
-  const concurrency = toInt(process.env.CONCURRENCY, 5);
-  const allowOverspend = (process.env.ALLOW_OVERSPEND || "").toLowerCase() === "true";
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-  if (authError || !authData.user) {
-    throw new Error(`Auth failed: ${authError?.message || "no user"}`);
-  }
-
-  const fanUserId = authData.user.id;
-  const accessToken = authData.session?.access_token;
-  if (!accessToken) {
-    throw new Error("Missing access token after sign-in.");
-  }
-
-  const functionsBase = supabaseUrl.replace(".supabase.co", ".functions.supabase.co");
-  const requestHeaders = {
-    Authorization: `Bearer ${accessToken}`,
+async function fetchLedgerCounts() {
+  const headers = {
+    apikey: ANON_KEY,
+    Authorization: `Bearer ${AUTH_TOKEN}`,
     "Content-Type": "application/json",
   };
 
-  const diagnosticResponse = await fetch(`${functionsBase}/charge-stream`, {
-    method: "POST",
-    headers: requestHeaders,
-    body: JSON.stringify({ trackId, idempotencyKey: randomUUID() }),
-  });
+  const [debitRes, streamRes] = await Promise.all([
+    fetch(
+      `${REST_BASE}/rest/v1/credit_ledger?select=id&type=eq.STREAM_DEBIT&user_email=eq.${encodeURIComponent(FAN_EMAIL)}`,
+      { headers }
+    ),
+    fetch(
+      `${REST_BASE}/rest/v1/stream_ledger?select=id&fan_email=eq.${encodeURIComponent(FAN_EMAIL)}&track_id=eq.${TRACK_ID}`,
+      { headers }
+    ),
+  ]);
 
-  const diagnosticText = await diagnosticResponse.text();
-  if (!diagnosticResponse.ok) {
-    const failureReport = {
-      generatedAt: new Date().toISOString(),
-      requestPlan: {
-        totalRequests,
-        plannedRequests: 0,
-        concurrency,
-        allowOverspend,
-      },
-      diagnostic: {
-        status: diagnosticResponse.status,
-        body: diagnosticText,
-      },
-    };
-    // eslint-disable-next-line no-console
-    console.log(JSON.stringify(failureReport, null, 2));
-    return;
-  }
+  const debits = await debitRes.json();
+  const streams = await streamRes.json();
+  return {
+    streamDebits: Array.isArray(debits) ? debits.length : 0,
+    streamLedger: Array.isArray(streams) ? streams.length : 0,
+  };
+}
 
-  const { data: ledgerBefore, error: ledgerBeforeError } = await supabase
-    .from("credit_ledger")
-    .select("id")
-    .eq("user_email", email)
-    .eq("type", "STREAM_DEBIT")
-    .like("reference", `stream_${trackId}_%`);
+async function fetchCredits() {
+  const headers = {
+    apikey: ANON_KEY,
+    Authorization: `Bearer ${AUTH_TOKEN}`,
+    "Content-Type": "application/json",
+  };
+  const res = await fetch(
+    `${REST_BASE}/rest/v1/vault_members?select=credits&email=eq.${encodeURIComponent(FAN_EMAIL)}`,
+    { headers }
+  );
+  const data = await res.json();
+  return Array.isArray(data) && data.length > 0 ? data[0].credits : null;
+}
 
-  if (ledgerBeforeError) {
-    throw new Error(`Failed to read credit_ledger before test: ${ledgerBeforeError.message}`);
-  }
+async function runStressTest() {
+  console.log(`\n=== Ledger Stress Test ===`);
+  console.log(`Fan: ${FAN_EMAIL}`);
+  console.log(`Track: ${TRACK_ID}`);
+  console.log(`Requests: ${TOTAL_REQUESTS}, Concurrency: ${CONCURRENCY}`);
+  console.log(`ALLOW_OVERSPEND: ${ALLOW_OVERSPEND} (DB CHECK constraint enforced regardless)\n`);
 
-  const { data: streamBefore, error: streamBeforeError } = await supabase
-    .from("stream_ledger")
-    .select("id")
-    .eq("fan_email", email)
-    .eq("track_id", trackId);
+  // Snapshot before
+  const creditsBefore = await fetchCredits();
+  const ledgerBefore = await fetchLedgerCounts();
+  console.log(`Credits before: ${creditsBefore}`);
+  console.log(`Ledger before: STREAM_DEBIT=${ledgerBefore.streamDebits}, stream_ledger=${ledgerBefore.streamLedger}\n`);
 
-  if (streamBeforeError) {
-    throw new Error(`Failed to read stream_ledger before test: ${streamBeforeError.message}`);
-  }
-
-  const { data: member, error: memberError } = await supabase
-    .from("vault_members")
-    .select("credits")
-    .eq("email", email)
-    .maybeSingle();
-
-  if (memberError) {
-    throw new Error(`Failed to read vault member: ${memberError.message}`);
-  }
-
-  const startingCredits = member?.credits ?? 0;
-  const plannedRequests = allowOverspend
-    ? totalRequests
-    : Math.min(totalRequests, startingCredits);
-
-  if (plannedRequests === 0) {
-    throw new Error("No credits available for test. Add credits or enable ALLOW_OVERSPEND.");
-  }
-
+  const statusCounts = {};
+  const latencies = [];
   let inFlight = 0;
   let started = 0;
-  let success = 0;
-  let failure = 0;
-  const statusCounts = {};
-  const errorSamples = {};
-  const latencies = [];
 
   const startTime = performance.now();
 
   await new Promise((resolve) => {
     const launchNext = () => {
-      while (inFlight < concurrency && started < plannedRequests) {
+      while (inFlight < CONCURRENCY && started < TOTAL_REQUESTS) {
         started += 1;
         inFlight += 1;
+        const idempotencyKey = crypto.randomUUID();
         const requestStart = performance.now();
 
-        fetch(`${functionsBase}/charge-stream`, {
+        fetch(`${BASE}/charge-stream`, {
           method: "POST",
-          headers: requestHeaders,
-          body: JSON.stringify({ trackId, idempotencyKey: randomUUID() }),
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${AUTH_TOKEN}`,
+            apikey: ANON_KEY,
+          },
+          body: JSON.stringify({ trackId: TRACK_ID, idempotencyKey }),
         })
           .then(async (res) => {
-            const status = res.status;
-            statusCounts[status] = (statusCounts[status] || 0) + 1;
-            const text = await res.text();
-            let parsed;
-            try {
-              parsed = text ? JSON.parse(text) : null;
-            } catch {
-              parsed = null;
-            }
-
-            if (res.ok) {
-              success += 1;
-            } else {
-              failure += 1;
-              const message =
-                parsed?.error ||
-                parsed?.message ||
-                (text || "unknown_error").slice(0, 200);
-              const key = `${status}:${message}`;
-              errorSamples[key] = (errorSamples[key] || 0) + 1;
-            }
+            statusCounts[res.status] = (statusCounts[res.status] || 0) + 1;
+            await res.text();
           })
           .catch(() => {
-            failure += 1;
-            statusCounts[0] = (statusCounts[0] || 0) + 1;
-            errorSamples["0:network_error"] = (errorSamples["0:network_error"] || 0) + 1;
+            statusCounts["error"] = (statusCounts["error"] || 0) + 1;
           })
           .finally(() => {
-            const requestEnd = performance.now();
-            latencies.push(requestEnd - requestStart);
+            latencies.push(performance.now() - requestStart);
             inFlight -= 1;
-
-            if (started >= plannedRequests && inFlight === 0) {
+            if (started >= TOTAL_REQUESTS && inFlight === 0) {
               resolve();
               return;
             }
@@ -180,86 +144,35 @@ async function main() {
     launchNext();
   });
 
-  const endTime = performance.now();
-  const durationMs = endTime - startTime;
+  const durationMs = performance.now() - startTime;
 
-  const { data: afterMember, error: afterError } = await supabase
-    .from("vault_members")
-    .select("credits")
-    .eq("email", email)
-    .maybeSingle();
+  // Snapshot after
+  const creditsAfter = await fetchCredits();
+  const ledgerAfter = await fetchLedgerCounts();
 
-  if (afterError) {
-    throw new Error(`Failed to read vault member after test: ${afterError.message}`);
-  }
+  const debitDelta = ledgerAfter.streamDebits - ledgerBefore.streamDebits;
+  const streamDelta = ledgerAfter.streamLedger - ledgerBefore.streamLedger;
+  const creditsConsumed = creditsBefore - creditsAfter;
 
-  const { data: ledgerRows, error: ledgerError } = await supabase
-    .from("credit_ledger")
-    .select("id")
-    .eq("user_email", email)
-    .eq("type", "STREAM_DEBIT")
-    .like("reference", `stream_${trackId}_%`);
+  console.log(`--- Results ---`);
+  console.log(`Duration: ${Math.round(durationMs)}ms`);
+  console.log(`Status codes:`, statusCounts);
+  console.log(`Credits after: ${creditsAfter} (consumed: ${creditsConsumed})`);
+  console.log(`Ledger delta: STREAM_DEBIT +${debitDelta}, stream_ledger +${streamDelta}`);
 
-  if (ledgerError) {
-    throw new Error(`Failed to read credit_ledger: ${ledgerError.message}`);
-  }
+  const ok =
+    creditsConsumed === debitDelta &&
+    creditsConsumed === streamDelta &&
+    creditsAfter >= 0;
 
-  const { data: streamRows, error: streamError } = await supabase
-    .from("stream_ledger")
-    .select("id")
-    .eq("fan_email", email)
-    .eq("track_id", trackId);
-
-  if (streamError) {
-    throw new Error(`Failed to read stream_ledger: ${streamError.message}`);
-  }
-
-  const rps = plannedRequests / (durationMs / 1000);
-  const sorted = [...latencies].sort((a, b) => a - b);
-  const p = (pct) => sorted[Math.max(0, Math.ceil((pct / 100) * sorted.length) - 1)];
-
-  const report = {
-    generatedAt: new Date().toISOString(),
-    requestPlan: {
-      totalRequests: totalRequests,
-      plannedRequests,
-      concurrency,
-      allowOverspend,
-    },
-    results: {
-      success,
-      failure,
-      statusCounts,
-      errorSamples,
-      durationMs: Math.round(durationMs),
-      rps: Number(rps.toFixed(2)),
-      latency: {
-        minMs: Math.round(sorted[0] ?? 0),
-        p50Ms: Math.round(p(50) ?? 0),
-        p95Ms: Math.round(p(95) ?? 0),
-        p99Ms: Math.round(p(99) ?? 0),
-        maxMs: Math.round(sorted[sorted.length - 1] ?? 0),
-      },
-    },
-    credits: {
-      starting: startingCredits,
-      ending: afterMember?.credits ?? null,
-      expectedEnding: startingCredits - success,
-    },
-    ledger: {
-      streamDebitCount: ledgerRows?.length ?? 0,
-      streamLedgerCount: streamRows?.length ?? 0,
-      streamDebitDelta: (ledgerRows?.length ?? 0) - (ledgerBefore?.length ?? 0),
-      streamLedgerDelta: (streamRows?.length ?? 0) - (streamBefore?.length ?? 0),
-    },
-  };
-
-  // eslint-disable-next-line no-console
-  console.log(JSON.stringify(report, null, 2));
+  console.log(
+    ok
+      ? `\n✅ INTEGRITY OK — credits consumed matches ledger deltas, no negatives.`
+      : `\n❌ INTEGRITY MISMATCH — credits consumed: ${creditsConsumed}, debit delta: ${debitDelta}, stream delta: ${streamDelta}`
+  );
 }
 
-main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error("Ledger stress test failed:", err.message || err);
+runStressTest().catch((err) => {
+  console.error("Stress test failed:", err);
   process.exit(1);
 });

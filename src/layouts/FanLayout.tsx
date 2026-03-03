@@ -1,7 +1,11 @@
 import { Outlet } from "react-router-dom";
 import { MiniPlayer } from "@/components/MiniPlayer";
 import { BottomNav } from "@/components/BottomNav";
+import { usePlayer } from "@/contexts/PlayerContext";
+
 const FanLayout = () => {
+  const { currentTrack } = usePlayer();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Page content – always reserve space for nav (64px) + mini-player (80px) */}
