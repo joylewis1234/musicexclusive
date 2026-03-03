@@ -1,27 +1,45 @@
 
 
-## Discovery Preview Behavior
+## Plan: Fix Discovery Preview Loop + Verify Full Flow
 
-### **6) Discovery Preview Behavior**
+### Problem
+The cleanup `useEffect` in `Discovery.tsx` (lines 168-172) depends on `[stopPreview]`, which changes on every render because `stopPreview` is recreated when `previewId` changes. This causes the effect to fire cleanup → call `stopPreview()` → reset state → re-render → loop, preventing the 25s preview from completing and the upsell modal from firing.
 
-File: src/pages/Discovery.tsx
+### Changes
 
-When a user taps Preview:
-- The track plays immediately.
-- It plays for exactly 25 seconds.
-- It cannot be paused.
-- It cannot be stopped.
-- It cannot be resumed (re-tapping the same track is ignored).
+**1. Fix render loop in `src/pages/Discovery.tsx`**
+- Add `useRef` to imports (line 1)
+- Add a `stopPreviewRef` that tracks the latest `stopPreview` function
+- Replace the `useEffect(() => { return () => { stopPreview(); }; }, [stopPreview])` with a stable cleanup that uses the ref and has `[]` deps
 
-After 25 seconds:
-- Playback stops automatically.
-- A modal appears: "Want to stream this track?"
-  - If they click **Stream**: Navigate to Artist Profile (`/artist/:id?track=:trackId&stream=1`) and open the stream confirmation modal.
-  - If they close the modal: They can continue browsing and previewing other tracks.
+**2. Verify remaining files — no changes needed**
+All other files already match the spec:
+- **`DiscoveryTrackCard.tsx`**: Preview button disabled during preview, Play icon only, no pause — ✅
+- **`useAudioPreview.ts`**: Thin wrapper over shared context — ✅
+- **`AudioPlayerContext.tsx`**: 25s timer with `setInterval`, auto-stops, fires `onComplete` callback — ✅
+- **`ArtistProfilePage.tsx`**: `autoStream` + `selectedTrack` triggers `showStreamConfirm` modal, cleans up `stream` param — ✅
+- **`CompactVaultPlayer.tsx`**: `handlePlayPause` calls `onPlay()` and returns without playing when `!skipPlayConfirm` — ✅
 
-File: src/components/discovery/DiscoveryTrackCard.tsx
+### Technical Detail
 
-- Preview button:
-  - Disabled while previewing
-  - Label = "Previewing"
-  - **Icon = Play only** (no pause icon anywhere)
+The only code change is in `Discovery.tsx`:
+
+```typescript
+// Line 1: add useRef to import
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+
+// Replace lines 168-172 with:
+const stopPreviewRef = useRef(stopPreview);
+useEffect(() => {
+  stopPreviewRef.current = stopPreview;
+}, [stopPreview]);
+
+useEffect(() => {
+  return () => {
+    stopPreviewRef.current();
+  };
+}, []);
+```
+
+This is the sole root cause — all other pieces are correctly wired.
+
