@@ -1,178 +1,154 @@
-import { createClient } from "@supabase/supabase-js";
 import { performance } from "node:perf_hooks";
 
-function requireEnv(name) {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Missing required env var: ${name}`);
-  }
-  return value;
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const ANON_KEY = process.env.SUPABASE_ANON_KEY;
+const TEST_FAN_EMAIL = process.env.TEST_FAN_EMAIL;
+const TEST_FAN_PASSWORD = process.env.TEST_FAN_PASSWORD;
+const TEST_TRACK_ID = process.env.TEST_TRACK_ID;
+
+const PLAYBACK_REQUESTS = parseInt(process.env.PLAYBACK_REQUESTS || "200", 10);
+const PLAYBACK_CONCURRENCY = parseInt(process.env.PLAYBACK_CONCURRENCY || "20", 10);
+const PLAYBACK_REFRESH_MS = parseInt(process.env.PLAYBACK_REFRESH_MS || "30000", 10);
+
+if (!SUPABASE_URL || !ANON_KEY || !TEST_FAN_EMAIL || !TEST_FAN_PASSWORD || !TEST_TRACK_ID) {
+  console.error("Required env vars: SUPABASE_URL, SUPABASE_ANON_KEY, TEST_FAN_EMAIL, TEST_FAN_PASSWORD, TEST_TRACK_ID");
+  process.exit(1);
 }
 
-function toInt(value, fallback) {
-  const parsed = Number.parseInt(value ?? "", 10);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
+const FUNCTIONS_URL = SUPABASE_URL.replace(/\/$/, "").replace(/\.supabase\.co$/, ".functions.supabase.co");
 
-async function main() {
-  const supabaseUrl = requireEnv("SUPABASE_URL");
-  const supabaseAnonKey = requireEnv("SUPABASE_ANON_KEY");
-  const email = requireEnv("TEST_FAN_EMAIL");
-  const password = requireEnv("TEST_FAN_PASSWORD");
-  const trackId = requireEnv("TEST_TRACK_ID");
-  const fileType = process.env.TEST_FILE_TYPE || "audio";
-
-  const totalRequests = toInt(process.env.PLAYBACK_REQUESTS, 20);
-  const concurrency = toInt(process.env.PLAYBACK_CONCURRENCY, 5);
-  const refreshMs = toInt(process.env.PLAYBACK_REFRESH_MS, 45000);
-
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
+async function authenticate() {
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    headers: {
+      apikey: ANON_KEY,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email: TEST_FAN_EMAIL, password: TEST_FAN_PASSWORD }),
   });
-  if (authError || !authData.user) {
-    throw new Error(`Auth failed: ${authError?.message || "no user"}`);
+  if (!res.ok) {
+    const text = await res.text();
+    console.error(`Auth failed (${res.status}): ${text}`);
+    process.exit(1);
   }
+  const data = await res.json();
+  return data.access_token;
+}
 
-  const accessToken = authData.session?.access_token;
-  if (!accessToken) {
-    throw new Error("Missing access token after sign-in.");
-  }
-
-  const functionsBase = supabaseUrl.replace(".supabase.co", ".functions.supabase.co");
-  const mintUrl = async () => {
-    const mintResponse = await fetch(`${functionsBase}/mint-playback-url`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ trackId, fileType }),
-    });
-
-    const mintText = await mintResponse.text();
-    if (!mintResponse.ok) {
-      throw new Error(`Failed to mint playback URL: ${mintText || mintResponse.status}`);
-    }
-
-    let mintData;
-    try {
-      mintData = mintText ? JSON.parse(mintText) : null;
-    } catch {
-      mintData = null;
-    }
-
-    if (!mintData?.url) {
-      throw new Error("Failed to mint playback URL: missing url");
-    }
-    return mintData.url;
-  };
-
-  let signedUrl = await mintUrl();
-  let mintedAt = Date.now();
-
-  let inFlight = 0;
-  let started = 0;
+async function runLoadTest({ name, url, body, headers, totalRequests, concurrency }) {
+  const latencies = [];
   let success = 0;
   let failure = 0;
   const statusCounts = {};
-  const errorSamples = {};
-  const latencies = [];
+  let inFlight = 0;
+  let started = 0;
 
-  const startTime = performance.now();
+  return new Promise((resolve) => {
+    const startTime = performance.now();
 
-  await new Promise((resolve) => {
     const launchNext = () => {
       while (inFlight < concurrency && started < totalRequests) {
         started += 1;
         inFlight += 1;
         const requestStart = performance.now();
 
-        const runRequest = async () => {
-          const now = Date.now();
-          if (now - mintedAt > refreshMs) {
-            signedUrl = await mintUrl();
-            mintedAt = Date.now();
-          }
-
-          const res = await fetch(signedUrl, { method: "GET" });
-          const status = res.status;
-          statusCounts[status] = (statusCounts[status] || 0) + 1;
-          if (res.ok) {
-            success += 1;
-            try {
-              await res.arrayBuffer();
-            } catch {
-              // ignore
+        fetch(url, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(body),
+        })
+          .then((res) => {
+            statusCounts[res.status] = (statusCounts[res.status] || 0) + 1;
+            if (res.ok) {
+              success += 1;
+            } else {
+              failure += 1;
             }
-          } else {
-            failure += 1;
-            const text = await res.text();
-            const message = text ? text.slice(0, 200) : "non_ok_response";
-            const key = `${status}:${message}`;
-            errorSamples[key] = (errorSamples[key] || 0) + 1;
-          }
-        };
-
-        runRequest()
+            return res.text();
+          })
           .catch(() => {
             failure += 1;
-            statusCounts[0] = (statusCounts[0] || 0) + 1;
-            errorSamples["0:network_error"] = (errorSamples["0:network_error"] || 0) + 1;
           })
           .finally(() => {
-            const requestEnd = performance.now();
-            latencies.push(requestEnd - requestStart);
+            latencies.push(performance.now() - requestStart);
             inFlight -= 1;
 
             if (started >= totalRequests && inFlight === 0) {
-              resolve();
+              const endTime = performance.now();
+              resolve({
+                name,
+                totalRequests,
+                success,
+                failure,
+                durationMs: endTime - startTime,
+                latencies,
+                statusCounts,
+              });
               return;
             }
+
             launchNext();
           });
       }
     };
+
     launchNext();
   });
+}
 
-  const endTime = performance.now();
-  const durationMs = endTime - startTime;
+function percentile(values, p) {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const idx = Math.ceil((p / 100) * sorted.length) - 1;
+  return sorted[Math.max(0, idx)];
+}
+
+function formatResult(result) {
+  const { name, totalRequests, success, failure, durationMs, latencies, statusCounts } = result;
   const rps = totalRequests / (durationMs / 1000);
-  const sorted = [...latencies].sort((a, b) => a - b);
-  const p = (pct) => sorted[Math.max(0, Math.ceil((pct / 100) * sorted.length) - 1)];
 
-  const report = {
-    generatedAt: new Date().toISOString(),
-    requestPlan: {
-      totalRequests,
-      concurrency,
-      fileType,
+  return {
+    name,
+    totalRequests,
+    success,
+    failure,
+    durationMs: Math.round(durationMs),
+    rps: Number(rps.toFixed(2)),
+    latency: {
+      minMs: Math.round(Math.min(...latencies)),
+      p50Ms: Math.round(percentile(latencies, 50)),
+      p95Ms: Math.round(percentile(latencies, 95)),
+      p99Ms: Math.round(percentile(latencies, 99)),
+      maxMs: Math.round(Math.max(...latencies)),
     },
-    results: {
-      success,
-      failure,
-      statusCounts,
-      errorSamples,
-      durationMs: Math.round(durationMs),
-      rps: Number(rps.toFixed(2)),
-      latency: {
-        minMs: Math.round(sorted[0] ?? 0),
-        p50Ms: Math.round(p(50) ?? 0),
-        p95Ms: Math.round(p(95) ?? 0),
-        p99Ms: Math.round(p(99) ?? 0),
-        maxMs: Math.round(sorted[sorted.length - 1] ?? 0),
-      },
-    },
+    statusCounts,
+  };
+}
+
+async function main() {
+  console.log(`Playback load test: ${PLAYBACK_REQUESTS} requests, concurrency ${PLAYBACK_CONCURRENCY}, refresh ${PLAYBACK_REFRESH_MS}ms`);
+
+  const jwt = await authenticate();
+
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${jwt}`,
+    apikey: ANON_KEY,
   };
 
-  // eslint-disable-next-line no-console
-  console.log(JSON.stringify(report, null, 2));
+  const result = await runLoadTest({
+    name: "mint-playback-url (playback load test)",
+    url: `${FUNCTIONS_URL}/mint-playback-url`,
+    body: { trackId: TEST_TRACK_ID, fileType: "preview" },
+    headers,
+    totalRequests: PLAYBACK_REQUESTS,
+    concurrency: PLAYBACK_CONCURRENCY,
+  });
+
+  console.log(JSON.stringify({ generatedAt: new Date().toISOString(), refreshMs: PLAYBACK_REFRESH_MS, results: [formatResult(result)] }, null, 2));
 }
 
 main().catch((err) => {
-  // eslint-disable-next-line no-console
-  console.error("Playback load test failed:", err.message || err);
+  console.error("Playback load test failed:", err);
   process.exit(1);
 });
