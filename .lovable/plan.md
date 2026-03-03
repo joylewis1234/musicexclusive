@@ -1,48 +1,22 @@
 
 
-## Fix: Eliminate Double `mint-playback-url` Calls
+## Plan: Update Documentation to Reflect Double-Mint Fix
 
-### Root Cause
+Three docs need updating, plus the plan file should be marked as completed.
 
-The `CompactVaultPlayer` component creates its own `useAudioPlayer()` instance (not the shared context one). When a track is selected on the Artist Profile page:
+### 1. `.lovable/plan.md`
+- Replace the current plan content with a "Completed" note summarizing what was done and when.
 
-1. **Call #1**: `CompactVaultPlayer`'s `useEffect` (line 62) fires on `track.id` change, calling `loadTrack({ fileType: "audio" })` which invokes `mint-playback-url`
-2. **Call #2**: After stream confirmation succeeds, the `autoPlay` effect (line 80) calls `play()`, which may re-mint the URL if it detects expiry, or the race between the two calls causes an `AbortError` when the second `play()` interrupts the first
+### 2. `docs/playback-protection-architecture.md`
+- Update the "Playback Flow (HLS)" section to document the new two-path flow:
+  - **Fan paid stream**: `charge-stream` mints the session JWT and returns `hlsUrl` directly; `CompactVaultPlayer` receives `paidStreamData` prop and calls `loadPaidStream()` — no separate `mint-playback-url` call.
+  - **Artist dashboard / replay**: Still uses `mint-playback-url` for on-demand signed URLs.
+- Add `charge-stream` to the Components list as the primary playback entry point for fan streams.
 
-Meanwhile, `charge-stream` already returns an `hlsUrl` and `sessionId` in its response, but these are completely ignored — the player independently mints its own URL.
+### 3. `docs/global-audio-engine-plan.md`
+- Update the Edge Function Dependencies table (section 9) to reflect that `charge-stream` now returns `hlsUrl` directly and `mint-playback-url` is no longer called for initial fan paid streams.
+- Update section 5 (Paid Stream Rules / First Play) to note that `charge-stream` returns the HLS URL, so no separate mint call is needed.
 
-### Solution
-
-**Stop eagerly loading the full audio track on selection.** The `CompactVaultPlayer` should only load artwork/metadata on track selection, not call `mint-playback-url` for audio until playback is actually confirmed and paid for. Then, use the `hlsUrl` returned by `charge-stream` directly instead of minting a separate one.
-
-### Changes
-
-#### 1. `src/components/profile/CompactVaultPlayer.tsx`
-- Remove the `useEffect` that calls `loadTrack({ fileType: "audio" })` on every `track.id` change (lines 62-67)
-- Instead, only load the track when playback is actually triggered (after charge confirmation)
-- Accept the `hlsUrl` and `sessionId` from the parent (returned by `charge-stream`) and use `loadPaidStream()` directly
-
-#### 2. `src/pages/ArtistProfilePage.tsx`
-- After `handleStreamConfirm` succeeds, pass the `hlsUrl`/`sessionId` from `chargeStream()` result down to trigger playback
-- Store the charge result's `hlsUrl` and `sessionId` in state, pass to `CompactVaultPlayer`
-- Remove the `shouldAutoPlay` → `play()` indirection; instead directly call `loadPaidStream` with the charge result
-
-#### 3. `src/hooks/useAudioPlayer.ts` (no changes needed)
-- `loadPaidStream` already accepts `hlsUrl` and handles HLS setup — it just needs to be called instead of the redundant `loadTrack` + `play` path
-
-### Technical Details
-
-```text
-Current flow (2 mint calls):
-  select track → loadTrack("audio") → mint-playback-url #1
-  confirm stream → charge-stream (returns hlsUrl, ignored)
-  autoPlay → play() → possibly mint-playback-url #2
-
-Fixed flow (0 mint calls for audio):
-  select track → no audio loading (just UI selection)
-  confirm stream → charge-stream → returns hlsUrl
-  use hlsUrl → loadPaidStream(hlsUrl) → direct HLS playback
-```
-
-The `skipPlayConfirm` path (replay after already charged) will need its own `mint-playback-url` call via `loadTrack`, but that's a single call — not a double.
+### 4. `docs/final-audit-report.md`
+- Add a brief entry under "Completed Work (Highlights)" noting the double-mint elimination and `charge-stream` protocol normalization fix (`https://` prefix).
 
