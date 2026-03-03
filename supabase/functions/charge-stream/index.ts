@@ -290,7 +290,8 @@ Deno.serve(async (req) => {
       playbackJwtSecret
     );
 
-    const hlsUrl = `${hlsWorkerBaseUrl}/${trackId}/master.m3u8?token=${encodeURIComponent(token)}`;
+    const normalizedBase = hlsWorkerBaseUrl.startsWith("http") ? hlsWorkerBaseUrl : `https://${hlsWorkerBaseUrl}`;
+    const hlsUrl = `${normalizedBase}/${trackId}/master.m3u8?token=${encodeURIComponent(token)}`;
 
     stage = "done";
     ledgerWritten = true;
