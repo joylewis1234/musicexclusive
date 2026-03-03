@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DiscoveryHeader } from "@/components/discovery/DiscoveryHeader";
 import { SearchFilterBar } from "@/components/discovery/SearchFilterBar";
@@ -165,11 +165,16 @@ const Discovery = () => {
     setUpsellTrack(null);
   }, []);
 
+  const stopPreviewRef = useRef(stopPreview);
+  useEffect(() => {
+    stopPreviewRef.current = stopPreview;
+  }, [stopPreview]);
+
   useEffect(() => {
     return () => {
-      stopPreview();
+      stopPreviewRef.current();
     };
-  }, [stopPreview]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col px-4 py-6">
