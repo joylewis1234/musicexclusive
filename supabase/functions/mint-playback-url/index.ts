@@ -190,27 +190,30 @@ Deno.serve(async (req) => {
         return await respond(403, { error: "Track not available" });
       }
 
-      const [roleResult, vaultResult] = await Promise.all([
-        admin.from("user_roles").select("role").eq("user_id", user.id),
-        admin.from("vault_members").select("vault_access_active").eq("email", userEmail).maybeSingle(),
-      ]);
+      // Allow previews for any authenticated fan; gate full audio only.
+      if (requestedFileType !== "preview") {
+        const [roleResult, vaultResult] = await Promise.all([
+          admin.from("user_roles").select("role").eq("user_id", user.id),
+          admin.from("vault_members").select("vault_access_active").eq("email", userEmail).maybeSingle(),
+        ]);
 
-      const roles = (roleResult.data ?? []).map((r: any) => r.role as string);
-      const isAdmin = roles.includes("admin");
-      const isArtist = roles.includes("artist");
-      const isVaultActive = vaultResult.data?.vault_access_active === true;
+        const roles = (roleResult.data ?? []).map((r: any) => r.role as string);
+        const isAdmin = roles.includes("admin");
+        const isArtist = roles.includes("artist");
+        const isVaultActive = vaultResult.data?.vault_access_active === true;
 
-      let isOwner = false;
-      if (isArtist) {
-        const { data: profile } = await admin.from("artist_profiles").select("id").eq("user_id", user.id).maybeSingle();
-        if (profile && String(profile.id) === track.artist_id) {
-          isOwner = true;
+        let isOwner = false;
+        if (isArtist) {
+          const { data: profile } = await admin.from("artist_profiles").select("id").eq("user_id", user.id).maybeSingle();
+          if (profile && String(profile.id) === track.artist_id) {
+            isOwner = true;
+          }
         }
-      }
 
-      if (!isAdmin && !isOwner && !isVaultActive) {
-        errorMessage = "Access denied";
-        return await respond(403, { error: "Access denied" });
+        if (!isAdmin && !isOwner && !isVaultActive) {
+          errorMessage = "Access denied";
+          return await respond(403, { error: "Access denied" });
+        }
       }
     }
 
