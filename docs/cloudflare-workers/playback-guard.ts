@@ -23,6 +23,13 @@ export interface Env {
 
 const HLS_PREFIX = "hls";
 
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, content-type, range",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Range",
+};
+
 /* ── JWT helpers ── */
 
 function base64urlToBytes(b64url: string): Uint8Array {
