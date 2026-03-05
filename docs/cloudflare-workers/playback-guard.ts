@@ -23,6 +23,13 @@ export interface Env {
 
 const HLS_PREFIX = "hls";
 
+const corsHeaders: Record<string, string> = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, content-type, range",
+  "Access-Control-Expose-Headers": "Content-Length, Content-Range",
+};
+
 /* ── JWT helpers ── */
 
 function base64urlToBytes(b64url: string): Uint8Array {
@@ -109,12 +116,16 @@ function rewritePlaylistWithTokenAndWatermark(
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
-    if (!token) return new Response("Missing token", { status: 401 });
+    if (!token) return new Response("Missing token", { status: 401, headers: corsHeaders });
 
     const payload = await verifyJwtHS256(token, env.PLAYBACK_JWT_SECRET);
-    if (!payload) return new Response("Invalid token", { status: 401 });
+    if (!payload) return new Response("Invalid token", { status: 401, headers: corsHeaders });
 
     const watermarkId: string = payload.watermark_id ?? "";
 
@@ -123,10 +134,10 @@ export default {
     const key = `${HLS_PREFIX}/${path}`;
 
     const obj = await env.R2_BUCKET.get(key);
-    if (!obj) return new Response("Not found", { status: 404 });
+    if (!obj) return new Response("Not found", { status: 404, headers: corsHeaders });
 
     const isPlaylist = key.endsWith(".m3u8");
-    const headers = new Headers();
+    const headers = new Headers(corsHeaders);
     obj.writeHttpMetadata(headers);
     headers.set("Cache-Control", "private, max-age=0, no-store");
 
