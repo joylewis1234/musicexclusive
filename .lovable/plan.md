@@ -1,9 +1,24 @@
 
-## Completed: Double-Mint Elimination (2026-03-03)
 
-**What was done:**
-- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
-- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
-- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
-- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
-- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
+## Update `playback-guard.ts` with CORS Headers
+
+Add a CORS headers object and apply it to every response path in the Cloudflare Worker, plus an OPTIONS preflight handler.
+
+### Changes to `docs/cloudflare-workers/playback-guard.ts`
+
+1. Add a `corsHeaders` constant after the `HLS_PREFIX` declaration:
+   - `Access-Control-Allow-Origin: *`
+   - `Access-Control-Allow-Methods: GET, OPTIONS`
+   - `Access-Control-Allow-Headers: authorization, content-type, range`
+   - `Access-Control-Expose-Headers: Content-Length, Content-Range`
+
+2. Add OPTIONS preflight handling at the top of the `fetch` handler (before the token check):
+   - Return `204` with `corsHeaders`
+
+3. Spread `corsHeaders` into all existing `Response` constructors:
+   - "Missing token" 401
+   - "Invalid token" 401
+   - "Not found" 404
+   - HLS playlist 200
+   - Raw segment 200
+
