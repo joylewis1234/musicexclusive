@@ -137,7 +137,7 @@ export default {
     if (!obj) return new Response("Not found", { status: 404, headers: corsHeaders });
 
     const isPlaylist = key.endsWith(".m3u8");
-    const headers = new Headers();
+    const headers = new Headers(corsHeaders);
     obj.writeHttpMetadata(headers);
     headers.set("Cache-Control", "private, max-age=0, no-store");
 
