@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
 
     const { data: track, error: trackErr } = await admin
       .from("tracks")
-      .select("artist_id, full_audio_key, preview_audio_key, artwork_key, status")
+      .select("artist_id, full_audio_key, preview_audio_key, preview_audio_url, artwork_key, status")
       .eq("id", trackId)
       .maybeSingle();
 
@@ -268,7 +268,25 @@ Deno.serve(async (req) => {
         ? track.preview_audio_key
         : track.artwork_key;
 
+    const previewUrl = requestedFileType === "preview" ? track.preview_audio_url : null;
+
     r2Key = key;
+
+    if (!key && previewUrl) {
+      const ttlSeconds = 3600;
+      return await respond(200, {
+        url: previewUrl,
+        expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
+        sessionToken,
+        session: {
+          track_id: trackId,
+          user_id: user.id,
+          session_id: sessionId,
+          watermark_id: watermarkId,
+          expires_at: sessionExpiresAtIso,
+        },
+      });
+    }
 
     if (!key) {
       errorMessage = `No ${requestedFileType} key`;
@@ -278,7 +296,10 @@ Deno.serve(async (req) => {
     const ttl = requestedFileType === "artwork" ? 300 : 90;
     const signedUrl = await presignR2Url(key, ttl);
     const hlsBase = hlsWorkerBaseUrl.startsWith("http") ? hlsWorkerBaseUrl : `https://${hlsWorkerBaseUrl}`;
-    const hlsUrl = `${hlsBase}/${trackId}/master.m3u8?token=${encodeURIComponent(sessionToken)}`;
+    const hlsUrl =
+      requestedFileType === "preview"
+        ? null
+        : `${hlsBase}/${trackId}/master.m3u8?token=${encodeURIComponent(sessionToken)}`;
 
     stage = "done";
     return await respond(200, {
