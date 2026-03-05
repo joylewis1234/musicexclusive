@@ -134,7 +134,7 @@ export default {
     const key = `${HLS_PREFIX}/${path}`;
 
     const obj = await env.R2_BUCKET.get(key);
-    if (!obj) return new Response("Not found", { status: 404 });
+    if (!obj) return new Response("Not found", { status: 404, headers: corsHeaders });
 
     const isPlaylist = key.endsWith(".m3u8");
     const headers = new Headers();
