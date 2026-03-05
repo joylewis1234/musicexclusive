@@ -116,12 +116,16 @@ function rewritePlaylistWithTokenAndWatermark(
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
+    if (req.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders });
+    }
+
     const url = new URL(req.url);
     const token = url.searchParams.get("token");
-    if (!token) return new Response("Missing token", { status: 401 });
+    if (!token) return new Response("Missing token", { status: 401, headers: corsHeaders });
 
     const payload = await verifyJwtHS256(token, env.PLAYBACK_JWT_SECRET);
-    if (!payload) return new Response("Invalid token", { status: 401 });
+    if (!payload) return new Response("Invalid token", { status: 401, headers: corsHeaders });
 
     const watermarkId: string = payload.watermark_id ?? "";
 
