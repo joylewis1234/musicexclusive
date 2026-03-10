@@ -51,6 +51,17 @@ const PREVIEW_DURATION_SECONDS = 25;
 
 export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
   const player = useAudioPlayer();
+
+  // Destructure stable callbacks to avoid re-creating dependent callbacks
+  // when the player object reference changes (it's a new object each render).
+  const {
+    stop: playerStop,
+    loadTrack: playerLoadTrack,
+    play: playerPlay,
+    seek: playerSeek,
+    currentTrack: playerCurrentTrack,
+  } = player;
+
   const [currentTrackMeta, setCurrentTrackMeta] = useState<TrackMeta | null>(null);
   const [previewState, setPreviewState] = useState<PreviewState>({
     currentPreviewId: null,
@@ -77,8 +88,8 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const stopPreview = useCallback(() => {
-    if (player.currentTrack?.fileType === "preview") {
-      player.stop();
+    if (playerCurrentTrack?.fileType === "preview") {
+      playerStop();
     }
     clearPreviewTimers();
     previewCompleteRef.current = null;
@@ -89,26 +100,26 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
       isPreviewLoading: false,
       previewError: null,
     });
-  }, [clearPreviewTimers, player]);
+  }, [clearPreviewTimers, playerCurrentTrack?.fileType, playerStop]);
 
   const startPaidTrack = useCallback(
     async (params: LoadTrackParams & TrackMeta) => {
       stopPreview();
-      player.stop();
+      playerStop();
       setCurrentTrackMeta({
         trackId: params.trackId,
         trackTitle: params.trackTitle,
         artistName: params.artistName,
         artworkUrl: params.artworkUrl,
       });
-      await player.loadTrack({
+      await playerLoadTrack({
         trackId: params.trackId,
         fileType: params.fileType,
         trackTitle: params.trackTitle,
         forceRefresh: params.forceRefresh,
       });
     },
-    [player, stopPreview]
+    [playerStop, playerLoadTrack, stopPreview]
   );
 
   const startPreview = useCallback(
@@ -124,7 +135,7 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
       previewCompleteRef.current = onComplete ?? null;
 
       // Stop any paid stream immediately before preview starts.
-      player.stop();
+      playerStop();
 
       setCurrentTrackMeta({
         trackId,
@@ -141,7 +152,7 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
       });
 
       try {
-        await player.loadTrack({
+        await playerLoadTrack({
           trackId,
           fileType: "preview",
           trackTitle,
@@ -149,11 +160,11 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
 
         // Jump to the preview start once loaded.
         if (startSeconds > 0) {
-          player.seek(startSeconds);
+          playerSeek(startSeconds);
         }
 
         previewStartRef.current = performance.now();
-        await player.play();
+        await playerPlay();
         setPreviewState((prev) => ({
           ...prev,
           isPreviewPlaying: true,
@@ -168,7 +179,7 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
 
         previewTimeoutRef.current = window.setTimeout(() => {
           clearPreviewTimers();
-          player.stop();
+          playerStop();
           setPreviewState({
             currentPreviewId: null,
             previewProgress: 100,
@@ -191,7 +202,7 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
         });
       }
     },
-    [clearPreviewTimers, player]
+    [clearPreviewTimers, playerStop, playerLoadTrack, playerSeek, playerPlay]
   );
 
   const value = useMemo<AudioPlayerContextValue>(
@@ -203,6 +214,10 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
       stopPreview,
       previewState,
     }),
+    // We spread player props but only need to re-create when specific values change.
+    // Using player here is intentional — it includes state values (isPlaying, etc.)
+    // that consumers need. The key fix is that startPaidTrack/startPreview/stopPreview
+    // are now stable callbacks that don't depend on the player object reference.
     [player, currentTrackMeta, startPaidTrack, startPreview, stopPreview, previewState]
   );
 
