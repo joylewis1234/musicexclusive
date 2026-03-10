@@ -353,16 +353,17 @@ const ArtistApplicationForm = () => {
                     className="mt-0.5 h-5 w-5"
                   />
                   <Label htmlFor="agreesTerms" className="text-base font-normal leading-relaxed cursor-pointer">
-                    I agree to the Music Exclusive{" "}
-                    <Link 
-                      to="/artist-agreement" 
+                    I have read and agree to the Music Exclusive{" "}
+                    <a
+                      href="/artist-agreement"
                       target="_blank"
+                      rel="noopener noreferrer"
                       className="text-primary hover:underline"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      Terms of Use
-                    </Link>{" "}
-                    and confirm I own or control all rights to the Content I upload.
+                      Artist Participation Agreement
+                    </a>
+                    .
                   </Label>
                 </div>
               </div>

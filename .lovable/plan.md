@@ -1,10 +1,9 @@
 
+## Completed: Double-Mint Elimination (2026-03-03)
 
-## Update agreesTerms Checkbox Label
-
-**File:** `src/pages/ArtistApplicationForm.tsx`, lines 355-366
-
-Replace the label text and link. Change from "I agree to the Music Exclusive Terms of Use and confirm I own or control all rights to the Content I upload." to "I have read and agree to the Music Exclusive Artist Participation Agreement." with the link on "Artist Participation Agreement" pointing to `/artist-agreement` in a new tab with `rel="noopener noreferrer"`.
-
-No changes to validation, state, or any other part of the form.
-
+**What was done:**
+- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
+- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
+- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
+- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
+- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
