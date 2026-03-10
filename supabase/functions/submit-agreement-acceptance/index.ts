@@ -105,6 +105,46 @@ serve(async (req) => {
       );
     }
 
+    // --- Artist agreement acceptance (additive, only when artist_id is present) ---
+    if (body.artist_id) {
+      const artistId = String(body.artist_id).trim();
+      const legalName = body.legal_name ? String(body.legal_name).trim() : "";
+      const artistName = body.artist_name ? String(body.artist_name).trim() : "";
+      const agreementVersion = body.agreement_version ? String(body.agreement_version).trim() : "1.0";
+
+      if (!legalName || !artistName) {
+        return new Response(
+          JSON.stringify({ error: "legal_name and artist_name are required for artist agreements" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const { error: artistInsertError } = await supabase
+        .from("artist_agreement_acceptances")
+        .insert({
+          artist_id: artistId,
+          legal_name: legalName,
+          artist_name: artistName,
+          agreement_version: agreementVersion,
+          ip_address: ip !== "unknown" ? ip : null,
+          user_agent: userAgent,
+          signed_at: new Date().toISOString(),
+        });
+
+      if (artistInsertError) {
+        // 409 / unique violation = already accepted, treat as success
+        if (artistInsertError.code === "23505") {
+          console.log("[submit-agreement-acceptance] Artist agreement already exists, skipping");
+        } else {
+          console.error("[submit-agreement-acceptance] Artist agreement insert error:", artistInsertError);
+          return new Response(
+            JSON.stringify({ error: artistInsertError.message }),
+            { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ success: true }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
