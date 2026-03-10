@@ -480,6 +480,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setCurrentTime(0);
       setDuration(0);
       setIsLoading(true);
+      // Set currentTrack so play() doesn't reject with "No audio source loaded"
+      const trackState = { trackId: params.trackId, fileType: "audio" as PlaybackFileType };
+      setCurrentTrack(trackState);
+      currentTrackRef.current = trackState;
       // Clear ended state when loading a new paid stream
       setLastEndedTrackId(null);
       setLastEndedAt(null);
