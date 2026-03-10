@@ -584,7 +584,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
             });
         });
     },
-    [destroyHls, loadHls]
+    [destroyHls, loadHls, loadSignedUrl]
   );
 
   return {
