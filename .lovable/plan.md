@@ -1,22 +1,9 @@
 
+## Completed: Double-Mint Elimination (2026-03-03)
 
-## Add columns to artist_agreement_acceptances
-
-The table already has `agreement_version`, `ip_address`, and `user_agent`. Only 3 new columns need adding, plus `signed_at`.
-
-### Migration SQL
-
-```sql
-ALTER TABLE artist_agreement_acceptances
-  ADD COLUMN IF NOT EXISTS legal_name text,
-  ADD COLUMN IF NOT EXISTS artist_name text,
-  ADD COLUMN IF NOT EXISTS pdf_storage_key text,
-  ADD COLUMN IF NOT EXISTS signed_at timestamptz DEFAULT now();
-```
-
-This is additive only — no existing columns or data are modified. The `IF NOT EXISTS` guard prevents errors if re-run.
-
-### No code changes required
-
-These columns are not yet referenced in any frontend code. The existing `useArtistAgreement` hook and `ArtistAgreementAccept` page will continue to work unchanged. When you're ready to use these new fields (e.g., capturing legal name in the agreement form or generating PDFs), that would be a separate task.
-
+**What was done:**
+- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
+- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
+- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
+- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
+- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
