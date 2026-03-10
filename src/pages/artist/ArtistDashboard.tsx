@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { ArtistTutorial } from "@/components/artist/tutorial/ArtistTutorial";
 import ArtistInviteSection from "@/components/artist/ArtistInviteSection";
+import AgreementStatusCard from "@/components/artist/AgreementStatusCard";
 import { 
   Upload, 
   LogOut,
