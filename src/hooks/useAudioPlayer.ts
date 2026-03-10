@@ -502,9 +502,29 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
             hls.on(Hls.Events.ERROR, (_event, data) => {
               console.error("[AudioPlayer] HLS error (paid):", data.type, data.details);
               if (data.fatal) {
+                console.warn("[AudioPlayer] Fatal HLS error in paid stream, falling back to signed URL");
                 destroyHls();
-                setError("Playback error — please retry");
-                setIsLoading(false);
+                loadSignedUrl(params.trackId, "audio", true)
+                  .then((entry) => {
+                    audio.src = entry.url;
+                    audio.load();
+                    setDiagnostics((prev) => ({
+                      ...prev,
+                      audioUrl: entry.url,
+                      hlsActive: false,
+                      lastError: `HLS fatal: ${data.details}, fell back to direct URL`,
+                    }));
+                    audio.play().catch((playErr) => {
+                      console.error("[AudioPlayer] Fallback play failed:", playErr);
+                      setError("Playback error — please retry");
+                      setIsLoading(false);
+                    });
+                  })
+                  .catch((fallbackErr) => {
+                    console.error("[AudioPlayer] Signed URL fallback failed:", fallbackErr);
+                    setError("Playback error — please retry");
+                    setIsLoading(false);
+                  });
               }
             });
 
