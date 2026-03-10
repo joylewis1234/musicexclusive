@@ -783,6 +783,9 @@ const ArtistDashboard = () => {
             </div>
           </div>
 
+          {/* Agreement Status */}
+          <AgreementStatusCard />
+
           {/* Invite Fans Section */}
           {artistProfileId && (
             <ArtistInviteSection artistProfileId={artistProfileId} />
