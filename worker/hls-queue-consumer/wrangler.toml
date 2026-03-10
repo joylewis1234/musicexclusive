@@ -1,0 +1,15 @@
+name = "hls-queue-consumer"
+main = "worker.js"
+compatibility_date = "2026-02-22"
+compatibility_flags = ["nodejs_compat"]
+account_id = "2f10df893433e4290bf1e708621baae5"
+
+[[queues.consumers]]
+queue = "hls-transcode-queue"
+max_batch_size = 1
+max_batch_timeout = 30
+
+[vars]
+# HLS_TRANSCODER_URL = "https://your-transcoder.example.com/transcode"
+# HLS_TRANSCODER_TOKEN = "<optional-bearer-token>"
+# HLS_TRANSCODER_TIMEOUT_MS = "120000"
