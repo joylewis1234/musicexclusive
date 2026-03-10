@@ -42,7 +42,10 @@ serve(async (req) => {
       );
     }
 
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+      || req.headers.get("x-real-ip")?.trim()
+      || "unknown";
+    const userAgent = req.headers.get("user-agent") || null;
     const endpoint = "agreement_acceptance";
     const rateKey = `${email}|${ip}`;
 
