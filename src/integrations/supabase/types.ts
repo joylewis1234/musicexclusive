@@ -153,24 +153,36 @@ export type Database = {
           accepted_at: string
           agreement_version: string
           artist_id: string
+          artist_name: string | null
           id: string
           ip_address: string | null
+          legal_name: string | null
+          pdf_storage_key: string | null
+          signed_at: string | null
           user_agent: string | null
         }
         Insert: {
           accepted_at?: string
           agreement_version: string
           artist_id: string
+          artist_name?: string | null
           id?: string
           ip_address?: string | null
+          legal_name?: string | null
+          pdf_storage_key?: string | null
+          signed_at?: string | null
           user_agent?: string | null
         }
         Update: {
           accepted_at?: string
           agreement_version?: string
           artist_id?: string
+          artist_name?: string | null
           id?: string
           ip_address?: string | null
+          legal_name?: string | null
+          pdf_storage_key?: string | null
+          signed_at?: string | null
           user_agent?: string | null
         }
         Relationships: []
