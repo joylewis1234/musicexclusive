@@ -10,6 +10,7 @@ import {
 import {
   useAudioPlayer,
   type LoadTrackParams,
+  type LoadPaidStreamParams,
   type UseAudioPlayerReturn,
 } from "@/hooks/useAudioPlayer";
 
@@ -37,12 +38,16 @@ interface StartPreviewParams {
   onComplete?: () => void;
 }
 
-interface AudioPlayerContextValue extends UseAudioPlayerReturn {
+type LoadPaidStreamWithMeta = LoadPaidStreamParams & Partial<TrackMeta>;
+
+interface AudioPlayerContextValue
+  extends Omit<UseAudioPlayerReturn, "loadPaidStream"> {
   currentTrackMeta: TrackMeta | null;
   startPaidTrack: (params: LoadTrackParams & TrackMeta) => Promise<void>;
   startPreview: (params: StartPreviewParams) => Promise<void>;
   stopPreview: () => void;
   previewState: PreviewState;
+  loadPaidStream: (params: LoadPaidStreamWithMeta) => void;
 }
 
 const AudioPlayerContext = createContext<AudioPlayerContextValue | null>(null);
@@ -57,6 +62,7 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
   const {
     stop: playerStop,
     loadTrack: playerLoadTrack,
+    loadPaidStream: playerLoadPaidStream,
     play: playerPlay,
     seek: playerSeek,
     currentTrack: playerCurrentTrack,
@@ -120,6 +126,19 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
       });
     },
     [playerStop, playerLoadTrack, stopPreview]
+  );
+
+  const loadPaidStream = useCallback(
+    (params: LoadPaidStreamWithMeta) => {
+      setCurrentTrackMeta({
+        trackId: params.trackId,
+        trackTitle: params.trackTitle,
+        artistName: params.artistName,
+        artworkUrl: params.artworkUrl,
+      });
+      playerLoadPaidStream(params);
+    },
+    [playerLoadPaidStream]
   );
 
   const startPreview = useCallback(
@@ -213,12 +232,21 @@ export const AudioPlayerProvider = ({ children }: { children: ReactNode }) => {
       startPreview,
       stopPreview,
       previewState,
+      loadPaidStream,
     }),
     // We spread player props but only need to re-create when specific values change.
     // Using player here is intentional — it includes state values (isPlaying, etc.)
     // that consumers need. The key fix is that startPaidTrack/startPreview/stopPreview
     // are now stable callbacks that don't depend on the player object reference.
-    [player, currentTrackMeta, startPaidTrack, startPreview, stopPreview, previewState]
+    [
+      player,
+      currentTrackMeta,
+      startPaidTrack,
+      startPreview,
+      stopPreview,
+      previewState,
+      loadPaidStream,
+    ]
   );
 
   return (

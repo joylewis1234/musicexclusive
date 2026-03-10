@@ -202,6 +202,47 @@ Deno.serve(async (req) => {
     // ── Success ──
     console.log(`COMPLETE: done key=${key}`);
 
+    // ── HLS transcode enqueue (audio uploads only) ──
+    if (key.includes("/audio/")) {
+      const hlsQueueProducerUrl = Deno.env.get("HLS_QUEUE_PRODUCER_URL");
+      if (!hlsQueueProducerUrl) {
+        console.warn("COMPLETE: HLS_QUEUE_PRODUCER_URL not set, skipping enqueue");
+      } else {
+        try {
+          const parts = key.split("/");
+          const artistIdx = parts.indexOf("artists");
+          const audioIdx = parts.indexOf("audio");
+          const artistId = artistIdx >= 0 ? parts[artistIdx + 1] : null;
+          const fileName = audioIdx >= 0 ? parts[audioIdx + 1] : null;
+          const trackId = fileName ? fileName.split(".")[0] : null;
+          if (!artistId || !trackId) {
+            console.warn("COMPLETE: could not parse artistId/trackId from key", key);
+          } else {
+            const token = Deno.env.get("HLS_QUEUE_PRODUCER_TOKEN");
+            const headers: Record<string, string> = { "Content-Type": "application/json" };
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const enqueueResp = await fetch(hlsQueueProducerUrl, {
+              method: "POST",
+              headers,
+              body: JSON.stringify({
+                trackId,
+                artistId,
+                inputKey: key,
+              }),
+            });
+            if (!enqueueResp.ok) {
+              const body = await enqueueResp.text();
+              console.warn("COMPLETE: HLS enqueue failed", enqueueResp.status, body.slice(0, 200));
+            } else {
+              console.log("COMPLETE: HLS enqueue ok", { trackId });
+            }
+          }
+        } catch (enqueueErr) {
+          console.warn("COMPLETE: HLS enqueue error", enqueueErr);
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ key, stage: "done" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }

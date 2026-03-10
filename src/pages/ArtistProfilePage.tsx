@@ -80,6 +80,7 @@ const ArtistProfilePage = () => {
   const [chargedForSession, setChargedForSession] = useState(false);
   const [autoPlay, setAutoPlay] = useState(false);
   const [autoStreamRequested, setAutoStreamRequested] = useState(false);
+  const [paidStreamData, setPaidStreamData] = useState<{ hlsUrl: string; sessionId?: string } | null>(null);
   const { isPlaying: isAudioPlaying } = useSharedAudioPlayer();
   
   const trackRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -220,6 +221,7 @@ const ArtistProfilePage = () => {
     const profile = profileOverride || artistProfile;
     setChargedForSession(false);
     setAutoPlay(false);
+    setPaidStreamData(null);
     setSelectedTrack({
       id: track.id,
       title: track.title,
@@ -300,6 +302,9 @@ const ArtistProfilePage = () => {
     if (result.success) {
       refetchCredits();
       setChargedForSession(true);
+      if (result.hlsUrl) {
+        setPaidStreamData({ hlsUrl: result.hlsUrl, sessionId: result.sessionId });
+      }
       setAutoPlay(true);
     } else if (result.requiresCredits) {
       throw new Error("Insufficient credits");
@@ -315,6 +320,7 @@ const ArtistProfilePage = () => {
   // Track ended — reset charge flag so next play charges again
   const handleTrackEnded = useCallback(() => {
     setChargedForSession(false);
+    setPaidStreamData(null);
   }, []);
 
   const handleBack = () => {
@@ -408,6 +414,7 @@ const ArtistProfilePage = () => {
           autoPlay={autoPlay}
           onAutoPlayConsumed={() => setAutoPlay(false)}
           onTrackEnded={handleTrackEnded}
+          paidStreamData={paidStreamData}
         />
       </PlayerErrorBoundary>
 

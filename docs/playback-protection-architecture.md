@@ -7,8 +7,9 @@ Protect audio from direct download by using short‑lived playback sessions, HLS
 ## Components
 
 - **Client**: `useAudioPlayer` with `hls.js` (or native HLS on Safari), `ExclusiveSongCard` (artist dashboard: full track + hook preview playback), `CompactVaultPlayer` (fan profile: receives `paidStreamData` from charge flow)
-- **Edge Function**: `charge-stream` (primary entry point for fan paid streams — mints session JWT and returns `hlsUrl` directly), `mint-playback-url` (artist dashboard, replay, and on-demand signed URLs)
+- **Edge Function**: `charge-stream` (primary entry point for fan paid streams — mints session JWT and returns `hlsUrl` directly), `mint-playback-url` (artist dashboard, replay, and on-demand signed URLs), `complete-multipart-upload` (enqueues HLS transcode jobs)
 - **Worker**: `playback-guard` (Cloudflare Worker)
+- **Queue**: `hls-transcode-queue` (Cloudflare Queue for HLS jobs)
 - **Storage**: R2 bucket
   - `artists/{artistId}/audio/` for raw uploads
   - `hls/{trackId}/` for HLS playlists/segments
@@ -59,3 +60,13 @@ Protect audio from direct download by using short‑lived playback sessions, HLS
 - 200 with valid token.
 - Playlist returns `#EXTM3U`.
 - Segment URLs load from Worker.
+
+Below is a Cloudflare‑only queue pipeline skeleton. It’s designed to write HLS to hls/{trackId}/... in R2, matching your existing worker + charge-stream URLs.
+1) Queue Producer (Worker)
+export interface Env {  HLS_TRANSCODE_QUEUE: Queue;}interface HlsJob {  trackId: string;  artistId: string;  inputKey: string; // e.g. artists/{artistId}/audio/{trackId}.mp3}export default {  async fetch(req: Request, env: Env): Promise<Response> {    if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });    const body = (await req.json()) as Partial<HlsJob>;    if (!body.trackId || !body.artistId || !body.inputKey) {      return new Response("Missing job fields", { status: 400 });    }    await env.HLS_TRANSCODE_QUEUE.send({      trackId: body.trackId,      artistId: body.artistId,      inputKey: body.inputKey,    });    return new Response(JSON.stringify({ ok: true }), {      status: 200,      headers: { "Content-Type": "application/json" },    });  },};
+2) Queue Consumer (Transcode Worker, FFmpeg WASM skeleton)
+export interface Env {  R2_BUCKET: R2Bucket;}interface HlsJob {  trackId: string;  artistId: string;  inputKey: string;}// Pseudocode placeholders for FFmpeg WASMasync function transcodeToHlsWasm(inputBytes: Uint8Array) {  // TODO: integrate FFmpeg WASM (e.g. @ffmpeg/ffmpeg build compatible with Workers)  // Must output: master.m3u8, variant.m3u8, seg_000.ts, ...  return {    "master.m3u8": new Uint8Array(),    "variant.m3u8": new Uint8Array(),    "seg_000.ts": new Uint8Array(),  };}export default {  async queue(batch: MessageBatch<HlsJob>, env: Env): Promise<void> {    for (const msg of batch.messages) {      const { trackId, inputKey } = msg.body;      const inputObj = await env.R2_BUCKET.get(inputKey);      if (!inputObj) {        msg.retry(); // raw audio missing        continue;      }      const inputBytes = new Uint8Array(await inputObj.arrayBuffer());      const outputs = await transcodeToHlsWasm(inputBytes);      const base = `hls/${trackId}/`;      for (const [name, bytes] of Object.entries(outputs)) {        await env.R2_BUCKET.put(`${base}${name}`, bytes, {          httpMetadata: {            contentType: name.endsWith(".m3u8")              ? "application/vnd.apple.mpegurl"              : "video/mp2t",          },        });      }      msg.ack();    }  },};
+3) Wrangler bindings (producer)
+name = "hls-queue-producer"main = "producer.js"compatibility_date = "2026-02-22"[[queues.producers]]binding = "HLS_TRANSCODE_QUEUE"queue = "hls-transcode-queue"
+4) Wrangler bindings (consumer)
+name = "hls-queue-consumer"main = "consumer.js"compatibility_date = "2026-02-22"[[queues.consumers]]queue = "hls-transcode-queue"max_batch_size = 1max_batch_timeout = 30[[r2_buckets]]binding = "R2_BUCKET"bucket_name = "musicexclusive-audio"

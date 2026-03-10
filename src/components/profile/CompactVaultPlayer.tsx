@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { Play, Pause, Heart, Share2, Loader2, AlertCircle, Crown, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
@@ -27,6 +27,8 @@ interface CompactVaultPlayerProps {
   onAutoPlayConsumed?: () => void;
   /** Called when the track finishes playing (song completed) */
   onTrackEnded?: () => void;
+  /** Provided after a successful charge-stream call */
+  paidStreamData?: { hlsUrl: string; sessionId?: string } | null;
 }
 
 export const CompactVaultPlayer = ({
@@ -41,6 +43,7 @@ export const CompactVaultPlayer = ({
   autoPlay = false,
   onAutoPlayConsumed,
   onTrackEnded,
+  paidStreamData = null,
 }: CompactVaultPlayerProps) => {
   const {
     isPlaying,
@@ -49,22 +52,50 @@ export const CompactVaultPlayer = ({
     error,
     play,
     pause,
-    startPaidTrack,
+    loadPaidStream,
     lastEndedTrackId,
   } = useSharedAudioPlayer();
 
-  // Load track when it changes — fetch signed URL via edge function
+  const lastPaidStreamRef = useRef<{
+    trackId: string;
+    hlsUrl: string;
+    sessionId: string | null;
+  } | null>(null);
+
+  // Load paid stream only when charge-stream returns HLS data
   useEffect(() => {
-    if (track?.id) {
-      void startPaidTrack({
-        trackId: track.id,
-        fileType: "audio",
-        trackTitle: track.title,
-        artistName: track.artist,
-        artworkUrl: track.artworkUrl,
-      });
+    if (!track?.id || !paidStreamData?.hlsUrl) return;
+
+    const sessionId = paidStreamData.sessionId ?? null;
+    const last = lastPaidStreamRef.current;
+    if (
+      last &&
+      last.trackId === track.id &&
+      last.hlsUrl === paidStreamData.hlsUrl &&
+      last.sessionId === sessionId
+    ) {
+      return;
     }
-  }, [track?.id, track?.title, track?.artist, track?.artworkUrl, startPaidTrack]);
+
+    lastPaidStreamRef.current = {
+      trackId: track.id,
+      hlsUrl: paidStreamData.hlsUrl,
+      sessionId,
+    };
+
+    loadPaidStream({
+      trackId: track.id,
+      hlsUrl: paidStreamData.hlsUrl,
+      sessionId,
+      trackTitle: track.title,
+      artistName: track.artist,
+      artworkUrl: track.artworkUrl,
+    });
+  }, [track?.id, paidStreamData?.hlsUrl, paidStreamData?.sessionId, loadPaidStream]);
+
+  useEffect(() => {
+    lastPaidStreamRef.current = null;
+  }, [track?.id]);
 
   // Detect song completion from the shared audio engine
   useEffect(() => {
