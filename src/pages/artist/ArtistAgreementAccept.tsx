@@ -1,58 +1,99 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useState, useRef, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { ChevronLeft, Loader2, Crown } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ChevronLeft, Loader2, Crown, ShieldCheck, Clock, Coins, DollarSign } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { useArtistAgreement } from "@/hooks/useArtistAgreement";
-import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import AgreementTextContent from "@/components/artist/agreement/AgreementTextContent";
+
+const signatureSchema = z.object({
+  legalName: z.string().trim().min(1, "Legal name is required").max(200),
+  artistName: z.string().trim().min(1, "Artist / stage name is required").max(200),
+  agreedTerms: z.literal(true, {
+    errorMap: () => ({ message: "You must agree to the Artist Participation Agreement" }),
+  }),
+  agreedAge: z.literal(true, {
+    errorMap: () => ({ message: "You must confirm you are 18 or older" }),
+  }),
+});
+
+type SignatureFormValues = z.infer<typeof signatureSchema>;
 
 const ArtistAgreementAccept = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { acceptAgreement, isSubmitting, lastError } = useArtistAgreement();
-  const [agreed, setAgreed] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleContinue = async () => {
-    if (!agreed) {
-      toast.error("Please agree to the Artist Participation Agreement to continue");
-      return;
-    }
+  const [scrollPercent, setScrollPercent] = useState(0);
+  const [hasScrolled90, setHasScrolled90] = useState(false);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-    setSaveError(null);
-    const success = await acceptAgreement();
+  const form = useForm<SignatureFormValues>({
+    resolver: zodResolver(signatureSchema),
+    mode: "onChange",
+    defaultValues: {
+      legalName: "",
+      artistName: "",
+      agreedTerms: undefined as unknown as true,
+      agreedAge: undefined as unknown as true,
+    },
+  });
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const pct = Math.round(
+      (el.scrollTop / (el.scrollHeight - el.clientHeight)) * 100
+    );
+    setScrollPercent(Math.min(pct, 100));
+    if (pct >= 90) setHasScrolled90(true);
+  }, []);
+
+  const todayFormatted = new Date().toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const onSubmit = async (values: SignatureFormValues) => {
+    if (!hasScrolled90) return;
+    setSubmitError(null);
+
+    const success = await acceptAgreement({
+      legalName: values.legalName,
+      artistName: values.artistName,
+    });
+
     if (success) {
-      toast.success("Agreement accepted! You can now upload your music.");
-      navigate("/artist/dashboard");
+      setShowConfirmation(true);
     } else {
-      const errorMsg = lastError || "Failed to save agreement. Please try again.";
-      setSaveError(errorMsg);
-      toast.error(errorMsg);
+      setSubmitError(
+        lastError || "Something went wrong. Please try again or contact support@musicexclusive.co"
+      );
     }
   };
 
-  const handleBack = () => {
-    navigate(-1);
-  };
+  const handleBack = () => navigate(-1);
 
-  const bulletPoints = [
-    {
-      icon: ShieldCheck,
-      text: "You confirm you own or control the rights to your music + artwork"
-    },
-    {
-      icon: Clock,
-      text: "Your releases are exclusive on Music Exclusive for at least 3 weeks"
-    },
-    {
-      icon: Coins,
-      text: "Fans stream using credits (1 credit = $0.20)"
-    },
-    {
-      icon: DollarSign,
-      text: "You earn $0.10 per verified stream (paid weekly on Mondays)"
-    }
-  ];
+  const canSubmit =
+    hasScrolled90 && form.formState.isValid && !isSubmitting;
 
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
@@ -71,136 +112,176 @@ const ArtistAgreementAccept = () => {
         </button>
       </header>
 
-      <main className="relative container max-w-lg mx-auto px-4 pt-8 pb-8">
-        {/* Header with crown */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-amber-500/30 to-primary/20 mb-4 shadow-lg shadow-amber-500/20">
-            <Crown className="w-10 h-10 text-amber-400" />
+      <main className="relative container max-w-lg mx-auto px-4 pt-4 pb-8">
+        {/* Title */}
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-amber-500/30 to-primary/20 mb-3 shadow-lg shadow-amber-500/20">
+            <Crown className="w-8 h-8 text-amber-400" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-display font-bold tracking-wide mb-2">
-            <span className="text-foreground">Welcome, Artist</span>{" "}
-            <span className="text-amber-400">👑</span>
+          <h1 className="text-2xl md:text-3xl font-display font-bold tracking-wide mb-1">
+            Artist Participation Agreement
           </h1>
-          <p className="text-lg font-display text-primary">
-            Let's Make It Official
+          <p className="text-sm text-muted-foreground">
+            Please read the full agreement before signing
           </p>
         </div>
 
-        <GlowCard glowColor="gradient" className="p-0 backdrop-blur-xl">
-          <div className="p-7 md:p-9">
-          {/* Intro Text */}
-          <p className="text-sm md:text-base font-body text-muted-foreground mb-4 leading-relaxed">
-            <span className="text-primary font-semibold">Music Exclusive</span> is a pre-release platform built to pay artists more and reward real fans.
-          </p>
-          <p className="text-sm md:text-base font-body text-muted-foreground mb-6 leading-relaxed">
-            Before you upload, we need your agreement to protect your work and the platform.
-          </p>
-
-          {/* Glowing Divider */}
-          <div className="relative h-px w-full mb-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent blur-sm" />
+        {/* Scroll progress */}
+        <div className="mb-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+            <span>Reading progress</span>
+            <span>{scrollPercent}%</span>
           </div>
+          <Progress value={scrollPercent} className="h-2" />
+        </div>
 
-          {/* Bullet Points */}
-          <div className="space-y-5 mb-8">
-            {bulletPoints.map((item, index) => (
-              <div key={index} className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/30 to-purple-600/20 flex items-center justify-center shrink-0 shadow-lg shadow-primary/10">
-                  <item.icon className="w-5 h-5 text-primary" />
-                </div>
-                <p className="text-sm md:text-base font-body text-foreground pt-2">
-                  {item.text}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Glowing Divider */}
-          <div className="relative h-px w-full mb-6">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent blur-sm" />
-          </div>
-
-          {/* Checkbox Agreement */}
-          <div 
-            className="rounded-xl bg-background/60 border border-primary/20 p-4 md:p-5 cursor-pointer transition-all hover:border-primary/40 hover:bg-background/80 active:scale-[0.99]"
-            onClick={() => setAgreed(!agreed)}
+        {/* Scrollable agreement text */}
+        <GlowCard glowColor="gradient" className="p-0 backdrop-blur-xl mb-4">
+          <div
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="max-h-[520px] overflow-y-auto p-5 md:p-7 scrollbar-thin"
+            style={{ scrollbarWidth: "thin" }}
           >
-            <div className="flex items-start gap-4">
-              <Checkbox
-                id="agree-artist-terms"
-                checked={agreed}
-                onCheckedChange={(checked) => setAgreed(checked === true)}
-                className="mt-1 w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-              />
-              <label
-                htmlFor="agree-artist-terms"
-                className="text-sm md:text-base font-body text-foreground leading-relaxed cursor-pointer"
-              >
-                I agree to the{" "}
-                <Link
-                  to="/artist-agreement?from=artist-agreement-accept"
-                  className="text-primary hover:underline font-semibold"
-                  target="_blank"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Artist Participation Agreement
-                </Link>{" "}
-                and confirm I own or control all rights to the Content I upload.
-              </label>
-            </div>
-
-            {/* Additional Policy Links */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-4 ml-9">
-              <Link 
-                to="/terms" 
-                className="hover:text-primary hover:underline transition-colors" 
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Terms of Use
-              </Link>
-              <span className="text-primary/30">•</span>
-              <Link 
-                to="/dmca" 
-                className="hover:text-primary hover:underline transition-colors" 
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
-              >
-                Copyright & DMCA
-              </Link>
-            </div>
-          </div>
+            <AgreementTextContent />
           </div>
         </GlowCard>
 
-        {/* Error Banner */}
-        {saveError && (
-          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
-            <p className="text-destructive text-sm font-semibold mb-1">Could not save agreement</p>
-            <p className="text-muted-foreground text-xs">{saveError}</p>
-          </div>
+        {/* Helper text */}
+        {!hasScrolled90 && (
+          <p className="text-center text-xs text-amber-400 mb-4 animate-pulse">
+            Scroll to the bottom to unlock the signature block
+          </p>
         )}
 
-        {/* Action Buttons */}
-        <div className="space-y-3 mt-6">
-          <Button
-            size="lg"
-            className="w-full h-14 text-base font-display uppercase tracking-wider bg-gradient-to-r from-amber-500 to-primary hover:from-amber-500/90 hover:to-primary/90 shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98]"
-            onClick={handleContinue}
-            disabled={!agreed || isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              "I Agree & Continue"
-            )}
-          </Button>
+        {/* Signature Block */}
+        <div
+          className={`transition-opacity duration-500 ${
+            hasScrolled90
+              ? "opacity-100"
+              : "opacity-40 pointer-events-none"
+          }`}
+        >
+          <GlowCard glowColor="gradient" className="p-0 backdrop-blur-xl">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="p-5 md:p-7 space-y-5">
+              <h2 className="text-lg font-display font-semibold text-foreground">
+                Electronic Signature
+              </h2>
 
+              {/* Legal Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="legalName">Legal Full Name *</Label>
+                <Input
+                  id="legalName"
+                  placeholder="Type your full legal name as your electronic signature"
+                  {...form.register("legalName")}
+                />
+                {form.formState.errors.legalName && (
+                  <p className="text-xs text-destructive">{form.formState.errors.legalName.message}</p>
+                )}
+              </div>
+
+              {/* Artist Name */}
+              <div className="space-y-1.5">
+                <Label htmlFor="artistName">Artist / Stage Name *</Label>
+                <Input
+                  id="artistName"
+                  placeholder="Your artist or stage name"
+                  {...form.register("artistName")}
+                />
+                {form.formState.errors.artistName && (
+                  <p className="text-xs text-destructive">{form.formState.errors.artistName.message}</p>
+                )}
+              </div>
+
+              {/* Email (read-only) */}
+              <div className="space-y-1.5">
+                <Label>Email</Label>
+                <Input
+                  value={user?.email || ""}
+                  readOnly
+                  className="bg-muted/50 cursor-not-allowed"
+                />
+              </div>
+
+              {/* Signature Date (read-only) */}
+              <div className="space-y-1.5">
+                <Label>Signature Date</Label>
+                <Input
+                  value={todayFormatted}
+                  readOnly
+                  className="bg-muted/50 cursor-not-allowed"
+                />
+              </div>
+
+              {/* Glowing Divider */}
+              <div className="relative h-px w-full">
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary/50 to-transparent" />
+              </div>
+
+              {/* Checkbox 1 */}
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="agreedTerms"
+                  checked={form.watch("agreedTerms") === true}
+                  onCheckedChange={(checked) =>
+                    form.setValue("agreedTerms", checked === true ? true : (undefined as unknown as true), {
+                      shouldValidate: true,
+                    })
+                  }
+                  className="mt-1 w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                />
+                <label htmlFor="agreedTerms" className="text-sm text-foreground leading-relaxed cursor-pointer">
+                  I have read and agree to the full Music Exclusive Artist Participation Agreement including all Schedules.
+                </label>
+              </div>
+
+              {/* Checkbox 2 */}
+              <div className="flex items-start gap-3">
+                <Checkbox
+                  id="agreedAge"
+                  checked={form.watch("agreedAge") === true}
+                  onCheckedChange={(checked) =>
+                    form.setValue("agreedAge", checked === true ? true : (undefined as unknown as true), {
+                      shouldValidate: true,
+                    })
+                  }
+                  className="mt-1 w-5 h-5 border-2 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                />
+                <label htmlFor="agreedAge" className="text-sm text-foreground leading-relaxed cursor-pointer">
+                  I confirm I am 18 years of age or older, or have legal parental or guardian consent to enter this agreement.
+                </label>
+              </div>
+
+              {/* Submit */}
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full h-14 text-base font-display uppercase tracking-wider bg-gradient-to-r from-amber-500 to-primary hover:from-amber-500/90 hover:to-primary/90 shadow-lg shadow-amber-500/20 transition-all active:scale-[0.98]"
+                disabled={!canSubmit}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Signing...
+                  </>
+                ) : (
+                  "Sign & Continue"
+                )}
+              </Button>
+
+              {/* Error banner */}
+              {submitError && (
+                <div className="p-4 bg-destructive/10 border border-destructive/30 rounded-xl">
+                  <p className="text-destructive text-sm">{submitError}</p>
+                </div>
+              )}
+            </form>
+          </GlowCard>
+        </div>
+
+        {/* Back button */}
+        <div className="mt-4">
           <Button
             variant="ghost"
             size="lg"
@@ -212,6 +293,34 @@ const ArtistAgreementAccept = () => {
           </Button>
         </div>
       </main>
+
+      {/* Confirmation Modal */}
+      <Dialog open={showConfirmation} onOpenChange={() => {}}>
+        <DialogContent
+          className="sm:max-w-md"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-xl font-display">
+              Agreement Signed ✓
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground pt-2">
+              Your signed agreement has been recorded. You can download a copy anytime from your Artist Dashboard.
+            </DialogDescription>
+          </DialogHeader>
+          <Button
+            size="lg"
+            className="w-full mt-4 bg-gradient-to-r from-amber-500 to-primary"
+            onClick={() => {
+              setShowConfirmation(false);
+              navigate("/artist/dashboard");
+            }}
+          >
+            Continue to Dashboard
+          </Button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
