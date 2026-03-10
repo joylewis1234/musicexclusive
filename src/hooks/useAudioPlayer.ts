@@ -62,6 +62,21 @@ interface CachedEntry {
   sessionId?: string | null;
 }
 
+const hlsConfig = {
+  enableWorker: true,
+  lowLatencyMode: false,
+  manifestLoadingTimeOut: 4000,
+  manifestLoadingMaxRetry: 2,
+  manifestLoadingRetryDelay: 500,
+  manifestLoadingMaxRetryTimeout: 2000,
+  levelLoadingTimeOut: 4000,
+  levelLoadingMaxRetry: 2,
+  levelLoadingRetryDelay: 500,
+  fragLoadingTimeOut: 6000,
+  fragLoadingMaxRetry: 2,
+  fragLoadingRetryDelay: 500,
+};
+
 export function useAudioPlayer(): UseAudioPlayerReturn {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hlsRef = useRef<Hls | null>(null);
@@ -319,7 +334,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
           try {
             const Hls = await loadHls();
             if (Hls.isSupported()) {
-              const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+              const hls = new Hls(hlsConfig);
               hlsRef.current = hls;
 
               hls.on(Hls.Events.ERROR, (_event, data) => {
@@ -477,7 +492,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       void loadHls()
         .then((Hls) => {
           if (Hls.isSupported()) {
-            const hls = new Hls({ enableWorker: true, lowLatencyMode: false });
+            const hls = new Hls(hlsConfig);
             hlsRef.current = hls;
 
             hls.on(Hls.Events.ERROR, (_event, data) => {

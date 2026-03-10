@@ -1,0 +1,14 @@
+name = "r2-playback-gate"
+main = "worker.js"
+compatibility_date = "2026-02-22"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "musicexclusive-audio"
+name = "r2-playback-gate"
+main = "worker.js"
+compatibility_date = "2026-02-22"
+
+r2_buckets = [
+  { binding = "R2_BUCKET", bucket_name = "musicexclusive-audio" }
+]

@@ -1,0 +1,17 @@
+name = "hls-queue-producer"
+main = "worker.js"
+compatibility_date = "2026-02-22"
+
+[[queues.producers]]
+binding = "HLS_TRANSCODE_QUEUE"
+queue = "hls-transcode-queue"
+
+[vars]
+# HLS_QUEUE_PRODUCER_TOKEN = "<your-secret-token>"
+name = "hls-queue-producer"
+main = "worker.js"
+compatibility_date = "2026-02-22"
+
+[[queues.producers]]
+binding = "HLS_TRANSCODE_QUEUE"
+queue = "hls-transcode-queue"
