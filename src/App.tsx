@@ -133,6 +133,7 @@ const AdminHealthCheck = React.lazy(
 const AdminTestTools = React.lazy(() => import("./pages/admin/AdminTestTools"));
 const AdminWaitlist = React.lazy(() => import("./pages/admin/AdminWaitlist"));
 const AdminFanWaitlist = React.lazy(() => import("./pages/admin/AdminFanWaitlist"));
+const AdminCashBonusTracker = React.lazy(() => import("./pages/admin/AdminCashBonusTracker"));
 
 const App = () => {
   // Global safety net for unhandled promise rejections (prevents white screen)
