@@ -1,9 +1,12 @@
 
-## Completed: Double-Mint Elimination (2026-03-03)
 
-**What was done:**
-- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
-- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
-- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
-- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
-- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
+## Plan: Create Implementation Blueprint Document
+
+Create a single markdown file at `docs/cash-bonus-exclusive-charts-blueprint.md` containing the full implementation blueprint the user provided. This is a documentation-only task with no code or schema changes.
+
+### What will be created
+- **File**: `docs/cash-bonus-exclusive-charts-blueprint.md`
+- **Contents**: The complete blueprint covering DB schema, edge functions, Lovable prompts, edge cases, build order, public charts page specs, and technical notes — exactly as specified.
+
+No database migrations, no edge functions, no UI changes. Just the reference document.
+
