@@ -63,15 +63,21 @@ const ChartsPage = () => {
     queryKey: ["charts", activeGenre, currentYear],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("charts_bonus_cycles")
-        .select("id, artist_id, cumulative_streams, rank, prize_usd, status, artist_profiles!inner(artist_name, country_code)")
-        .eq("genre", activeGenre)
-        .eq("cycle_year", currentYear)
-        .neq("status", "disqualified")
-        .order("cumulative_streams", { ascending: false });
+        .rpc("get_public_charts", { p_genre: activeGenre, p_year: currentYear });
 
       if (error) throw error;
-      return (data ?? []) as unknown as ChartRow[];
+      return (data ?? []).map((row: any) => ({
+        id: row.id,
+        artist_id: row.artist_id,
+        cumulative_streams: row.cumulative_streams,
+        rank: row.rank,
+        prize_usd: row.prize_usd,
+        status: row.status,
+        artist_profiles: {
+          artist_name: row.artist_name,
+          country_code: row.country_code,
+        },
+      })) as ChartRow[];
     },
     staleTime: 5 * 60 * 1000,
   });

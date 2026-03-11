@@ -1738,6 +1738,19 @@ export type Database = {
           like_count: number
         }[]
       }
+      get_public_charts: {
+        Args: { p_genre: string; p_year: number }
+        Returns: {
+          artist_id: string
+          artist_name: string
+          country_code: string
+          cumulative_streams: number
+          id: string
+          prize_usd: number
+          rank: number
+          status: string
+        }[]
+      }
       get_public_preview_audio_key: {
         Args: { p_track_id: string }
         Returns: string
