@@ -359,6 +359,7 @@ export type Database = {
           artist_name: string
           avatar_url: string | null
           bio: string | null
+          country_code: string | null
           created_at: string
           genre: string | null
           id: string
@@ -376,6 +377,7 @@ export type Database = {
           artist_name: string
           avatar_url?: string | null
           bio?: string | null
+          country_code?: string | null
           created_at?: string
           genre?: string | null
           id?: string
@@ -393,6 +395,7 @@ export type Database = {
           artist_name?: string
           avatar_url?: string | null
           bio?: string | null
+          country_code?: string | null
           created_at?: string
           genre?: string | null
           id?: string
@@ -455,6 +458,154 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      bonus_milestones: {
+        Row: {
+          artist_id: string
+          created_at: string
+          disqualified_at: string | null
+          disqualified_reason: string | null
+          id: string
+          milestone: number
+          paid_at: string | null
+          payout_batch_id: string | null
+          prize_usd: number
+          reached_at: string | null
+          status: string
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string
+          disqualified_at?: string | null
+          disqualified_reason?: string | null
+          id?: string
+          milestone: number
+          paid_at?: string | null
+          payout_batch_id?: string | null
+          prize_usd: number
+          reached_at?: string | null
+          status?: string
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string
+          disqualified_at?: string | null
+          disqualified_reason?: string | null
+          id?: string
+          milestone?: number
+          paid_at?: string | null
+          payout_batch_id?: string | null
+          prize_usd?: number
+          reached_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonus_milestones_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "admin_stream_report_view"
+            referencedColumns: ["artist_profile_id"]
+          },
+          {
+            foreignKeyName: "bonus_milestones_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artist_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_milestones_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "public_artist_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bonus_milestones_payout_batch_id_fkey"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payout_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      charts_bonus_cycles: {
+        Row: {
+          artist_id: string
+          created_at: string
+          cumulative_streams: number
+          cycle_year: number
+          disqualified_at: string | null
+          disqualified_reason: string | null
+          genre: string
+          id: string
+          paid_at: string | null
+          payout_batch_id: string | null
+          prize_usd: number | null
+          rank: number | null
+          status: string
+        }
+        Insert: {
+          artist_id: string
+          created_at?: string
+          cumulative_streams?: number
+          cycle_year: number
+          disqualified_at?: string | null
+          disqualified_reason?: string | null
+          genre: string
+          id?: string
+          paid_at?: string | null
+          payout_batch_id?: string | null
+          prize_usd?: number | null
+          rank?: number | null
+          status?: string
+        }
+        Update: {
+          artist_id?: string
+          created_at?: string
+          cumulative_streams?: number
+          cycle_year?: number
+          disqualified_at?: string | null
+          disqualified_reason?: string | null
+          genre?: string
+          id?: string
+          paid_at?: string | null
+          payout_batch_id?: string | null
+          prize_usd?: number | null
+          rank?: number | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "charts_bonus_cycles_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "admin_stream_report_view"
+            referencedColumns: ["artist_profile_id"]
+          },
+          {
+            foreignKeyName: "charts_bonus_cycles_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "artist_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charts_bonus_cycles_artist_id_fkey"
+            columns: ["artist_id"]
+            isOneToOne: false
+            referencedRelation: "public_artist_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "charts_bonus_cycles_payout_batch_id_fkey"
+            columns: ["payout_batch_id"]
+            isOneToOne: false
+            referencedRelation: "payout_batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       credit_ledger: {
         Row: {
