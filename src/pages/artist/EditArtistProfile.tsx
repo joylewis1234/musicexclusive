@@ -131,6 +131,7 @@ const EditArtistProfile = () => {
         setTiktokUrl(profile.tiktok_url || "");
         setYoutubeUrl(profile.youtube_url || "");
         setTwitterUrl(profile.twitter_url || "");
+        setCountryCode(profile.country_code || "");
       } else {
         const { data: app } = await supabase
           .from("artist_applications")
