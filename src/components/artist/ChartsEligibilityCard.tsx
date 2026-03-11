@@ -13,8 +13,8 @@ interface Milestone {
 const MILESTONES = [
   { milestone: 1000, prize: 25, label: "1K streams" },
   { milestone: 2500, prize: 50, label: "2.5K streams" },
-  { milestone: 5000, prize: 100, label: "5K streams" },
-  { milestone: 10000, prize: 125, label: "10K streams" },
+  { milestone: 5000, prize: 75, label: "5K streams" },
+  { milestone: 10000, prize: 150, label: "10K streams" },
 ];
 
 export const ChartsEligibilityCard = ({ artistProfileId }: { artistProfileId: string }) => {
