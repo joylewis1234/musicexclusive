@@ -23,8 +23,8 @@ A one-time, non-repeatable performance incentive that rewards artists for hittin
 | --- | --- |
 | 1,000 Verified Streams | $25.00 |
 | 2,500 Verified Streams | $50.00 |
-| 5,000 Verified Streams | $100.00 |
-| 10,000 Verified Streams | $125.00 (Program Complete) |
+| 5,000 Verified Streams | $75.00 |
+| 10,000 Verified Streams | $150.00 (Program Complete) |
 | Maximum Total | $300.00 per artist |
 
 Key rules:
@@ -578,7 +578,7 @@ If `cash_bonus_complete = false`:
 - Title: Your Path to Exclusive Charts
 - Body: Complete the Cash Bonus Program to unlock eligibility.
 - 4 milestone checkmarks (green=paid, gray=not reached):
-  - 1,000 streams ($25) | 2,500 streams ($50) | 5,000 streams ($100) | 10,000 streams ($125)
+  - 1,000 streams ($25) | 2,500 streams ($50) | 5,000 streams ($75) | 10,000 streams ($150)
 - Fetch status from `bonus_milestones` where artist_id = current user
 
 Change 2 — Fan Discovery Page
@@ -595,51 +595,64 @@ React Query for milestone fetch. Match existing card styles.
 ## Section 8 — Charts Page Technical Notes for Developer
 
 ### 8.1 Data Flow for /charts Page
-The /charts page is read-only. It reads from `charts_bonus_cycles` joined to `artist_profiles`. Data is populated by the update-charts-standings nightly cron (Section 3.4). No writes happen from this page.
+The /charts page is read-only. It calls the `get_public_charts` SECURITY DEFINER RPC function, which joins `charts_bonus_cycles` with `artist_profiles` server-side (bypassing artist_profiles RLS). Data is populated by the update-charts-standings nightly cron (Section 3.4). No writes happen from this page.
 
 | Data Need | Source |
 | --- | --- |
-| Artist display name | artist_profiles.artist_name |
-| Country flag | artist_profiles.country_code (ISO 3166-1 alpha-2) |
-| Annual streams | charts_bonus_cycles.annual_streams |
-| Qualification status | charts_bonus_cycles.is_qualified = true |
+| Artist display name | artist_profiles.artist_name (via RPC) |
+| Country flag | artist_profiles.country_code ISO 3166-1 alpha-2 (via RPC) |
+| Cumulative streams | charts_bonus_cycles.cumulative_streams |
+| Rank | charts_bonus_cycles.rank (NOT NULL = qualified) |
 | Current year filter | charts_bonus_cycles.cycle_year = current year |
 | Genre filter | charts_bonus_cycles.genre = slug |
-| Sort order | ORDER BY annual_streams DESC |
+| Sort order | ORDER BY cumulative_streams DESC |
 | Prize amounts | Derived client-side: rank 1=$500, rank 2=$250, rank 3=$100 |
 
 ### 8.2 Country Code to Flag Emoji Utility
 
 ```ts
 function countryCodeToFlag(code: string | null): string {
-  if (!code) return "🌐";
-  return code
-    .toUpperCase()
-    .split("")
-    .map((char) => String.fromCodePoint(127397 + char.charCodeAt(0)))
-    .join("");
+  if (!code || code.length !== 2) return "🌍";
+  return String.fromCodePoint(
+    ...code.toUpperCase().split("").map((c) => 0x1f1e6 + c.charCodeAt(0) - 65)
+  );
 }
 ```
 
 Examples:
 - countryCodeToFlag("US") => 🇺🇸
 - countryCodeToFlag("NG") => 🇳🇬
-- countryCodeToFlag(null) => 🌐
+- countryCodeToFlag(null) => 🌍
 
-### 8.3 Supabase Query
+### 8.3 Database Function (SECURITY DEFINER)
 
-```ts
-const { data } = await supabase
-  .from("charts_bonus_cycles")
-  .select("id, annual_streams, rank, artist_profiles(id, artist_name, country_code)")
-  .eq("genre", selectedGenreSlug)
-  .eq("cycle_year", new Date().getFullYear())
-  .eq("is_qualified", true)
-  .neq("status", "disqualified")
-  .order("annual_streams", { ascending: false });
+```sql
+CREATE OR REPLACE FUNCTION public.get_public_charts(p_genre text, p_year integer)
+RETURNS TABLE(
+  id uuid, artist_id uuid, cumulative_streams bigint,
+  rank integer, prize_usd numeric, status text,
+  artist_name text, country_code text
+)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT c.id, c.artist_id, c.cumulative_streams, c.rank, c.prize_usd, c.status,
+         a.artist_name, a.country_code
+  FROM charts_bonus_cycles c
+  JOIN artist_profiles a ON a.id = c.artist_id
+  WHERE c.genre = p_genre AND c.cycle_year = p_year
+    AND c.status = 'active' AND c.rank IS NOT NULL
+  ORDER BY c.cumulative_streams DESC;
+$$;
 ```
 
-### 8.4 React Query Key Convention
+### 8.4 Frontend Query (Supabase RPC)
+
+```ts
+const { data, error } = await supabase
+  .rpc("get_public_charts", { p_genre: activeGenre, p_year: currentYear });
+```
+
+### 8.5 React Query Key Convention
 
 ```ts
 useQuery({
@@ -649,15 +662,25 @@ useQuery({
 });
 ```
 
-### 8.5 RLS Policy — Public Read Access
+### 8.6 RLS Policy — Public Read Access
 
 ```sql
-CREATE POLICY "Public can read qualified charts"
+CREATE POLICY "Public can read active charts cycles"
   ON charts_bonus_cycles
   FOR SELECT
   TO anon, authenticated
-  USING (
-    is_qualified = true
-    AND status != 'disqualified'
-  );
+  USING (status = 'active' AND rank IS NOT NULL);
 ```
+
+Note: The direct table query is only used by admin/artist RLS policies. The public `/charts` page uses the `get_public_charts()` RPC function which bypasses `artist_profiles` RLS safely.
+
+---
+
+## Section 9 — Implementation Verification Summary
+
+All 13 steps verified and tested. Two bugs were found and fixed during verification:
+
+| Bug | Location | Fix Applied |
+| --- | --- | --- |
+| Prize mismatch (5k=$100, 10k=$125) | `ChartsEligibilityCard.tsx` | Corrected to 5k=$75, 10k=$150 |
+| Public charts broken for anon users | `ChartsPage.tsx` direct join on RLS-protected `artist_profiles` | Created `get_public_charts()` SECURITY DEFINER RPC |
