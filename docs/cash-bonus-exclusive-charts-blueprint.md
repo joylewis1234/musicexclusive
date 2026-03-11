@@ -578,7 +578,7 @@ If `cash_bonus_complete = false`:
 - Title: Your Path to Exclusive Charts
 - Body: Complete the Cash Bonus Program to unlock eligibility.
 - 4 milestone checkmarks (green=paid, gray=not reached):
-  - 1,000 streams ($25) | 2,500 streams ($50) | 5,000 streams ($100) | 10,000 streams ($125)
+  - 1,000 streams ($25) | 2,500 streams ($50) | 5,000 streams ($75) | 10,000 streams ($150)
 - Fetch status from `bonus_milestones` where artist_id = current user
 
 Change 2 — Fan Discovery Page
