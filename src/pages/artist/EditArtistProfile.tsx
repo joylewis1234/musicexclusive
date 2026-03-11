@@ -250,6 +250,7 @@ const EditArtistProfile = () => {
         tiktok_url: tiktokUrl.trim() || null,
         youtube_url: youtubeUrl.trim() || null,
         twitter_url: twitterUrl.trim() || null,
+        country_code: countryCode.trim() || null,
         updated_at: new Date().toISOString(),
       };
 
