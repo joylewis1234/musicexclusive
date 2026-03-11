@@ -73,6 +73,7 @@ const EditArtistProfile = () => {
   const [tiktokUrl, setTiktokUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [twitterUrl, setTwitterUrl] = useState("");
+  const [countryCode, setCountryCode] = useState("");
 
   // Cropper state – raw file before crop
   const [cropFile, setCropFile] = useState<File | null>(null);
