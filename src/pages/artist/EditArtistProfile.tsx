@@ -528,6 +528,48 @@ const EditArtistProfile = () => {
                       </SelectItem>
                     ))}
                   </SelectContent>
+              </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="country-code">Country (for Charts)</Label>
+                <Select value={countryCode} onValueChange={setCountryCode}>
+                  <SelectTrigger className="h-11 bg-background rounded-xl">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-card border-border z-50 max-h-60">
+                    {[
+                      { code: "US", name: "United States" },
+                      { code: "GB", name: "United Kingdom" },
+                      { code: "CA", name: "Canada" },
+                      { code: "AU", name: "Australia" },
+                      { code: "NG", name: "Nigeria" },
+                      { code: "GH", name: "Ghana" },
+                      { code: "ZA", name: "South Africa" },
+                      { code: "KE", name: "Kenya" },
+                      { code: "JM", name: "Jamaica" },
+                      { code: "MX", name: "Mexico" },
+                      { code: "BR", name: "Brazil" },
+                      { code: "CO", name: "Colombia" },
+                      { code: "AR", name: "Argentina" },
+                      { code: "DE", name: "Germany" },
+                      { code: "FR", name: "France" },
+                      { code: "ES", name: "Spain" },
+                      { code: "IT", name: "Italy" },
+                      { code: "NL", name: "Netherlands" },
+                      { code: "SE", name: "Sweden" },
+                      { code: "JP", name: "Japan" },
+                      { code: "KR", name: "South Korea" },
+                      { code: "IN", name: "India" },
+                      { code: "PH", name: "Philippines" },
+                      { code: "PR", name: "Puerto Rico" },
+                      { code: "TT", name: "Trinidad & Tobago" },
+                    ].map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code.toUpperCase().split("").map((ch) => String.fromCodePoint(127397 + ch.charCodeAt(0))).join("")} {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
                 </Select>
               </div>
 
