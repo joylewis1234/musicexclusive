@@ -13,7 +13,8 @@ import {
   BarChart3,
   Wrench,
   UserPlus,
-  Mail
+  Mail,
+  Trophy
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
