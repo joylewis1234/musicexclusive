@@ -19,6 +19,7 @@ import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { Genre } from "@/data/discoveryArtists";
 import { Track } from "@/contexts/PlayerContext";
 import { Headphones, X } from "lucide-react";
+import { ChartsBanner } from "@/components/discovery/ChartsBanner";
 
 // Convert DbTrack to Track for sharing
 const dbTrackToTrack = (dbTrack: DbTrack): Track => ({
@@ -188,6 +189,9 @@ const Discovery = () => {
           selectedGenre={selectedGenre}
           onGenreChange={setSelectedGenre}
         />
+
+        {/* Charts Banner */}
+        <ChartsBanner />
 
         {/* Hot New Drops */}
         <HotNewTracks

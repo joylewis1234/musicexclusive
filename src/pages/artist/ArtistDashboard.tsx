@@ -8,6 +8,7 @@ import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { ArtistTutorial } from "@/components/artist/tutorial/ArtistTutorial";
 import ArtistInviteSection from "@/components/artist/ArtistInviteSection";
 import AgreementStatusCard from "@/components/artist/AgreementStatusCard";
+import { ChartsEligibilityCard } from "@/components/artist/ChartsEligibilityCard";
 import { 
   Upload, 
   LogOut,
@@ -786,6 +787,11 @@ const ArtistDashboard = () => {
 
           {/* Agreement Status */}
           <AgreementStatusCard />
+
+          {/* Charts Eligibility */}
+          {artistProfileId && (
+            <ChartsEligibilityCard artistProfileId={artistProfileId} />
+          )}
 
           {/* Invite Fans Section */}
           {artistProfileId && (
