@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Trophy, Music, Globe, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
+import Footer from "@/components/Footer";
 
 const CHART_GENRES = [
   { label: "Pop", slug: "Pop" },
