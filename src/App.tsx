@@ -163,6 +163,7 @@ const App = () => {
                     <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
+                <Route path="/charts" element={<ChartsPage />} />
                 <Route path="/artist-benefits" element={<ArtistBenefits />} />
                 <Route path="/vault/enter" element={<EnterVault />} />
                 <Route path="/vault/submit" element={<SubmitVaultCode />} />
