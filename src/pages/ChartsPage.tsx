@@ -57,7 +57,7 @@ const PRIZE_CONFIG: Record<number, { amount: number; color: string; bg: string }
 
 const ChartsPage = () => {
   const navigate = useNavigate();
-  const [activeGenre, setActiveGenre] = useState(CHART_GENRES[0].slug);
+  const [activeGenre, setActiveGenre] = useState<string>(CHART_GENRES[0].slug);
 
   const { data: entries, isLoading } = useQuery({
     queryKey: ["charts", activeGenre, currentYear],
