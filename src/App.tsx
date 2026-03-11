@@ -134,6 +134,7 @@ const AdminTestTools = React.lazy(() => import("./pages/admin/AdminTestTools"));
 const AdminWaitlist = React.lazy(() => import("./pages/admin/AdminWaitlist"));
 const AdminFanWaitlist = React.lazy(() => import("./pages/admin/AdminFanWaitlist"));
 const AdminCashBonusTracker = React.lazy(() => import("./pages/admin/AdminCashBonusTracker"));
+const AdminExclusiveCharts = React.lazy(() => import("./pages/admin/AdminExclusiveCharts"));
 
 const App = () => {
   // Global safety net for unhandled promise rejections (prevents white screen)
@@ -324,6 +325,11 @@ const App = () => {
                 <Route path="/admin/bonus-tracker/cash-bonus" element={
                   <AdminProtectedRoute>
                     <AdminCashBonusTracker />
+                  </AdminProtectedRoute>
+                } />
+                <Route path="/admin/bonus-tracker/exclusive-charts" element={
+                  <AdminProtectedRoute>
+                    <AdminExclusiveCharts />
                   </AdminProtectedRoute>
                 } />
                 {/* Token-based actions from email links */}
