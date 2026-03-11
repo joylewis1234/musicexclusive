@@ -62,6 +62,7 @@ const ArtistWaitlistForm = React.lazy(() => import("./pages/ArtistWaitlistForm")
 const ArtistWaitlistSubmitted = React.lazy(
   () => import("./pages/ArtistWaitlistSubmitted")
 );
+const ChartsPage = React.lazy(() => import("./pages/ChartsPage"));
 
 const FanAuth = React.lazy(() => import("./pages/auth/FanAuth"));
 const ArtistAuth = React.lazy(() => import("./pages/auth/ArtistAuth"));
