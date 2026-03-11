@@ -118,6 +118,14 @@ const AdminDashboard = () => {
       tooltip: "Monitor artist progress toward Cash Bonus milestones (1k, 2.5k, 5k, 10k streams). Approve payouts or disqualify.",
     },
     {
+      title: "Exclusive Charts",
+      description: "Annual genre leaderboards, close cycles, and manage rankings",
+      icon: Crown,
+      path: "/admin/bonus-tracker/exclusive-charts",
+      color: "text-violet-400",
+      tooltip: "View per-genre annual leaderboards. Close yearly cycles to assign prizes ($500/$250/$100) to top 3 artists.",
+    },
+    {
       title: "Test Tools",
       description: "Create test accounts, simulate streams, debug tools",
       icon: Wrench,
