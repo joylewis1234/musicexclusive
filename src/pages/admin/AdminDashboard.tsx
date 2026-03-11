@@ -13,7 +13,8 @@ import {
   BarChart3,
   Wrench,
   UserPlus,
-  Mail
+  Mail,
+  Trophy
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -106,6 +107,14 @@ const AdminDashboard = () => {
       path: "/admin/fan-waitlist",
       color: "text-rose-400",
       tooltip: "View all Founding Superfan signups. These fans have reserved lifetime access before launch.",
+    },
+    {
+      title: "Cash Bonus Tracker",
+      description: "Track and approve artist streaming milestone bonuses",
+      icon: Trophy,
+      path: "/admin/bonus-tracker/cash-bonus",
+      color: "text-amber-300",
+      tooltip: "Monitor artist progress toward Cash Bonus milestones (1k, 2.5k, 5k, 10k streams). Approve payouts or disqualify.",
     },
     {
       title: "Test Tools",
