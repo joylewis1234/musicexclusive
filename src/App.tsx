@@ -321,6 +321,11 @@ const App = () => {
                     <AdminFanWaitlist />
                   </AdminProtectedRoute>
                 } />
+                <Route path="/admin/bonus-tracker/cash-bonus" element={
+                  <AdminProtectedRoute>
+                    <AdminCashBonusTracker />
+                  </AdminProtectedRoute>
+                } />
                 {/* Token-based actions from email links */}
                 <Route path="/admin/artist-applications/approve" element={<ArtistApplicationAction />} />
                 <Route path="/admin/artist-applications/deny" element={<ArtistApplicationAction />} />

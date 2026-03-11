@@ -109,6 +109,14 @@ const AdminDashboard = () => {
       tooltip: "View all Founding Superfan signups. These fans have reserved lifetime access before launch.",
     },
     {
+      title: "Cash Bonus Tracker",
+      description: "Track and approve artist streaming milestone bonuses",
+      icon: Trophy,
+      path: "/admin/bonus-tracker/cash-bonus",
+      color: "text-amber-300",
+      tooltip: "Monitor artist progress toward Cash Bonus milestones (1k, 2.5k, 5k, 10k streams). Approve payouts or disqualify.",
+    },
+    {
       title: "Test Tools",
       description: "Create test accounts, simulate streams, debug tools",
       icon: Wrench,
