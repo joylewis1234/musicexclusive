@@ -62,6 +62,7 @@ const ArtistWaitlistForm = React.lazy(() => import("./pages/ArtistWaitlistForm")
 const ArtistWaitlistSubmitted = React.lazy(
   () => import("./pages/ArtistWaitlistSubmitted")
 );
+const ChartsPage = React.lazy(() => import("./pages/ChartsPage"));
 
 const FanAuth = React.lazy(() => import("./pages/auth/FanAuth"));
 const ArtistAuth = React.lazy(() => import("./pages/auth/ArtistAuth"));
@@ -162,6 +163,7 @@ const App = () => {
                     <Routes>
                 {/* Public routes */}
                 <Route path="/" element={<Index />} />
+                <Route path="/charts" element={<ChartsPage />} />
                 <Route path="/artist-benefits" element={<ArtistBenefits />} />
                 <Route path="/vault/enter" element={<EnterVault />} />
                 <Route path="/vault/submit" element={<SubmitVaultCode />} />
