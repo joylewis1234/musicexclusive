@@ -293,6 +293,18 @@ Deno.serve(async (req) => {
     const normalizedBase = hlsWorkerBaseUrl.startsWith("http") ? hlsWorkerBaseUrl : `https://${hlsWorkerBaseUrl}`;
     const hlsUrl = `${normalizedBase}/${trackId}/master.m3u8?token=${encodeURIComponent(token)}`;
 
+    // ── Fire-and-forget: check bonus milestones ──
+    stage = "bonus_check";
+    const bonusUrl = `${supabaseUrl}/functions/v1/check-bonus-milestones`;
+    fetch(bonusUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
+      body: JSON.stringify({ artist_id: trackOwnerArtistId }),
+    }).catch((err) => console.warn("[charge-stream] bonus check failed (non-blocking):", err));
+
     stage = "done";
     ledgerWritten = true;
     return await respond(200, {
