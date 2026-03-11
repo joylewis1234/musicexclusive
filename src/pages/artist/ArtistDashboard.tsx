@@ -788,6 +788,11 @@ const ArtistDashboard = () => {
           {/* Agreement Status */}
           <AgreementStatusCard />
 
+          {/* Charts Eligibility */}
+          {artistProfileId && (
+            <ChartsEligibilityCard artistProfileId={artistProfileId} />
+          )}
+
           {/* Invite Fans Section */}
           {artistProfileId && (
             <ArtistInviteSection artistProfileId={artistProfileId} />

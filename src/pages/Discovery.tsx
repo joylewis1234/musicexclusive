@@ -190,6 +190,9 @@ const Discovery = () => {
           onGenreChange={setSelectedGenre}
         />
 
+        {/* Charts Banner */}
+        <ChartsBanner />
+
         {/* Hot New Drops */}
         <HotNewTracks
           tracks={displayedFeaturedTracks}
