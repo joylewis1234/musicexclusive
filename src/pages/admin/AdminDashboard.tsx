@@ -17,18 +17,6 @@ import {
   Trophy,
   Crown
 } from "lucide-react";
-  Users, 
-  Receipt, 
-  DollarSign, 
-  FileText, 
-  Home, 
-  LogOut,
-  BarChart3,
-  Wrench,
-  UserPlus,
-  Mail,
-  Trophy
-} from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
 const TOOLTIP_MESSAGES = {
