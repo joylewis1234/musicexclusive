@@ -1,9 +1,16 @@
 
-## Completed: Double-Mint Elimination (2026-03-03)
 
-**What was done:**
-- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
-- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
-- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
-- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
-- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
+# Add Watermark Protection Statement to Artist Benefits Page
+
+## What
+A new section at the bottom of the page (between the CTA and the spacer) with a Shield/Lock icon, a bold statement that all releases are watermarked and protected, and a brief plain-language explanation of what forensic watermarking means for the artist.
+
+## Design
+- Subtle, trust-building footer-style section with muted styling
+- Shield icon + bold title: "Every Release Is Watermarked & Protected"
+- Short explanation: each stream is tagged with an invisible, unique identifier tied to the listener's session — if audio leaks, it can be traced back to the source. Masters are never modified; protection is applied dynamically at playback.
+- Small reassuring closer line
+
+## File Change
+- `src/pages/ArtistBenefits.tsx` — Insert new section between line 607 (end of CTA section) and line 610 (spacer). Uses existing `Shield` icon import.
+
