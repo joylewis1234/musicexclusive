@@ -4,9 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, ArrowRight } from "lucide-react";
+import { Trophy, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const CHART_GENRES = [
@@ -101,7 +100,17 @@ const ChartsPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Header />
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+        <div className="container max-w-4xl mx-auto px-4 h-14 flex items-center">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span>Back</span>
+          </button>
+        </div>
+      </header>
 
       <main className="flex-1 pt-20 pb-16 px-4">
         <div className="container max-w-4xl mx-auto space-y-6">
@@ -193,14 +202,6 @@ const ChartsPage = () => {
                 <p className="text-sm text-muted-foreground/70">
                   Be the first — 10,000 streams unlocks your spot on the charts.
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 gap-1 border-primary text-primary hover:bg-primary/10"
-                  onClick={() => navigate("/artist/application-form")}
-                >
-                  Become an Artist <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
               </div>
             </div>
           ) : (
