@@ -76,6 +76,7 @@ try {
     </React.StrictMode>
   );
   console.log("[Boot] render() called");
+  (window as any).__APP_BOOT_COMPLETE__ = true;
 } catch (e) {
   console.error("[Boot] Fatal error:", e);
   document.getElementById("root")!.innerHTML = `<div style="color:#fff;padding:2rem;font-family:sans-serif;">Boot error: ${e}</div>`;

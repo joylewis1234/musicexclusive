@@ -157,7 +157,6 @@ const App = () => {
     console.log("[App] Mounted");
     const handler = (e: PromiseRejectionEvent) => {
       console.error("[App] Unhandled rejection:", e.reason);
-      e.preventDefault();
     };
     window.addEventListener("unhandledrejection", handler);
     return () => window.removeEventListener("unhandledrejection", handler);
