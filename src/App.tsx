@@ -16,7 +16,7 @@ import { PaymentErrorBoundary } from "@/components/error-boundaries/PaymentError
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
-console.log("[App] Module loaded v10");
+console.log("[App] Module loaded v11");
 
 const queryClient = new QueryClient({
   defaultOptions: {

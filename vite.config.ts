@@ -15,8 +15,9 @@ export default defineConfig(({ mode }) => ({
   build: {
     rollupOptions: {
       output: {
-        // Stable entry file name to reduce cache/mismatch risk on publish
         entryFileNames: "assets/app.js",
+        chunkFileNames: "assets/[name]-[hash].js",
+        assetFileNames: "assets/[name]-[hash][extname]",
       },
     },
   },
