@@ -60,10 +60,10 @@ class BootErrorBoundary extends React.Component<
   }
 }
 
-// Global safety net for unhandled promise rejections
+// Global safety net for unhandled promise rejections — do NOT preventDefault
+// so errors remain visible in devtools and monitoring
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[Global] Unhandled promise rejection:", event.reason);
-  event.preventDefault();
 });
 
 try {
