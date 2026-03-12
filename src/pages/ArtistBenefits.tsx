@@ -14,7 +14,11 @@ import {
   Eye,
   Sparkles,
   Crown,
-  ChevronDown
+  ChevronDown,
+  Trophy,
+  Target,
+  Gift,
+  Music
 } from "lucide-react"
 
 const ArtistBenefits = () => {
@@ -415,7 +419,115 @@ const ArtistBenefits = () => {
         </div>
       </section>
 
-      {/* SECTION 7 — CTA (Strong Close) */}
+      {/* SECTION 7 — CASH BONUS PROGRAM */}
+      <section className="px-4 py-16">
+        <div className="container max-w-lg md:max-w-3xl mx-auto">
+          <SectionHeader title="Earn Up To $300 In Cash Bonuses" align="center" />
+
+          <p className="text-center text-muted-foreground font-body text-base mt-2 mb-8 max-w-md mx-auto">
+            On top of your streaming income, hit verified milestones and unlock <span className="text-primary font-semibold">real cash bonuses</span> paid straight to your account.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { streams: "1,000", bonus: "$25", icon: Target },
+              { streams: "2,500", bonus: "$50", icon: Target },
+              { streams: "5,000", bonus: "$100", icon: Gift },
+              { streams: "10,000", bonus: "$125", icon: Gift },
+            ].map((m, i) => (
+              <GlowCard key={i} glowColor="primary" className="w-full">
+                <div className="p-4 text-center">
+                  <m.icon className="w-6 h-6 text-primary mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">{m.streams} streams</p>
+                  <p className="text-2xl font-display font-black text-foreground mt-1">{m.bonus}</p>
+                </div>
+              </GlowCard>
+            ))}
+          </div>
+
+          <GlowCard glowColor="gradient" variant="elevated" className="w-full mt-6">
+            <div className="p-6 text-center">
+              <Sparkles className="w-7 h-7 text-primary mx-auto mb-2" />
+              <p className="text-3xl font-display font-black gradient-text">$300 Total</p>
+              <p className="text-muted-foreground text-sm font-body mt-2">
+                Earned on top of every cent you make from streams.
+              </p>
+            </div>
+          </GlowCard>
+
+          <div className="mt-6 space-y-2">
+            {[
+              "Milestones unlock sequentially — hit one to unlock the next",
+              "Bonuses are paid via your weekly payout schedule",
+              "One-time per artist — stack them all to $300",
+            ].map((rule, i) => (
+              <div key={i} className="flex items-start gap-2">
+                <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-primary text-[10px] font-bold">✓</span>
+                </div>
+                <p className="text-muted-foreground text-sm font-body">{rule}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECTION 8 — EXCLUSIVE CHARTS BONUS PROGRAM */}
+      <section className="px-4 py-16 bg-background-elevated">
+        <div className="container max-w-lg md:max-w-3xl mx-auto">
+          <SectionHeader title="Compete For Annual Chart Prizes" align="center" />
+
+          <p className="text-center text-muted-foreground font-body text-base mt-2 mb-4 max-w-md mx-auto">
+            After you complete all four Cash Bonus milestones, you unlock eligibility for the <span className="text-primary font-semibold">Exclusive Charts</span> — an annual competition with real prize money.
+          </p>
+
+          <div className="space-y-3 mt-8">
+            {[
+              { place: "1st Place", prize: "$500", icon: Crown, color: "primary" as const },
+              { place: "2nd Place", prize: "$250", icon: Trophy, color: "secondary" as const },
+              { place: "3rd Place", prize: "$100", icon: Trophy, color: "accent" as const },
+            ].map((tier, i) => (
+              <GlowCard key={i} glowColor={tier.color} className="w-full">
+                <div className="p-5 flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl bg-${tier.color}/20 flex items-center justify-center flex-shrink-0 border border-${tier.color}/40`}>
+                    <tier.icon className={`w-6 h-6 text-${tier.color}`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-display text-lg text-foreground font-bold">{tier.place}</p>
+                    <p className="text-muted-foreground text-sm">per genre, per year</p>
+                  </div>
+                  <p className="text-2xl font-display font-black gradient-text">{tier.prize}</p>
+                </div>
+              </GlowCard>
+            ))}
+          </div>
+
+          <div className="mt-8">
+            <p className="text-muted-foreground text-xs uppercase tracking-wider font-display mb-3 text-center">Eligible Genres</p>
+            <div className="grid grid-cols-2 gap-2">
+              {["Pop", "Hip-Hop / Rap", "Latin Music", "Country", "EDM", "Rock", "Phonk & Trap", "K-Pop", "Alternative / Indie", "R&B"].map((genre) => (
+                <div key={genre} className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-2">
+                  <Music className="w-3.5 h-3.5 text-primary" />
+                  <span className="text-foreground text-sm font-body">{genre}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <GlowCard glowColor="primary" className="w-full mt-8">
+            <div className="p-5 text-center">
+              <p className="text-foreground font-display text-sm uppercase tracking-wider leading-relaxed">
+                Compete in multiple genres. <span className="text-primary font-bold">Get paid in all of them.</span>
+              </p>
+              <p className="text-muted-foreground text-xs mt-2 font-body">
+                Once you qualify, you're eligible for life — no re-enrollment needed.
+              </p>
+            </div>
+          </GlowCard>
+        </div>
+      </section>
+
+      {/* SECTION 9 — CTA (Strong Close) */}
       <section className="px-4 py-20">
         <div className="container max-w-lg md:max-w-md mx-auto text-center">
           <h2 className="text-2xl md:text-3xl font-display font-black text-foreground mb-6">
