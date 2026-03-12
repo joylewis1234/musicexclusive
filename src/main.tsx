@@ -1,4 +1,4 @@
-// Force Vite cache rebuild - v3
+// Force Vite cache rebuild - v5
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
