@@ -585,7 +585,7 @@ const ArtistBenefits = () => {
             <Button 
               size="lg" 
               className="w-full animate-glow-pulse"
-              onClick={() => navigate("/artist/apply")}
+              onClick={() => navigate("/artist-waitlist")}
             >
               <Crown className="w-5 h-5 mr-2" />
               Apply as an Exclusive Artist
