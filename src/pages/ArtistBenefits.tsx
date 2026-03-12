@@ -329,7 +329,7 @@ const ArtistBenefits = () => {
       <section className="px-4 py-16 bg-background-elevated">
         <div className="container max-w-lg md:max-w-3xl mx-auto">
           <SectionHeader 
-            title="$1,000/Week From A Small Fan Base" 
+            title="Fan Binge Scenario = $1,000/Week From A Small Fan Base" 
             align="center" 
           />
           <p className="text-center text-primary font-display text-sm uppercase tracking-widest mt-2 mb-8">
