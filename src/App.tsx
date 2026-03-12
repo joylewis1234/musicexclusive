@@ -16,7 +16,7 @@ import { PaymentErrorBoundary } from "@/components/error-boundaries/PaymentError
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
-// Founding Superfan pages
+console.log("[App] Module loaded");
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,120 +26,118 @@ const queryClient = new QueryClient({
   },
 });
 
-// Lazy-load route pages to split large bundles.
-const Index = React.lazy(() => import("./pages/Index"));
-const ArtistBenefits = React.lazy(() => import("./pages/ArtistBenefits"));
-const EnterVault = React.lazy(() => import("./pages/EnterVault"));
-const SubmitVaultCode = React.lazy(() => import("./pages/SubmitVaultCode"));
-const VaultStatus = React.lazy(() => import("./pages/VaultStatus"));
-const VaultWinCongrats = React.lazy(() => import("./pages/VaultWinCongrats"));
-const Agreements = React.lazy(() => import("./pages/Agreements"));
-const ChooseAccess = React.lazy(() => import("./pages/ChooseAccess"));
-const Subscribe = React.lazy(() => import("./pages/Subscribe"));
-const LoadCredits = React.lazy(() => import("./pages/LoadCredits"));
-const Payment = React.lazy(() => import("./pages/Payment"));
-const CheckoutReturn = React.lazy(() => import("./pages/CheckoutReturn"));
-const NotFound = React.lazy(() => import("./pages/NotFound"));
-const Login = React.lazy(() => import("./pages/Login"));
-const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
-const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
-const Terms = React.lazy(() => import("./pages/Terms"));
-const ArtistAgreement = React.lazy(() => import("./pages/ArtistAgreement"));
-const PrivacyPolicy = React.lazy(() => import("./pages/PrivacyPolicy"));
-const CopyrightDmca = React.lazy(() => import("./pages/CopyrightDmca"));
-const RefundPolicy = React.lazy(() => import("./pages/RefundPolicy"));
-const FanAgreementStep = React.lazy(() => import("./pages/FanAgreementStep"));
-const PatentNotice = React.lazy(() => import("./pages/PatentNotice"));
-const InviteLanding = React.lazy(() => import("./pages/InviteLanding"));
-const TestSounds = React.lazy(() => import("./pages/TestSounds"));
-const PreviewDiscovery = React.lazy(() => import("./pages/PreviewDiscovery"));
-const FoundingSuperfan = React.lazy(() => import("./pages/FoundingSuperfan"));
-const FoundingSuperfanConfirmed = React.lazy(
-  () => import("./pages/FoundingSuperfanConfirmed")
-);
-const ArtistWaitlist = React.lazy(() => import("./pages/ArtistWaitlist"));
-const ArtistWaitlistForm = React.lazy(() => import("./pages/ArtistWaitlistForm"));
-const ArtistWaitlistSubmitted = React.lazy(
-  () => import("./pages/ArtistWaitlistSubmitted")
-);
-const ChartsPage = React.lazy(() => import("./pages/ChartsPage"));
+// Lazy loader with retry + fallback to prevent Suspense from hanging forever
+function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
+  return React.lazy(() =>
+    factory().catch(() => {
+      console.warn("[LazyLoad] Chunk failed, retrying in 1.5s…");
+      return new Promise<{ default: React.ComponentType<any> }>((resolve) =>
+        setTimeout(() => {
+          factory()
+            .then(resolve)
+            .catch((retryErr) => {
+              console.error("[LazyLoad] Chunk failed after retry:", retryErr);
+              resolve({
+                default: () => (
+                  <div style={{ padding: "2rem", color: "#fff", background: "#000", minHeight: "100vh", fontFamily: "sans-serif", textAlign: "center" }}>
+                    <h2>Failed to load page</h2>
+                    <p style={{ color: "#aaa", margin: "1rem 0" }}>A required file could not be loaded.</p>
+                    <button
+                      onClick={() => location.reload()}
+                      style={{ padding: "0.5rem 1.5rem", background: "#fff", color: "#000", border: "none", borderRadius: "6px", cursor: "pointer" }}
+                    >
+                      Reload
+                    </button>
+                  </div>
+                ),
+              });
+            });
+        }, 1500)
+      );
+    })
+  );
+}
 
-const FanAuth = React.lazy(() => import("./pages/auth/FanAuth"));
-const ArtistAuth = React.lazy(() => import("./pages/auth/ArtistAuth"));
-const ArtistLogin = React.lazy(() => import("./pages/auth/ArtistLogin"));
-const AdminLogin = React.lazy(() => import("./pages/auth/AdminLogin"));
-const AccessRestricted = React.lazy(() => import("./pages/AccessRestricted"));
+// Lazy-load route pages with retry
+const Index = lazyWithRetry(() => import("./pages/Index"));
+const ArtistBenefits = lazyWithRetry(() => import("./pages/ArtistBenefits"));
+const EnterVault = lazyWithRetry(() => import("./pages/EnterVault"));
+const SubmitVaultCode = lazyWithRetry(() => import("./pages/SubmitVaultCode"));
+const VaultStatus = lazyWithRetry(() => import("./pages/VaultStatus"));
+const VaultWinCongrats = lazyWithRetry(() => import("./pages/VaultWinCongrats"));
+const Agreements = lazyWithRetry(() => import("./pages/Agreements"));
+const ChooseAccess = lazyWithRetry(() => import("./pages/ChooseAccess"));
+const Subscribe = lazyWithRetry(() => import("./pages/Subscribe"));
+const LoadCredits = lazyWithRetry(() => import("./pages/LoadCredits"));
+const Payment = lazyWithRetry(() => import("./pages/Payment"));
+const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
+const Login = lazyWithRetry(() => import("./pages/Login"));
+const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
+const Terms = lazyWithRetry(() => import("./pages/Terms"));
+const ArtistAgreement = lazyWithRetry(() => import("./pages/ArtistAgreement"));
+const PrivacyPolicy = lazyWithRetry(() => import("./pages/PrivacyPolicy"));
+const CopyrightDmca = lazyWithRetry(() => import("./pages/CopyrightDmca"));
+const RefundPolicy = lazyWithRetry(() => import("./pages/RefundPolicy"));
+const FanAgreementStep = lazyWithRetry(() => import("./pages/FanAgreementStep"));
+const PatentNotice = lazyWithRetry(() => import("./pages/PatentNotice"));
+const InviteLanding = lazyWithRetry(() => import("./pages/InviteLanding"));
+const TestSounds = lazyWithRetry(() => import("./pages/TestSounds"));
+const PreviewDiscovery = lazyWithRetry(() => import("./pages/PreviewDiscovery"));
+const FoundingSuperfan = lazyWithRetry(() => import("./pages/FoundingSuperfan"));
+const FoundingSuperfanConfirmed = lazyWithRetry(() => import("./pages/FoundingSuperfanConfirmed"));
+const ArtistWaitlist = lazyWithRetry(() => import("./pages/ArtistWaitlist"));
+const ArtistWaitlistForm = lazyWithRetry(() => import("./pages/ArtistWaitlistForm"));
+const ArtistWaitlistSubmitted = lazyWithRetry(() => import("./pages/ArtistWaitlistSubmitted"));
+const ChartsPage = lazyWithRetry(() => import("./pages/ChartsPage"));
 
-// Fan pages (protected)
-// FanDashboard removed – /fan/profile is now the fan landing page
-const FanProfile = React.lazy(() => import("./pages/FanProfile"));
-const FanInbox = React.lazy(() => import("./pages/FanInbox"));
-const Discovery = React.lazy(() => import("./pages/Discovery"));
-const MusicPlayer = React.lazy(() => import("./pages/MusicPlayer"));
-const AddCredits = React.lazy(() => import("./pages/AddCredits"));
-const ArtistProfilePage = React.lazy(() => import("./pages/ArtistProfilePage"));
+const FanAuth = lazyWithRetry(() => import("./pages/auth/FanAuth"));
+const ArtistAuth = lazyWithRetry(() => import("./pages/auth/ArtistAuth"));
+const ArtistLogin = lazyWithRetry(() => import("./pages/auth/ArtistLogin"));
+const AdminLogin = lazyWithRetry(() => import("./pages/auth/AdminLogin"));
+const AccessRestricted = lazyWithRetry(() => import("./pages/AccessRestricted"));
 
-// Artist pages
-const ArtistApply = React.lazy(() => import("./pages/ArtistApply"));
-const ArtistApplicationForm = React.lazy(
-  () => import("./pages/ArtistApplicationForm")
-);
-const ArtistApplicationStatus = React.lazy(
-  () => import("./pages/ArtistApplicationStatus")
-);
-const ArtistApplicationSubmitted = React.lazy(
-  () => import("./pages/ArtistApplicationSubmitted")
-);
-const ArtistUpload = React.lazy(() => import("./pages/ArtistUpload"));
-const ArtistDashboard = React.lazy(() => import("./pages/artist/ArtistDashboard"));
-const ArtistEarnings = React.lazy(() => import("./pages/artist/ArtistEarnings"));
-const ArtistInvites = React.lazy(() => import("./pages/artist/ArtistInvites"));
-const ArtistSetupAccount = React.lazy(
-  () => import("./pages/artist/ArtistSetupAccount")
-);
-const ArtistPendingActivation = React.lazy(
-  () => import("./pages/artist/ArtistPendingActivation")
-);
-const ArtistAgreementAccept = React.lazy(
-  () => import("./pages/artist/ArtistAgreementAccept")
-);
-const EditArtistProfile = React.lazy(
-  () => import("./pages/artist/EditArtistProfile")
-);
-const MarketingStudio = React.lazy(() => import("./pages/artist/MarketingStudio"));
+const FanProfile = lazyWithRetry(() => import("./pages/FanProfile"));
+const FanInbox = lazyWithRetry(() => import("./pages/FanInbox"));
+const Discovery = lazyWithRetry(() => import("./pages/Discovery"));
+const MusicPlayer = lazyWithRetry(() => import("./pages/MusicPlayer"));
+const AddCredits = lazyWithRetry(() => import("./pages/AddCredits"));
+const ArtistProfilePage = lazyWithRetry(() => import("./pages/ArtistProfilePage"));
 
-// Admin pages
-const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminReports = React.lazy(() => import("./pages/admin/AdminReports"));
-const AdminFanStreamDetail = React.lazy(
-  () => import("./pages/admin/AdminFanStreamDetail")
-);
-const AdminFanDetail = React.lazy(() => import("./pages/admin/AdminFanDetail"));
-const AdminDailyReport = React.lazy(
-  () => import("./pages/admin/AdminDailyReport")
-);
-const AdminPayouts = React.lazy(() => import("./pages/admin/AdminPayouts"));
-const AdminArtistApplications = React.lazy(
-  () => import("./pages/admin/AdminArtistApplications")
-);
-const ArtistApplicationAction = React.lazy(
-  () => import("./pages/admin/ArtistApplicationAction")
-);
-const AdminInvitations = React.lazy(
-  () => import("./pages/admin/AdminInvitations")
-);
-const AdminHealthCheck = React.lazy(
-  () => import("./pages/admin/AdminHealthCheck")
-);
-const AdminTestTools = React.lazy(() => import("./pages/admin/AdminTestTools"));
-const AdminWaitlist = React.lazy(() => import("./pages/admin/AdminWaitlist"));
-const AdminFanWaitlist = React.lazy(() => import("./pages/admin/AdminFanWaitlist"));
-const AdminCashBonusTracker = React.lazy(() => import("./pages/admin/AdminCashBonusTracker"));
-const AdminExclusiveCharts = React.lazy(() => import("./pages/admin/AdminExclusiveCharts"));
+const ArtistApply = lazyWithRetry(() => import("./pages/ArtistApply"));
+const ArtistApplicationForm = lazyWithRetry(() => import("./pages/ArtistApplicationForm"));
+const ArtistApplicationStatus = lazyWithRetry(() => import("./pages/ArtistApplicationStatus"));
+const ArtistApplicationSubmitted = lazyWithRetry(() => import("./pages/ArtistApplicationSubmitted"));
+const ArtistUpload = lazyWithRetry(() => import("./pages/ArtistUpload"));
+const ArtistDashboard = lazyWithRetry(() => import("./pages/artist/ArtistDashboard"));
+const ArtistEarnings = lazyWithRetry(() => import("./pages/artist/ArtistEarnings"));
+const ArtistInvites = lazyWithRetry(() => import("./pages/artist/ArtistInvites"));
+const ArtistSetupAccount = lazyWithRetry(() => import("./pages/artist/ArtistSetupAccount"));
+const ArtistPendingActivation = lazyWithRetry(() => import("./pages/artist/ArtistPendingActivation"));
+const ArtistAgreementAccept = lazyWithRetry(() => import("./pages/artist/ArtistAgreementAccept"));
+const EditArtistProfile = lazyWithRetry(() => import("./pages/artist/EditArtistProfile"));
+const MarketingStudio = lazyWithRetry(() => import("./pages/artist/MarketingStudio"));
+
+const AdminDashboard = lazyWithRetry(() => import("./pages/admin/AdminDashboard"));
+const AdminReports = lazyWithRetry(() => import("./pages/admin/AdminReports"));
+const AdminFanStreamDetail = lazyWithRetry(() => import("./pages/admin/AdminFanStreamDetail"));
+const AdminFanDetail = lazyWithRetry(() => import("./pages/admin/AdminFanDetail"));
+const AdminDailyReport = lazyWithRetry(() => import("./pages/admin/AdminDailyReport"));
+const AdminPayouts = lazyWithRetry(() => import("./pages/admin/AdminPayouts"));
+const AdminArtistApplications = lazyWithRetry(() => import("./pages/admin/AdminArtistApplications"));
+const ArtistApplicationAction = lazyWithRetry(() => import("./pages/admin/ArtistApplicationAction"));
+const AdminInvitations = lazyWithRetry(() => import("./pages/admin/AdminInvitations"));
+const AdminHealthCheck = lazyWithRetry(() => import("./pages/admin/AdminHealthCheck"));
+const AdminTestTools = lazyWithRetry(() => import("./pages/admin/AdminTestTools"));
+const AdminWaitlist = lazyWithRetry(() => import("./pages/admin/AdminWaitlist"));
+const AdminFanWaitlist = lazyWithRetry(() => import("./pages/admin/AdminFanWaitlist"));
+const AdminCashBonusTracker = lazyWithRetry(() => import("./pages/admin/AdminCashBonusTracker"));
+const AdminExclusiveCharts = lazyWithRetry(() => import("./pages/admin/AdminExclusiveCharts"));
 
 const App = () => {
-  // Global safety net for unhandled promise rejections (prevents white screen)
   React.useEffect(() => {
+    console.log("[App] Mounted");
     const handler = (e: PromiseRejectionEvent) => {
       console.error("[App] Unhandled rejection:", e.reason);
       e.preventDefault();
@@ -270,7 +268,7 @@ const App = () => {
                   </ArtistProtectedRoute>
                 } />
                 
-{/* Admin routes */}
+                {/* Admin routes */}
                 <Route path="/admin" element={
                   <AdminProtectedRoute>
                     <AdminDashboard />
@@ -344,8 +342,6 @@ const App = () => {
                 {/* Token-based actions from email links */}
                 <Route path="/admin/artist-applications/approve" element={<ArtistApplicationAction />} />
                 <Route path="/admin/artist-applications/deny" element={<ArtistApplicationAction />} />
-                
-                
                 
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
