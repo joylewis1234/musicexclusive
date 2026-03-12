@@ -23,8 +23,8 @@ A one-time, non-repeatable performance incentive that rewards artists for hittin
 | --- | --- |
 | 1,000 Verified Streams | $25.00 |
 | 2,500 Verified Streams | $50.00 |
-| 5,000 Verified Streams | $75.00 |
-| 10,000 Verified Streams | $150.00 (Program Complete) |
+| 5,000 Verified Streams | $100.00 |
+| 10,000 Verified Streams | $125.00 (Program Complete) |
 | Maximum Total | $300.00 per artist |
 
 Key rules:
