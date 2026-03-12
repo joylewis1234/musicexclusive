@@ -20,6 +20,7 @@ const MILESTONES = [
 ];
 
 export const ChartsEligibilityCard = ({ artistProfileId }: { artistProfileId: string }) => {
+  const navigate = useNavigate();
   const { data: milestones, isLoading, isError } = useQuery({
     queryKey: ["bonus-milestones", artistProfileId],
     queryFn: async () => {
