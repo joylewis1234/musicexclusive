@@ -1,9 +1,15 @@
 
-## Completed: Double-Mint Elimination (2026-03-03)
 
-**What was done:**
-- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
-- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
-- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
-- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
-- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
+# Update Artist Benefits Page - Fan Binge Scenario
+
+## Changes
+
+1. **Remove the $300 Fan Binge Scenario box** (lines 325-342) — the standalone card showing 100 fans × 30 streams = $300/week
+
+2. **Update Section 4 title** to combine "Fan Binge Scenario" with the $1,000/week message:
+   - Current: `"$1,000/Week From A Small Fan Base"`
+   - New: `"Fan Binge Scenario = $1,000/Week From A Small Fan Base"`
+
+## File Changed
+- `src/pages/ArtistBenefits.tsx`
+
