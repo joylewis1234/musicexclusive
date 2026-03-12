@@ -329,6 +329,11 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Cash Bonus Feed */}
+      <CashBonusFeed />
+
+      {/* Charts Teaser */}
+      <ChartsTeaser />
 
       {/* Bottom CTA Section */}
       <section className="px-4 py-16">
