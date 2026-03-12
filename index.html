@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
     <link rel="icon" href="/favicon.png" type="image/png" />
     <title>Music Exclusive™ | Built for Artists. Made for Superfans.</title>
     <meta name="description" content="Music. Released here first. Get exclusive access to unreleased tracks from your favorite artists before anyone else." />
@@ -20,6 +23,12 @@
 
   <body>
     <div id="root"></div>
+    <noscript>
+      <div style="padding:2rem;color:#fff;background:#000;font-family:sans-serif;text-align:center;min-height:100vh;">
+        <h1>JavaScript Required</h1>
+        <p>Please enable JavaScript to use Music Exclusive™.</p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

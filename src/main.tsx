@@ -64,7 +64,8 @@ window.addEventListener("unhandledrejection", (event) => {
 const rootEl = document.getElementById("root");
 
 if (!rootEl) {
-  document.body.innerHTML = '<div style="color:#fff;padding:2rem;background:#000;font-family:sans-serif;">Fatal: #root element missing</div>';
+  document.body.innerHTML =
+    '<div style="color:#fff;padding:2rem;background:#000;font-family:sans-serif;">Fatal: #root element missing</div>';
 } else {
   try {
     console.log("[Boot] Creating root");
