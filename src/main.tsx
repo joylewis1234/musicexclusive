@@ -1,10 +1,11 @@
-// Force Vite cache rebuild - v8
+// Force Vite cache rebuild - v9
 import React, { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-console.log("[Boot] Script entry v8");
+console.log("[Boot] Script entry v9");
+(window as any).__APP_BOOT_SCRIPT_LOADED__ = true;
 
 // Top-level error boundary that catches crashes from ALL providers
 class BootErrorBoundary extends React.Component<
