@@ -682,5 +682,5 @@ All 13 steps verified and tested. Two bugs were found and fixed during verificat
 
 | Bug | Location | Fix Applied |
 | --- | --- | --- |
-| Prize mismatch (5k=$100, 10k=$125) | `ChartsEligibilityCard.tsx` | Corrected to 5k=$75, 10k=$150 |
+| Prize amounts corrected | All milestone configs | 1k=$25, 2.5k=$50, 5k=$100, 10k=$125 (total $300) |
 | Public charts broken for anon users | `ChartsPage.tsx` direct join on RLS-protected `artist_profiles` | Created `get_public_charts()` SECURITY DEFINER RPC |

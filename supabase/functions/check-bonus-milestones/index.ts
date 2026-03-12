@@ -8,8 +8,8 @@ const corsHeaders = {
 const MILESTONES = [
   { threshold: 1000, prize: 25 },
   { threshold: 2500, prize: 50 },
-  { threshold: 5000, prize: 75 },
-  { threshold: 10000, prize: 150 },
+  { threshold: 5000, prize: 100 },
+  { threshold: 10000, prize: 125 },
 ] as const;
 
 Deno.serve(async (req) => {
