@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,16 +15,27 @@ export function useIsAdmin() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  useEffect(() => {
-    async function checkAdminAccess() {
-      if (!user?.email) {
-        setIsAdmin(false);
-        setIsChecking(false);
-        return;
-      }
+  const checkedUserIdRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    // Skip if auth is still loading or no user
+    if (authLoading) return;
+
+    if (!user?.email) {
+      setIsAdmin(false);
+      setIsChecking(false);
+      checkedUserIdRef.current = null;
+      return;
+    }
+
+    // Guard: don't re-check the same user
+    if (checkedUserIdRef.current === user.id) return;
+
+    let cancelled = false;
+    setIsChecking(true);
+
+    (async () => {
       try {
-        // Run both checks in parallel
         const [roleResult, allowlistResult] = await Promise.all([
           supabase
             .from("user_roles")
@@ -35,23 +46,24 @@ export function useIsAdmin() {
           supabase.rpc("is_admin_email", { email: user.email }),
         ]);
 
+        if (cancelled) return;
+
         const hasRole = !roleResult.error && !!roleResult.data;
         const onAllowlist = !allowlistResult.error && allowlistResult.data === true;
-
-        // BOTH must be true
         setIsAdmin(hasRole && onAllowlist);
+        checkedUserIdRef.current = user.id;
       } catch (err) {
-        console.error("Error checking admin access:", err);
-        setIsAdmin(false);
+        if (!cancelled) {
+          console.error("Error checking admin access:", err);
+          setIsAdmin(false);
+        }
       } finally {
-        setIsChecking(false);
+        if (!cancelled) setIsChecking(false);
       }
-    }
+    })();
 
-    if (!authLoading) {
-      checkAdminAccess();
-    }
-  }, [user, authLoading]);
+    return () => { cancelled = true; };
+  }, [user?.id, user?.email, authLoading]);
 
   return { isAdmin, isLoading: authLoading || isChecking };
 }

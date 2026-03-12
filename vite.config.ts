@@ -12,12 +12,19 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        // Stable entry file name to reduce cache/mismatch risk on publish
+        entryFileNames: "assets/app.js",
+      },
+    },
+  },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
-    // Prevent duplicate React instances (causes hooks like useState to be null)
     dedupe: ["react", "react-dom", "react/jsx-runtime"],
   },
 }));

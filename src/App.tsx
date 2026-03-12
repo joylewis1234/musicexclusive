@@ -16,7 +16,7 @@ import { PaymentErrorBoundary } from "@/components/error-boundaries/PaymentError
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
-console.log("[App] Module loaded v9");
+console.log("[App] Module loaded v10");
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -154,12 +154,7 @@ const AdminExclusiveCharts = lazyWithRetry(() => import("./pages/admin/AdminExcl
 
 const App = () => {
   React.useEffect(() => {
-    console.log("[App] Mounted");
-    const handler = (e: PromiseRejectionEvent) => {
-      console.error("[App] Unhandled rejection:", e.reason);
-    };
-    window.addEventListener("unhandledrejection", handler);
-    return () => window.removeEventListener("unhandledrejection", handler);
+    console.log("[App] Mounted successfully");
   }, []);
 
   return (
