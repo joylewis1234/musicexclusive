@@ -94,6 +94,8 @@ const EditArtistProfile = () => {
     try {
       const authResult = await withTimeout(getAuthedUserOrFail(signal), 10000);
 
+      if (signal.aborted) return;
+
       if (authResult.ok === false) {
         setLoadError(authResult.error);
         toast.error(authResult.error);
