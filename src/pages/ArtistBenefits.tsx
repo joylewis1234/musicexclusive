@@ -606,6 +606,27 @@ const ArtistBenefits = () => {
         </div>
       </section>
 
+      {/* Watermark Protection Statement */}
+      <section className="px-6 py-10 border-t border-border/40">
+        <div className="max-w-2xl mx-auto text-center space-y-4">
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <Shield className="w-5 h-5" />
+            <Lock className="w-4 h-4" />
+          </div>
+          <h3 className="text-lg font-bold font-display text-foreground">
+            Every Release Is Watermarked &amp; Protected
+          </h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Each stream is tagged with an invisible, unique identifier tied to the listener's session. 
+            If audio ever leaks, it can be traced directly back to the source. Your master files are 
+            never modified — protection is applied dynamically at playback, so your originals stay untouched.
+          </p>
+          <p className="text-xs text-muted-foreground/70 italic">
+            Your music is always protected. Always traceable. Always yours.
+          </p>
+        </div>
+      </section>
+
       {/* Spacer */}
       <div className="h-12" />
     </div>
