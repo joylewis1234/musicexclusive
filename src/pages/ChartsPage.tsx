@@ -202,14 +202,6 @@ const ChartsPage = () => {
                 <p className="text-sm text-muted-foreground/70">
                   Be the first — 10,000 streams unlocks your spot on the charts.
                 </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 gap-1 border-primary text-primary hover:bg-primary/10"
-                  onClick={() => navigate("/artist/application-form")}
-                >
-                  Become an Artist <ArrowRight className="w-3.5 h-3.5" />
-                </Button>
               </div>
             </div>
           ) : (
