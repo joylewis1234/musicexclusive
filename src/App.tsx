@@ -73,8 +73,10 @@ function lazyWithRetry(factory: () => Promise<LazyComponentModule>) {
   });
 }
 
-// Lazy-load route pages with retry
-const Index = lazyWithRetry(() => import("./pages/Index"));
+// Eager-load the homepage to guarantee first paint
+import Index from "./pages/Index";
+
+// Lazy-load secondary route pages with retry
 const ArtistBenefits = lazyWithRetry(() => import("./pages/ArtistBenefits"));
 const EnterVault = lazyWithRetry(() => import("./pages/EnterVault"));
 const SubmitVaultCode = lazyWithRetry(() => import("./pages/SubmitVaultCode"));
