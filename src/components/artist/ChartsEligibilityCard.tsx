@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ const MILESTONES = [
 ];
 
 export const ChartsEligibilityCard = ({ artistProfileId }: { artistProfileId: string }) => {
+  const navigate = useNavigate();
   const { data: milestones, isLoading, isError } = useQuery({
     queryKey: ["bonus-milestones", artistProfileId],
     queryFn: async () => {
@@ -91,7 +93,7 @@ export const ChartsEligibilityCard = ({ artistProfileId }: { artistProfileId: st
               size="sm"
               className="rounded-full gap-1.5"
               style={{ background: "hsl(45, 90%, 50%)", color: "hsl(0, 0%, 0%)" }}
-              onClick={() => window.open("/charts", "_blank")}
+              onClick={() => navigate("/charts")}
             >
               View Charts
               <ExternalLink className="w-3.5 h-3.5" />
@@ -167,7 +169,7 @@ export const ChartsEligibilityCard = ({ artistProfileId }: { artistProfileId: st
         size="sm"
         variant="outline"
         className="rounded-full gap-1.5 text-xs"
-        onClick={() => window.open("/charts", "_blank")}
+        onClick={() => navigate("/charts")}
       >
         View Charts
         <ExternalLink className="w-3.5 h-3.5" />
