@@ -4,9 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Trophy, ArrowRight } from "lucide-react";
+import { Trophy, ChevronLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { Header } from "@/components/Header";
 import Footer from "@/components/Footer";
 
 const CHART_GENRES = [
