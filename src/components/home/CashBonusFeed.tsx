@@ -65,7 +65,7 @@ const CashBonusFeed = () => {
           Earnings shown are illustrative of platform potential. Actual earnings depend on stream volume.
         </p>
         <div className="flex justify-center">
-          <Button variant="outline" className="rounded-full border-primary text-primary" onClick={() => navigate("/artist-agreement")}>
+          <Button variant="outline" className="rounded-full border-primary text-primary" onClick={() => navigate("/artist-benefits")}>
             See How Artist Earnings Work
           </Button>
         </div>
