@@ -1,13 +1,10 @@
-// Force Vite cache rebuild - v9
 import React, { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-console.log("[Boot] Script entry v9");
-(window as any).__APP_BOOT_SCRIPT_LOADED__ = true;
+console.log("[Boot] main.tsx executing");
 
-// Top-level error boundary that catches crashes from ALL providers
 class BootErrorBoundary extends React.Component<
   { children: ReactNode },
   { error: Error | null }
@@ -60,24 +57,32 @@ class BootErrorBoundary extends React.Component<
   }
 }
 
-// Global safety net for unhandled promise rejections — do NOT preventDefault
-// so errors remain visible in devtools and monitoring
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[Global] Unhandled promise rejection:", event.reason);
 });
 
-try {
-  console.log("[Boot] Creating root");
-  createRoot(document.getElementById("root")!).render(
-    <React.StrictMode>
-      <BootErrorBoundary>
-        <App />
-      </BootErrorBoundary>
-    </React.StrictMode>
-  );
-  console.log("[Boot] render() called");
-  (window as any).__APP_BOOT_COMPLETE__ = true;
-} catch (e) {
-  console.error("[Boot] Fatal error:", e);
-  document.getElementById("root")!.innerHTML = `<div style="color:#fff;padding:2rem;font-family:sans-serif;">Boot error: ${e}</div>`;
+const rootEl = document.getElementById("root");
+
+if (!rootEl) {
+  document.body.innerHTML = '<div style="color:#fff;padding:2rem;background:#000;font-family:sans-serif;">Fatal: #root element missing</div>';
+} else {
+  try {
+    console.log("[Boot] Creating root");
+    const root = createRoot(rootEl);
+    root.render(
+      <React.StrictMode>
+        <BootErrorBoundary>
+          <App />
+        </BootErrorBoundary>
+      </React.StrictMode>
+    );
+    console.log("[Boot] render() called successfully");
+  } catch (e) {
+    console.error("[Boot] Fatal error:", e);
+    rootEl.innerHTML = `<div style="color:#fff;padding:2rem;font-family:sans-serif;background:#000;min-height:100vh;">
+      <h1>Boot Error</h1>
+      <p style="color:#aaa;margin:1rem 0;">${e}</p>
+      <button onclick="location.reload()" style="padding:8px 20px;background:#fff;color:#000;border:none;border-radius:6px;cursor:pointer;">Reload</button>
+    </div>`;
+  }
 }

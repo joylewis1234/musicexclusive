@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- build v9 - force rebuild -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="/favicon.png" type="image/png" />
@@ -20,24 +19,7 @@
   </head>
 
   <body>
-    <div id="root">
-      <div id="boot-fallback" style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#000;color:#fff;font-family:sans-serif;flex-direction:column;gap:12px;">
-        <p>Loading...</p>
-      </div>
-    </div>
-    <script>
-      window.__APP_BOOT_START__ = Date.now();
-      setTimeout(function() {
-        if (!window.__APP_BOOT_COMPLETE__) {
-          var fb = document.getElementById('boot-fallback');
-          if (fb) {
-            fb.innerHTML = '<p style="margin-bottom:8px">The app took too long to start.</p>'
-              + '<button onclick="location.reload()" style="padding:8px 20px;background:#fff;color:#000;border:none;border-radius:6px;cursor:pointer;font-size:14px;">Reload</button>'
-              + '<p style="margin-top:12px;font-size:11px;color:#888;">If this keeps happening, try clearing your browser cache.</p>';
-          }
-        }
-      }, 10000);
-    </script>
+    <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
