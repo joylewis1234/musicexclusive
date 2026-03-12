@@ -14,7 +14,11 @@ import {
   Eye,
   Sparkles,
   Crown,
-  ChevronDown
+  ChevronDown,
+  Trophy,
+  Target,
+  Gift,
+  Music
 } from "lucide-react"
 
 const ArtistBenefits = () => {
