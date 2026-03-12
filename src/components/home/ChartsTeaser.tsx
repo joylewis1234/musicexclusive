@@ -113,12 +113,9 @@ const ChartsTeaser = () => {
         <p className="text-muted-foreground text-xs italic text-center mt-6 mb-4">
           Chart positions shown are illustrative. Live rankings launch with the platform.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-          <Button variant="accent" onClick={() => navigate("/artist/application-form")}>
+        <div className="flex justify-center items-center">
+          <Button variant="accent" onClick={() => navigate("/artist-waitlist")}>
             Become a Charting Artist
-          </Button>
-          <Button variant="outline" className="rounded-full border-primary text-primary" onClick={() => navigate("/charts")}>
-            View Full Charts
           </Button>
         </div>
       </div>
