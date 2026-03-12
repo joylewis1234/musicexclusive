@@ -1,10 +1,11 @@
-// Force Vite cache rebuild - v8
+// Force Vite cache rebuild - v9
 import React, { ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-console.log("[Boot] Script entry v8");
+console.log("[Boot] Script entry v9");
+(window as any).__APP_BOOT_SCRIPT_LOADED__ = true;
 
 // Top-level error boundary that catches crashes from ALL providers
 class BootErrorBoundary extends React.Component<
@@ -59,10 +60,10 @@ class BootErrorBoundary extends React.Component<
   }
 }
 
-// Global safety net for unhandled promise rejections
+// Global safety net for unhandled promise rejections — do NOT preventDefault
+// so errors remain visible in devtools and monitoring
 window.addEventListener("unhandledrejection", (event) => {
   console.error("[Global] Unhandled promise rejection:", event.reason);
-  event.preventDefault();
 });
 
 try {
@@ -75,6 +76,7 @@ try {
     </React.StrictMode>
   );
   console.log("[Boot] render() called");
+  (window as any).__APP_BOOT_COMPLETE__ = true;
 } catch (e) {
   console.error("[Boot] Fatal error:", e);
   document.getElementById("root")!.innerHTML = `<div style="color:#fff;padding:2rem;font-family:sans-serif;">Boot error: ${e}</div>`;

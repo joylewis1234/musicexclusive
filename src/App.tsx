@@ -16,7 +16,7 @@ import { PaymentErrorBoundary } from "@/components/error-boundaries/PaymentError
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { AdminProtectedRoute } from "@/components/auth/AdminProtectedRoute";
 
-console.log("[App] Module loaded");
+console.log("[App] Module loaded v9");
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,8 +73,10 @@ function lazyWithRetry(factory: () => Promise<LazyComponentModule>) {
   });
 }
 
-// Lazy-load route pages with retry
-const Index = lazyWithRetry(() => import("./pages/Index"));
+// Eager-load the homepage to guarantee first paint
+import Index from "./pages/Index";
+
+// Lazy-load secondary route pages with retry
 const ArtistBenefits = lazyWithRetry(() => import("./pages/ArtistBenefits"));
 const EnterVault = lazyWithRetry(() => import("./pages/EnterVault"));
 const SubmitVaultCode = lazyWithRetry(() => import("./pages/SubmitVaultCode"));
@@ -155,7 +157,6 @@ const App = () => {
     console.log("[App] Mounted");
     const handler = (e: PromiseRejectionEvent) => {
       console.error("[App] Unhandled rejection:", e.reason);
-      e.preventDefault();
     };
     window.addEventListener("unhandledrejection", handler);
     return () => window.removeEventListener("unhandledrejection", handler);
