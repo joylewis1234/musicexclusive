@@ -12,15 +12,6 @@ export default defineConfig(({ mode }) => ({
       overlay: false,
     },
   },
-  build: {
-    rollupOptions: {
-      output: {
-        entryFileNames: "assets/app.js",
-        chunkFileNames: "assets/[name]-[hash].js",
-        assetFileNames: "assets/[name]-[hash][extname]",
-      },
-    },
-  },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
