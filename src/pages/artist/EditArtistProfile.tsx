@@ -532,7 +532,7 @@ const EditArtistProfile = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="country-code">Country (for Charts)</Label>
+                <Label htmlFor="country-code">{countryCode ? `${countryCode.toUpperCase().split("").map((ch) => String.fromCodePoint(127397 + ch.charCodeAt(0))).join("")} ` : ""}Country (for Charts)</Label>
                 <Select value={countryCode} onValueChange={setCountryCode}>
                   <SelectTrigger className="h-11 bg-background rounded-xl">
                     <SelectValue placeholder="Select country" />
