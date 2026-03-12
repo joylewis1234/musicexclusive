@@ -1,4 +1,6 @@
 import { useState } from "react"
+import CashBonusFeed from "@/components/home/CashBonusFeed"
+import ChartsTeaser from "@/components/home/ChartsTeaser"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
@@ -329,6 +331,11 @@ const Index = () => {
         </div>
       </section>
 
+      {/* Cash Bonus Feed */}
+      <CashBonusFeed />
+
+      {/* Charts Teaser */}
+      <ChartsTeaser />
 
       {/* Bottom CTA Section */}
       <section className="px-4 py-16">
