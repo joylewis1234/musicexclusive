@@ -322,24 +322,6 @@ const ArtistBenefits = () => {
             </GlowCard>
           </div>
 
-          {/* Fan binge scenario */}
-          <div className="mt-6">
-            <GlowCard glowColor="secondary" className="w-full">
-              <div className="p-6">
-                <div className="flex items-center gap-2 mb-3">
-                  <Zap className="w-5 h-5 text-secondary" />
-                  <span className="font-display text-sm uppercase tracking-wider text-secondary">Fan Binge Scenario</span>
-                </div>
-                <div className="space-y-2 text-sm font-body">
-                  <p className="text-muted-foreground">100 fans × 30 streams/week = <span className="text-foreground font-semibold">3,000 streams</span></p>
-                  <p className="text-2xl font-display font-bold text-foreground">$300/week</p>
-                </div>
-                <p className="text-secondary/80 text-xs font-display uppercase tracking-wider mt-3">
-                  When fans get exclusive access, they binge. That's the point.
-                </p>
-              </div>
-            </GlowCard>
-          </div>
         </div>
       </section>
 
