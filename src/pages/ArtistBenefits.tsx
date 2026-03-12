@@ -18,7 +18,10 @@ import {
   Trophy,
   Target,
   Gift,
-  Music
+  Music,
+  Shield,
+  Lock,
+  Rocket
 } from "lucide-react"
 
 const ArtistBenefits = () => {
@@ -72,6 +75,67 @@ const ArtistBenefits = () => {
               <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
           </div>
+        </div>
+      </section>
+
+      {/* SECTION — OWNERSHIP & CONTROL */}
+      <section className="px-4 py-16 bg-background">
+        <div className="container max-w-lg md:max-w-3xl mx-auto">
+          <SectionHeader title="Your Music. Your Money. Your Rules." align="center" />
+
+          <div className="grid gap-4 mt-8">
+            <GlowCard glowColor="primary" className="w-full">
+              <div className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/20 flex items-center justify-center flex-shrink-0 border border-primary/40">
+                    <Shield className="w-6 h-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground mb-1">You Own Everything</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Your masters, your catalog, your decisions. We never take ownership of your music. You stay in control, always.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </GlowCard>
+
+            <GlowCard glowColor="secondary" className="w-full">
+              <div className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-secondary/20 flex items-center justify-center flex-shrink-0 border border-secondary/40">
+                    <Lock className="w-6 h-6 text-secondary" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground mb-1">Your Revenue, Transparent & Direct</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      See every stream, every cent, every payout in real time. No hidden fees, no mystery math. You know exactly what you earn.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </GlowCard>
+
+            <GlowCard glowColor="accent" className="w-full">
+              <div className="p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-accent/20 flex items-center justify-center flex-shrink-0 border border-accent/40">
+                    <Rocket className="w-6 h-6 text-accent" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground mb-1">Release On Your Terms</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">
+                      Drop when you want, pull tracks when you want, set your own preview windows. No gatekeepers, no approval chains.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </GlowCard>
+          </div>
+
+          <p className="text-center text-muted-foreground italic mt-8 text-sm">
+            "Most platforms take your leverage. We give it back."
+          </p>
         </div>
       </section>
 
