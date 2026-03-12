@@ -1,9 +1,11 @@
+# Replace Header with Back Button on Charts Page
 
-## Completed: Double-Mint Elimination (2026-03-03)
+## What
 
-**What was done:**
-- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
-- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
-- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
-- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
-- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
+Remove the full site `<Header>` (hamburger menu, login button) from the Charts page and replace it with a simple back button header. Also remove the "Become an Artist" CTA button in the empty state.
+
+## Changes — `src/pages/ChartsPage.tsx`
+
+1. **Remove** `Header` import, add `ChevronLeft` to lucide imports
+2. **Replace** `<Header />` with a minimal top bar containing a back button that uses `navigate(-1)` — this sends artists back to their dashboard and fans back to wherever they came from
+3. **Remove** the "Become an Artist" `<Button>` in the empty-state section (lines 196-203)
