@@ -26,36 +26,51 @@ const queryClient = new QueryClient({
   },
 });
 
-// Lazy loader with retry + fallback to prevent Suspense from hanging forever
-function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType<any> }>) {
-  return React.lazy(() =>
-    factory().catch(() => {
-      console.warn("[LazyLoad] Chunk failed, retrying in 1.5s…");
-      return new Promise<{ default: React.ComponentType<any> }>((resolve) =>
-        setTimeout(() => {
-          factory()
-            .then(resolve)
-            .catch((retryErr) => {
-              console.error("[LazyLoad] Chunk failed after retry:", retryErr);
-              resolve({
-                default: () => (
-                  <div style={{ padding: "2rem", color: "#fff", background: "#000", minHeight: "100vh", fontFamily: "sans-serif", textAlign: "center" }}>
-                    <h2>Failed to load page</h2>
-                    <p style={{ color: "#aaa", margin: "1rem 0" }}>A required file could not be loaded.</p>
-                    <button
-                      onClick={() => location.reload()}
-                      style={{ padding: "0.5rem 1.5rem", background: "#fff", color: "#000", border: "none", borderRadius: "6px", cursor: "pointer" }}
-                    >
-                      Reload
-                    </button>
-                  </div>
-                ),
-              });
-            });
-        }, 1500)
-      );
-    })
-  );
+type LazyComponentModule = { default: React.ComponentType<any> };
+
+const CHUNK_LOAD_TIMEOUT_MS = 12000;
+const CHUNK_RETRY_DELAY_MS = 1500;
+
+const ChunkLoadErrorFallback = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center px-6">
+    <div className="max-w-sm text-center space-y-3">
+      <h2 className="text-lg font-semibold text-foreground">Failed to load page</h2>
+      <p className="text-sm text-muted-foreground">A required file could not be loaded in time.</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+      >
+        Reload
+      </button>
+    </div>
+  </div>
+);
+
+const loadChunkWithTimeout = (factory: () => Promise<LazyComponentModule>) =>
+  Promise.race<LazyComponentModule>([
+    factory(),
+    new Promise<LazyComponentModule>((_, reject) => {
+      setTimeout(() => reject(new Error("Route chunk load timed out")), CHUNK_LOAD_TIMEOUT_MS);
+    }),
+  ]);
+
+// Lazy loader with retry + timeout fallback to prevent Suspense from hanging forever
+function lazyWithRetry(factory: () => Promise<LazyComponentModule>) {
+  return React.lazy(async () => {
+    try {
+      return await loadChunkWithTimeout(factory);
+    } catch (firstError) {
+      console.warn("[LazyLoad] Chunk failed/timed out, retrying in 1.5s…", firstError);
+      await new Promise((resolve) => setTimeout(resolve, CHUNK_RETRY_DELAY_MS));
+
+      try {
+        return await loadChunkWithTimeout(factory);
+      } catch (retryErr) {
+        console.error("[LazyLoad] Chunk failed after retry:", retryErr);
+        return { default: ChunkLoadErrorFallback };
+      }
+    }
+  });
 }
 
 // Lazy-load route pages with retry
