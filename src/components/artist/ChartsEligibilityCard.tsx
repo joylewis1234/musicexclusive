@@ -93,7 +93,7 @@ export const ChartsEligibilityCard = ({ artistProfileId }: { artistProfileId: st
               size="sm"
               className="rounded-full gap-1.5"
               style={{ background: "hsl(45, 90%, 50%)", color: "hsl(0, 0%, 0%)" }}
-              onClick={() => window.open("/charts", "_blank")}
+              onClick={() => navigate("/charts")}
             >
               View Charts
               <ExternalLink className="w-3.5 h-3.5" />
