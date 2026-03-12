@@ -18,7 +18,10 @@ import {
   Trophy,
   Target,
   Gift,
-  Music
+  Music,
+  Shield,
+  Lock,
+  Rocket
 } from "lucide-react"
 
 const ArtistBenefits = () => {
