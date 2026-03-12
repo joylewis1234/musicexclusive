@@ -23,8 +23,8 @@ A one-time, non-repeatable performance incentive that rewards artists for hittin
 | --- | --- |
 | 1,000 Verified Streams | $25.00 |
 | 2,500 Verified Streams | $50.00 |
-| 5,000 Verified Streams | $75.00 |
-| 10,000 Verified Streams | $150.00 (Program Complete) |
+| 5,000 Verified Streams | $100.00 |
+| 10,000 Verified Streams | $125.00 (Program Complete) |
 | Maximum Total | $300.00 per artist |
 
 Key rules:
@@ -578,7 +578,7 @@ If `cash_bonus_complete = false`:
 - Title: Your Path to Exclusive Charts
 - Body: Complete the Cash Bonus Program to unlock eligibility.
 - 4 milestone checkmarks (green=paid, gray=not reached):
-  - 1,000 streams ($25) | 2,500 streams ($50) | 5,000 streams ($75) | 10,000 streams ($150)
+  - 1,000 streams ($25) | 2,500 streams ($50) | 5,000 streams ($100) | 10,000 streams ($125)
 - Fetch status from `bonus_milestones` where artist_id = current user
 
 Change 2 — Fan Discovery Page
@@ -682,5 +682,5 @@ All 13 steps verified and tested. Two bugs were found and fixed during verificat
 
 | Bug | Location | Fix Applied |
 | --- | --- | --- |
-| Prize mismatch (5k=$100, 10k=$125) | `ChartsEligibilityCard.tsx` | Corrected to 5k=$75, 10k=$150 |
+| Prize amounts corrected | All milestone configs | 1k=$25, 2.5k=$50, 5k=$100, 10k=$125 (total $300) |
 | Public charts broken for anon users | `ChartsPage.tsx` direct join on RLS-protected `artist_profiles` | Created `get_public_charts()` SECURITY DEFINER RPC |
