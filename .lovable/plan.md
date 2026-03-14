@@ -1,9 +1,10 @@
 
-## Completed: Double-Mint Elimination (2026-03-03)
 
-**What was done:**
-- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
-- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
-- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
-- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
-- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
+## Delete the export-data-migration Edge Function
+
+Remove the `supabase/functions/export-data-migration/index.ts` file since the data migration SQL has been downloaded and this function exposes raw database contents.
+
+### Changes
+1. Delete `supabase/functions/export-data-migration/index.ts`
+2. Remove any `[functions.export-data-migration]` config from `supabase/config.toml` (if present)
+
