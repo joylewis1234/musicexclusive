@@ -1,0 +1,204 @@
+# Supabase config.toml for edge function migration
+# Replace with your new project's reference ID
+project_id = "<YOUR_NEW_PROJECT_REF>"
+
+[functions.aggregate-weekly-earnings]
+verify_jwt = false
+
+[functions.apply-credit-topup]
+verify_jwt = false
+
+[functions.approve-artist]
+verify_jwt = false
+
+[functions.approve-bonus-payout]
+verify_jwt = false
+
+[functions.approve-waitlist-artist]
+verify_jwt = false
+
+[functions.backfill-vault-user-ids]
+verify_jwt = false
+
+[functions.charge-stream]
+verify_jwt = false
+
+[functions.check-bonus-milestones]
+verify_jwt = false
+
+[functions.check-exclusivity]
+verify_jwt = false
+
+[functions.cleanup-accounts]
+verify_jwt = false
+
+[functions.close-annual-cycle]
+verify_jwt = false
+
+[functions.complete-multipart-upload]
+verify_jwt = false
+
+[functions.create-checkout]
+verify_jwt = false
+
+[functions.create-connect-account]
+verify_jwt = false
+
+[functions.create-subscription-checkout]
+verify_jwt = false
+
+[functions.create-test-artist]
+verify_jwt = false
+
+[functions.create-test-fan]
+verify_jwt = false
+
+[functions.create-track-draft]
+verify_jwt = false
+
+[functions.delete-test-application]
+verify_jwt = false
+
+[functions.disqualify-bonus]
+verify_jwt = false
+
+[functions.disqualify-charts-artist]
+verify_jwt = false
+
+[functions.elevenlabs-sfx]
+verify_jwt = false
+
+[functions.ensure-vault-member]
+verify_jwt = false
+
+[functions.finalize-artist-setup]
+verify_jwt = false
+
+[functions.generate-fan-invite]
+verify_jwt = false
+
+[functions.generate-promo-captions]
+verify_jwt = false
+
+[functions.generate-superfan-invite]
+verify_jwt = false
+
+[functions.generate-vault-code]
+verify_jwt = false
+
+[functions.handle-application-action]
+verify_jwt = false
+
+[functions.initiate-multipart-upload]
+verify_jwt = false
+
+[functions.lookup-artist-application]
+verify_jwt = false
+
+[functions.mint-playback-url]
+verify_jwt = false
+
+[functions.mint-playback-url-public-preview]
+verify_jwt = false
+
+[functions.monitoring-metrics]
+verify_jwt = false
+
+[functions.notify-new-application]
+verify_jwt = false
+
+[functions.playback-telemetry]
+verify_jwt = false
+
+[functions.process-payouts]
+verify_jwt = false
+
+[functions.reject-waitlist-artist]
+verify_jwt = false
+
+[functions.reset-test-password]
+verify_jwt = false
+
+[functions.send-artist-invite]
+verify_jwt = false
+
+[functions.send-daily-report]
+verify_jwt = false
+
+[functions.send-password-reset]
+verify_jwt = false
+
+[functions.send-payout-notification]
+verify_jwt = false
+
+[functions.send-superfan-welcome-email]
+verify_jwt = false
+
+[functions.send-vault-lose-email]
+verify_jwt = false
+
+[functions.send-vault-resend-email]
+verify_jwt = false
+
+[functions.send-vault-retry-win-email]
+verify_jwt = false
+
+[functions.send-vault-win-email]
+verify_jwt = false
+
+[functions.sign-upload-part]
+verify_jwt = false
+
+[functions.storage-health-check]
+verify_jwt = false
+
+[functions.stripe-webhook]
+verify_jwt = false
+
+[functions.submit-agreement-acceptance]
+verify_jwt = false
+
+[functions.submit-artist-application]
+verify_jwt = false
+
+[functions.submit-fan-waitlist]
+verify_jwt = false
+
+[functions.submit-waitlist-application]
+verify_jwt = false
+
+[functions.update-charts-standings]
+verify_jwt = false
+
+[functions.upload-avatar]
+verify_jwt = false
+
+[functions.upload-fan-avatar]
+verify_jwt = false
+
+[functions.upload-part-proxy]
+verify_jwt = false
+
+[functions.upload-track-cover]
+verify_jwt = false
+
+[functions.upload-track-media]
+verify_jwt = false
+
+[functions.uploadTrackAssets]
+verify_jwt = false
+
+[functions.validate-fan-invite]
+verify_jwt = false
+
+[functions.validate-vault-code]
+verify_jwt = false
+
+[functions.verify-checkout]
+verify_jwt = false
+
+[functions.verify-connect-status]
+verify_jwt = false
+
+[functions.verify-r2-objects]
+verify_jwt = false
