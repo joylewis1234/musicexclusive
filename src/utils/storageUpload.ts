@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { debugLog } from "@/utils/debugLog";
 import * as tus from "tus-js-client";
 
