@@ -132,7 +132,7 @@ const PayoutSettings = ({ onStatusChange }: PayoutSettingsProps) => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-connect-status`,
+        `${SUPABASE_URL}/functions/v1/verify-connect-status`,
         {
           method: "POST",
           headers: {
