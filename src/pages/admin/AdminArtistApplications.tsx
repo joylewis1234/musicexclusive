@@ -104,7 +104,7 @@ const AdminArtistApplications = () => {
 
   useEffect(() => {
     // Environment debug logging
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+    const supabaseUrl = SUPABASE_URL || "";
     console.log("[Admin] Supabase env:", supabaseUrl.replace(/^(https?:\/\/[^.]+).*/, "$1.***"));
 
     // Handle token-based actions from email links
