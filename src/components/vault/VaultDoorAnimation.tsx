@@ -3,15 +3,16 @@ import { cn } from "@/lib/utils";
 import { Lock } from "lucide-react";
 import vaultPortal from "@/assets/vault-portal.png";
 import vaultVideo from "@/assets/vault-door-animation.mp4";
+import { SUPABASE_URL } from "@/config/supabase";
 
 interface VaultDoorAnimationProps {
   onComplete: (result: "winner" | "not_selected") => void;
   result: "winner" | "not_selected";
 }
 
-const DOOR_SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-door-open.mp3`;
-const WIN_SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-win-reveal.mp3`;
-const LOSE_SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-door-slam.mp3`;
+const DOOR_SFX_URL = `${SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-door-open.mp3`;
+const WIN_SFX_URL = `${SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-win-reveal.mp3`;
+const LOSE_SFX_URL = `${SUPABASE_URL}/storage/v1/object/public/audio/sfx/vault-door-slam.mp3`;
 
 /** Preload & play vault sounds from static files */
 const useVaultSounds = () => {

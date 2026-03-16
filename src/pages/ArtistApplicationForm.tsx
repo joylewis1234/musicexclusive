@@ -70,8 +70,8 @@ const ArtistApplicationForm = () => {
 
       // Use direct fetch to bypass Supabase client's AbortController which can
       // abort requests during auth token refresh when a user is already logged in.
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+      const supabaseUrl = SUPABASE_URL
+      const supabaseKey = SUPABASE_ANON_KEY
 
       const insertBody = {
         id: applicationId,

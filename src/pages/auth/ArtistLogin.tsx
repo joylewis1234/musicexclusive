@@ -30,7 +30,7 @@ const ArtistLogin = () => {
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   // Masked Supabase URL for debug
-  const maskedUrl = (import.meta.env.VITE_SUPABASE_URL || "").replace(/^(https?:\/\/[^.]+).*/, "$1.***");
+  const maskedUrl = (SUPABASE_URL || "").replace(/^(https?:\/\/[^.]+).*/, "$1.***");
 
   /**
    * Lookup application via the edge function (uses service_role, bypasses RLS).

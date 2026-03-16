@@ -17,7 +17,7 @@ interface ArtistProtectedRouteProps {
  */
 function hasCachedSupabaseSession(): boolean {
   try {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const projectId = SUPABASE_PROJECT_ID;
     if (!projectId) return false;
     const key = `sb-${projectId}-auth-token`;
     const raw = localStorage.getItem(key);
