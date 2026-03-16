@@ -773,13 +773,13 @@ export function useTrackUpload() {
                   // 2) Call verify-r2-objects edge function
                   try {
                     const verifyResp = await fetch(
-                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-r2-objects`,
+                      `${SUPABASE_URL}/functions/v1/verify-r2-objects`,
                       {
                         method: "POST",
                         headers: {
                           "Content-Type": "application/json",
                           Authorization: `Bearer ${currentAccessToken}`,
-                          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                          apikey: SUPABASE_ANON_KEY,
                         },
                         body: JSON.stringify({
                           fullKey: row.full_audio_key,
