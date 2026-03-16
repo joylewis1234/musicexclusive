@@ -407,7 +407,7 @@ export function useTrackUpload() {
                   headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${currentAccessToken}`,
-                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                    apikey: SUPABASE_ANON_KEY,
                   },
                   body: edgeBody,
                   signal: controller.signal,
