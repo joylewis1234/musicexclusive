@@ -287,7 +287,7 @@ const ArtistDashboard = () => {
 
       // Fetch tracks via REST with AbortController for Android Chrome resilience
       try {
-        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const anonKey = SUPABASE_ANON_KEY;
         const token = authResult.ok ? authResult.session.access_token : "";
         const trackController = new AbortController();
         const trackTimer = setTimeout(() => trackController.abort(), 30000);
