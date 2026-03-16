@@ -713,7 +713,7 @@ export function useTrackUpload() {
           };
 
           // Use direct REST to avoid Supabase SDK hanging on Android Chrome
-          const restUpdateUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`;
+          const restUpdateUrl = `${SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`;
           const updateController = new AbortController();
           const updateTimer = setTimeout(() => updateController.abort(), 15000);
 
