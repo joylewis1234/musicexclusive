@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Home, Mic2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
