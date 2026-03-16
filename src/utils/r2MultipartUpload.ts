@@ -58,7 +58,7 @@ async function callEdgeFn(
   token: string,
   timeoutMs = 30_000
 ): Promise<any> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`;
+  const url = `${SUPABASE_URL}/functions/v1/${fnName}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
