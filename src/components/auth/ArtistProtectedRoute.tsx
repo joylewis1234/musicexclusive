@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArtistAccessCache } from "@/hooks/useArtistAccessCache";
 import { TimeoutSpinner } from "@/components/ui/TimeoutSpinner";
+import { SUPABASE_PROJECT_ID } from "@/config/supabase";
 import { Loader2, AlertTriangle, RotateCcw } from "lucide-react";
 
 interface ArtistProtectedRouteProps {
