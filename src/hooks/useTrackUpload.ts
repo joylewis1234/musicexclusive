@@ -825,12 +825,12 @@ export function useTrackUpload() {
           if (!verified) {
             console.error("[Upload:DIAG] ❌ Track verification timed out after 120s");
             try {
-              await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
+              await fetch(`${SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",
                   Prefer: "return=minimal",
-                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  apikey: SUPABASE_ANON_KEY,
                   Authorization: `Bearer ${currentAccessToken}`,
                 },
                 body: JSON.stringify({ status: "failed", processing_error: "File verification timed out after 120 seconds. Please retry." }),
