@@ -119,8 +119,8 @@ async function xhrUpload(params: {
     return { ok: false, status: 401, responseText: "No auth session" };
   }
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const supabaseUrl = SUPABASE_URL;
+  const anonKey = SUPABASE_ANON_KEY;
   const url = `${supabaseUrl}/storage/v1/object/${bucket}/${objectPath}`;
 
   // Log upload target (no secrets)
