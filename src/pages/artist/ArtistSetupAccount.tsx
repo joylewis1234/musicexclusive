@@ -49,7 +49,7 @@ const ArtistSetupAccount = () => {
   // Extract checkApplication so it can be called from retry button
   const checkApplication = useCallback(async () => {
     // Environment debug logging
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+    const supabaseUrl = SUPABASE_URL || "";
     console.log("[ArtistSetupAccount] Supabase env:", supabaseUrl.replace(/^(https?:\/\/[^.]+).*/, "$1.***"));
 
     setIsLoading(true);
