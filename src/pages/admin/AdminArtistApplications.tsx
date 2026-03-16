@@ -197,7 +197,7 @@ const AdminArtistApplications = () => {
     if (!session) throw new Error("Not logged in — please sign in again.");
     return {
       Authorization: `Bearer ${session.access_token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      apikey: SUPABASE_ANON_KEY,
       "Content-Type": "application/json",
     };
   };

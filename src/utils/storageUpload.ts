@@ -388,8 +388,8 @@ export function tusUploadToStorage(params: {
       return;
     }
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const supabaseUrl = SUPABASE_URL;
+    const anonKey = SUPABASE_ANON_KEY;
     const endpoint = `${supabaseUrl}/storage/v1/upload/resumable`;
 
     debugLog(`${tag} 🚀 TUS start — endpoint=${endpoint}`);

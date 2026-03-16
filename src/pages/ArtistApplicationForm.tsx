@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select"
 import { ArrowLeft, Home, Loader2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client" // used only for edge function invoke
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase"
 import { useToast } from "@/hooks/use-toast"
 
 const yearsOptions = [

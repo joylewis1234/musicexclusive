@@ -315,8 +315,8 @@ const ArtistSetupAccount = () => {
       }
 
       // Direct fetch with timeout for Android Chrome reliability
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const supabaseUrl = SUPABASE_URL;
+      const anonKey = SUPABASE_ANON_KEY;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30_000);
 
