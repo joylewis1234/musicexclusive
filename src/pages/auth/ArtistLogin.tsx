@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Loader2, Mic2, AlertCircle, FileText } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { SUPABASE_URL } from "@/config/supabase";
 import { toast } from "sonner";
 
 const normalizeEmail = (e: string) => e.trim().toLowerCase();
