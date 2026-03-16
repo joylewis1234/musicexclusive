@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { ArrowLeft, Home, Mic2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
@@ -48,7 +49,7 @@ const ArtistSetupAccount = () => {
   // Extract checkApplication so it can be called from retry button
   const checkApplication = useCallback(async () => {
     // Environment debug logging
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+    const supabaseUrl = SUPABASE_URL || "";
     console.log("[ArtistSetupAccount] Supabase env:", supabaseUrl.replace(/^(https?:\/\/[^.]+).*/, "$1.***"));
 
     setIsLoading(true);
@@ -314,8 +315,8 @@ const ArtistSetupAccount = () => {
       }
 
       // Direct fetch with timeout for Android Chrome reliability
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const supabaseUrl = SUPABASE_URL;
+      const anonKey = SUPABASE_ANON_KEY;
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30_000);
 

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select"
 import { ArrowLeft, Home, Loader2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client" // used only for edge function invoke
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase"
 import { useToast } from "@/hooks/use-toast"
 
 const yearsOptions = [
@@ -70,8 +71,8 @@ const ArtistApplicationForm = () => {
 
       // Use direct fetch to bypass Supabase client's AbortController which can
       // abort requests during auth token refresh when a user is already logged in.
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+      const supabaseUrl = SUPABASE_URL
+      const supabaseKey = SUPABASE_ANON_KEY
 
       const insertBody = {
         id: applicationId,

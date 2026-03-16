@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Loader2, Mic2, AlertCircle, FileText } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
+import { SUPABASE_URL } from "@/config/supabase";
 import { toast } from "sonner";
 
 const normalizeEmail = (e: string) => e.trim().toLowerCase();
@@ -29,7 +30,7 @@ const ArtistLogin = () => {
   const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   // Masked Supabase URL for debug
-  const maskedUrl = (import.meta.env.VITE_SUPABASE_URL || "").replace(/^(https?:\/\/[^.]+).*/, "$1.***");
+  const maskedUrl = (SUPABASE_URL || "").replace(/^(https?:\/\/[^.]+).*/, "$1.***");
 
   /**
    * Lookup application via the edge function (uses service_role, bypasses RLS).

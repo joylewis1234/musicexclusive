@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -103,7 +104,7 @@ const AdminArtistApplications = () => {
 
   useEffect(() => {
     // Environment debug logging
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+    const supabaseUrl = SUPABASE_URL || "";
     console.log("[Admin] Supabase env:", supabaseUrl.replace(/^(https?:\/\/[^.]+).*/, "$1.***"));
 
     // Handle token-based actions from email links
@@ -189,14 +190,14 @@ const AdminArtistApplications = () => {
   };
 
   const getEdgeFunctionUrl = (fnName: string) =>
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`;
+    `${SUPABASE_URL}/functions/v1/${fnName}`;
 
   const getAuthHeaders = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) throw new Error("Not logged in — please sign in again.");
     return {
       Authorization: `Bearer ${session.access_token}`,
-      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      apikey: SUPABASE_ANON_KEY,
       "Content-Type": "application/json",
     };
   };

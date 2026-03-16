@@ -1,12 +1,13 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Play, Square, Loader2, Volume2 } from "lucide-react";
 
-const SFX_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/elevenlabs-sfx`;
+const SFX_URL = `${SUPABASE_URL}/functions/v1/elevenlabs-sfx`;
 
 const PRESET_PROMPTS = [
   "Epic cinematic reveal sound, deep bass impact followed by ascending sparkle tones",
@@ -42,7 +43,7 @@ export default function TestSounds() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ prompt, duration }),

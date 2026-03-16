@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ExclusiveSongCard, ExclusiveSong } from "@/components/artist/ExclusiveSongCard";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { toast } from "sonner";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { ArtistTutorial } from "@/components/artist/tutorial/ArtistTutorial";
@@ -111,14 +112,14 @@ const ArtistDashboard = () => {
         return;
       }
       try {
-        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const anonKey = SUPABASE_ANON_KEY;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profileId}&status=neq.disabled&order=created_at.desc`,
+          `${SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profileId}&status=neq.disabled&order=created_at.desc`,
           {
             headers: {
               apikey: anonKey,
@@ -140,7 +141,7 @@ const ArtistDashboard = () => {
           if (track.status === "processing" && track.full_audio_key && track.artwork_key) {
             try {
               const verifyResp = await fetch(
-                `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-r2-objects`,
+                `${SUPABASE_URL}/functions/v1/verify-r2-objects`,
                 {
                   method: "POST",
                   headers: {
@@ -157,7 +158,7 @@ const ArtistDashboard = () => {
               );
               const verifyData = await verifyResp.json();
               if (verifyData?.ok) {
-                await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${track.id}`, {
+                await fetch(`${SUPABASE_URL}/rest/v1/tracks?id=eq.${track.id}`, {
                   method: "PATCH",
                   headers: {
                     "Content-Type": "application/json",
@@ -286,13 +287,13 @@ const ArtistDashboard = () => {
 
       // Fetch tracks via REST with AbortController for Android Chrome resilience
       try {
-        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const anonKey = SUPABASE_ANON_KEY;
         const token = authResult.ok ? authResult.session.access_token : "";
         const trackController = new AbortController();
         const trackTimer = setTimeout(() => trackController.abort(), 30000);
 
         const resp = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profile.id}&status=neq.disabled&order=created_at.desc`,
+          `${SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profile.id}&status=neq.disabled&order=created_at.desc`,
           {
             headers: {
               apikey: anonKey,

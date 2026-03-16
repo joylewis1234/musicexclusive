@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { debugLog } from "@/utils/debugLog";
 import * as tus from "tus-js-client";
 
@@ -118,8 +119,8 @@ async function xhrUpload(params: {
     return { ok: false, status: 401, responseText: "No auth session" };
   }
 
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+  const supabaseUrl = SUPABASE_URL;
+  const anonKey = SUPABASE_ANON_KEY;
   const url = `${supabaseUrl}/storage/v1/object/${bucket}/${objectPath}`;
 
   // Log upload target (no secrets)
@@ -387,8 +388,8 @@ export function tusUploadToStorage(params: {
       return;
     }
 
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const supabaseUrl = SUPABASE_URL;
+    const anonKey = SUPABASE_ANON_KEY;
     const endpoint = `${supabaseUrl}/storage/v1/upload/resumable`;
 
     debugLog(`${tag} 🚀 TUS start — endpoint=${endpoint}`);

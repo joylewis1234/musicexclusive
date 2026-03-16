@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
 import { r2MultipartUpload } from "@/utils/r2MultipartUpload";
@@ -297,8 +298,8 @@ export function useTrackUpload() {
         addDiagnostic({ step: "session_check", status: "pending", message: "Fetching artist profile via REST...", timestamp: new Date() });
         try {
           console.time("[Upload:DIAG] artistProfile REST");
-          const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-          const restUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/artist_profiles?select=id&user_id=eq.${userId}&limit=1`;
+          const anonKey = SUPABASE_ANON_KEY;
+          const restUrl = `${SUPABASE_URL}/rest/v1/artist_profiles?select=id&user_id=eq.${userId}&limit=1`;
           const controller = new AbortController();
           const restTimer = setTimeout(() => controller.abort(), 10000);
 
@@ -367,11 +368,11 @@ export function useTrackUpload() {
 
         // ── Auto-cleanup stale "uploading" drafts (>10 min, no keys) ──
         try {
-          const cleanupUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${artistId}&status=eq.uploading&full_audio_key=is.null&artwork_key=is.null&created_at=lt.${new Date(Date.now() - 10 * 60 * 1000).toISOString()}`;
+          const cleanupUrl = `${SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${artistId}&status=eq.uploading&full_audio_key=is.null&artwork_key=is.null&created_at=lt.${new Date(Date.now() - 10 * 60 * 1000).toISOString()}`;
           const cleanupResp = await fetch(cleanupUrl, {
             method: "DELETE",
             headers: {
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              apikey: SUPABASE_ANON_KEY,
               Authorization: `Bearer ${currentAccessToken}`,
               Prefer: "return=minimal",
             },
@@ -386,7 +387,7 @@ export function useTrackUpload() {
           addDiagnostic({ step: "db_insert", status: "pending", message: trackId ? "Re-using existing track draft" : "Creating track draft via edge function...", timestamp: new Date() });
 
           if (!trackId) {
-            const edgeFnUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-track-draft`;
+            const edgeFnUrl = `${SUPABASE_URL}/functions/v1/create-track-draft`;
             const edgeBody = JSON.stringify({
               title: title?.trim() || "Untitled",
               genre: genre || null,
@@ -406,7 +407,7 @@ export function useTrackUpload() {
                   headers: {
                     "Content-Type": "application/json",
                     Authorization: `Bearer ${currentAccessToken}`,
-                    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                    apikey: SUPABASE_ANON_KEY,
                   },
                   body: edgeBody,
                   signal: controller.signal,
@@ -712,7 +713,7 @@ export function useTrackUpload() {
           };
 
           // Use direct REST to avoid Supabase SDK hanging on Android Chrome
-          const restUpdateUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`;
+          const restUpdateUrl = `${SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`;
           const updateController = new AbortController();
           const updateTimer = setTimeout(() => updateController.abort(), 15000);
 
@@ -722,7 +723,7 @@ export function useTrackUpload() {
             headers: {
               "Content-Type": "application/json",
               Prefer: "return=minimal",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              apikey: SUPABASE_ANON_KEY,
               Authorization: `Bearer ${currentAccessToken}`,
             },
             body: JSON.stringify(updatePayload),
@@ -746,10 +747,10 @@ export function useTrackUpload() {
           while (Date.now() - pollStart < POLL_TIMEOUT_MS) {
             try {
               // 1) Check DB has the keys persisted
-              const pollUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}&select=status,processing_error,full_audio_key,artwork_key,preview_audio_key`;
+              const pollUrl = `${SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}&select=status,processing_error,full_audio_key,artwork_key,preview_audio_key`;
               const pollResp = await fetch(pollUrl, {
                 headers: {
-                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  apikey: SUPABASE_ANON_KEY,
                   Authorization: `Bearer ${currentAccessToken}`,
                   Accept: "application/json",
                 },
@@ -772,13 +773,13 @@ export function useTrackUpload() {
                   // 2) Call verify-r2-objects edge function
                   try {
                     const verifyResp = await fetch(
-                      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-r2-objects`,
+                      `${SUPABASE_URL}/functions/v1/verify-r2-objects`,
                       {
                         method: "POST",
                         headers: {
                           "Content-Type": "application/json",
                           Authorization: `Bearer ${currentAccessToken}`,
-                          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                          apikey: SUPABASE_ANON_KEY,
                         },
                         body: JSON.stringify({
                           fullKey: row.full_audio_key,
@@ -791,12 +792,12 @@ export function useTrackUpload() {
 
                     if (verifyData?.ok) {
                       // Set status to ready
-                      await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
+                      await fetch(`${SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
                         method: "PATCH",
                         headers: {
                           "Content-Type": "application/json",
                           Prefer: "return=minimal",
-                          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                          apikey: SUPABASE_ANON_KEY,
                           Authorization: `Bearer ${currentAccessToken}`,
                         },
                         body: JSON.stringify({ status: "ready" }),
@@ -824,12 +825,12 @@ export function useTrackUpload() {
           if (!verified) {
             console.error("[Upload:DIAG] ❌ Track verification timed out after 120s");
             try {
-              await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
+              await fetch(`${SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}`, {
                 method: "PATCH",
                 headers: {
                   "Content-Type": "application/json",
                   Prefer: "return=minimal",
-                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  apikey: SUPABASE_ANON_KEY,
                   Authorization: `Bearer ${currentAccessToken}`,
                 },
                 body: JSON.stringify({ status: "failed", processing_error: "File verification timed out after 120 seconds. Please retry." }),

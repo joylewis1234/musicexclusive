@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_PROJECT_ID } from "@/config/supabase";
 
 interface UsePublicAudioPreviewReturn {
   currentPreviewId: string | null;
@@ -59,8 +60,8 @@ export const usePublicAudioPreview = (): UsePublicAudioPreviewReturn => {
       setError(null);
 
       // Call the secure public preview endpoint (no auth header needed)
-      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const projectId = SUPABASE_PROJECT_ID;
+      const anonKey = SUPABASE_ANON_KEY;
 
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/mint-playback-url-public-preview`,

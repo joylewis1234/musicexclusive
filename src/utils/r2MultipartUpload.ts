@@ -9,6 +9,7 @@
  */
 
 import { debugLog } from "@/utils/debugLog";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 
 const PART_SIZE = 5_242_880; // 5 MB — must match edge function
 const MAX_RETRIES = 5;
@@ -57,7 +58,7 @@ async function callEdgeFn(
   token: string,
   timeoutMs = 30_000
 ): Promise<any> {
-  const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/${fnName}`;
+  const url = `${SUPABASE_URL}/functions/v1/${fnName}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -67,7 +68,7 @@ async function callEdgeFn(
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
-        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        apikey: SUPABASE_ANON_KEY,
       },
       body: JSON.stringify(body),
       signal: controller.signal,

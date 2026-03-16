@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL } from "@/config/supabase";
 import { 
   processImageForUpload, 
   validateImageFile, 
@@ -157,7 +158,7 @@ export const useAvatarUpload = (params: { userId?: string | null }) => {
         formData.append("file", fileToUpload);
 
         const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/upload-avatar`,
+          `${SUPABASE_URL}/functions/v1/upload-avatar`,
           {
             method: "POST",
             headers: { Authorization: `Bearer ${sessionData.session.access_token}` },

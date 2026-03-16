@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 
 const ArtistApplicationAction = () => {
   const navigate = useNavigate();
@@ -30,8 +31,8 @@ const ArtistApplicationAction = () => {
 
   const processAction = async () => {
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const supabaseUrl = SUPABASE_URL;
+      const supabaseKey = SUPABASE_ANON_KEY;
 
       const response = await fetch(
         `${supabaseUrl}/functions/v1/handle-application-action`,

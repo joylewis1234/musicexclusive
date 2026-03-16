@@ -3,6 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useArtistAccessCache } from "@/hooks/useArtistAccessCache";
 import { TimeoutSpinner } from "@/components/ui/TimeoutSpinner";
+import { SUPABASE_PROJECT_ID } from "@/config/supabase";
 import { Loader2, AlertTriangle, RotateCcw } from "lucide-react";
 
 interface ArtistProtectedRouteProps {
@@ -16,7 +17,7 @@ interface ArtistProtectedRouteProps {
  */
 function hasCachedSupabaseSession(): boolean {
   try {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const projectId = SUPABASE_PROJECT_ID;
     if (!projectId) return false;
     const key = `sb-${projectId}-auth-token`;
     const raw = localStorage.getItem(key);
