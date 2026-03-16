@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_PROJECT_ID } from "@/config/supabase";
 
 interface UsePublicAudioPreviewReturn {
   currentPreviewId: string | null;
