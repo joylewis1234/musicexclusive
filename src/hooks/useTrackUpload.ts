@@ -298,8 +298,8 @@ export function useTrackUpload() {
         addDiagnostic({ step: "session_check", status: "pending", message: "Fetching artist profile via REST...", timestamp: new Date() });
         try {
           console.time("[Upload:DIAG] artistProfile REST");
-          const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-          const restUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/artist_profiles?select=id&user_id=eq.${userId}&limit=1`;
+          const anonKey = SUPABASE_ANON_KEY;
+          const restUrl = `${SUPABASE_URL}/rest/v1/artist_profiles?select=id&user_id=eq.${userId}&limit=1`;
           const controller = new AbortController();
           const restTimer = setTimeout(() => controller.abort(), 10000);
 
