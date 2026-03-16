@@ -112,7 +112,7 @@ const ArtistDashboard = () => {
         return;
       }
       try {
-        const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const anonKey = SUPABASE_ANON_KEY;
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
