@@ -9,6 +9,7 @@
  */
 
 import { debugLog } from "@/utils/debugLog";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 
 const PART_SIZE = 5_242_880; // 5 MB — must match edge function
 const MAX_RETRIES = 5;
