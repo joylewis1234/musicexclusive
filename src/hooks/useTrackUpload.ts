@@ -723,7 +723,7 @@ export function useTrackUpload() {
             headers: {
               "Content-Type": "application/json",
               Prefer: "return=minimal",
-              apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+              apikey: SUPABASE_ANON_KEY,
               Authorization: `Bearer ${currentAccessToken}`,
             },
             body: JSON.stringify(updatePayload),
