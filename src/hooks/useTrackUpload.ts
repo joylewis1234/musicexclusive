@@ -747,10 +747,10 @@ export function useTrackUpload() {
           while (Date.now() - pollStart < POLL_TIMEOUT_MS) {
             try {
               // 1) Check DB has the keys persisted
-              const pollUrl = `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}&select=status,processing_error,full_audio_key,artwork_key,preview_audio_key`;
+              const pollUrl = `${SUPABASE_URL}/rest/v1/tracks?id=eq.${trackId}&select=status,processing_error,full_audio_key,artwork_key,preview_audio_key`;
               const pollResp = await fetch(pollUrl, {
                 headers: {
-                  apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+                  apikey: SUPABASE_ANON_KEY,
                   Authorization: `Bearer ${currentAccessToken}`,
                   Accept: "application/json",
                 },
