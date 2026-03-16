@@ -158,7 +158,7 @@ const ArtistDashboard = () => {
               );
               const verifyData = await verifyResp.json();
               if (verifyData?.ok) {
-                await fetch(`${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?id=eq.${track.id}`, {
+                await fetch(`${SUPABASE_URL}/rest/v1/tracks?id=eq.${track.id}`, {
                   method: "PATCH",
                   headers: {
                     "Content-Type": "application/json",
