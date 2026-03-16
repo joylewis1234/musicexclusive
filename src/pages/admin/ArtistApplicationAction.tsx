@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Button } from "@/components/ui/button";
 import { Loader2, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 
 const ArtistApplicationAction = () => {
   const navigate = useNavigate();
