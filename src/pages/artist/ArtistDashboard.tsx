@@ -119,7 +119,7 @@ const ArtistDashboard = () => {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), 30000);
         const resp = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profileId}&status=neq.disabled&order=created_at.desc`,
+          `${SUPABASE_URL}/rest/v1/tracks?artist_id=eq.${profileId}&status=neq.disabled&order=created_at.desc`,
           {
             headers: {
               apikey: anonKey,
