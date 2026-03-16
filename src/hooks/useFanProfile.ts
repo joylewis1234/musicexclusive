@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { SUPABASE_URL } from "@/config/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   processImageForUpload, 
