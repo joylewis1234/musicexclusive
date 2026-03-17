@@ -1,20 +1,21 @@
 
+## Completed: Double-Mint Elimination (2026-03-03)
 
-## Plan: Fix `create-connect-account` Auth Method
+**What was done:**
+- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
+- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
+- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
+- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
+- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
 
-### Root Cause
+## Completed: Upload Flow Verification (2026-03-17)
 
-The `create-connect-account` edge function uses `supabaseClient.auth.getClaims(token)` (line 51), which **does not exist** in the Supabase JS client SDK. This causes a runtime error, returning a 401/500 before any Stripe logic runs. The sister function `verify-connect-status` correctly uses `auth.getUser(token)`.
+**Status:** Client-side code correctly configured — no code changes required.
 
-### Fix
+**Verified:**
+- `SUPABASE_URL` → `https://esgpsapstljgsqpmezzf.supabase.co`
+- `create-track-draft` call routes to `${SUPABASE_URL}/functions/v1/create-track-draft`
+- `r2MultipartUpload` routes to external project for `initiate-multipart-upload`, `sign-upload-part`, `complete-multipart-upload`
+- localStorage auth token key → `sb-esgpsapstljgsqpmezzf-auth-token`
 
-**`supabase/functions/create-connect-account/index.ts`**
-
-Replace the `getClaims`-based auth block (lines 43-67) with the standard `getUser(token)` pattern:
-
-- Use `supabaseClient.auth.getUser(token)` to authenticate
-- Extract `user.id` and `user.email` from the result
-- Keep all downstream logic (Stripe account creation, profile update, account link) unchanged
-
-This is a one-file, ~10-line change that aligns the function with the working pattern used in `verify-connect-status` and all other edge functions.
-
+**If 401 persists:** Issue is on external project deployment/config — verify `verify_jwt = false` in external `config.toml` and check Edge Function logs for `getClaims()` output.

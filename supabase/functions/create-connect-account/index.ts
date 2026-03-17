@@ -40,7 +40,7 @@ serve(async (req) => {
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
     logStep("Stripe key verified");
 
-    // Authenticate user (must be a real user JWT with `sub`)
+    // Authenticate user
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       logStep("Unauthorized - missing/invalid Authorization header");
@@ -48,21 +48,16 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
-      logStep("Unauthorized - claims verification failed", { message: claimsError?.message });
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+    if (userError || !user) {
+      logStep("Unauthorized - user verification failed", { message: userError?.message });
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
 
-    const userId = claimsData.claims.sub;
-    const email = (claimsData.claims as Record<string, unknown>).email;
-    if (!userId || typeof userId !== "string") {
-      // This is the common case when a client accidentally sends the anon key as Authorization
-      logStep("Unauthorized - missing sub claim");
-      return jsonResponse({ error: "Unauthorized" }, 401);
-    }
-    if (!email || typeof email !== "string") {
-      logStep("Unauthorized - missing email claim");
+    const userId = user.id;
+    const email = user.email;
+    if (!email) {
+      logStep("Unauthorized - missing email");
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
     logStep("User authenticated", { userId, email });
