@@ -1,21 +1,37 @@
 
-## Completed: Double-Mint Elimination (2026-03-03)
+Goal: Resolve persistent `initiate-multipart-upload failed (401): {"code":401,"message":"Invalid JWT"}` in the artist upload flow.
 
-**What was done:**
-- Eliminated redundant `mint-playback-url` calls during fan paid streams by using the `hlsUrl` returned directly from `charge-stream`.
-- Fixed `charge-stream` protocol normalization (`https://` prefix for `HLS_WORKER_BASE_URL`).
-- Updated `CompactVaultPlayer` to accept `paidStreamData` prop and call `loadPaidStream()` directly.
-- Updated `ArtistProfilePage` to pass charge result's `hlsUrl`/`sessionId` to the player.
-- Updated `docs/playback-protection-architecture.md`, `docs/global-audio-engine-plan.md`, and `docs/final-audit-report.md` to reflect the new flow.
+What I found
+- The failure happens after `create-track-draft` succeeds (`200`) and before multipart begins.
+- Response shape is gateway-style (`code/message`), which means the request is rejected before function logic runs.
+- In this repo, `supabase/config.toml` is missing:
+  - `[functions.initiate-multipart-upload]`
+  - `verify_jwt = false`
+- Other upload functions (`sign-upload-part`, `complete-multipart-upload`) are already set to `verify_jwt = false`.
+- `supabase/export/config.toml` already includes `initiate-multipart-upload` with `verify_jwt = false`, so local/runtime config is out of sync.
 
-## Completed: Upload Flow Verification (2026-03-17)
+Implementation plan
+1. Fix function gateway auth config
+- Add `[functions.initiate-multipart-upload] verify_jwt = false` to `supabase/config.toml`.
+- Keep existing manual auth validation in function code (required when `verify_jwt = false`).
 
-**Status:** Client-side code correctly configured — no code changes required.
+2. Normalize JWT validation across multipart functions
+- Align `initiate-multipart-upload`, `sign-upload-part`, and `complete-multipart-upload` to the same explicit JWT validation style (`Authorization` extraction + claims/user validation) for consistent behavior and logs.
+- Keep validation against the external project credentials currently used by these functions.
 
-**Verified:**
-- `SUPABASE_URL` → `https://esgpsapstljgsqpmezzf.supabase.co`
-- `create-track-draft` call routes to `${SUPABASE_URL}/functions/v1/create-track-draft`
-- `r2MultipartUpload` routes to external project for `initiate-multipart-upload`, `sign-upload-part`, `complete-multipart-upload`
-- localStorage auth token key → `sb-esgpsapstljgsqpmezzf-auth-token`
+3. External deployment alignment (critical for your setup)
+- Redeploy `initiate-multipart-upload` on the external project with JWT gateway verification disabled (matching config).
+- Redeploy `sign-upload-part` and `complete-multipart-upload` only if auth logic is updated in step 2.
 
-**If 401 persists:** Issue is on external project deployment/config — verify `verify_jwt = false` in external `config.toml` and check Edge Function logs for `getClaims()` output.
+4. End-to-end verification checklist
+- Re-run artist upload with cover + full audio + preview.
+- Confirm network sequence:
+  - `create-track-draft` → 200
+  - 3x `initiate-multipart-upload` → 200 (each returns `uploadId`/`key`)
+  - `sign-upload-part`/R2 PUT/`complete-multipart-upload` → 200
+- Confirm track record updates to keys + `status=ready`.
+
+Technical details
+- No database schema/RLS changes required.
+- Root cause is function gateway JWT verification mismatch for `initiate-multipart-upload` (config/deployment), not client token generation.
+- Current console `ref` warning in `UploadProgressBar` is unrelated to this 401 and can be handled separately after upload is unblocked.
