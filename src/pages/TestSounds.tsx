@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
+import { SUPABASE_ANON_KEY, EDGE_FUNCTIONS_URL } from "@/config/supabase";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
