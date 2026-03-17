@@ -1,6 +1,6 @@
 import { useCallback, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL } from "@/config/supabase";
+import { EDGE_FUNCTIONS_URL } from "@/config/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   processImageForUpload, 
@@ -151,7 +151,7 @@ export const useFanProfile = () => {
         formData.append("file", fileToUpload);
 
         const res = await fetch(
-          `${SUPABASE_URL}/functions/v1/upload-fan-avatar`,
+          `${EDGE_FUNCTIONS_URL}/functions/v1/upload-fan-avatar`,
           {
             method: "POST",
             headers: { Authorization: `Bearer ${sessionData.session.access_token}` },

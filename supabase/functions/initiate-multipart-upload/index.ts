@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 import { S3Client, CreateMultipartUploadCommand } from "npm:@aws-sdk/client-s3@3.700.0";
+import { EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY } from "../_shared/external-supabase.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ── Auth ──
+    // ── Auth (validate against external project) ──
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -24,11 +25,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabase = createClient(EXTERNAL_SUPABASE_URL, EXTERNAL_SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const { data: { user }, error: userErr } = await supabase.auth.getUser();
     if (userErr || !user) {
@@ -47,16 +46,10 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    // fileType: "audio" (default), "cover", or "preview"
     const resolvedFileType = fileType === "cover" ? "cover" : fileType === "preview" ? "preview" : "audio";
 
-    // ── Verify artist owns track ──
-    const adminClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
-
-    const { data: track, error: trackErr } = await adminClient
+    // ── Verify artist owns track (using authenticated client) ──
+    const { data: track, error: trackErr } = await supabase
       .from("tracks")
       .select("id, artist_id")
       .eq("id", trackId)
@@ -69,8 +62,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check artist profile ownership
-    const { data: profile } = await adminClient
+    const { data: profile } = await supabase
       .from("artist_profiles")
       .select("id")
       .eq("user_id", userId)

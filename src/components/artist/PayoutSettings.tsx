@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL } from "@/config/supabase";
+import { EDGE_FUNCTIONS_URL } from "@/config/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +81,7 @@ const PayoutSettings = ({ onStatusChange }: PayoutSettingsProps) => {
       }
 
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/create-connect-account`,
+        `${EDGE_FUNCTIONS_URL}/functions/v1/create-connect-account`,
         {
           method: "POST",
           headers: {
@@ -132,7 +132,7 @@ const PayoutSettings = ({ onStatusChange }: PayoutSettingsProps) => {
       }
 
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/verify-connect-status`,
+        `${EDGE_FUNCTIONS_URL}/functions/v1/verify-connect-status`,
         {
           method: "POST",
           headers: {
