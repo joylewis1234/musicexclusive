@@ -81,6 +81,24 @@ const benefits = [
   },
 ]
 
+const artistBenefits = [
+  {
+    number: 1,
+    title: "Own Your Masters",
+    description: "Keep 100% ownership of your music. No label deals required.",
+  },
+  {
+    number: 2,
+    title: "Get Paid Per Stream",
+    description: "Every stream earns you real revenue — transparent and direct.",
+  },
+  {
+    number: 3,
+    title: "Cash Bonus Program",
+    description: "Hit stream milestones and unlock up to $300 in cash bonuses.",
+  },
+]
+
 const Index = () => {
   const navigate = useNavigate()
   const [vaultLocked, setVaultLocked] = useState(false)
