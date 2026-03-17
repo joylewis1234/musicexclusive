@@ -225,7 +225,7 @@ export function useTrackUpload() {
             // Fallback: read session token directly from localStorage
             console.log("[Upload:DIAG] attempting localStorage fallback...");
             try {
-              const storageKey = `sb-yjytuglxpvdkyvjsdyfk-auth-token`;
+              const storageKey = `sb-esgpsapstljgsqpmezzf-auth-token`;
               const raw = localStorage.getItem(storageKey);
               if (raw) {
                 const parsed = JSON.parse(raw);
