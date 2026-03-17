@@ -78,28 +78,6 @@ const Login = forwardRef<HTMLDivElement>((_, ref) => {
             </GlowCard>
           </button>
 
-          {/* Admin Login Option */}
-          <button
-            onClick={() => navigate("/admin/login")}
-            className="w-full text-left group"
-          >
-            <GlowCard className="p-6 transition-all duration-300 hover:border-muted-foreground/50 group-hover:shadow-[0_0_20px_hsl(var(--muted-foreground)/0.2)]">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-7 h-7 text-muted-foreground" />
-                </div>
-                <div className="flex-1">
-                  <h2 className="font-display text-lg font-bold text-foreground mb-1">
-                    Admin Login
-                  </h2>
-                  <p className="text-muted-foreground text-sm">
-                    Platform administration access
-                  </p>
-                </div>
-              </div>
-            </GlowCard>
-          </button>
-
           {/* Divider */}
           <div className="flex items-center gap-4 py-2">
             <div className="flex-1 h-px bg-border/50" />
