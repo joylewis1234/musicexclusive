@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL, SUPABASE_ANON_KEY, EDGE_FUNCTIONS_URL } from "@/config/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
 import { r2MultipartUpload } from "@/utils/r2MultipartUpload";
@@ -387,7 +387,7 @@ export function useTrackUpload() {
           addDiagnostic({ step: "db_insert", status: "pending", message: trackId ? "Re-using existing track draft" : "Creating track draft via edge function...", timestamp: new Date() });
 
           if (!trackId) {
-            const edgeFnUrl = `${EDGE_FUNCTIONS_URL}/functions/v1/create-track-draft`;
+            const edgeFnUrl = `${SUPABASE_URL}/functions/v1/create-track-draft`;
             const edgeBody = JSON.stringify({
               title: title?.trim() || "Untitled",
               genre: genre || null,
@@ -773,7 +773,7 @@ export function useTrackUpload() {
                   // 2) Call verify-r2-objects edge function
                   try {
                     const verifyResp = await fetch(
-                      `${EDGE_FUNCTIONS_URL}/functions/v1/verify-r2-objects`,
+                      `${SUPABASE_URL}/functions/v1/verify-r2-objects`,
                       {
                         method: "POST",
                         headers: {

@@ -1,13 +1,13 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_ANON_KEY, EDGE_FUNCTIONS_URL } from "@/config/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Play, Square, Loader2, Volume2 } from "lucide-react";
 
-const SFX_URL = `${EDGE_FUNCTIONS_URL}/functions/v1/elevenlabs-sfx`;
+const SFX_URL = `${SUPABASE_URL}/functions/v1/elevenlabs-sfx`;
 
 const PRESET_PROMPTS = [
   "Epic cinematic reveal sound, deep bass impact followed by ascending sparkle tones",

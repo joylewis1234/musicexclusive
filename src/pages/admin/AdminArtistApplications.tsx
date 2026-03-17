@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL, SUPABASE_ANON_KEY, EDGE_FUNCTIONS_URL } from "@/config/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -190,7 +190,7 @@ const AdminArtistApplications = () => {
   };
 
   const getEdgeFunctionUrl = (fnName: string) =>
-    `${EDGE_FUNCTIONS_URL}/functions/v1/${fnName}`;
+    `${SUPABASE_URL}/functions/v1/${fnName}`;
 
   const getAuthHeaders = async () => {
     const { data: { session } } = await supabase.auth.getSession();

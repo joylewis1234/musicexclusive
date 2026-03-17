@@ -9,7 +9,7 @@
  */
 
 import { debugLog } from "@/utils/debugLog";
-import { SUPABASE_ANON_KEY, EDGE_FUNCTIONS_URL } from "@/config/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
 
 const PART_SIZE = 5_242_880; // 5 MB — must match edge function
 const MAX_RETRIES = 5;
@@ -58,7 +58,7 @@ async function callEdgeFn(
   token: string,
   timeoutMs = 30_000
 ): Promise<any> {
-  const url = `${EDGE_FUNCTIONS_URL}/functions/v1/${fnName}`;
+  const url = `${SUPABASE_URL}/functions/v1/${fnName}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
