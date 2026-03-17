@@ -81,7 +81,7 @@ const PayoutSettings = ({ onStatusChange }: PayoutSettingsProps) => {
       }
 
       const response = await fetch(
-        `${EDGE_FUNCTIONS_URL}/functions/v1/create-connect-account`,
+        `${SUPABASE_URL}/functions/v1/create-connect-account`,
         {
           method: "POST",
           headers: {
