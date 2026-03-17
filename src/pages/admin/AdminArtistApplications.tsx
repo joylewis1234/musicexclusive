@@ -190,7 +190,7 @@ const AdminArtistApplications = () => {
   };
 
   const getEdgeFunctionUrl = (fnName: string) =>
-    `${SUPABASE_URL}/functions/v1/${fnName}`;
+    `${EDGE_FUNCTIONS_URL}/functions/v1/${fnName}`;
 
   const getAuthHeaders = async () => {
     const { data: { session } } = await supabase.auth.getSession();

@@ -151,7 +151,7 @@ export const useFanProfile = () => {
         formData.append("file", fileToUpload);
 
         const res = await fetch(
-          `${SUPABASE_URL}/functions/v1/upload-fan-avatar`,
+          `${EDGE_FUNCTIONS_URL}/functions/v1/upload-fan-avatar`,
           {
             method: "POST",
             headers: { Authorization: `Bearer ${sessionData.session.access_token}` },

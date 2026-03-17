@@ -132,7 +132,7 @@ const PayoutSettings = ({ onStatusChange }: PayoutSettingsProps) => {
       }
 
       const response = await fetch(
-        `${SUPABASE_URL}/functions/v1/verify-connect-status`,
+        `${EDGE_FUNCTIONS_URL}/functions/v1/verify-connect-status`,
         {
           method: "POST",
           headers: {
