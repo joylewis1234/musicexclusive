@@ -11,3 +11,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     autoRefreshToken: true,
   }
 });
+
+// Edge Functions are deployed on Lovable Cloud, not the external project.
+// Override the functions URL so supabase.functions.invoke() routes correctly.
+(supabase as any).functionsUrl = "https://yjytuglxpvdkyvjsdyfk.supabase.co/functions/v1";
