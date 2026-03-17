@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL } from "@/config/supabase";
+import { EDGE_FUNCTIONS_URL } from "@/config/supabase";
 import { 
   processImageForUpload, 
   validateImageFile, 
