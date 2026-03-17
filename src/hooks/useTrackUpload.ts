@@ -387,7 +387,7 @@ export function useTrackUpload() {
           addDiagnostic({ step: "db_insert", status: "pending", message: trackId ? "Re-using existing track draft" : "Creating track draft via edge function...", timestamp: new Date() });
 
           if (!trackId) {
-            const edgeFnUrl = `${EDGE_FUNCTIONS_URL}/functions/v1/create-track-draft`;
+            const edgeFnUrl = `${SUPABASE_URL}/functions/v1/create-track-draft`;
             const edgeBody = JSON.stringify({
               title: title?.trim() || "Untitled",
               genre: genre || null,
