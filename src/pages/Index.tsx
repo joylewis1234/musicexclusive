@@ -81,6 +81,24 @@ const benefits = [
   },
 ]
 
+const artistBenefits = [
+  {
+    number: 1,
+    title: "Own Your Masters",
+    description: "Keep 100% ownership of your music. No label deals required.",
+  },
+  {
+    number: 2,
+    title: "Get Paid Per Stream",
+    description: "Every stream earns you real revenue — transparent and direct.",
+  },
+  {
+    number: 3,
+    title: "Cash Bonus Program",
+    description: "Hit stream milestones and unlock up to $300 in cash bonuses.",
+  },
+]
+
 const Index = () => {
   const navigate = useNavigate()
   const [vaultLocked, setVaultLocked] = useState(false)
@@ -305,6 +323,28 @@ const Index = () => {
             <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
               ✨ Skip the lottery — guaranteed access
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Benefits — For Artists */}
+      <section className="px-4 py-16">
+        <div className="container max-w-lg md:max-w-2xl mx-auto">
+          <SectionHeader
+            title="Benefits — For Artists"
+            align="left"
+            framed
+          />
+          
+          <div className="flex flex-col gap-4 mt-8">
+            {artistBenefits.map((benefit) => (
+              <BenefitCard
+                key={benefit.number}
+                number={benefit.number}
+                title={benefit.title}
+                description={benefit.description}
+              />
+            ))}
           </div>
         </div>
       </section>
