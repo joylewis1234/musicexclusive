@@ -1,7 +1,7 @@
 import { forwardRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
-import { ArrowLeft, Music, Mic2, Shield } from "lucide-react";
+import { ArrowLeft, Music, Mic2 } from "lucide-react";
 
 const Login = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
