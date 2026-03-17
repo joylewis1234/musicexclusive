@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ExclusiveSongCard, ExclusiveSong } from "@/components/artist/ExclusiveSongCard";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, EDGE_FUNCTIONS_URL } from "@/config/supabase";
 import { toast } from "sonner";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { ArtistTutorial } from "@/components/artist/tutorial/ArtistTutorial";
