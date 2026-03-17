@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 export function useIsAdmin() {
   const { user, isLoading: authLoading } = useAuth();
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [isChecking, setIsChecking] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
 
   const checkedUserIdRef = useRef<string | null>(null);
 
