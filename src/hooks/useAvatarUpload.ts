@@ -158,7 +158,7 @@ export const useAvatarUpload = (params: { userId?: string | null }) => {
         formData.append("file", fileToUpload);
 
         const res = await fetch(
-          `${EDGE_FUNCTIONS_URL}/functions/v1/upload-avatar`,
+          `${SUPABASE_URL}/functions/v1/upload-avatar`,
           {
             method: "POST",
             headers: { Authorization: `Bearer ${sessionData.session.access_token}` },

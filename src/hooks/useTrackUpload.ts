@@ -773,7 +773,7 @@ export function useTrackUpload() {
                   // 2) Call verify-r2-objects edge function
                   try {
                     const verifyResp = await fetch(
-                      `${EDGE_FUNCTIONS_URL}/functions/v1/verify-r2-objects`,
+                      `${SUPABASE_URL}/functions/v1/verify-r2-objects`,
                       {
                         method: "POST",
                         headers: {

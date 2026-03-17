@@ -141,7 +141,7 @@ const ArtistDashboard = () => {
           if (track.status === "processing" && track.full_audio_key && track.artwork_key) {
             try {
               const verifyResp = await fetch(
-                `${EDGE_FUNCTIONS_URL}/functions/v1/verify-r2-objects`,
+                `${SUPABASE_URL}/functions/v1/verify-r2-objects`,
                 {
                   method: "POST",
                   headers: {
