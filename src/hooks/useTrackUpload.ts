@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
+import { SUPABASE_URL, SUPABASE_ANON_KEY, EDGE_FUNCTIONS_URL } from "@/config/supabase";
 import { sanitizeFilename, getImageContentType } from "@/utils/imageProcessing";
 import { safeStringify } from "@/utils/safeStringify";
 import { r2MultipartUpload } from "@/utils/r2MultipartUpload";
