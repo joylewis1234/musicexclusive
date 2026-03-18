@@ -60,7 +60,7 @@ const ArtistAgreement = () => {
         {/* Footer Note */}
         <div className="mt-12 pt-8 border-t border-border/30 text-center">
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            This agreement governs all artist accounts on themusicexclusive.com.
+            This agreement governs all artist accounts on musicexclusive.co.
             Questions or concerns? Contact us at support@musicexclusive.co
           </p>
           <a href="mailto:support@musicexclusive.co">
