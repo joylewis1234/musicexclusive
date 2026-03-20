@@ -257,7 +257,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Failed to send notification email:", sendErr);
     }
 
-    // Log to email_logs
+    // Log admin notification to email_logs
     try {
       await supabase.from("email_logs").insert({
         email_type: "artist_application_submitted",
@@ -269,7 +269,143 @@ const handler = async (req: Request): Promise<Response> => {
         sent_at: emailStatus === "sent" ? new Date().toISOString() : null,
       });
     } catch (logErr) {
-      console.error("Failed to log email:", logErr);
+      console.error("Failed to log admin email:", logErr);
+    }
+
+    // --- Send confirmation email to the applicant (fire-and-forget) ---
+    let confirmEmailStatus = "sent";
+    let confirmEmailError: string | null = null;
+    let confirmResendId: string | null = null;
+
+    const statusPageUrl = `${baseUrl}/artist/application-status`;
+
+    const confirmationEmailHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: #0a0a0a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0a0a0a; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%); border-radius: 16px; border: 1px solid rgba(139, 92, 246, 0.3); overflow: hidden;">
+          
+          <!-- Header -->
+          <tr>
+            <td style="padding: 40px 30px 30px; text-align: center; border-bottom: 1px solid rgba(139, 92, 246, 0.2);">
+              <h1 style="margin: 0; font-size: 28px; font-weight: 800; background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 50%, #7c3aed 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; letter-spacing: 2px;">
+                MUSIC EXCLUSIVE
+              </h1>
+              <p style="margin: 10px 0 0; color: #a78bfa; font-size: 12px; letter-spacing: 3px; text-transform: uppercase;">
+                Application Received
+              </p>
+            </td>
+          </tr>
+
+          <!-- Welcome Message -->
+          <tr>
+            <td style="padding: 30px 30px 10px;">
+              <h2 style="margin: 0 0 15px; color: #f8fafc; font-size: 22px; font-weight: 700;">
+                Hey ${application.artist_name} 👋
+              </h2>
+              <p style="margin: 0 0 15px; color: #e2e8f0; font-size: 15px; line-height: 1.7;">
+                Thank you for applying to join <strong style="color: #a78bfa;">Music Exclusive</strong>! We're excited that you want to share your music with our community.
+              </p>
+              <p style="margin: 0 0 15px; color: #e2e8f0; font-size: 15px; line-height: 1.7;">
+                Your application is now <strong style="color: #22c55e;">under review</strong>. Our team carefully reviews every submission to ensure a great experience for both artists and fans.
+              </p>
+            </td>
+          </tr>
+
+          <!-- What to Expect -->
+          <tr>
+            <td style="padding: 0 30px 25px;">
+              <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.25); border-radius: 12px; padding: 20px;">
+                <h3 style="margin: 0 0 12px; color: #a78bfa; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">
+                  What Happens Next
+                </h3>
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 8px 0; color: #e2e8f0; font-size: 14px; line-height: 1.6;">
+                      ⏱️ &nbsp; We typically review applications within <strong>3–5 business days</strong>.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #e2e8f0; font-size: 14px; line-height: 1.6;">
+                      📧 &nbsp; You'll receive an email at <strong style="color: #a78bfa;">${application.contact_email}</strong> with your approval status.
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: #e2e8f0; font-size: 14px; line-height: 1.6;">
+                      🎵 &nbsp; Once approved, you can start uploading your exclusive music right away.
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </td>
+          </tr>
+
+          <!-- CTA Button -->
+          <tr>
+            <td style="padding: 0 30px 30px; text-align: center;">
+              <a href="${statusPageUrl}" style="display: inline-block; background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 12px; font-size: 14px; font-weight: 600; letter-spacing: 1px;">
+                CHECK APPLICATION STATUS
+              </a>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 25px 30px; background: rgba(0, 0, 0, 0.3); border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center;">
+              <p style="margin: 0 0 8px; color: #64748b; font-size: 12px;">
+                Questions? Reach us at <a href="mailto:support@musicexclusive.co" style="color: #a78bfa; text-decoration: none;">support@musicexclusive.co</a>
+              </p>
+              <p style="margin: 0; color: #475569; font-size: 11px;">
+                © ${new Date().getFullYear()} Music Exclusive. All rights reserved.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+    `;
+
+    try {
+      const confirmResult = await resend.emails.send({
+        from: "Music Exclusive <noreply@themusicisexclusive.com>",
+        reply_to: "support@musicexclusive.co",
+        to: [application.contact_email],
+        subject: `We Received Your Application, ${application.artist_name}!`,
+        html: confirmationEmailHtml,
+      });
+
+      console.log("Applicant confirmation email sent:", confirmResult);
+      confirmResendId = confirmResult?.data?.id ?? null;
+    } catch (confirmErr) {
+      confirmEmailStatus = "failed";
+      confirmEmailError = confirmErr instanceof Error ? confirmErr.message : "Unknown send error";
+      console.error("Failed to send applicant confirmation email:", confirmErr);
+    }
+
+    // Log applicant confirmation to email_logs
+    try {
+      await supabase.from("email_logs").insert({
+        email_type: "artist_application_confirmation",
+        recipient_email: application.contact_email,
+        application_id: applicationId,
+        status: confirmEmailStatus,
+        error_message: confirmEmailError,
+        resend_id: confirmResendId,
+        sent_at: confirmEmailStatus === "sent" ? new Date().toISOString() : null,
+      });
+    } catch (logErr) {
+      console.error("Failed to log confirmation email:", logErr);
     }
 
     return new Response(
