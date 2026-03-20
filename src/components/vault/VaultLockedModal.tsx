@@ -9,6 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Lock, Sparkles } from "lucide-react";
 
+// TEMPORARY: Set to false to disable modal for testing lottery flow
+// Set to true to re-enable the "Vault is Closed" popup
+const VAULT_LOCKED_MODAL_ENABLED = false;
+
 interface VaultLockedModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -16,6 +20,11 @@ interface VaultLockedModalProps {
 
 export function VaultLockedModal({ open, onOpenChange }: VaultLockedModalProps) {
   const navigate = useNavigate();
+
+  // Temporarily disabled for testing
+  if (!VAULT_LOCKED_MODAL_ENABLED) {
+    return null;
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -1,3 +1,6 @@
+/* Music Exclusive - Dark Futuristic Premium Design System */
+@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap');
+
 @tailwind base;
 
 /* ========================================
@@ -52,9 +55,6 @@
 }
 @tailwind components;
 @tailwind utilities;
-
-/* Music Exclusive - Dark Futuristic Premium Design System */
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap');
 
 @layer base {
   :root {

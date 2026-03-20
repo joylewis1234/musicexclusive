@@ -74,10 +74,6 @@ const EnterVault = () => {
   const [vaultLocked, setVaultLocked] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const timer = setTimeout(() => setVaultLocked(true), 5000);
-    return () => clearTimeout(timer);
-  }, []);
   const { signUp } = useAuth();
 
   const form = useForm<FormValues>({
@@ -412,8 +408,8 @@ const EnterVault = () => {
                   {/* Form */}
                   <Form {...form}>
                     <form
-                      onSubmit={(e) => e.preventDefault()}
-                      className="space-y-6 opacity-50 pointer-events-none"
+                      onSubmit={form.handleSubmit(onSubmit)}
+                      className="space-y-6"
                     >
                       <FormField
                         control={form.control}
@@ -602,7 +598,7 @@ const EnterVault = () => {
             variant="secondary" 
             size="lg" 
             className="w-full"
-            onClick={() => setVaultLocked(true)}
+            onClick={() => navigate("/founding-superfan")}
           >
             Unlock Superfan Access
           </Button>

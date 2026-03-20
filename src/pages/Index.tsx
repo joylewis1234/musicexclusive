@@ -162,7 +162,7 @@ const Index = () => {
                 variant="secondary" 
                 size="lg" 
                 className="w-full"
-                onClick={() => setVaultLocked(true)}
+                onClick={() => navigate("/founding-superfan")}
               >
                 Unlock Superfan Access
               </Button>
@@ -218,7 +218,7 @@ const Index = () => {
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => setVaultLocked(true)}
+              onClick={() => navigate("/vault/enter")}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
             >
               Enter the Vault
@@ -303,7 +303,7 @@ const Index = () => {
             <Button
               variant="ghost"
               size="lg"
-              onClick={() => setVaultLocked(true)}
+              onClick={() => navigate("/vault/enter")}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
             >
               Enter the Vault
@@ -316,7 +316,7 @@ const Index = () => {
               variant="secondary" 
               size="lg" 
               className="w-full"
-              onClick={() => setVaultLocked(true)}
+              onClick={() => navigate("/founding-superfan")}
             >
               Unlock Superfan Access
             </Button>
@@ -399,7 +399,7 @@ const Index = () => {
               size="lg" 
               variant="outline"
               className="w-full animate-glow-pulse"
-              onClick={() => setVaultLocked(true)}
+              onClick={() => navigate("/vault/enter")}
             >
               Enter the Vault
             </Button>
@@ -407,7 +407,7 @@ const Index = () => {
               variant="outline" 
               size="lg" 
               className="w-full h-auto py-3 whitespace-normal text-amber-400 border-amber-500/50 hover:border-amber-400 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(251,191,36,0.3)] animate-glow-pulse"
-              onClick={() => setVaultLocked(true)}
+              onClick={() => navigate("/founding-superfan")}
             >
               <span className="block text-center leading-tight">
                 Want Access Now?<br />Become a Superfan
