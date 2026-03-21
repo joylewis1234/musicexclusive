@@ -10,6 +10,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { APP_URL } from "@/config/app";
 
 const CREDIT_TO_DOLLAR = 0.20;
 const MIN_CREDITS = 25;
@@ -69,13 +70,16 @@ const Payment = () => {
     setIsProcessing(true);
     
     try {
+      const successUrl = `${APP_URL}/checkout/return?payment=success&credits=${credits}&return_to=%2Ffan%2Fpayment`;
+      const cancelUrl = `${APP_URL}/fan/payment?payment=cancelled`;
+
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {
           credits,
           email: user.email,
           // Always return via a public route so verification can run even if the user session is lost.
-          successUrl: `${window.location.origin}/checkout/return?payment=success&credits=${credits}`,
-          cancelUrl: `${window.location.origin}/fan/payment?payment=cancelled`,
+          successUrl,
+          cancelUrl,
         },
       });
 

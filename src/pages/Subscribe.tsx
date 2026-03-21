@@ -9,6 +9,8 @@ import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { warmFanAuthRoute } from "@/utils/preloadRoutes";
+import { APP_URL } from "@/config/app";
 
 interface LocationState {
   email?: string;
@@ -39,9 +41,14 @@ const Subscribe = () => {
 
   // Redirect to auth if not logged in (but only after auth check is complete)
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/auth/fan", { state: { flow: "superfan" }, replace: true });
-    }
+    const redirectToFanAuth = () => {
+      if (!authLoading && !user) {
+        warmFanAuthRoute();
+        navigate("/auth/fan", { state: { flow: "superfan" }, replace: true });
+      }
+    };
+
+    redirectToFanAuth();
   }, [user, navigate, authLoading]);
 
   // Check for payment success from URL params - redirect to proper verification
@@ -67,11 +74,14 @@ const Subscribe = () => {
     setIsProcessing(true);
     
     try {
+      const successUrl = `${APP_URL}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25&return_to=%2Fsubscribe`;
+      const cancelUrl = `${APP_URL}/subscribe?payment=cancelled`;
+
       const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
         body: {
           email,
-          successUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25`,
-          cancelUrl: `${window.location.origin}/subscribe?payment=cancelled`,
+          successUrl,
+          cancelUrl,
         },
       });
 

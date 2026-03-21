@@ -13,6 +13,7 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
 };
 
 const CHECKOUT_SESSION_PLACEHOLDER = "{CHECKOUT_SESSION_ID}";
+const APP_URL = "https://musicexclusive.co";
 
 const ensureCheckoutSessionIdInSuccessUrl = (
   url: string,
@@ -85,8 +86,8 @@ serve(async (req) => {
     }
 
     // Create Stripe checkout session
-    const defaultSuccessUrl = `${req.headers.get("origin")}/checkout/return?payment=success&credits=${credits}`;
-    const defaultCancelUrl = `${req.headers.get("origin")}/fan/payment?payment=cancelled`;
+    const defaultSuccessUrl = `${APP_URL}/checkout/return?payment=success&credits=${credits}&return_to=%2Ffan%2Fpayment`;
+    const defaultCancelUrl = `${APP_URL}/fan/payment?payment=cancelled`;
 
     const successUrlWithSession = ensureCheckoutSessionIdInSuccessUrl(
       successUrl || defaultSuccessUrl,

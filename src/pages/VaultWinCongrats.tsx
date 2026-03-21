@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Crown, Sparkles, Music, ArrowRight } from "lucide-react";
+import { warmFanAuthRoute } from "@/utils/preloadRoutes";
 
 const VaultWinCongrats = () => {
   const navigate = useNavigate();
@@ -21,11 +22,13 @@ const VaultWinCongrats = () => {
 
     // Animate in content
     const timer = setTimeout(() => setShowContent(true), 100);
+    warmFanAuthRoute();
     return () => clearTimeout(timer);
   }, [email, code]);
 
   const handleContinue = () => {
     // Navigate to login page with vault flow
+    warmFanAuthRoute();
     navigate("/auth/fan?flow=vault", {
       state: { email, vaultCode: code, flow: "vault" },
     });

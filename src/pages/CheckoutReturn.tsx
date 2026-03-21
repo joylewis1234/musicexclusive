@@ -15,6 +15,15 @@ const CheckoutReturn = () => {
 
   const sessionId = searchParams.get("session_id");
   const credits = searchParams.get("credits");
+  const requestedReturnPath = searchParams.get("return_to");
+
+  const retryPath = useMemo(() => {
+    const allowedPaths = new Set(["/subscribe", "/load-credits", "/fan/payment"]);
+    if (requestedReturnPath && allowedPaths.has(requestedReturnPath)) {
+      return requestedReturnPath;
+    }
+    return "/fan/payment";
+  }, [requestedReturnPath]);
 
   const profileUrl = useMemo(() => {
     const qs = new URLSearchParams();
@@ -142,7 +151,7 @@ const CheckoutReturn = () => {
 
           {status === "error" && (
             <div className="space-y-2">
-              <Button className="w-full" onClick={() => navigate("/fan/payment")}>Try Again</Button>
+              <Button className="w-full" onClick={() => navigate(retryPath)}>Try Again</Button>
               <Button className="w-full" variant="outline" onClick={() => navigate("/fan/profile")}>Go to Profile</Button>
               <Button className="w-full" variant="ghost" onClick={() => navigate("/login")}>Log in</Button>
             </div>

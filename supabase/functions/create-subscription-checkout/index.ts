@@ -8,6 +8,7 @@ const corsHeaders = {
 
 // Superfan subscription price ID
 const SUPERFAN_PRICE_ID = "price_1SuFPkKICFkRzPC4AQfhunEn";
+const APP_URL = "https://musicexclusive.co";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -38,10 +39,9 @@ serve(async (req) => {
       console.log(`Found existing customer: ${customerId}`);
     }
 
-    // Use /checkout/return for consistent verification flow
-    const origin = req.headers.get("origin") || "";
-    const defaultSuccessUrl = `${origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25`;
-    const defaultCancelUrl = `${origin}/subscribe?payment=cancelled`;
+    // Use the canonical domain for checkout return URLs.
+    const defaultSuccessUrl = `${APP_URL}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25&return_to=%2Fsubscribe`;
+    const defaultCancelUrl = `${APP_URL}/subscribe?payment=cancelled`;
 
     // Create Stripe checkout session for subscription
     const session = await stripe.checkout.sessions.create({

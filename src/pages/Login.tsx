@@ -1,10 +1,15 @@
-import { forwardRef } from "react";
+import { forwardRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { ArrowLeft, Music, Mic2 } from "lucide-react";
+import { warmFanAuthRoute } from "@/utils/preloadRoutes";
 
 const Login = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    warmFanAuthRoute();
+  }, []);
 
   return (
     <div ref={ref} className="min-h-screen bg-background flex flex-col">
@@ -36,7 +41,10 @@ const Login = forwardRef<HTMLDivElement>((_, ref) => {
 
           {/* Fan Login Option */}
           <button
-            onClick={() => navigate("/auth/fan")}
+            onClick={() => {
+              warmFanAuthRoute();
+              navigate("/auth/fan");
+            }}
             className="w-full text-left group"
           >
             <GlowCard className="p-6 transition-all duration-300 hover:border-primary/50 group-hover:shadow-[0_0_20px_hsl(var(--primary)/0.2)]">

@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertCircle, Sparkles, Music } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
+import { warmFanAuthRoute } from "@/utils/preloadRoutes";
 
 const InviteLanding = () => {
   const navigate = useNavigate();
@@ -51,8 +52,15 @@ const InviteLanding = () => {
     validate();
   }, [token, type]);
 
+  useEffect(() => {
+    if (isValid) {
+      warmFanAuthRoute();
+    }
+  }, [isValid]);
+
   const handleAcceptInvite = () => {
     // Pass invite token through to auth flow
+    warmFanAuthRoute();
     navigate(`/auth/fan?flow=invite&invite_token=${token}&invite_type=${inviterType}`);
   };
 
