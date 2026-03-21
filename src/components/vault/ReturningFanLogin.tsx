@@ -17,6 +17,7 @@ import {
 import { KeyRound, ArrowRight, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { APP_URL } from "@/config/app";
 
 const returnFormSchema = z.object({
   email: z
@@ -94,15 +95,11 @@ export const ReturningFanLogin = () => {
 
       // Route based on status
       if (data.status === "won") {
-        // Winner - go to agreements
-        navigate("/fan/agreements", {
-          state: {
-            email: values.email,
-            name: data.name,
-            vaultCode: values.vaultCode,
-            flow: "vault",
-          },
+        const params = new URLSearchParams({
+          email: values.email,
+          code: values.vaultCode,
         });
+        navigate(`/vault/congrats?${params.toString()}`);
       } else {
         // Lost or pending - show vault status
         navigate("/vault/status", {
@@ -157,15 +154,14 @@ export const ReturningFanLogin = () => {
       }
 
       // Send the resend email
-      const appUrl = window.location.origin;
-      const returnUrl = `${appUrl}/vault/submit?email=${encodeURIComponent(email)}&code=${existingCode.code}`;
+      const returnUrl = `${APP_URL}/vault/submit?email=${encodeURIComponent(email)}&code=${existingCode.code}`;
 
       const { error: emailError } = await supabase.functions.invoke("send-vault-resend-email", {
         body: {
           email: email,
           name: existingCode.name,
           vaultCode: existingCode.code,
-          appUrl: appUrl,
+          appUrl: APP_URL,
           returnUrl: returnUrl,
         },
       });

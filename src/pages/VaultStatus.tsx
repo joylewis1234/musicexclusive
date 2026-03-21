@@ -9,7 +9,6 @@ import { VaultDoorAnimation } from "@/components/vault/VaultDoorAnimation";
 import { VaultLoseScreen } from "@/components/vault/VaultLoseScreen";
 import { VaultWinScreen } from "@/components/vault/VaultWinScreen";
 import { VaultPendingScreen } from "@/components/vault/VaultPendingScreen";
-import { supabase } from "@/integrations/supabase/client";
 
 type VaultState = "winner" | "not_selected";
 type RevealPhase = "spinning" | "revealed";
@@ -51,90 +50,6 @@ const VaultStatus = () => {
   const vaultCode = state?.vaultCode || sessionStorage.getItem("vaultCode") || "";
   const fromReturn = state?.fromReturn || false;
   const nextDrawDate = state?.nextDrawDate || null;
-
-  // Handle win state - update database and send email
-  useEffect(() => {
-    const handleWinFlow = async () => {
-      if (revealPhase === "revealed" && vaultState === "winner" && userEmail && vaultCode) {
-        try {
-          // Update vault_codes status to 'won'
-          const { error: updateError } = await supabase
-            .from("vault_codes")
-            .update({ 
-              status: "won",
-              used_at: new Date().toISOString()
-            })
-            .eq("email", userEmail)
-            .eq("code", vaultCode);
-
-          if (updateError) {
-            console.error("Error updating vault code status:", updateError);
-          }
-
-          // Send win email with vault code and app link
-          const appUrl = window.location.origin;
-          const { error: emailError } = await supabase.functions.invoke("send-vault-win-email", {
-            body: {
-              email: userEmail,
-              name: userName,
-              vaultCode: vaultCode,
-              appUrl: appUrl,
-            },
-          });
-
-          if (emailError) {
-            console.error("Failed to send vault win email:", emailError);
-          }
-        } catch (err) {
-          console.error("Error in win flow:", err);
-        }
-      }
-    };
-
-    handleWinFlow();
-  }, [revealPhase, vaultState, userEmail, vaultCode, userName]);
-
-  // Handle lose state - update database and send email
-  useEffect(() => {
-    const handleLoseFlow = async () => {
-      if (revealPhase === "revealed" && vaultState === "not_selected" && userEmail && vaultCode) {
-        try {
-          // Update vault_codes status to 'lost'
-          const { error: updateError } = await supabase
-            .from("vault_codes")
-            .update({ 
-              status: "lost",
-              next_draw_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // Next draw in 7 days
-            })
-            .eq("email", userEmail)
-            .eq("code", vaultCode);
-
-          if (updateError) {
-            console.error("Error updating vault code status:", updateError);
-          }
-
-          // Send lose email with vault code
-          const appUrl = window.location.origin;
-          const { error: emailError } = await supabase.functions.invoke("send-vault-lose-email", {
-            body: {
-              email: userEmail,
-              name: userName,
-              vaultCode: vaultCode,
-              appUrl: appUrl,
-            },
-          });
-
-          if (emailError) {
-            console.error("Failed to send vault lose email:", emailError);
-          }
-        } catch (err) {
-          console.error("Error in lose flow:", err);
-        }
-      }
-    };
-
-    handleLoseFlow();
-  }, [revealPhase, vaultState, userEmail, vaultCode, userName]);
 
   // Handle spin wheel completion
   const handleSpinComplete = useCallback(() => {

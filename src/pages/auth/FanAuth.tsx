@@ -9,7 +9,7 @@ import { ArrowLeft, Loader2, Music, Sparkles, Crown } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
+import { APP_URL } from "@/config/app";
 
 interface LocationState {
   from?: Location;
@@ -37,8 +37,8 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
   const inviteToken = searchParams.get("invite_token") || state?.invite_token || "";
   const inviteType = searchParams.get("invite_type") || state?.invite_type || "";
   
-  // Default to signup for superfan and vault flows
-  const [isSignUp, setIsSignUp] = useState(isSuperfanFlow || isVaultFlow || isInviteFlow);
+  // Vault winners now claim their account on /vault/congrats, so vault auth is sign-in only.
+  const [isSignUp, setIsSignUp] = useState(isSuperfanFlow || isInviteFlow);
   const [email, setEmail] = useState(state?.email || "");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState(state?.name || "");
@@ -54,7 +54,7 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
       return "/fan/agreements";
     }
     if (isVaultFlow) {
-      return "/agreements/fan";
+      return "/fan/agreements";
     }
     return state?.from?.pathname || "/fan/profile";
   };
@@ -176,7 +176,7 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
             {isInviteFlow
               ? (isSignUp ? "Accept Your Invite" : "Welcome Back")
               : isVaultFlow
-              ? (isSignUp ? "Create Your Account" : "Welcome Back")
+              ? "Welcome Back"
               : isSuperfanFlow 
                 ? (isSignUp ? "Become a Superfan" : "Welcome Back, Superfan")
                 : (isSignUp ? "Join the Vault" : "Welcome Back")}
@@ -188,9 +188,7 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
                   ? "You've been invited! Create your account to continue"
                   : "Sign in to accept your invite")
               : isVaultFlow
-              ? (isSignUp 
-                  ? "You've won access! Create your account to continue"
-                  : "Sign in to access your Vault membership")
+              ? "Sign in to access your Vault membership"
               : isSuperfanFlow
                 ? (isSignUp 
                     ? "Create your account to unlock guaranteed access"
@@ -294,8 +292,11 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
                 setActiveRole("fan");
                 try {
                   const destination = getDestination();
-                  const { error } = await lovable.auth.signInWithOAuth("google", {
-                    redirect_uri: window.location.origin + destination,
+                  const { error } = await supabase.auth.signInWithOAuth({
+                    provider: "google",
+                    options: {
+                      redirectTo: `${APP_URL}${destination}`,
+                    },
                   });
                   if (error) {
                     toast.error(error.message || "Google sign-in failed");
@@ -318,15 +319,23 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
           </form>
 
           <div className="mt-6 text-center space-y-3">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-primary hover:underline"
-            >
-              {isSignUp 
-                ? "Already have an account? Sign in"
-                : "Don't have an account? Sign up"}
-            </button>
+            {!isVaultFlow && (
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-primary hover:underline"
+              >
+                {isSignUp
+                  ? "Already have an account? Sign in"
+                  : "Don't have an account? Sign up"}
+              </button>
+            )}
+
+            {isVaultFlow && (
+              <p className="text-sm text-muted-foreground">
+                Need to create your account? Open the winner email and claim your access first.
+              </p>
+            )}
             
             {!isSignUp && (
               <div>

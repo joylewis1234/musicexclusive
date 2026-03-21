@@ -27,15 +27,12 @@ export const VaultWinScreen = ({ vaultCode, email, name }: VaultWinScreenProps) 
   };
 
   const handleContinue = () => {
-    // Navigate to fan agreements with state preserved
-    navigate("/fan/agreements", { 
-      state: { 
-        email, 
-        name, 
-        vaultCode,
-        flow: "vault" 
-      } 
+    const params = new URLSearchParams({
+      email,
+      code: vaultCode,
     });
+
+    navigate(`/vault/congrats?${params.toString()}`);
   };
 
   return (

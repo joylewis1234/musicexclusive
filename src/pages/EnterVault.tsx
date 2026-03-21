@@ -5,7 +5,6 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { GlowCard } from "@/components/ui/GlowCard";
-import { Checkbox } from "@/components/ui/checkbox";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,10 +15,9 @@ import {
   FormItem,
   FormMessage,
 } from "@/components/ui/form";
-import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2, Eye, EyeOff, ChevronDown } from "lucide-react";
+import { ChevronLeft, ArrowRight, Home, Copy, Check, Loader2, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
 import { FanCommentBubble } from "@/components/vault/FanCommentBubble";
 import { ReturningFanLogin } from "@/components/vault/ReturningFanLogin";
 import vaultPortal from "@/assets/vault-portal.png";
@@ -45,16 +43,6 @@ const formSchema = z.object({
     .trim()
     .email({ message: "Please enter a valid email" })
     .max(255, { message: "Email must be less than 255 characters" }),
-  password: z
-    .string()
-    .min(6, { message: "Password must be at least 6 characters" })
-    .max(72, { message: "Password must be less than 72 characters" }),
-  confirmPassword: z
-    .string()
-    .min(1, { message: "Please confirm your password" }),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -68,21 +56,14 @@ const EnterVault = () => {
   const [submittedData, setSubmittedData] = useState<{ name: string; email: string } | null>(null);
   const [vaultCode, setVaultCode] = useState<string>("");
   const [isCopied, setIsCopied] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [vaultLocked, setVaultLocked] = useState(false);
   const navigate = useNavigate();
-
-  const { signUp } = useAuth();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       email: "",
-      password: "",
-      confirmPassword: "",
     },
   });
 
@@ -146,35 +127,6 @@ const EnterVault = () => {
         return;
       }
       
-      // Step 2: Create user account
-      const { error: signUpError } = await signUp(values.email, values.password, "fan", values.name);
-      
-      if (signUpError) {
-        const errMsg = (signUpError.message || "").toLowerCase();
-        const isExistingUser = errMsg.includes("already registered") || 
-                               errMsg.includes("already been registered") || 
-                               errMsg.includes("already exists") ||
-                               errMsg.includes("user already");
-        
-        if (isExistingUser) {
-          // Account already exists — still show their vault code so they're not stuck
-          setVaultCode(codeResult.code);
-          setSubmittedData({ name: values.name, email: values.email });
-          setIsSubmitted(true);
-          sessionStorage.setItem("vaultCode", codeResult.code);
-          sessionStorage.setItem("vaultEmail", values.email);
-          sessionStorage.setItem("vaultName", values.name);
-          window.scrollTo({ top: 0, behavior: "instant" });
-          toast.success("Your vault code is ready! If you already have an account, log in below to continue. Otherwise, try resetting your password.");
-          setIsSubmitting(false);
-          return;
-        } else {
-          toast.error(signUpError.message || "Failed to create account. Please try again.");
-          setIsSubmitting(false);
-          return;
-        }
-      }
-      
       setVaultCode(codeResult.code);
       setSubmittedData({ name: values.name, email: values.email });
       setIsSubmitted(true);
@@ -185,7 +137,7 @@ const EnterVault = () => {
       sessionStorage.setItem("vaultEmail", values.email);
       sessionStorage.setItem("vaultName", values.name);
       
-      toast.success("Account created! Your vault code is ready.");
+      toast.success("Your vault code is ready.");
     } catch (err) {
       console.error("Unexpected error:", err);
       toast.error("Something went wrong. Please try again.");
@@ -389,7 +341,7 @@ const EnterVault = () => {
                     </h3>
                     <div className="space-y-3 text-sm md:text-base text-muted-foreground font-body leading-relaxed">
                       <p>
-                        Enter your email to generate a Vault Code.
+                        Enter your name and email to generate a Vault Code.
                         Your code gives you a chance to unlock access to Music Exclusive — a private space where fans hear music before it hits the world.
                       </p>
                       <p>
@@ -450,60 +402,6 @@ const EnterVault = () => {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type={showPassword ? "text" : "password"}
-                                  placeholder="Create password"
-                                  className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base pr-12"
-                                  {...field}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      <FormField
-                        control={form.control}
-                        name="confirmPassword"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <div className="relative">
-                                <Input
-                                  type={showConfirmPassword ? "text" : "password"}
-                                  placeholder="Confirm password"
-                                  className="h-14 bg-muted/30 border-border/50 focus:border-primary/50 text-foreground placeholder:text-muted-foreground rounded-xl text-base pr-12"
-                                  {...field}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                >
-                                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
-                              </div>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
                       {/* Existing code warning */}
                       {hasExistingCode && (
                         <div className="p-4 rounded-xl bg-primary/10 border border-primary/30">
@@ -516,37 +414,16 @@ const EnterVault = () => {
                         </div>
                       )}
 
-                      {/* Terms Checkbox */}
-                      <label className="flex items-start gap-3 cursor-pointer group">
-                        <Checkbox
-                          checked={termsAccepted}
-                          onCheckedChange={(checked) => setTermsAccepted(checked === true)}
-                          className="mt-0.5 border-primary/50 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                        />
-                        <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors leading-relaxed">
-                          I agree to the Music Exclusive{" "}
-                          <a 
-                            href="/terms" 
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-primary hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            Terms of Use
-                          </a>.
-                        </span>
-                      </label>
-
                       <Button
                         type="submit"
                         size="lg"
                         className="w-full"
-                        disabled={isSubmitting || isCheckingExisting || !termsAccepted || hasExistingCode}
+                        disabled={isSubmitting || isCheckingExisting || hasExistingCode}
                       >
                         {isSubmitting ? (
                           <>
                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            CREATING...
+                            GENERATING...
                           </>
                         ) : isCheckingExisting ? (
                           <>

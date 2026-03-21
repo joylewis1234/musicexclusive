@@ -14,6 +14,7 @@ type ResendErrorPayload = {
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const PRIMARY_FROM = "Music Exclusive <noreply@themusicisexclusive.com>";
 const REPLY_TO = "support@musicexclusive.co";
+const DEFAULT_APP_URL = Deno.env.get("APP_URL") || "https://musicexclusive.co";
 
 async function sendResendEmail(args: {
   resendKey: string;
@@ -123,11 +124,11 @@ function buildRetryWinEmailHtml(
             </td>
           </tr>
 
-          <!-- Vault Login Details -->
+          <!-- Vault Claim Details -->
           <tr>
             <td style="padding-bottom: 32px;">
               <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(251, 191, 36, 0.25); border-radius: 16px; padding: 24px;">
-                <p style="margin: 0 0 16px 0; color: #fbbf24; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">🔐 Your Vault Login Details</p>
+                <p style="margin: 0 0 16px 0; color: #fbbf24; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">🔐 Your Vault Claim Details</p>
                 <table width="100%" cellpadding="0" cellspacing="0">
                   <tr>
                     <td style="padding: 8px 0;">
@@ -146,12 +147,12 @@ function buildRetryWinEmailHtml(
             </td>
           </tr>
 
-          <!-- Enter the Vault -->
+          <!-- Claim Access -->
           <tr>
             <td align="center" style="padding-bottom: 24px;">
-              <p style="margin: 0 0 16px 0; color: #ffffff; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">✅ Enter the Vault Now</p>
+              <p style="margin: 0 0 16px 0; color: #ffffff; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">✅ Claim Your Access Now</p>
               <a href="${loginLink}" style="display: inline-block; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #00d4ff 100%); color: #000000; font-size: 16px; font-weight: 700; text-decoration: none; padding: 18px 48px; border-radius: 12px; letter-spacing: 1px; text-transform: uppercase;">
-                ENTER MUSIC EXCLUSIVE
+                CLAIM YOUR ACCESS
               </a>
             </td>
           </tr>
@@ -159,8 +160,8 @@ function buildRetryWinEmailHtml(
           <!-- Reset Password Section -->
           <tr>
             <td style="padding-bottom: 32px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 24px;">
-              <p style="margin: 0 0 12px 0; color: #888; font-size: 14px;">🔁 Want to set a new password?</p>
-              <p style="margin: 0 0 16px 0; color: #666; font-size: 13px;">You can create or reset your password anytime here:</p>
+              <p style="margin: 0 0 12px 0; color: #888; font-size: 14px;">🔁 Already claimed your account?</p>
+              <p style="margin: 0 0 16px 0; color: #666; font-size: 13px;">If you've already created your account, reset your password here anytime:</p>
               <a href="${resetPasswordLink}" style="color: #8b5cf6; font-size: 14px; text-decoration: underline;">Create / Reset Password →</a>
             </td>
           </tr>
@@ -209,7 +210,7 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY not configured");
     }
 
-    const baseUrl = appUrl || 'https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app';
+    const baseUrl = appUrl || DEFAULT_APP_URL;
     const loginLink = `${baseUrl}/vault/congrats?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}&retry=true`;
     const resetPasswordLink = `${baseUrl}/forgot-password?email=${encodeURIComponent(email)}`;
 
