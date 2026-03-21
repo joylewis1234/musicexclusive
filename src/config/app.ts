@@ -5,10 +5,14 @@ const LOCAL_APP_ORIGINS = new Set([
   "http://127.0.0.1:8080",
 ]);
 
-export function getAuthRedirectBaseUrl() {
+export function getAppBaseUrl() {
   if (typeof window !== "undefined" && LOCAL_APP_ORIGINS.has(window.location.origin)) {
     return window.location.origin;
   }
 
   return APP_URL;
+}
+
+export function getAuthRedirectBaseUrl() {
+  return getAppBaseUrl();
 }

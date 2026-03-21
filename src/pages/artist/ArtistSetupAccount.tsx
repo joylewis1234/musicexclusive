@@ -122,9 +122,13 @@ const ArtistSetupAccount = () => {
       setApplicationStatus(status);
 
       // If application already linked to another user, block
-      if (authUid) {
-        console.warn("[ArtistSetupAccount] Application already linked to auth_user_id:", authUid);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      if (authUid && currentUser?.id && authUid !== currentUser.id) {
+        console.warn("[ArtistSetupAccount] Application linked to different auth_user_id:", authUid);
         setApplicationStatus("already_linked");
+      } else if (authUid && currentUser?.id && authUid === currentUser.id) {
+        console.log("[ArtistSetupAccount] Application already linked to current user, redirecting to login");
+        setApplicationStatus("active");
       }
     } catch (err) {
       console.error("[ArtistSetupAccount] Unexpected lookup error:", err);
@@ -194,8 +198,14 @@ const ArtistSetupAccount = () => {
 
       // Block if already linked
       if (data.auth_user_id) {
-        setApplicationStatus("already_linked");
-        setLookupError("This application is already linked to an account. Please log in instead.");
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (currentUser?.id && data.auth_user_id === currentUser.id) {
+          setApplicationStatus("active");
+          setLookupError("Your account is already set up. Please log in instead.");
+        } else {
+          setApplicationStatus("already_linked");
+          setLookupError("This application is already linked to another account. Please log in or contact support.");
+        }
         return;
       }
 
@@ -251,44 +261,59 @@ const ArtistSetupAccount = () => {
     setIsSubmitting(true);
 
     try {
-      // Step 1: Create auth account (normalize email)
+      // Step 1: Create a confirmed auth account server-side so signup email stays in Resend-owned flows.
       const normalizedEmail = email.trim().toLowerCase();
-      console.log("[ArtistSetupAccount] Step 1: Creating auth account for", normalizedEmail);
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: normalizedEmail,
-        password,
-        options: {
-          emailRedirectTo: window.location.origin,
-          data: { display_name: normalizedEmail.split("@")[0] },
+      console.log("[ArtistSetupAccount] Step 1: Creating confirmed auth account for", normalizedEmail);
+      const { data: createAccountData, error: createAccountError } = await supabase.functions.invoke("create-artist-setup-account", {
+        body: {
+          email: normalizedEmail,
+          password,
+          application_id: resolvedApplicationId,
         },
       });
 
-      if (signUpError) {
-        const msg = signUpError.message.toLowerCase();
-        const code = (signUpError as any)?.code || "unknown";
-        console.error("[ArtistSetupAccount] SignUp error:", { message: signUpError.message, code, status: (signUpError as any)?.status });
-        
-        if (msg.includes("already registered") || msg.includes("already been registered") || msg.includes("already exists")) {
+      if (createAccountError) {
+        console.error("[ArtistSetupAccount] Create account invoke error:", createAccountError);
+        setSetupError(`AUTH_ERROR: ${createAccountError.message}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      if (!createAccountData?.success) {
+        const errorCode = createAccountData?.error_code || "unknown";
+        console.error("[ArtistSetupAccount] Create account error:", createAccountData);
+
+        if (errorCode === "ALREADY_REGISTERED") {
           console.log("[ArtistSetupAccount] User already exists — auth user found for this email");
           setSetupError("ALREADY_REGISTERED");
           setIsSubmitting(false);
           return;
         }
-        
-        if (msg.includes("weak") || msg.includes("leaked") || msg.includes("compromised") || msg.includes("hibp")) {
-          console.warn("[ArtistSetupAccount] Weak/leaked password:", signUpError.message);
+
+        if (errorCode === "NOT_APPROVED") {
+          setSetupError("Your application has not been approved yet. Please wait for approval before creating an account.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        if (errorCode === "ALREADY_LINKED") {
+          setSetupError("This application is already linked to another account. Please log in or contact support.");
+          setIsSubmitting(false);
+          return;
+        }
+
+        if ((createAccountData?.message || "").toLowerCase().includes("password")) {
           setSetupError("PASSWORD_WEAK");
           setIsSubmitting(false);
           return;
         }
 
-        // Show the exact error from auth for debugging
-        setSetupError(`AUTH_ERROR: ${signUpError.message} (code: ${code})`);
+        setSetupError(`AUTH_ERROR: ${createAccountData?.message || "Unknown error"} (code: ${errorCode})`);
         setIsSubmitting(false);
         return;
       }
 
-      console.log("[ArtistSetupAccount] Step 2: Auth account created, user ID:", signUpData.user?.id);
+      console.log("[ArtistSetupAccount] Step 2: Auth account created, user ID:", createAccountData.user_id);
 
       // Step 2: Sign in to get a definitive session
       const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({

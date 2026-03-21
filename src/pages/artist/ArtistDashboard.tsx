@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ExclusiveSongCard, ExclusiveSong } from "@/components/artist/ExclusiveSongCard";
 import { supabase } from "@/integrations/supabase/client";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
+import { getAppBaseUrl } from "@/config/app";
 import { toast } from "sonner";
 import { getAuthedUserOrFail, withTimeout } from "@/utils/authHelpers";
 import { ArtistTutorial } from "@/components/artist/tutorial/ArtistTutorial";
@@ -513,7 +514,7 @@ const ArtistDashboard = () => {
     setIsConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("create-connect-account", {
-        body: { returnOrigin: window.location.origin }
+        body: { returnOrigin: getAppBaseUrl() }
       });
       
       if (error) {

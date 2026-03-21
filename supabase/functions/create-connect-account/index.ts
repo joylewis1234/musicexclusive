@@ -18,6 +18,29 @@ const jsonResponse = (body: unknown, status: number) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
+const DEFAULT_APP_URL = "https://musicexclusive.co";
+const LOCAL_APP_ORIGINS = new Set([
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+]);
+
+const resolveAllowedOrigin = (...candidates: Array<string | null | undefined>) => {
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+
+    try {
+      const origin = new URL(candidate).origin;
+      if (origin === DEFAULT_APP_URL || LOCAL_APP_ORIGINS.has(origin)) {
+        return origin;
+      }
+    } catch {
+      // Ignore invalid origins and fall back to the canonical app URL.
+    }
+  }
+
+  return DEFAULT_APP_URL;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -75,16 +98,18 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     
-    // Get origin from body (preferred) or fallback to header
-    let origin = "http://localhost:3000";
+    let requestBody: { returnOrigin?: string } | null = null;
     try {
-      const body = await req.json();
-      if (body?.returnOrigin) {
-        origin = body.returnOrigin;
-      }
+      requestBody = await req.json();
     } catch {
-      origin = req.headers.get("origin") || "http://localhost:3000";
+      requestBody = null;
     }
+
+    const origin = resolveAllowedOrigin(
+      requestBody?.returnOrigin,
+      req.headers.get("origin"),
+      req.headers.get("referer"),
+    );
     logStep("Using origin for return URLs", { origin });
 
     let accountId = artistProfile.stripe_account_id;

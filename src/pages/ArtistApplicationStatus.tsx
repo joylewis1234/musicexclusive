@@ -5,6 +5,7 @@ import { GlowCard } from "@/components/ui/GlowCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
 import { ArrowLeft, Home, Clock, CheckCircle, XCircle, Sparkles, Copy, ExternalLink } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client"
+import { getAppBaseUrl } from "@/config/app"
 import { toast } from "sonner"
 
 type ApplicationStatus = "pending" | "approved" | "approved_pending_setup" | "rejected" | "active"
@@ -56,7 +57,7 @@ const ArtistApplicationStatus = () => {
     }
   }, [emailParam, email, state?.status])
   
-  const setupLink = email ? `${window.location.origin}/artist/setup-account?email=${encodeURIComponent(email)}` : ""
+  const setupLink = email ? `${getAppBaseUrl()}/artist/setup-account?email=${encodeURIComponent(email)}` : ""
   
   const copySetupLink = () => {
     navigator.clipboard.writeText(setupLink)

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
+import { getAppBaseUrl } from "@/config/app";
 import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -120,7 +121,7 @@ const AdminArtistApplications = () => {
         body: {
           token,
           adminEmail: "email_link",
-          baseUrl: window.location.origin,
+          baseUrl: getAppBaseUrl(),
         },
       });
 
@@ -335,7 +336,7 @@ const AdminArtistApplications = () => {
         body: {
           token: tokenData.token,
           adminEmail: "admin_dashboard",
-          baseUrl: window.location.origin,
+          baseUrl: getAppBaseUrl(),
         },
       });
 
@@ -391,7 +392,7 @@ const AdminArtistApplications = () => {
         body: {
           token: tokenData.token,
           adminEmail: "admin_dashboard",
-          baseUrl: window.location.origin,
+          baseUrl: getAppBaseUrl(),
         },
       });
 

@@ -16,6 +16,7 @@ import {
 import { ArrowLeft, Home, Loader2 } from "lucide-react"
 import { supabase } from "@/integrations/supabase/client" // used only for edge function invoke
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase"
+import { getAppBaseUrl } from "@/config/app"
 import { useToast } from "@/hooks/use-toast"
 
 const yearsOptions = [
@@ -52,8 +53,8 @@ const ArtistApplicationForm = () => {
   const [notReleasedPublicly, setNotReleasedPublicly] = useState(false)
   const [agreesTerms, setAgreesTerms] = useState(false)
 
-  // Form validation: require agreesTerms checkbox
-  const isFormValid = agreesTerms
+  // Form validation: require agreesTerms checkbox and required fields
+  const isFormValid = agreesTerms && artistName.trim() !== "" && contactEmail.trim() !== "" && genres.trim() !== ""
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -65,7 +66,7 @@ const ArtistApplicationForm = () => {
       const applicationId = crypto.randomUUID()
 
       // Normalize email before saving
-      const normalizedEmail = (contactEmail || "test@example.com").trim().toLowerCase()
+      const normalizedEmail = contactEmail.trim().toLowerCase()
 
       console.log("[ArtistApplicationForm] Submitting application:", { applicationId, email: normalizedEmail })
 
@@ -76,22 +77,22 @@ const ArtistApplicationForm = () => {
 
       const insertBody = {
         id: applicationId,
-        artist_name: artistName || "Test Artist",
+        artist_name: artistName.trim(),
         contact_email: normalizedEmail,
         country_city: countryCity || null,
         spotify_url: musicUrl || null,
         apple_music_url: null,
-        years_releasing: yearsReleasing || "1-2 years",
-        genres: genres || "Test Genre",
+        years_releasing: yearsReleasing || "Less than 1 year",
+        genres: genres.trim(),
         primary_social_platform: primarySocialPlatform || "instagram",
         social_profile_url: socialProfileUrl || "not_provided",
-        follower_count: parseInt(followerCount) || 1000,
+        follower_count: parseInt(followerCount) || 0,
         song_sample_url: "not_required",
         hook_preview_url: null,
         owns_rights: true,
         not_released_publicly: true,
         agrees_terms: true,
-        baseUrl: window.location.origin,
+        baseUrl: getAppBaseUrl(),
       }
 
       const { data, error: fnError } = await supabase.functions.invoke("submit-artist-application", {

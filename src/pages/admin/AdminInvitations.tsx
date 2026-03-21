@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { getAppBaseUrl } from "@/config/app";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Button } from "@/components/ui/button";
@@ -429,9 +430,7 @@ const AdminInvitations = () => {
     navigate("/");
   };
 
-  const fullApplyLink = typeof window !== "undefined" 
-    ? `${window.location.origin}${BENEFITS_LINK}` 
-    : BENEFITS_LINK;
+  const fullApplyLink = `${getAppBaseUrl()}${BENEFITS_LINK}`;
 
   // Queries
   const { data: invitations = [], isLoading: loadingInvitations } = useQuery({

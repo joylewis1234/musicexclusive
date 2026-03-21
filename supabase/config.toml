@@ -195,6 +195,12 @@ verify_jwt = false
 [functions.claim-vault-access]
 verify_jwt = false
 
+[functions.create-fan-account]
+verify_jwt = false
+
+[functions.create-artist-setup-account]
+verify_jwt = false
+
 [functions.mint-playback-url-public-preview]
 verify_jwt = false
 

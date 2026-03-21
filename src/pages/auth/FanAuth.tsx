@@ -9,7 +9,7 @@ import { ArrowLeft, Loader2, Music, Sparkles, Crown } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { APP_URL } from "@/config/app";
+import { getAppBaseUrl } from "@/config/app";
 
 interface LocationState {
   from?: Location;
@@ -24,7 +24,7 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const { signIn, signUp, setActiveRole } = useAuth();
+  const { signIn, setActiveRole } = useAuth();
   
   const state = location.state as LocationState | null;
   // Check both URL query param and location state for flow
@@ -85,29 +85,51 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
       setActiveRole("fan");
 
       if (isSignUp) {
-        const { error } = await signUp(email, password, "fan", displayName);
+        const normalizedEmail = email.trim().toLowerCase();
+        const { data, error } = await supabase.functions.invoke("create-fan-account", {
+          body: {
+            email: normalizedEmail,
+            password,
+            displayName: displayName.trim(),
+          },
+        });
+
         if (error) {
-          // If user already exists, auto-switch to sign-in
-          const msg = (error.message || "").toLowerCase();
-          if (msg.includes("already") || msg.includes("registered") || msg.includes("exists")) {
-            console.log("[FanAuth] User already exists, attempting sign-in...");
-              const { error: loginErr } = await signIn(email, password);
-              if (!loginErr) {
-                setActiveRole("fan");
-              await consumeInvite();
-              toast.success("Welcome back!");
-            }
-            // Navigate forward regardless — account exists
-            navigate(destination, { replace: true, state: navState });
-            return;
-          }
-          toast.error(error.message);
+          toast.error(error.message || "We couldn't create your account.");
           return;
         }
+
+        if (data?.status === "account_exists") {
+          console.log("[FanAuth] Fan account already exists, attempting sign-in...");
+          const { error: loginErr } = await signIn(normalizedEmail, password);
+          if (loginErr) {
+            setIsSignUp(false);
+            toast.error("An account with this email already exists. Sign in or reset your password.");
+            return;
+          }
+
+          setActiveRole("fan");
+          await consumeInvite();
+          toast.success("Welcome back!");
+          navigate(destination, { replace: true, state: { ...navState, email: normalizedEmail } });
+          return;
+        }
+
+        if (!data?.success) {
+          toast.error(data?.error || "We couldn't create your account.");
+          return;
+        }
+
+        const { error: loginErr } = await signIn(normalizedEmail, password);
+        if (loginErr) {
+          toast.error("Your account was created, but sign-in failed. Please sign in to continue.");
+          return;
+        }
+
         setActiveRole("fan");
-        toast.success("Account created! Welcome to the Vault.");
         await consumeInvite();
-        navigate(destination, { replace: true, state: navState });
+        toast.success("Account created! Welcome to the Vault.");
+        navigate(destination, { replace: true, state: { ...navState, email: normalizedEmail } });
       } else {
         const { error } = await signIn(email, password);
         if (error) {
@@ -120,25 +142,6 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
         navigate(destination, { replace: true, state: navState });
       }
     } catch (err: any) {
-      // AbortError means the request may have succeeded server-side
-      const errName = err?.name || "";
-      const errMsg = (err?.message || "").toLowerCase();
-      if (errName === "AbortError" || errMsg.includes("abort") || errMsg.includes("signal")) {
-        console.warn("[FanAuth] Caught AbortError during signup, attempting sign-in fallback...");
-        try {
-          const { error: fallbackErr } = await signIn(email, password);
-          if (!fallbackErr) {
-            setActiveRole("fan");
-            await consumeInvite();
-            toast.success("Account created! Welcome to the Vault.");
-          }
-        } catch {
-          // silent — navigate forward anyway
-        }
-        // Always advance — the account was likely created server-side
-        navigate(destination, { replace: true, state: navState });
-        return;
-      }
       toast.error(err?.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
@@ -295,7 +298,7 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
                   const { error } = await supabase.auth.signInWithOAuth({
                     provider: "google",
                     options: {
-                      redirectTo: `${APP_URL}${destination}`,
+                      redirectTo: `${getAppBaseUrl()}${destination}`,
                     },
                   });
                   if (error) {

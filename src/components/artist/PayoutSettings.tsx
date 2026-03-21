@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { SUPABASE_URL } from "@/config/supabase";
+import { getAppBaseUrl } from "@/config/app";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -89,7 +90,7 @@ const PayoutSettings = ({ onStatusChange }: PayoutSettingsProps) => {
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            returnOrigin: window.location.origin,
+            returnOrigin: getAppBaseUrl(),
           }),
         }
       );
