@@ -36,6 +36,12 @@ verify_jwt = false
 [functions.send-password-reset]
 verify_jwt = false
 
+[functions.start-signup-verification]
+verify_jwt = false
+
+[functions.complete-signup-verification]
+verify_jwt = false
+
 [functions.send-daily-report]
 verify_jwt = false
 

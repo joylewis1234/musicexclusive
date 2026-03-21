@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { supabase } from "@/integrations/supabase/client";
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/config/supabase";
-import { useAuth } from "@/contexts/AuthContext";
+import { SUPABASE_URL } from "@/config/supabase";
 import { ArrowLeft, Home, Mic2, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
+import { startSignupVerification } from "@/lib/signupVerification";
 
 const setupSchema = z.object({
   email: z.string().email(),
@@ -27,11 +27,11 @@ type SetupFormData = z.infer<typeof setupSchema>;
 
 const ArtistSetupAccount = () => {
   const navigate = useNavigate();
-  const { refreshRole, setActiveRole } = useAuth();
   const [searchParams] = useSearchParams();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [verificationEmailSent, setVerificationEmailSent] = useState(false);
   const [setupError, setSetupError] = useState<string | null>(null);
   const [applicationStatus, setApplicationStatus] = useState<string | null>(null);
   const [lookupEmail, setLookupEmail] = useState("");
@@ -261,177 +261,36 @@ const ArtistSetupAccount = () => {
     setIsSubmitting(true);
 
     try {
-      // Step 1: Create a confirmed auth account server-side so signup email stays in Resend-owned flows.
       const normalizedEmail = email.trim().toLowerCase();
-      console.log("[ArtistSetupAccount] Step 1: Creating confirmed auth account for", normalizedEmail);
-      const { data: createAccountData, error: createAccountError } = await supabase.functions.invoke("create-artist-setup-account", {
-        body: {
-          email: normalizedEmail,
-          password,
-          application_id: resolvedApplicationId,
-        },
-      });
-
-      if (createAccountError) {
-        console.error("[ArtistSetupAccount] Create account invoke error:", createAccountError);
-        setSetupError(`AUTH_ERROR: ${createAccountError.message}`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (!createAccountData?.success) {
-        const errorCode = createAccountData?.error_code || "unknown";
-        console.error("[ArtistSetupAccount] Create account error:", createAccountData);
-
-        if (errorCode === "ALREADY_REGISTERED") {
-          console.log("[ArtistSetupAccount] User already exists — auth user found for this email");
-          setSetupError("ALREADY_REGISTERED");
-          setIsSubmitting(false);
-          return;
-        }
-
-        if (errorCode === "NOT_APPROVED") {
-          setSetupError("Your application has not been approved yet. Please wait for approval before creating an account.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        if (errorCode === "ALREADY_LINKED") {
-          setSetupError("This application is already linked to another account. Please log in or contact support.");
-          setIsSubmitting(false);
-          return;
-        }
-
-        if ((createAccountData?.message || "").toLowerCase().includes("password")) {
-          setSetupError("PASSWORD_WEAK");
-          setIsSubmitting(false);
-          return;
-        }
-
-        setSetupError(`AUTH_ERROR: ${createAccountData?.message || "Unknown error"} (code: ${errorCode})`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      console.log("[ArtistSetupAccount] Step 2: Auth account created, user ID:", createAccountData.user_id);
-
-      // Step 2: Sign in to get a definitive session
-      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      const data = await startSignupVerification({
+        intent: "artist-setup",
         email: normalizedEmail,
         password,
+        applicationId: resolvedApplicationId ?? undefined,
       });
 
-      if (signInError) {
-        console.error("[ArtistSetupAccount] Sign-in after signup failed:", signInError);
-        setSetupError("Account created but sign-in failed. Please go to Artist Login to continue.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      console.log("[ArtistSetupAccount] Step 3: Signed in, session user:", signInData.user?.id);
-
-      // Step 3: Finalize artist setup (creates role + profile in DB)
-      const accessToken = signInData.session?.access_token;
-      if (!accessToken) {
-        console.error("[ArtistSetupAccount] No access token after sign-in");
-        setSetupError("Session error. Please go to Artist Login to continue.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      // Direct fetch with timeout for Android Chrome reliability
-      const supabaseUrl = SUPABASE_URL;
-      const anonKey = SUPABASE_ANON_KEY;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 30_000);
-
-      let finalizeData: any = null;
-      try {
-        const resp = await fetch(`${supabaseUrl}/functions/v1/finalize-artist-setup`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-            apikey: anonKey,
-          },
-          body: JSON.stringify({ application_id: resolvedApplicationId }),
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        finalizeData = await resp.json();
-      } catch (fetchErr: any) {
-        clearTimeout(timeout);
-        const isTimeout = fetchErr?.name === "AbortError";
-        console.error("[ArtistSetupAccount] ❌ Finalize fetch failed:", fetchErr);
-        setSetupError(
-          isTimeout
-            ? "Request timed out. Please check your connection and try again."
-            : `Artist setup failed: Network error. Please try again or contact support.`
-        );
-        setIsSubmitting(false);
-        return;
-      }
-
-      // The edge function is the SOLE authority for role + profile + link.
-      if (finalizeData?.error_code === "ALREADY_LINKED") {
-        setSetupError("This application is already linked to another account. Please log in or contact support.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (finalizeData?.error_code === "NOT_APPROVED") {
-        setSetupError("Your application has not been approved yet. Please wait for approval before creating an account.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (!finalizeData?.success) {
-        const errorMsg = finalizeData?.message || "Unknown error";
-        console.error("[ArtistSetupAccount] ❌ Finalize FAILED (hard block):", errorMsg);
-        setSetupError(`Artist setup failed: ${errorMsg}. Please try again or contact support.`);
-        setIsSubmitting(false);
-        return;
-      }
-
-      console.log("[ArtistSetupAccount] ✅ Finalize succeeded — role, profile, and link all confirmed:", finalizeData);
-
-      // Step 4: Poll DB for artist role (up to 10s) before navigating
-      console.log("[ArtistSetupAccount] Step 5: Polling for artist role in DB...");
-      toast.success("Account setup complete! Verifying your role…");
-
-      const ROLE_POLL_TIMEOUT = 10_000;
-      const ROLE_POLL_INTERVAL = 1_000;
-      const rolePollStart = Date.now();
-      let artistRoleConfirmed = false;
-
-      while (Date.now() - rolePollStart < ROLE_POLL_TIMEOUT) {
-        try {
-          const { data: roleRows } = await supabase
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", signInData.user!.id)
-            .eq("role", "artist");
-
-          if (roleRows && roleRows.length > 0) {
-            artistRoleConfirmed = true;
-            console.log("[ArtistSetupAccount] ✅ Artist role confirmed in DB");
-            break;
-          }
-        } catch (err) {
-          console.warn("[ArtistSetupAccount] Role poll error (retrying):", err);
+      if (!data.success) {
+        if (data.error_code === "ALREADY_LINKED") {
+          setSetupError("This application is already linked to another account. Please log in or contact support.");
+          return;
         }
-        await new Promise(r => setTimeout(r, ROLE_POLL_INTERVAL));
+
+        if (data.error_code === "NOT_APPROVED") {
+          setSetupError("Your application has not been approved yet. Please wait for approval before creating an account.");
+          return;
+        }
+
+        if ((data.error || "").toLowerCase().includes("password")) {
+          setSetupError("PASSWORD_WEAK");
+          return;
+        }
+
+        setSetupError(data.error || "We couldn't send your verification email. Please try again.");
+        return;
       }
 
-      if (artistRoleConfirmed) {
-        // Refresh AuthContext so route guard sees the role
-        await refreshRole();
-        setActiveRole("artist");
-        navigate("/artist/dashboard", { replace: true });
-      } else {
-        console.warn("[ArtistSetupAccount] Artist role not confirmed after 10s, sending to pending");
-        navigate("/artist/pending", { replace: true });
-      }
+      setVerificationEmailSent(true);
+      toast.success("Check your email to verify your artist account and finish setup.");
     } catch (error) {
       console.error("[ArtistSetupAccount] Unexpected setup error:", error);
       setSetupError("An unexpected error occurred. Please try again or go to Artist Login.");
@@ -512,6 +371,77 @@ const ArtistSetupAccount = () => {
                   </Button>
                 </>
               )}
+            </div>
+          </GlowCard>
+        </main>
+      </div>
+    );
+  }
+
+  if (verificationEmailSent) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+          <div className="container max-w-lg mx-auto px-4 h-14 flex items-center justify-between">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Back</span>
+            </button>
+            <button
+              onClick={() => navigate("/")}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Home className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
+          <GlowCard className="max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-8 h-8 text-accent" />
+            </div>
+            <h1 className="font-display text-2xl font-bold text-foreground mb-3">
+              Check Your Email
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              We sent a verification link to <span className="text-foreground">{email}</span>. Open that email to verify your account and finish artist setup.
+            </p>
+            <div className="space-y-3">
+              <Button
+                className="w-full"
+                onClick={async () => {
+                  setIsSubmitting(true);
+                  try {
+                    const data = await startSignupVerification({
+                      intent: "artist-setup",
+                      email,
+                      password,
+                      applicationId: resolvedApplicationId ?? undefined,
+                    });
+                    if (!data.success) {
+                      toast.error(data.error || "We couldn't resend your verification email.");
+                      return;
+                    }
+                    toast.success("Verification email sent.");
+                  } finally {
+                    setIsSubmitting(false);
+                  }
+                }}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Resend Verification Email
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setVerificationEmailSent(false)}>
+                Edit Password
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => navigate("/artist/login")}>
+                Already verified? Sign in
+              </Button>
             </div>
           </GlowCard>
         </main>

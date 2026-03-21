@@ -3,7 +3,6 @@ import { createContext, useContext, useEffect, useState, useRef } from "react";
 import type { ReactNode } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { getAuthRedirectBaseUrl } from "@/config/app";
 
 export type AppRole = "fan" | "artist" | "admin";
 
@@ -15,7 +14,6 @@ interface AuthContextType {
   role: AppRole | null;
   userRoles: AppRole[];
   isLoading: boolean;
-  signUp: (email: string, password: string, role: AppRole, displayName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshRole: () => Promise<AppRole | null>;
@@ -210,40 +208,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  // ── signUp ─────────────────────────────────────────────────────────
-  const signUp = async (
-    email: string,
-    password: string,
-    selectedRole: AppRole,
-    displayName?: string
-  ): Promise<{ error: Error | null }> => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: getAuthRedirectBaseUrl(),
-          data: {
-            display_name: displayName || email.split("@")[0],
-          },
-        },
-      });
-
-      if (error) throw error;
-
-      if (data.user) {
-        // Role is assigned by database trigger (fan) or edge function (artist).
-        // Just set the local active role for immediate UI routing.
-        setRole(selectedRole);
-        setUserRoles(prev => prev.includes(selectedRole) ? prev : [...prev, selectedRole]);
-      }
-
-      return { error: null };
-    } catch (error) {
-      return { error: error as Error };
-    }
-  };
-
   // ── signIn ─────────────────────────────────────────────────────────
   const signIn = async (email: string, password: string): Promise<{ error: Error | null }> => {
     try {
@@ -298,7 +262,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         role,
         userRoles,
         isLoading,
-        signUp,
         signIn,
         signOut,
         refreshRole,

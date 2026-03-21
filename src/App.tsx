@@ -28,7 +28,7 @@ const queryClient = new QueryClient({
 
 type LazyComponentModule = { default: React.ComponentType<any> };
 
-const CHUNK_LOAD_TIMEOUT_MS = 12000;
+const CHUNK_LOAD_TIMEOUT_MS = 30000;
 const CHUNK_RETRY_DELAY_MS = 1500;
 
 const ChunkLoadErrorFallback = () => (
@@ -82,7 +82,6 @@ const EnterVault = lazyWithRetry(() => import("./pages/EnterVault"));
 const SubmitVaultCode = lazyWithRetry(() => import("./pages/SubmitVaultCode"));
 const VaultStatus = lazyWithRetry(() => import("./pages/VaultStatus"));
 const VaultWinCongrats = lazyWithRetry(() => import("./pages/VaultWinCongrats"));
-const Agreements = lazyWithRetry(() => import("./pages/Agreements"));
 const ChooseAccess = lazyWithRetry(() => import("./pages/ChooseAccess"));
 const Subscribe = lazyWithRetry(() => import("./pages/Subscribe"));
 const LoadCredits = lazyWithRetry(() => import("./pages/LoadCredits"));
@@ -90,6 +89,7 @@ const Payment = lazyWithRetry(() => import("./pages/Payment"));
 const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const Login = lazyWithRetry(() => import("./pages/Login"));
+const AuthConfirm = lazyWithRetry(() => import("./pages/AuthConfirm"));
 const ForgotPassword = lazyWithRetry(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazyWithRetry(() => import("./pages/ResetPassword"));
 const Terms = lazyWithRetry(() => import("./pages/Terms"));
@@ -185,7 +185,7 @@ const App = () => {
                 <Route path="/vault/submit" element={<SubmitVaultCode />} />
                 <Route path="/vault/status" element={<VaultStatus />} />
                 <Route path="/vault/congrats" element={<VaultWinCongrats />} />
-                <Route path="/agreements/fan" element={<Agreements />} />
+                <Route path="/agreements/fan" element={<Navigate to="/fan/agreements" replace />} />
                 <Route path="/fan/agreements" element={<FanAgreementStep />} />
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
                 <Route path="/subscribe" element={<PaymentErrorBoundary onBack={() => window.history.back()}><Subscribe /></PaymentErrorBoundary>} />
@@ -208,6 +208,7 @@ const App = () => {
                 
                 {/* Login selector page */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/auth/confirm" element={<AuthConfirm />} />
                 {/* Auth routes */}
                 <Route path="/auth/fan" element={<FanAuth />} />
                 <Route path="/auth/artist" element={<ArtistAuth />} />

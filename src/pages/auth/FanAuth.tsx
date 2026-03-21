@@ -5,11 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Loader2, Music, Sparkles, Crown } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Music, Sparkles, Crown } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAppBaseUrl } from "@/config/app";
+import { startSignupVerification } from "@/lib/signupVerification";
 
 interface LocationState {
   from?: Location;
@@ -44,6 +45,7 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
   const [displayName, setDisplayName] = useState(state?.name || "");
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationEmailSent, setVerificationEmailSent] = useState(false);
 
   const getDestination = () => {
     if (isSuperfanFlow) {
@@ -86,50 +88,30 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
 
       if (isSignUp) {
         const normalizedEmail = email.trim().toLowerCase();
-        const { data, error } = await supabase.functions.invoke("create-fan-account", {
-          body: {
-            email: normalizedEmail,
-            password,
-            displayName: displayName.trim(),
-          },
+        const data = await startSignupVerification({
+          intent: "fan",
+          email: normalizedEmail,
+          password,
+          displayName: displayName.trim(),
+          flow: flow ?? null,
+          inviteToken,
+          inviteType,
+          next: destination,
         });
 
-        if (error) {
-          toast.error(error.message || "We couldn't create your account.");
+        if (!data.success) {
+          toast.error(data.error || "We couldn't start signup.");
           return;
         }
 
         if (data?.status === "account_exists") {
-          console.log("[FanAuth] Fan account already exists, attempting sign-in...");
-          const { error: loginErr } = await signIn(normalizedEmail, password);
-          if (loginErr) {
-            setIsSignUp(false);
-            toast.error("An account with this email already exists. Sign in or reset your password.");
-            return;
-          }
-
-          setActiveRole("fan");
-          await consumeInvite();
-          toast.success("Welcome back!");
-          navigate(destination, { replace: true, state: { ...navState, email: normalizedEmail } });
+          setIsSignUp(false);
+          toast.error(data.message || "An account with this email already exists. Sign in or reset your password.");
           return;
         }
 
-        if (!data?.success) {
-          toast.error(data?.error || "We couldn't create your account.");
-          return;
-        }
-
-        const { error: loginErr } = await signIn(normalizedEmail, password);
-        if (loginErr) {
-          toast.error("Your account was created, but sign-in failed. Please sign in to continue.");
-          return;
-        }
-
-        setActiveRole("fan");
-        await consumeInvite();
-        toast.success("Account created! Welcome to the Vault.");
-        navigate(destination, { replace: true, state: { ...navState, email: normalizedEmail } });
+        setVerificationEmailSent(true);
+        toast.success("Check your inbox to verify your account.");
       } else {
         const { error } = await signIn(email, password);
         if (error) {
@@ -147,6 +129,75 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
       setIsLoading(false);
     }
   };
+
+  if (isSignUp && verificationEmailSent) {
+    return (
+      <div ref={ref} className="min-h-screen bg-background flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+          <div className="container max-w-lg mx-auto px-4 h-14 flex items-center">
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Back</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
+          <GlowCard className="max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="font-display text-2xl font-bold text-foreground mb-3">
+              Check Your Email
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              We sent a verification link to <span className="text-foreground">{email}</span>. Open that email to verify your account and continue.
+            </p>
+            <div className="space-y-3">
+              <Button
+                className="w-full"
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const data = await startSignupVerification({
+                      intent: "fan",
+                      email,
+                      password,
+                      displayName: displayName.trim(),
+                      flow: flow ?? null,
+                      inviteToken,
+                      inviteType,
+                      next: getDestination(),
+                    });
+                    if (!data.success) {
+                      toast.error(data.error || "We couldn't resend your verification email.");
+                      return;
+                    }
+                    toast.success("Verification email sent.");
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Resend Verification Email
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setVerificationEmailSent(false)}>
+                Edit Signup Details
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => setIsSignUp(false)}>
+                Already verified? Sign in
+              </Button>
+            </div>
+          </GlowCard>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className="min-h-screen bg-background flex flex-col">

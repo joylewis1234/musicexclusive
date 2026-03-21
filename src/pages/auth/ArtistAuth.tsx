@@ -4,21 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { useAuth } from "@/contexts/AuthContext";
-import { ArrowLeft, Loader2, Mic2, Sparkles } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Mic2, Sparkles } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
-import { lovable } from "@/integrations/lovable/index";
+import { supabase } from "@/integrations/supabase/client";
+import { getAppBaseUrl } from "@/config/app";
+import { startSignupVerification } from "@/lib/signupVerification";
 
 const ArtistAuth = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, signUp, setActiveRole } = useAuth();
+  const { signIn, setActiveRole } = useAuth();
   
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationEmailSent, setVerificationEmailSent] = useState(false);
 
   const from = (location.state as { from?: Location })?.from?.pathname || "/artist/profile";
 
@@ -32,14 +35,27 @@ const ArtistAuth = () => {
       setActiveRole("artist");
 
       if (isSignUp) {
-        const { error } = await signUp(email, password, "artist", displayName);
-        if (error) {
-          toast.error(error.message);
+        const data = await startSignupVerification({
+          intent: "artist-signup",
+          email,
+          password,
+          displayName,
+          next: from,
+        });
+
+        if (!data.success) {
+          toast.error(data.error || "We couldn't start artist signup.");
           return;
         }
-        setActiveRole("artist");
-        toast.success("Artist account created! Welcome aboard.");
-        navigate(from, { replace: true });
+
+        if (data.status === "account_exists") {
+          toast.error(data.message || "That account already exists. Please sign in instead.");
+          setIsSignUp(false);
+          return;
+        }
+
+        setVerificationEmailSent(true);
+        toast.success("Check your inbox to verify your artist account.");
       } else {
         const { error } = await signIn(email, password);
         if (error) {
@@ -54,6 +70,72 @@ const ArtistAuth = () => {
       setIsLoading(false);
     }
   };
+
+  if (isSignUp && verificationEmailSent) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
+          <div className="container max-w-lg mx-auto px-4 h-14 flex items-center">
+            <button
+              onClick={() => navigate("/")}
+              className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-5 h-5" />
+              <span className="text-sm uppercase tracking-wider">Back</span>
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
+          <GlowCard className="max-w-md w-full p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-accent/10 flex items-center justify-center mx-auto mb-6">
+              <CheckCircle2 className="w-8 h-8 text-accent" />
+            </div>
+            <h1 className="font-display text-2xl font-bold text-foreground mb-3">
+              Check Your Email
+            </h1>
+            <p className="text-muted-foreground mb-6">
+              We sent a verification link to <span className="text-foreground">{email}</span>. Open that email to verify your artist account and finish signing in.
+            </p>
+            <div className="space-y-3">
+              <Button
+                className="w-full"
+                onClick={async () => {
+                  setIsLoading(true);
+                  try {
+                    const data = await startSignupVerification({
+                      intent: "artist-signup",
+                      email,
+                      password,
+                      displayName,
+                      next: from,
+                    });
+                    if (!data.success) {
+                      toast.error(data.error || "We couldn't resend your verification email.");
+                      return;
+                    }
+                    toast.success("Verification email sent.");
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+                disabled={isLoading}
+              >
+                {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Resend Verification Email
+              </Button>
+              <Button variant="outline" className="w-full" onClick={() => setVerificationEmailSent(false)}>
+                Edit Signup Details
+              </Button>
+              <Button variant="ghost" className="w-full" onClick={() => navigate("/artist/login")}>
+                Already verified? Sign in
+              </Button>
+            </div>
+          </GlowCard>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -159,8 +241,11 @@ const ArtistAuth = () => {
                 // Pre-set artist role so pickActiveRole finds it after OAuth redirect
                 setActiveRole("artist");
                 try {
-                  const { error } = await lovable.auth.signInWithOAuth("google", {
-                    redirect_uri: window.location.origin + "/artist/dashboard",
+                  const { error } = await supabase.auth.signInWithOAuth({
+                    provider: "google",
+                    options: {
+                      redirectTo: `${getAppBaseUrl()}/artist/dashboard`,
+                    },
                   });
                   if (error) {
                     toast.error(error.message || "Google sign-in failed");
