@@ -337,7 +337,7 @@ function drawFrame(ctx: CanvasRenderingContext2D, p: DrawParams) {
 
   ctx.fillStyle = "hsl(0, 0%, 93%)";
   ctx.font = "800 30px Georgia, serif";
-  ctx.fillText("🌐  www.TheMusicIsExclusive.com", W / 2, nextY + 52);
+  ctx.fillText("🌐  musicexclusive.co", W / 2, nextY + 52);
 
   // ── Vignette ──
   const vig = ctx.createRadialGradient(W / 2, H / 2, W * 0.3, W / 2, H / 2, W * 0.7);
