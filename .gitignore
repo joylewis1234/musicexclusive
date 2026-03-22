@@ -24,6 +24,10 @@ playwright/.auth
 supabase/.temp/
 .tools/
 
+# Cursor / agent local config (not shared via repo)
+.cursor/rules/
+AGENTS.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
