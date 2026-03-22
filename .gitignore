@@ -20,6 +20,10 @@ test-results
 blob-report
 playwright/.auth
 
+# Local / CLI temp
+supabase/.temp/
+.tools/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

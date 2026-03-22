@@ -9,13 +9,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Loader2, Mic2, AlertCircle, FileText } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { SUPABASE_URL } from "@/config/supabase";
+import { MIN_PASSWORD_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE } from "@/config/passwordPolicy";
 import { toast } from "sonner";
 
 const normalizeEmail = (e: string) => e.trim().toLowerCase();
 
 const loginSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }).max(255),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
+  password: z.string().min(MIN_PASSWORD_LENGTH, { message: PASSWORD_MIN_LENGTH_MESSAGE }),
 });
 
 const ArtistLogin = () => {

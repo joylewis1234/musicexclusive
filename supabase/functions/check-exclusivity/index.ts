@@ -6,6 +6,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const ARTIST_DASHBOARD_URL = "https://musicexclusive.co/artist/dashboard";
+
 interface TrackRow {
   id: string;
   title: string;
@@ -112,8 +114,6 @@ Deno.serve(async (req) => {
 
       // Compose email
       const artistName = artistProfile.artist_name || "Artist";
-      const dashboardUrl = "https://musicexclusive.lovable.app/artist/dashboard";
-      
       let subject: string;
       let bodyText: string;
 
@@ -150,7 +150,7 @@ Deno.serve(async (req) => {
           <p style="font-size: 13px; color: #707080; margin-bottom: 24px;">
             If you don't take action, your track will remain on the platform and continue to earn royalties until you decide.
           </p>
-          <a href="${dashboardUrl}" style="display: inline-block; background: hsl(280, 80%, 50%); color: white; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 14px;">
+          <a href="${ARTIST_DASHBOARD_URL}" style="display: inline-block; background: hsl(280, 80%, 50%); color: white; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 14px;">
             Go to My Dashboard
           </a>
           <p style="font-size: 12px; color: #505060; margin-top: 32px;">
@@ -169,7 +169,7 @@ Deno.serve(async (req) => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              from: "Music Exclusive <noreply@themusicisexclusive.com>",
+              from: "Music Exclusive <noreply@musicexclusive.co>",
               to: [artistEmail],
               subject,
               html: htmlBody,

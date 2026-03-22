@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
 import { VaultLockedModal } from "@/components/vault/VaultLockedModal"
 import Footer from "@/components/Footer"
+import { ARTIST_APPLICATION_ENTRY_ENABLED } from "@/config/artistEntry"
 import { ArtistCard } from "@/components/ArtistCard"
 import { ArtistPreviewStrip } from "@/components/ArtistPreviewStrip"
 import { ArtistCardCarousel } from "@/components/ArtistCardCarousel"
@@ -414,14 +415,14 @@ const Index = () => {
               </span>
             </Button>
             
-            {/* Artist Waitlist CTA */}
+            {/* Artist CTA (application or waitlist based on flag) */}
             <Button 
               variant="outline" 
               size="default" 
               className="mt-4 text-xs tracking-widest"
-              onClick={() => navigate("/artist-waitlist")}
+              onClick={() => navigate(ARTIST_APPLICATION_ENTRY_ENABLED ? "/artist/apply" : "/artist-waitlist")}
             >
-              Join the Artist Waitlist
+              {ARTIST_APPLICATION_ENTRY_ENABLED ? "Apply as an Artist" : "Join the Artist Waitlist"}
             </Button>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
 import { GlowCard } from "@/components/ui/GlowCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
+import { ARTIST_APPLICATION_ENTRY_ENABLED } from "@/config/artistEntry"
 import { 
   DollarSign, 
   FlaskConical, 
@@ -60,10 +61,10 @@ const ArtistBenefits = () => {
             <Button 
               size="lg" 
               className="w-full max-w-xs text-base animate-glow-pulse"
-              onClick={() => navigate("/artist-waitlist")}
+              onClick={() => navigate(ARTIST_APPLICATION_ENTRY_ENABLED ? "/artist/apply" : "/artist-waitlist")}
             >
               <Crown className="w-5 h-5 mr-2" />
-              Apply as an Exclusive Artist
+              {ARTIST_APPLICATION_ENTRY_ENABLED ? "Apply Now" : "Join the Waitlist"}
             </Button>
             <Button 
               variant="outline" 
@@ -585,10 +586,10 @@ const ArtistBenefits = () => {
             <Button 
               size="lg" 
               className="w-full animate-glow-pulse"
-              onClick={() => navigate("/artist-waitlist")}
+              onClick={() => navigate(ARTIST_APPLICATION_ENTRY_ENABLED ? "/artist/apply" : "/artist-waitlist")}
             >
               <Crown className="w-5 h-5 mr-2" />
-              Apply as an Exclusive Artist
+              {ARTIST_APPLICATION_ENTRY_ENABLED ? "Apply Now" : "Join the Waitlist"}
             </Button>
             <Button 
               variant="outline" 

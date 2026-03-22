@@ -253,10 +253,13 @@ Deno.serve(async (req) => {
       );
     }
 
-    const minPasswordLength = intent === "artist-setup" ? 8 : 6;
+    const minPasswordLength = 8;
     if (password.length < minPasswordLength) {
       return new Response(
-        JSON.stringify({ success: false, error: `Password must be at least ${minPasswordLength} characters.` }),
+        JSON.stringify({
+          success: false,
+          error: `Password must be at least ${minPasswordLength} characters.`,
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

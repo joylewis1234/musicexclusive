@@ -19,8 +19,9 @@ type ResendErrorPayload = {
 };
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const PRIMARY_FROM = "Music Exclusive <noreply@themusicisexclusive.com>";
+const PRIMARY_FROM = "Music Exclusive <noreply@musicexclusive.co>";
 const REPLY_TO = "support@musicexclusive.co";
+const DEFAULT_APP_URL = Deno.env.get("APP_URL") || "https://musicexclusive.co";
 
 async function sendResendEmail(args: {
   resendKey: string;
@@ -193,7 +194,7 @@ serve(async (req) => {
       throw new Error("RESEND_API_KEY not configured");
     }
 
-    const baseUrl = appUrl || 'https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app';
+    const baseUrl = appUrl || DEFAULT_APP_URL;
     const loginLink = `${baseUrl}/vault/submit?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
 
     const subject = "Not This Time… But Tomorrow Could Be Yours 💫";

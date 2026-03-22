@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ARTIST_APPLICATION_ENTRY_ENABLED } from "@/config/artistEntry";
 
 const genres = ["Pop", "Hip-Hop/Rap", "R&B", "EDM", "Latin Music"] as const;
 
@@ -114,7 +115,7 @@ const ChartsTeaser = () => {
           Chart positions shown are illustrative. Live rankings launch with the platform.
         </p>
         <div className="flex justify-center items-center">
-          <Button variant="accent" onClick={() => navigate("/artist-waitlist")}>
+          <Button variant="accent" onClick={() => navigate(ARTIST_APPLICATION_ENTRY_ENABLED ? "/artist/apply" : "/artist-waitlist")}>
             Become a Charting Artist
           </Button>
         </div>

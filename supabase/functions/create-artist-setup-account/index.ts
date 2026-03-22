@@ -58,7 +58,7 @@ serve(async (req) => {
 
     if (password.length < 8) {
       return new Response(
-        JSON.stringify({ success: false, message: "password must be at least 8 characters" }),
+        JSON.stringify({ success: false, message: "Password must be at least 8 characters." }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }

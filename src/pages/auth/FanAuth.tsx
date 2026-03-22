@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getAppBaseUrl } from "@/config/app";
 import { startSignupVerification } from "@/lib/signupVerification";
+import { MIN_PASSWORD_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE } from "@/config/passwordPolicy";
 
 interface LocationState {
   from?: Location;
@@ -87,6 +88,10 @@ const FanAuth = forwardRef<HTMLDivElement>((_, ref) => {
       setActiveRole("fan");
 
       if (isSignUp) {
+        if (password.length < MIN_PASSWORD_LENGTH) {
+          toast.error(PASSWORD_MIN_LENGTH_MESSAGE);
+          return;
+        }
         const normalizedEmail = email.trim().toLowerCase();
         const data = await startSignupVerification({
           intent: "fan",

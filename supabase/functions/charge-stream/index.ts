@@ -284,6 +284,7 @@ Deno.serve(async (req) => {
         stream_id: streamId,
         track_id: trackId,
         user_id: fanUserId,
+        watermark_id: watermarkId,
         exp: sessionExpiresAt,
         iat: Math.floor(Date.now() / 1000),
       },

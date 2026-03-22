@@ -9,10 +9,6 @@ import { ChevronLeft, Loader2, Home } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-// =============================================================================
-// LEGAL CONTENT - Replace placeholder text below with actual legal documents
-// =============================================================================
-
 const TERMS_VERSION = "1.0";
 const PRIVACY_VERSION = "1.0";
 
@@ -37,6 +33,12 @@ Music Exclusive uses the Vault Lottery System to grant fan access to the Platfor
 • If you do not win, you remain entered for future draws and will receive a re-entry code.
 • Lottery mechanics may change over time and are not fully disclosed.
 • Winners can stay active inside the Vault as long as they maintain an active paid plan.
+
+3.1 CONTENT PROTECTION & WATERMARKING
+• Vault audio may include account-linked watermarking and other technical protection controls
+• You may not record, rip, capture, redistribute, restream, or publicly share Vault-only content
+• You may not share access credentials or attempt to bypass platform protection controls
+• Violations may result in suspension, termination, or permanent removal from the Platform
 
 4. PAYMENT PLANS
 
@@ -100,7 +102,7 @@ For questions about these terms, please contact us through the Platform.
 const PRIVACY_POLICY = `
 PRIVACY POLICY
 Version ${PRIVACY_VERSION}
-Last Updated: [DATE]
+Last Updated: March 21, 2026
 
 1. INTRODUCTION
 
@@ -159,14 +161,8 @@ We may update this policy periodically. We will notify you of significant change
 
 11. CONTACT US
 
-For privacy-related inquiries, please contact us through the Platform.
-
-[ADDITIONAL PRIVACY TERMS TO BE ADDED]
+For privacy-related inquiries, contact support@musicexclusive.co.
 `;
-
-// =============================================================================
-// END LEGAL CONTENT
-// =============================================================================
 
 interface LocationState {
   email?: string;

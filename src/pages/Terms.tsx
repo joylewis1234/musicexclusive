@@ -118,7 +118,7 @@ const Terms = () => {
         </p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>$5.00 per month</li>
-          <li>Includes 10 free streams added to the fan's streaming balance each month</li>
+          <li>Includes 25 credits added to the fan's streaming balance each month</li>
           <li>Streams reset monthly and do not roll over unless explicitly stated</li>
           <li>Streams are consumed when the fan streams Content</li>
         </ul>
@@ -148,6 +148,24 @@ const Terms = () => {
         </p>
       </LegalSection>
 
+      <LegalSection number="08A" title="Content Protection & Watermarking">
+        <p>
+          To protect artist releases and platform access, Music Exclusive may use account-linked
+          watermarking, gated playback, tokenized delivery, and other technical controls on
+          streams and downloadable materials made available through the Services.
+        </p>
+        <p>
+          You may not record, rip, capture, redistribute, restream, publicly post, or otherwise
+          share Vault-only content, stream files, access credentials, or any watermark-protected
+          material without express written permission from the applicable rights holder and Company.
+        </p>
+        <p>
+          Violations may result in immediate suspension or termination of access, removal from
+          the Vault, loss of credits or subscription benefits, and any other remedies available
+          under these Terms or applicable law.
+        </p>
+      </LegalSection>
+
       <LegalSection number="09" title="User Responsibilities">
         <p>
           You agree that you will provide accurate information, keep your login credentials 
@@ -170,6 +188,10 @@ const Terms = () => {
           You may not use the Services to commit fraud or streaming manipulation, harass 
           or impersonate others, upload illegal or infringing Content, attempt to reverse 
           engineer the platform, or use bots/scripts/automation to abuse platform features.
+        </p>
+        <p>
+          You also may not capture, rip, record, leak, or redistribute watermark-protected
+          Vault content or otherwise interfere with the platform's content-protection controls.
         </p>
       </LegalSection>
 

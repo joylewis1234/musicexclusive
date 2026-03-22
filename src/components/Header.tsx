@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { NavLink } from "@/components/NavLink"
 import { useIsAdmin } from "@/hooks/useIsAdmin"
 import { VaultLockedModal } from "@/components/vault/VaultLockedModal"
+import { ARTIST_APPLICATION_ENTRY_ENABLED } from "@/config/artistEntry"
 
 const mainNavItems: { title: string; href: string; icon: typeof Home; disabled?: boolean }[] = [
   { title: "Home", href: "/", icon: Home },
@@ -15,7 +16,7 @@ const mainNavItems: { title: string; href: string; icon: typeof Home; disabled?:
   { title: "Become a Superfan", href: "#vault-locked", icon: Star },
   { title: "Join Fan Waitlist", href: "/founding-superfan", icon: Heart },
   { title: "Join Artist Waitlist", href: "/artist-waitlist", icon: Users },
-  { title: "Artist Application", href: "/artist/apply", icon: Music, disabled: true },
+  { title: "Artist Application", href: "/artist/apply", icon: Music, disabled: !ARTIST_APPLICATION_ENTRY_ENABLED },
   { title: "Terms of Use", href: "/terms", icon: FileText },
   { title: "Privacy Policy", href: "/privacy", icon: Shield },
   { title: "Copyright & DMCA", href: "/dmca", icon: Copyright },

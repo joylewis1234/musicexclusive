@@ -12,8 +12,9 @@ type ResendErrorPayload = {
 };
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const PRIMARY_FROM = "Music Exclusive <noreply@themusicisexclusive.com>";
+const PRIMARY_FROM = "Music Exclusive <noreply@musicexclusive.co>";
 const REPLY_TO = "support@musicexclusive.co";
+const DEFAULT_APP_URL = Deno.env.get("APP_URL") || "https://musicexclusive.co";
 
 async function sendResendEmail(args: {
   resendKey: string;
@@ -69,8 +70,8 @@ interface VaultResendRequest {
   email: string;
   name: string;
   vaultCode: string;
-  appUrl: string;
-  returnUrl: string;
+  appUrl?: string;
+  returnUrl?: string;
 }
 
 serve(async (req) => {
@@ -96,7 +97,8 @@ serve(async (req) => {
     }
 
     const displayName = name || "Vault Member";
-    const finalReturnUrl = returnUrl || `${appUrl || 'https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app'}/vault/submit?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
+    const baseUrl = appUrl || DEFAULT_APP_URL;
+    const finalReturnUrl = returnUrl || `${baseUrl}/vault/submit?email=${encodeURIComponent(email)}&code=${encodeURIComponent(vaultCode)}`;
 
     const subject = "🔐 Your Music Exclusive Vault Code";
     const html = `

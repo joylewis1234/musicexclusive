@@ -1,0 +1,342 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`promo caption golden outputs > matches approved output for 'electronic punchy flagship' 1`] = `
+{
+  "captions": [
+    {
+      "length": "short",
+      "text": ""Neon Circuit" just landed before Spotify. Stream Exclusive.",
+    },
+    {
+      "length": "short",
+      "text": "Pulse Harbor dropped "Neon Circuit" before Apple Music.",
+    },
+    {
+      "length": "medium",
+      "text": "Pulse Harbor brought "Neon Circuit" to Music Exclusive before Spotify. Carrying festival and bass from the first listen. Stream Exclusive.",
+    },
+    {
+      "length": "medium",
+      "text": "New drop. Pulse Harbor's "Neon Circuit" is available before Apple Music. Hear it first. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "medium",
+      "text": "Vault only. Pulse Harbor's "Neon Circuit" is available exclusive on Music Exclusive. Hear it first. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "long",
+      "text": "Pulse Harbor just dropped "Neon Circuit" on Music Exclusive, which means you can hear it before Spotify. made for headphones and volume. Carrying festival and bass from the first listen. Stream Exclusive.",
+    },
+    {
+      "length": "long",
+      "text": "If you're the kind of listener who wants the music before everyone else, "Neon Circuit" by Pulse Harbor is exactly that. before Spotify, built for direct listeners. Stream Exclusive. That's what Music Exclusive is built for: real supporters getting the first listen before the wider release catche...",
+    },
+  ],
+  "hashtags": [
+    "#MusicExclusive",
+    "#VaultOnly",
+    "#FirstListen",
+    "#NewMusic",
+    "#MusicDiscovery",
+    "#NowPlaying",
+    "#IndependentArtist",
+    "#ExclusiveDrop",
+    "#StreamExclusive",
+    "#ListenNow",
+    "#ElectronicMusic",
+    "#EDM",
+    "#Synth",
+    "#NightDrive",
+    "#Electronic",
+  ],
+  "storyOverlays": [
+    "FIRST LISTEN",
+    "STREAM EXCLUSIVE",
+  ],
+}
+`;
+
+exports[`promo caption golden outputs > matches approved output for 'faith flagship' 1`] = `
+{
+  "captions": [
+    {
+      "length": "short",
+      "text": "Vault only: "Still Covered" by Micah Vale.",
+    },
+    {
+      "length": "short",
+      "text": ""Still Covered" just landed early access only. Stream Exclusive.",
+    },
+    {
+      "length": "medium",
+      "text": "Micah Vale just dropped "Still Covered" early access only. message in the music. Stream Exclusive. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "medium",
+      "text": "Micah Vale brought "Still Covered" to Music Exclusive before Apple Music. Stream Exclusive. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "medium",
+      "text": ""Still Covered" is live inside the Vault exclusive on Music Exclusive. If you're early, this one's for you. Stream Exclusive.",
+    },
+    {
+      "length": "long",
+      "text": "Micah Vale is giving early listeners something real with "Still Covered". It's live inside the Vault, exclusive on Music Exclusive, and made for uplifting from start to finish. Stream Exclusive. That's what Music Exclusive is built for: real supporters getting the first listen before the wider re...",
+    },
+    {
+      "length": "long",
+      "text": "For the ones who need this message. "Still Covered" from Micah Vale is available exclusive on Music Exclusive, only on Music Exclusive. hope in every line. Early access to something deeper. Stream Exclusive.",
+    },
+  ],
+  "hashtags": [
+    "#MusicExclusive",
+    "#VaultOnly",
+    "#FirstListen",
+    "#NewMusic",
+    "#MusicDiscovery",
+    "#NowPlaying",
+    "#IndependentArtist",
+    "#ExclusiveDrop",
+    "#StreamExclusive",
+    "#ListenNow",
+    "#ChristianMusic",
+    "#Gospel",
+    "#FaithMusic",
+    "#Inspirational",
+    "#ChristianGospel",
+  ],
+  "storyOverlays": [
+    "FIRST LISTEN",
+    "STREAM EXCLUSIVE",
+    "MORE THAN MUSIC",
+  ],
+}
+`;
+
+exports[`promo caption golden outputs > matches approved output for 'indie mysterious flagship' 1`] = `
+{
+  "captions": [
+    {
+      "length": "short",
+      "text": ""Static Flowers" just landed exclusive on Music Exclusive. Join the Vault.",
+    },
+    {
+      "length": "short",
+      "text": ""Static Flowers" just landed for the first listeners. Join the Vault.",
+    },
+    {
+      "length": "medium",
+      "text": "New from North Arcade: "Static Flowers" is out now on Music Exclusive. something worth finding early. Join the Vault.",
+    },
+    {
+      "length": "medium",
+      "text": "North Arcade brought "Static Flowers" to Music Exclusive for the first listeners. Join the Vault. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "medium",
+      "text": ""Static Flowers" is live on Music Exclusive before Spotify. If you're early, this one's for you. Join the Vault.",
+    },
+    {
+      "length": "long",
+      "text": "North Arcade just dropped "Static Flowers" on Music Exclusive, which means you can hear it for the first listeners. something worth finding early. Join the Vault. That's what the Vault is for: real supporters getting the moment first, before the wider release catches up.",
+    },
+    {
+      "length": "long",
+      "text": "The early listeners will understand. "Static Flowers" from North Arcade is available for the first listeners, only on Music Exclusive. something worth finding early. You'll get it when you hear it. Join the Vault.",
+    },
+  ],
+  "hashtags": [
+    "#MusicExclusive",
+    "#VaultOnly",
+    "#FirstListen",
+    "#NewMusic",
+    "#MusicDiscovery",
+    "#NowPlaying",
+    "#IndependentArtist",
+    "#ExclusiveDrop",
+    "#JoinTheVault",
+    "#VaultAccess",
+    "#IndieMusic",
+    "#IndieVibes",
+    "#NewIndie",
+    "#RareSound",
+    "#SecretDrop",
+  ],
+  "storyOverlays": [
+    "FIRST LISTEN",
+    "JOIN THE VAULT",
+    "RARE SOUND",
+  ],
+}
+`;
+
+exports[`promo caption golden outputs > matches approved output for 'stream rnb flagship' 1`] = `
+{
+  "captions": [
+    {
+      "length": "short",
+      "text": "Solea dropped "After Midnight" early access only.",
+    },
+    {
+      "length": "short",
+      "text": "Vault only: "After Midnight" by Solea.",
+    },
+    {
+      "length": "medium",
+      "text": "Solea just dropped "After Midnight" early access only. made for mood-setting. Press play first. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "medium",
+      "text": "Solea brought "After Midnight" to Music Exclusive early access only. Carrying intimate and velvet from the first listen. Press play first.",
+    },
+    {
+      "length": "medium",
+      "text": "Let this sit with you. Solea's "After Midnight" is available early access only. Sit with this one. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "long",
+      "text": "If you're the kind of listener who wants the music before everyone else, "After Midnight" by Solea is exactly that. early access only, built for raw listeners. Press play first. That's what Music Exclusive is built for: real supporters getting the first listen before the wider release catches up.",
+    },
+    {
+      "length": "long",
+      "text": "Solea is giving early listeners something real with "After Midnight". It's live on Music Exclusive, early access only, and made for for the repeat button. You can hear the intimate and velvet throughout. Press play first.",
+    },
+  ],
+  "hashtags": [
+    "#MusicExclusive",
+    "#VaultOnly",
+    "#FirstListen",
+    "#NewMusic",
+    "#MusicDiscovery",
+    "#NowPlaying",
+    "#IndependentArtist",
+    "#ExclusiveDrop",
+    "#StreamExclusive",
+    "#ListenNow",
+    "#RnB",
+    "#Soul",
+    "#LateNightVibes",
+    "#Smooth",
+    "#FeelThis",
+  ],
+  "storyOverlays": [
+    "FIRST LISTEN",
+    "STREAM EXCLUSIVE",
+    "FEEL THIS ONE",
+  ],
+}
+`;
+
+exports[`promo caption golden outputs > matches approved output for 'vault afrobeats flagship' 1`] = `
+{
+  "captions": [
+    {
+      "length": "short",
+      "text": ""Soro Soke" just landed exclusive on Music Exclusive. Join the Vault.",
+    },
+    {
+      "length": "short",
+      "text": ""Soro Soke" just landed before Apple Music. Join the Vault.",
+    },
+    {
+      "length": "medium",
+      "text": "Kemi V just dropped "Soro Soke" before Apple Music. feel-good motion. Join the Vault. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "medium",
+      "text": "Kemi V brought "Soro Soke" to Music Exclusive before Apple Music. Summer and Dancefloor run through this drop. Join the Vault.",
+    },
+    {
+      "length": "medium",
+      "text": "New from Kemi V: "Soro Soke" is out now inside the Vault. rhythm-heavy. Join the Vault. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "long",
+      "text": "This one belongs with the select few. "Soro Soke" from Kemi V is available before Apple Music, only on Music Exclusive. feel-good motion. First-listener energy only. Join the Vault. That's what the Vault is for: real supporters getting the moment first, before the wider release catches up.",
+    },
+    {
+      "length": "long",
+      "text": "Premium sound only. "Soro Soke" from Kemi V is available before Spotify, only on Music Exclusive. pure movement from the first play. This belongs in the Vault. Join the Vault. That's what the Vault is for: real supporters getting the moment first, before the wider release catches up.",
+    },
+  ],
+  "hashtags": [
+    "#MusicExclusive",
+    "#VaultOnly",
+    "#FirstListen",
+    "#NewMusic",
+    "#MusicDiscovery",
+    "#NowPlaying",
+    "#IndependentArtist",
+    "#ExclusiveDrop",
+    "#JoinTheVault",
+    "#VaultAccess",
+    "#Afrobeats",
+    "#AfroMusic",
+    "#GlobalSounds",
+    "#NewAfrobeats",
+    "#PremiumSound",
+  ],
+  "storyOverlays": [
+    "FIRST LISTEN",
+    "JOIN THE VAULT",
+    "PREMIUM ONLY",
+  ],
+}
+`;
+
+exports[`promo caption golden outputs > matches approved output for 'vault hiphop flagship' 1`] = `
+{
+  "captions": [
+    {
+      "length": "short",
+      "text": "Jai Sterling dropped "Backseat Gospel" inside the Vault first.",
+    },
+    {
+      "length": "short",
+      "text": "Vault only: "Backseat Gospel" by Jai Sterling.",
+    },
+    {
+      "length": "medium",
+      "text": "Jai Sterling just dropped "Backseat Gospel" inside the Vault first. straight pressure. Tap in early. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "medium",
+      "text": "Jai Sterling brought "Backseat Gospel" to Music Exclusive inside the Vault first. Carrying anthemic and gritty from the first listen. Tap in early.",
+    },
+    {
+      "length": "medium",
+      "text": "New from Jai Sterling: "Backseat Gospel" is out now inside the Vault. no skips. Tap in early. Music Exclusive puts the first listeners in position before the wider rollout.",
+    },
+    {
+      "length": "long",
+      "text": "New heat. "Backseat Gospel" from Jai Sterling is available inside the Vault first, only on Music Exclusive. straight pressure. Run this one up first. Tap in early. That's what the Vault is for: real supporters getting the moment first, before the wider release catches up.",
+    },
+    {
+      "length": "long",
+      "text": "All gas from the first second. "Backseat Gospel" from Jai Sterling is available exclusive on Music Exclusive, only on Music Exclusive. straight pressure. Don't miss this. Tap in early. That's what the Vault is for: real supporters getting the moment first, before the wider release catches up.",
+    },
+  ],
+  "hashtags": [
+    "#MusicExclusive",
+    "#VaultOnly",
+    "#FirstListen",
+    "#NewMusic",
+    "#MusicDiscovery",
+    "#NowPlaying",
+    "#IndependentArtist",
+    "#ExclusiveDrop",
+    "#JoinTheVault",
+    "#VaultAccess",
+    "#HipHop",
+    "#Rap",
+    "#Bars",
+    "#NewRap",
+    "#RunItUp",
+  ],
+  "storyOverlays": [
+    "FIRST LISTEN",
+    "JOIN THE VAULT",
+    "TURN THIS UP",
+  ],
+}
+`;

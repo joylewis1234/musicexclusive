@@ -8,6 +8,7 @@ import { Lock, CheckCircle, Loader2 } from "lucide-react";
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { MIN_PASSWORD_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE } from "@/config/passwordPolicy";
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -54,8 +55,8 @@ const ResetPassword = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      toast.error(PASSWORD_MIN_LENGTH_MESSAGE);
       return;
     }
 
@@ -157,7 +158,7 @@ const ResetPassword = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={8}
+                minLength={MIN_PASSWORD_LENGTH}
                 className="bg-background/50"
               />
               <p className="text-xs text-muted-foreground">

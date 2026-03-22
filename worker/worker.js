@@ -35,17 +35,40 @@ async function verifyJwtHS256(token, secret) {
   if (!ok) return null;
 
   const payloadJson = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-  return JSON.parse(payloadJson);
+  const parsed = JSON.parse(payloadJson);
+  
+  // Check expiration
+  const now = Math.floor(Date.now() / 1000);
+  if (!parsed.exp || parsed.exp < now) return null;
+
+  return parsed;
 }
 
-function rewritePlaylist(text, token) {
+function injectWatermark(playlist, watermarkId) {
+  const header = `#EXT-X-SESSION-DATA:DATA-ID="WATERMARK",VALUE="${watermarkId}"`;
+  const lines = playlist.split("\n");
+  const output = [];
+  let injected = false;
+  for (const line of lines) {
+    if (!injected && line.startsWith("#EXTM3U")) {
+      output.push(line);
+      output.push(header);
+      injected = true;
+      continue;
+    }
+    output.push(line);
+  }
+  return output.join("\n");
+}
+
+function rewritePlaylistWithTokenAndWatermark(text, token, watermarkId) {
   return text
     .split("\n")
     .map((line) => {
       const trimmed = line.trim();
       if (!trimmed || trimmed.startsWith("#")) return line;
       const sep = trimmed.includes("?") ? "&" : "?";
-      return `${trimmed}${sep}token=${encodeURIComponent(token)}`;
+      return `${trimmed}${sep}token=${encodeURIComponent(token)}&wm=${encodeURIComponent(watermarkId)}`;
     })
     .join("\n");
 }
@@ -68,6 +91,9 @@ async function handleRequest(request, env) {
     const payload = await verifyJwtHS256(token, env.PLAYBACK_JWT_SECRET);
     if (!payload) return new Response("Invalid token", { status: 401, headers: corsHeaders });
 
+    // Extract watermark_id from payload
+    const watermarkId = payload.watermark_id ?? "";
+
     const path = url.pathname.replace(/^\/+/, "");
     const key = `${HLS_PREFIX}/${path}`;
     const isPlaylist = key.endsWith(".m3u8");
@@ -88,7 +114,9 @@ async function handleRequest(request, env) {
 
     if (isPlaylist) {
       const text = await obj.text();
-      const rewritten = rewritePlaylist(text, token);
+      // Inject watermark and rewrite with token + watermark
+      const withHeader = injectWatermark(text, watermarkId);
+      const rewritten = rewritePlaylistWithTokenAndWatermark(withHeader, token, watermarkId);
       headers.set("Content-Type", "application/vnd.apple.mpegurl");
       return new Response(rewritten, { status: 200, headers });
     }

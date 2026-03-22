@@ -11,10 +11,16 @@ import { ArrowLeft, Home, Mic2, Loader2, CheckCircle2, AlertCircle } from "lucid
 import { PasswordInput } from "@/components/ui/PasswordInput";
 import { toast } from "sonner";
 import { startSignupVerification } from "@/lib/signupVerification";
+import {
+  MIN_PASSWORD_LENGTH,
+  PASSWORD_MIN_LENGTH_MESSAGE,
+  isPasswordLengthErrorMessage,
+  isPasswordWeakOrBreachedMessage,
+} from "@/config/passwordPolicy";
 
 const setupSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+  password: z.string().min(MIN_PASSWORD_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE),
   confirmPassword: z.string(),
   agreeTerms: z.boolean().refine(val => val === true, "You must agree to the terms"),
   confirmRights: z.boolean().refine(val => val === true, "You must confirm music rights"),
@@ -302,16 +308,21 @@ const ArtistSetupAccount = () => {
   // Setup error state - shown instead of infinite spinner
   if (setupError) {
     const isAlreadyRegistered = setupError === "ALREADY_REGISTERED";
+    const isPasswordTooShort = setupError === "PASSWORD_TOO_SHORT";
     const isWeakPassword = setupError === "PASSWORD_WEAK";
 
     const errorTitle = isAlreadyRegistered
       ? "Account Already Exists"
+      : isPasswordTooShort
+      ? "Password requirements"
       : isWeakPassword
       ? "Password Not Accepted"
       : "Setup Issue";
 
     const errorMessage = isAlreadyRegistered
       ? "An account with this email already exists. Please log in with your existing password, or reset it if you've forgotten it."
+      : isPasswordTooShort
+      ? PASSWORD_MIN_LENGTH_MESSAGE
       : isWeakPassword
       ? "That password has appeared in a data breach and can't be used. Please choose a different, more secure password."
       : setupError;
@@ -339,10 +350,10 @@ const ArtistSetupAccount = () => {
         <main className="flex-1 flex items-center justify-center px-4 pt-20 pb-8">
           <GlowCard className="max-w-md w-full p-8 text-center">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 ${
-              isAlreadyRegistered ? "bg-amber-500/10" : "bg-destructive/10"
+              isAlreadyRegistered || isPasswordTooShort ? "bg-amber-500/10" : "bg-destructive/10"
             }`}>
               <AlertCircle className={`w-8 h-8 ${
-                isAlreadyRegistered ? "text-amber-500" : "text-destructive"
+                isAlreadyRegistered || isPasswordTooShort ? "text-amber-500" : "text-destructive"
               }`} />
             </div>
             <h1 className="font-display text-xl font-bold text-foreground mb-3">

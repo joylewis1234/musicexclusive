@@ -8,6 +8,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const ARTIST_APPLY_URL = "https://musicexclusive.co/artist/apply";
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -79,7 +81,6 @@ serve(async (req) => {
     try {
       const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
       if (RESEND_API_KEY) {
-        const applyUrl = "https://musicexclusive.lovable.app/artist/apply";
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -105,7 +106,7 @@ serve(async (req) => {
                 </div>
 
                 <div style="text-align: center; margin: 32px 0;">
-                  <a href="${applyUrl}" style="display: inline-block; background: #22c55e; color: #000; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                  <a href="${ARTIST_APPLY_URL}" style="display: inline-block; background: #22c55e; color: #000; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px;">
                     Complete Your Application
                   </a>
                 </div>

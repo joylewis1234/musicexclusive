@@ -5,6 +5,7 @@ import { GlowCard } from "@/components/ui/GlowCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Clock, Home, RefreshCw } from "lucide-react";
+import { toast } from "sonner";
 
 const ArtistPendingActivation = () => {
   const navigate = useNavigate();
@@ -19,6 +20,17 @@ const ArtistPendingActivation = () => {
 
     setIsChecking(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (accessToken) {
+        try {
+          await supabase.functions.invoke("finalize-artist-setup", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        } catch (finalizeErr) {
+          console.warn("[ArtistPending] finalize-artist-setup retry error:", finalizeErr);
+        }
+      }
       const { data: roleRows } = await supabase
         .from("user_roles")
         .select("role")
@@ -30,7 +42,7 @@ const ArtistPendingActivation = () => {
         setActiveRole("artist");
         navigate("/artist/dashboard", { replace: true });
       } else {
-        // Still not ready
+        toast.info("Still activating. Please try again in a moment.");
         setIsChecking(false);
       }
     } catch {

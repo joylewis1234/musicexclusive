@@ -82,6 +82,12 @@ const FanAgreementStep = () => {
       title: "Fair Use Policy",
       description: "No fraudulent activity, stream manipulation, or abuse of the platform.",
     },
+    {
+      icon: ShieldCheck,
+      title: "Watermark Protection",
+      description:
+        "Vault audio may include account-linked watermarking and security controls. You may not record, rip, redistribute, or publicly share Vault content or access credentials.",
+    },
   ];
 
   return (

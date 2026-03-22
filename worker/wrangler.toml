@@ -5,10 +5,6 @@ compatibility_date = "2026-02-22"
 [[r2_buckets]]
 binding = "R2_BUCKET"
 bucket_name = "musicexclusive-audio"
-name = "r2-playback-gate"
-main = "worker.js"
-compatibility_date = "2026-02-22"
 
-r2_buckets = [
-  { binding = "R2_BUCKET", bucket_name = "musicexclusive-audio" }
-]
+[vars]
+PLAYBACK_JWT_SECRET = "VHd4ddZJwEqHhycirQ3tCcT6iQr3IfCAToII93gV7bU"

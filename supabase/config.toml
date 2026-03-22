@@ -1,4 +1,4 @@
-project_id = "yjytuglxpvdkyvjsdyfk"
+project_id = "esgpsapstljgsqpmezzf"
 
 [functions.aggregate-weekly-earnings]
 verify_jwt = false

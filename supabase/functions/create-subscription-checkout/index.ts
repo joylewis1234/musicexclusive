@@ -6,9 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Superfan subscription price ID
-const SUPERFAN_PRICE_ID = "price_1SuFPkKICFkRzPC4AQfhunEn";
 const APP_URL = "https://musicexclusive.co";
+const SUPERFAN_SUBSCRIPTION_AMOUNT_CENTS = 500;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -51,7 +50,16 @@ serve(async (req) => {
       customer_email: customerId ? undefined : email,
       line_items: [
         {
-          price: SUPERFAN_PRICE_ID,
+          price_data: {
+            currency: "usd",
+            product_data: {
+              name: "Music Exclusive Superfan",
+            },
+            recurring: {
+              interval: "month",
+            },
+            unit_amount: SUPERFAN_SUBSCRIPTION_AMOUNT_CENTS,
+          },
           quantity: 1,
         },
       ],

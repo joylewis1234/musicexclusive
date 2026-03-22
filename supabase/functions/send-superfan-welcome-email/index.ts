@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const PRIMARY_FROM = "Music Exclusive <noreply@themusicisexclusive.com>";
+const PRIMARY_FROM = "Music Exclusive <noreply@musicexclusive.co>";
 const REPLY_TO = "support@musicexclusive.co";
 
 interface SuperfanWelcomeRequest {
@@ -259,7 +259,7 @@ serve(async (req) => {
     const vaultCode = vaultEntry?.code || "N/A";
     const displayName = name || vaultEntry?.name || email.split("@")[0];
 
-    const baseUrl = appUrl || "https://themusicisexclusive.com";
+    const baseUrl = appUrl || "https://musicexclusive.co";
     const loginLink = `${baseUrl}/auth/fan?email=${encodeURIComponent(email)}`;
 
     // Ensure vault_members row exists and get stable UUID for inviter_id

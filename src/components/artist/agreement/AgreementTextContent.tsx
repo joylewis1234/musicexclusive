@@ -6,7 +6,7 @@ const AgreementTextContent = () => (
         This Artist Participation Agreement ("Agreement") is entered into between Music
         Exclusive LLC ("Company," "we," or "us") and you ("Artist," "you," or "your").
         This Agreement governs your participation as an artist on the Music Exclusive
-        platform at themusicexclusive.com ("Platform"). By uploading Content, clicking
+        platform at musicexclusive.co ("Platform"). By uploading Content, clicking
         "I Agree," or otherwise using the Platform as an artist, you confirm you have
         read, understood, and agree to be bound by this Agreement in its entirety,
         including all Schedules and Terms and Conditions incorporated herein.

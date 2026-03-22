@@ -32,7 +32,7 @@ const ArtistAgreement = () => {
             Artist Participation Agreement
           </h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Music Exclusive LLC | themusicexclusive.com
+            Music Exclusive LLC | musicexclusive.co
           </p>
           <div className="flex items-center justify-center gap-2 mt-3">
             <Badge variant="secondary" className="text-xs">Version 1.0</Badge>

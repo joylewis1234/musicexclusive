@@ -10,7 +10,7 @@ const corsHeaders = {
 };
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const PRIMARY_FROM = "Music Exclusive <noreply@themusicisexclusive.com>";
+const PRIMARY_FROM = "Music Exclusive <noreply@musicexclusive.co>";
 const REPLY_TO = "support@musicexclusive.co";
 
 const logStep = (step: string, details?: Record<string, unknown>) => {
@@ -135,7 +135,7 @@ serve(async (req) => {
     // Generate invite token
     const inviteToken = generateToken();
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    const baseUrl = "https://themusicisexclusive.com";
+    const baseUrl = "https://musicexclusive.co";
     const inviteLink = `${baseUrl}/invite?token=${inviteToken}&type=superfan`;
 
     const { error: insertErr } = await supabaseAdmin

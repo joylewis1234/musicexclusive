@@ -15,6 +15,8 @@ interface NotifyApplicationRequest {
   baseUrl?: string;
 }
 
+const APP_URL = "https://musicexclusive.co";
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -25,7 +27,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { applicationId, baseUrl = "https://id-preview--09644822-430a-4a4e-a068-bdf812a2aedf.lovable.app" }: NotifyApplicationRequest = await req.json();
+    const { applicationId }: NotifyApplicationRequest = await req.json();
 
     if (!applicationId) {
       throw new Error("Application ID is required");
@@ -60,9 +62,9 @@ const handler = async (req: Request): Promise<Response> => {
       },
     ]);
 
-    const approveUrl = `${baseUrl}/admin/artist-applications/approve?token=${approveToken}`;
-    const denyUrl = `${baseUrl}/admin/artist-applications/deny?token=${denyToken}`;
-    const adminDashboardUrl = `${baseUrl}/admin/login?next=/admin/artist-applications`;
+    const approveUrl = `${APP_URL}/admin/artist-applications/approve?token=${approveToken}`;
+    const denyUrl = `${APP_URL}/admin/artist-applications/deny?token=${denyToken}`;
+    const adminDashboardUrl = `${APP_URL}/admin/login?next=/admin/artist-applications`;
 
     // Build the email HTML with Music Exclusive branding
     const emailHtml = `
@@ -242,7 +244,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const emailResult = await resend.emails.send({
-        from: "Music Exclusive <noreply@themusicisexclusive.com>",
+        from: "Music Exclusive <noreply@musicexclusive.co>",
         reply_to: "support@musicexclusive.co",
         to: ["support@musicexclusive.co"],
         subject: `🎵 New Artist Application: ${application.artist_name}`,
@@ -378,7 +380,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const confirmResult = await resend.emails.send({
-        from: "Music Exclusive <noreply@themusicisexclusive.com>",
+        from: "Music Exclusive <noreply@musicexclusive.co>",
         reply_to: "support@musicexclusive.co",
         to: [application.contact_email],
         subject: `We Received Your Application, ${application.artist_name}!`,

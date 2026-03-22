@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { warmFanAuthRoute } from "@/utils/preloadRoutes";
+import { MIN_PASSWORD_LENGTH, PASSWORD_MIN_LENGTH_MESSAGE } from "@/config/passwordPolicy";
 
 type ClaimState = "checking" | "claimable" | "claiming" | "account_exists" | "invalid";
 
@@ -79,8 +80,8 @@ const VaultWinCongrats = () => {
   };
 
   const handleClaim = async () => {
-    if (!password || password.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+    if (!password || password.length < MIN_PASSWORD_LENGTH) {
+      toast.error(PASSWORD_MIN_LENGTH_MESSAGE);
       return;
     }
 

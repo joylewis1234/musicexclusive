@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       siteOrigin = url.origin;
     } catch {
       // Fallback chain: env var → production domain
-      siteOrigin = Deno.env.get("SITE_URL") || "https://www.themusicisexclusive.com";
+      siteOrigin = Deno.env.get("SITE_URL") || "https://musicexclusive.co";
     }
     const redirectTo = `${siteOrigin}/reset-password`;
     console.log(`[send-password-reset] Redirect URL: ${redirectTo}`);
@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "Music Exclusive <noreply@themusicisexclusive.com>",
+        from: "Music Exclusive <noreply@musicexclusive.co>",
         reply_to: "support@musicexclusive.co",
         to: [email.trim()],
         subject: "Reset Your Music Exclusive Password",

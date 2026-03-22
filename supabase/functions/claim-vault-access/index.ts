@@ -9,6 +9,8 @@ const corsHeaders = {
 
 const TERMS_VERSION = "1.0";
 const PRIVACY_VERSION = "1.0";
+const MIN_PASSWORD_LENGTH = 8;
+const passwordMinLengthMessage = `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`;
 
 type ClaimMode = "inspect" | "claim";
 
@@ -130,9 +132,9 @@ serve(async (req) => {
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < MIN_PASSWORD_LENGTH) {
       return new Response(
-        JSON.stringify({ success: false, error: "password_too_short" }),
+        JSON.stringify({ success: false, error: passwordMinLengthMessage }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
