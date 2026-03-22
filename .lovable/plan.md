@@ -1,27 +1,29 @@
 
 
-## Add Artist Application Confirmation Email
+# Update Domain References to musicexclusive.co
 
-**What's missing:** When an artist submits their application, only admins are notified. The applicant receives no email confirmation.
+The codebase is already 95% migrated — `musicexclusive.co` is used in 43 files. Only **4 files** still reference the old `www.TheMusicIsExclusive.com` domain.
 
-**What's already working:** Denial emails are sent via `handle-application-action` when an admin denies an application. No changes needed there.
+## Changes
 
-### Plan
+### 1. `index.html` (Lines 17, 21)
+Update OG/Twitter image URLs:
+- `https://www.themusicisexclusive.com/og-image.png` → `https://musicexclusive.co/og-image.png`
 
-**Modify `supabase/functions/notify-new-application/index.ts`**
+### 2. `src/components/artist/marketing/templates/CinematicArtistPhoto.tsx` (Line 206)
+Update display URL:
+- `www.TheMusicIsExclusive.com` → `musicexclusive.co`
 
-After the existing admin notification email is sent (around line ~250), add a second Resend email send to `application.contact_email` with:
+### 3. `src/components/artist/marketing/templates/CinematicCoverArt.tsx` (Line 206)
+Update display URL:
+- `www.TheMusicIsExclusive.com` → `musicexclusive.co`
 
-- **From:** `Music Exclusive <noreply@themusicisexclusive.com>`
-- **Subject:** "We Received Your Application, [artist_name]!"
-- **HTML body:** Branded confirmation email matching the existing email style, containing:
-  - Thank-you message using their artist name
-  - Confirmation that the application is under review
-  - Expected review timeline (3-5 business days)
-  - Note that they'll receive an email with their approval status
-  - Link to check application status
-- Fire-and-forget (don't fail the response if this email fails)
-- Log the result to `email_logs` with `email_type: "artist_application_confirmation"`
+### 4. `src/hooks/useVideoExport.ts` (Line 340)
+Update canvas-rendered URL:
+- `www.TheMusicIsExclusive.com` → `musicexclusive.co`
 
-No frontend changes needed — the `ArtistApplicationSubmitted` page already tells the user to check their inbox.
+## No other changes needed
+- `src/config/app.ts` already has `APP_URL = "https://musicexclusive.co"`
+- All edge functions already use `musicexclusive.co`
+- All email templates already use `noreply@musicexclusive.co`
 
