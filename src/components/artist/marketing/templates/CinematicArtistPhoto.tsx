@@ -203,7 +203,7 @@ export const CinematicArtistPhoto = ({
         <div className="flex items-center gap-3">
           <Globe className="w-7 h-7" style={{ color: "hsl(0, 0%, 65%)" }} />
           <span className="font-extrabold" style={{ fontSize: "32px", color: "hsl(0, 0%, 93%)", letterSpacing: "0.05em" }}>
-            www.TheMusicIsExclusive.com
+            musicexclusive.co
           </span>
         </div>
       </div>
