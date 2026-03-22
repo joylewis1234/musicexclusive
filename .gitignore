@@ -8,10 +8,17 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+# Use npm only; do not commit Bun's lockfile
+bun.lock
+
 dist
 dist-ssr
 *.local
 .env
+playwright-report
+test-results
+blob-report
+playwright/.auth
 
 # Editor directories and files
 .vscode/*
