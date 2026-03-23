@@ -43,3 +43,6 @@ Cloudflare R2 multipart uploads + signed URLs/HLS via Edge Functions and Cloudfl
 3. URLs use `musicexclusive.co` (prod) or `localhost:8080` (local).
 4. Server logic in Edge Functions + migrations, not React.
 5. No unapproved mocks or fallback providers.
+
+#Edge Functions
+When I ask you to implement something that involves Supabase, add the edge function's code to the answer so that I can add it manually.
