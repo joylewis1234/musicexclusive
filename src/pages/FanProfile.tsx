@@ -69,6 +69,9 @@ const FanProfile = () => {
   const [isSuperfan, setIsSuperfan] = useState(false);
   const [fanVaultId, setFanVaultId] = useState<string | null>(null);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [cancelAt, setCancelAt] = useState<Date | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Handle payment success redirect - verify with Stripe and update credits
   useEffect(() => {
