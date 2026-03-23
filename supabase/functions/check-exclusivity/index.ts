@@ -6,7 +6,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const ARTIST_DASHBOARD_URL = "https://musicexclusive.co/artist/dashboard";
+const ARTIST_DASHBOARD_URL = "https://www.musicexclusive.co/login";
 
 interface TrackRow {
   id: string;
