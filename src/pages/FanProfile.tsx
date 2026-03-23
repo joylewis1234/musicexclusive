@@ -195,7 +195,22 @@ const FanProfile = () => {
     const fetchSuperfanStatus = async () => {
       if (!user?.email) return;
       
-      // A true Superfan has a SUBSCRIPTION_CREDITS entry in the ledger
+      // Primary: check vault_members for superfan_active
+      const { data: vmData } = await supabase
+        .from("vault_members")
+        .select("superfan_active, subscription_cancel_at")
+        .eq("email", user.email)
+        .maybeSingle();
+      
+      if (vmData?.superfan_active) {
+        setIsSuperfan(true);
+        if (vmData.subscription_cancel_at) {
+          setCancelAt(new Date(vmData.subscription_cancel_at));
+        }
+        return;
+      }
+      
+      // Fallback: check credit_ledger for SUBSCRIPTION_CREDITS
       const { data, error } = await supabase
         .from("credit_ledger")
         .select("id")
@@ -210,6 +225,27 @@ const FanProfile = () => {
     
     fetchSuperfanStatus();
   }, [user?.email]);
+
+  const handleCancelMembership = async () => {
+    setIsCancelling(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cancel-superfan");
+      
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      if (data?.cancel_at) {
+        setCancelAt(new Date(data.cancel_at));
+        toast.success("Your Superfan membership has been cancelled. Access continues until your billing period ends.");
+      }
+    } catch (err: any) {
+      console.error("[FanProfile] Cancel membership error:", err);
+      toast.error(err?.message || "Failed to cancel membership. Please try again.");
+    } finally {
+      setIsCancelling(false);
+      setShowCancelDialog(false);
+    }
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
