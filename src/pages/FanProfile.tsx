@@ -500,6 +500,40 @@ const FanProfile = () => {
           <WalletBalanceCard externalCredits={credits} externalLoading={false} />
         </section>
 
+        {/* Upgrade to Superfan Upsell */}
+        {!isSuperfan && (
+          <section className="animate-fade-in" style={{ animationDelay: "210ms" }}>
+            <GlowCard glowColor="primary" variant="elevated" className="overflow-hidden">
+              <div className="p-5 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <h3 className="font-display text-base font-semibold text-foreground">
+                    Upgrade to Superfan & Get More Perks
+                  </h3>
+                </div>
+                <ul className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-bold">✓</span>
+                    No more worrying about credits running out
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-primary font-bold">✓</span>
+                    Monthly invite link to share with a friend
+                  </li>
+                </ul>
+                <Button
+                  variant="accent"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => navigate("/subscribe")}
+                >
+                  Upgrade to Superfan
+                </Button>
+              </div>
+            </GlowCard>
+          </section>
+        )}
+
         {/* Cancel Membership Button */}
         {isSuperfan && !cancelAt && (
           <section className="animate-fade-in" style={{ animationDelay: "220ms" }}>
