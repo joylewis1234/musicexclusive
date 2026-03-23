@@ -280,13 +280,6 @@ const VaultWinCongrats = () => {
                 </span>
               </label>
 
-              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2 text-foreground mb-2">
-                  <ShieldCheck className="w-4 h-4 text-primary" />
-                  <span className="font-medium">No extra auth email</span>
-                </div>
-                Your winner claim creates the account directly after you click below, so you can continue inside the app immediately.
-              </div>
 
               <Button
                 onClick={handleClaim}
