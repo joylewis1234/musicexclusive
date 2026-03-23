@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/ui/PasswordInput";
-import { Crown, Sparkles, Music, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
+import { Crown, Sparkles, Music, ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
