@@ -189,11 +189,11 @@ const VaultWinCongrats = () => {
 
         {/* Vault Code Display */}
         {code && (
-          <GlowCard className="inline-block px-8 py-4 mb-8">
-            <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">
+        <GlowCard className="inline-block px-10 py-6 mb-8">
+            <p className="text-base text-muted-foreground uppercase tracking-wider mb-2">
               Your Vault Code
             </p>
-            <p className="text-3xl font-mono font-bold text-primary tracking-[0.3em]">
+            <p className="text-4xl font-mono font-bold text-primary tracking-[0.3em]">
               {code}
             </p>
           </GlowCard>
