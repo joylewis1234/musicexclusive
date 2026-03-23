@@ -1,29 +1,20 @@
 
 
-## Plan: Add Upgrade to Superfan Section on Fan Profile
+## Plan: Update Exclusivity Email CTA Link
 
 ### What changes
 
-**`src/pages/FanProfile.tsx`** — single file:
+**`supabase/functions/check-exclusivity/index.ts`** — single line change:
 
-Add a new section between the Wallet Balance Card (line 501) and the Cancel Membership button (line 503) that is **only visible when `!isSuperfan`**.
+Replace the `ARTIST_DASHBOARD_URL` constant on line 9:
+- From: `"https://musicexclusive.co/artist/dashboard"`
+- To: `"https://www.musicexclusive.co/login"`
 
-The section will use `GlowCard` with `glowColor="primary"` to match the existing design language and contain:
-- A `Sparkles` icon + heading: "Upgrade to Superfan & Get More Perks"
-- Two benefit lines with checkmark styling:
-  - "✓ No more worrying about credits running out"
-  - "✓ Monthly invite link to share with a friend"
-- An "Upgrade to Superfan" button (variant `accent`) that navigates to `/subscribe`
-
-The section renders only when `!isSuperfan` (meaning no active subscription and no cancellation scheduled), so it's hidden for current Superfans.
-
-### No backend changes needed
-
-This is purely a frontend UI addition — no new edge functions, database columns, or webhook changes required.
+This updates the CTA link in all three exclusivity period emails (1-week warning, 2-day warning, expired notice).
 
 ### Files changed
 
 | File | Action |
 |------|--------|
-| `src/pages/FanProfile.tsx` | Add upgrade upsell section for non-Superfan fans |
+| `supabase/functions/check-exclusivity/index.ts` | Update `ARTIST_DASHBOARD_URL` to `https://www.musicexclusive.co/login` |
 
