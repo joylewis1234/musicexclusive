@@ -661,6 +661,44 @@ const FanProfile = () => {
         onConfirm={handleBarStreamConfirm}
         onAddCredits={() => navigate("/fan/add-credits")}
       />
+
+      {/* Cancel Membership Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Superfan Membership?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3">
+              <p>
+                Your Superfan access will remain active until the end of your current billing period. After that, you'll be automatically downgraded to <strong>Pay Per Stream</strong> credits.
+              </p>
+              <p>
+                You'll still have full access to the platform — you'll just pay per stream instead of receiving monthly credits.
+              </p>
+              <p className="text-destructive font-medium">
+                This action cannot be undone.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isCancelling}>
+              Keep Membership
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleCancelMembership();
+              }}
+              disabled={isCancelling}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isCancelling ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Yes, Cancel Membership
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
