@@ -360,10 +360,24 @@ const FanProfile = () => {
             </StatusBadge>
             <Sparkles className="w-5 h-5 text-primary" />
           </div>
-          {isSuperfan && (
+          {isSuperfan && !cancelAt && (
             <StatusBadge variant="superfan" size="default">
               Superfan
             </StatusBadge>
+          )}
+          {isSuperfan && cancelAt && (
+            <div className="flex flex-col items-center gap-1">
+              <StatusBadge variant="default" size="default">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                Cancellation Scheduled
+              </StatusBadge>
+              <p className="text-xs text-muted-foreground">
+                Access until {cancelAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              </p>
+              <p className="text-[10px] text-muted-foreground/70">
+                You'll move to Pay Per Stream credits after this date
+              </p>
+            </div>
           )}
         </section>
 
