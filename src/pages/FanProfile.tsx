@@ -500,6 +500,19 @@ const FanProfile = () => {
           <WalletBalanceCard externalCredits={credits} externalLoading={false} />
         </section>
 
+        {/* Cancel Membership Button */}
+        {isSuperfan && !cancelAt && (
+          <section className="animate-fade-in" style={{ animationDelay: "220ms" }}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-muted-foreground hover:text-destructive hover:border-destructive"
+              onClick={() => setShowCancelDialog(true)}
+            >
+              Cancel Membership
+            </Button>
+          </section>
+        )}
         {/* Discovery CTA */}
         <section className="animate-fade-in" style={{ animationDelay: "250ms" }}>
           <Button 
