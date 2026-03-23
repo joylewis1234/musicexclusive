@@ -28,6 +28,7 @@ import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { GlowCard } from "@/components/ui/GlowCard";
 
 
 const FanProfile = () => {
