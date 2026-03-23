@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordInput } from "@/components/ui/PasswordInput";
-import { Crown, Sparkles, Music, ArrowRight, Loader2 } from "lucide-react";
+import { Crown, Sparkles, Music, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -189,11 +189,11 @@ const VaultWinCongrats = () => {
 
         {/* Vault Code Display */}
         {code && (
-        <GlowCard className="inline-block px-10 py-6 mb-8">
-            <p className="text-base text-muted-foreground uppercase tracking-wider mb-2">
+          <GlowCard className="inline-block px-8 py-4 mb-8">
+            <p className="text-sm text-muted-foreground uppercase tracking-wider mb-2">
               Your Vault Code
             </p>
-            <p className="text-4xl font-mono font-bold text-primary tracking-[0.3em]">
+            <p className="text-3xl font-mono font-bold text-primary tracking-[0.3em]">
               {code}
             </p>
           </GlowCard>
@@ -280,6 +280,13 @@ const VaultWinCongrats = () => {
                 </span>
               </label>
 
+              <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-foreground mb-2">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  <span className="font-medium">No extra auth email</span>
+                </div>
+                Your winner claim creates the account directly after you click below, so you can continue inside the app immediately.
+              </div>
 
               <Button
                 onClick={handleClaim}
