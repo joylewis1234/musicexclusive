@@ -49,6 +49,17 @@ Examples of existing function names (non-exhaustive):
 
 ---
 
+## Backend modification policy
+
+- **AI may edit backend code** (Edge Functions, database migrations, `config.toml`) but **must request explicit product-owner approval before every change**.
+- Each proposed backend change must include:
+  1. **What** is changing — file path, function name, affected lines.
+  2. **Why** the change is needed.
+  3. **Impact analysis** — which parts of the app (frontend pages, other Edge Functions, database tables, auth flows, payments, emails) are affected by the change and how.
+- **No backend change may be applied until the product owner approves in chat.**
+
+---
+
 ## Authentication & roles
 
 - **Supabase Auth** only (`AuthContext` in `src/contexts/AuthContext.tsx`).

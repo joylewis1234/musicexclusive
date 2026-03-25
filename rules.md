@@ -28,21 +28,13 @@ Vite · React 18 · TypeScript · react-router-dom v6 · @tanstack/react-query �
 
 Business rules, payments (Stripe), email (Resend), webhooks, privileged DB operations → `supabase/functions/`. Client calls via `supabase.functions.invoke()`.
 
+## Backend modification policy
+
+- **AI may edit backend code** (Edge Functions, migrations, config.toml) but **must request explicit approval** before every change.
+- Each proposed backend change must include:
+  1. **What** is changing (file, function, lines).
+  2. **Why** the change is needed.
+  3. **Impact analysis** — which parts of the app (frontend pages, other Edge Functions, database tables, auth flows, payments, emails) are affected and how.
+- **No backend change may be applied until the product owner approves.**
+
 ## Auth & roles
-
-Supabase Auth only. Roles (`fan | artist | admin`) in `user_roles` table. No client-side `signUp()` for production — use Edge Function verification flow.
-
-## Media
-
-Cloudflare R2 multipart uploads + signed URLs/HLS via Edge Functions and Cloudflare Workers. No long-lived public R2 URLs.
-
-## Pre-commit checklist
-
-1. No Lovable-specific npm packages added.
-2. Supabase project = `esgpsapstljgsqpmezzf`.
-3. URLs use `musicexclusive.co` (prod) or `localhost:8080` (local).
-4. Server logic in Edge Functions + migrations, not React.
-5. No unapproved mocks or fallback providers.
-
-#Edge Functions
-When I ask you to implement something that involves Supabase, add the edge function's code to the answer so that I can add it manually.
