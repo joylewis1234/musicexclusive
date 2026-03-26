@@ -107,9 +107,10 @@ const EarningsDashboard = () => {
           .reduce((sum, b) => sum + Number(b.total_usd), 0);
 
         setSummary({
-          pendingThisWeek,
+          pendingAll,
           paidLifetime,
           totalPayouts,
+          streamsAll,
           streamsThisWeek,
         });
       } catch (error) {
@@ -182,9 +183,9 @@ const EarningsDashboard = () => {
             </span>
           </div>
           <p className="text-xl font-display font-bold text-foreground">
-            ${summary.pendingThisWeek.toFixed(2)}
+            ${summary.pendingAll.toFixed(2)}
           </p>
-          <p className="text-[10px] text-muted-foreground mt-1">This week</p>
+          <p className="text-[10px] text-muted-foreground mt-1">All pending</p>
         </GlowCard>
 
         {/* Paid Earnings (Lifetime) */}
@@ -230,9 +231,9 @@ const EarningsDashboard = () => {
             </span>
           </div>
           <p className="text-xl font-display font-bold text-foreground">
-            {summary.streamsThisWeek}
+            {summary.streamsAll}
           </p>
-          <p className="text-[10px] text-muted-foreground mt-1">This week</p>
+          <p className="text-[10px] text-muted-foreground mt-1">This week: {summary.streamsThisWeek}</p>
         </GlowCard>
       </div>
 
