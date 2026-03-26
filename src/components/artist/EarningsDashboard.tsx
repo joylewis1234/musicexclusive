@@ -21,9 +21,10 @@ interface PayoutBatch {
 }
 
 interface EarningsSummary {
-  pendingThisWeek: number;
+  pendingAll: number;
   paidLifetime: number;
   totalPayouts: number;
+  streamsAll: number;
   streamsThisWeek: number;
 }
 
@@ -33,9 +34,10 @@ const EarningsDashboard = () => {
   const [batches, setBatches] = useState<PayoutBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<EarningsSummary>({
-    pendingThisWeek: 0,
+    pendingAll: 0,
     paidLifetime: 0,
     totalPayouts: 0,
+    streamsAll: 0,
     streamsThisWeek: 0,
   });
 
@@ -61,8 +63,9 @@ const EarningsDashboard = () => {
         }
 
         // Calculate summary from stream_ledger
-        let pendingThisWeek = 0;
+        let pendingAll = 0;
         let paidLifetime = 0;
+        let streamsAll = 0;
         let streamsThisWeek = 0;
 
         if (streams) {
@@ -70,14 +73,15 @@ const EarningsDashboard = () => {
             const streamDate = new Date(stream.created_at);
             const isThisWeek = streamDate >= weekStart && streamDate <= weekEnd;
 
-            if (stream.payout_status === "pending" && isThisWeek) {
-              pendingThisWeek += Number(stream.amount_artist);
+            if (stream.payout_status === "pending") {
+              pendingAll += Number(stream.amount_artist);
             }
 
             if (stream.payout_status === "paid") {
               paidLifetime += Number(stream.amount_artist);
             }
 
+            streamsAll++;
             if (isThisWeek) {
               streamsThisWeek++;
             }
@@ -103,9 +107,10 @@ const EarningsDashboard = () => {
           .reduce((sum, b) => sum + Number(b.total_usd), 0);
 
         setSummary({
-          pendingThisWeek,
+          pendingAll,
           paidLifetime,
           totalPayouts,
+          streamsAll,
           streamsThisWeek,
         });
       } catch (error) {
@@ -178,9 +183,9 @@ const EarningsDashboard = () => {
             </span>
           </div>
           <p className="text-xl font-display font-bold text-foreground">
-            ${summary.pendingThisWeek.toFixed(2)}
+            ${summary.pendingAll.toFixed(2)}
           </p>
-          <p className="text-[10px] text-muted-foreground mt-1">This week</p>
+          <p className="text-[10px] text-muted-foreground mt-1">All pending</p>
         </GlowCard>
 
         {/* Paid Earnings (Lifetime) */}
@@ -226,9 +231,9 @@ const EarningsDashboard = () => {
             </span>
           </div>
           <p className="text-xl font-display font-bold text-foreground">
-            {summary.streamsThisWeek}
+            {summary.streamsAll}
           </p>
-          <p className="text-[10px] text-muted-foreground mt-1">This week</p>
+          <p className="text-[10px] text-muted-foreground mt-1">This week: {summary.streamsThisWeek}</p>
         </GlowCard>
       </div>
 
