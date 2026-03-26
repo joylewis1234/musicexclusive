@@ -63,8 +63,9 @@ const EarningsDashboard = () => {
         }
 
         // Calculate summary from stream_ledger
-        let pendingThisWeek = 0;
+        let pendingAll = 0;
         let paidLifetime = 0;
+        let streamsAll = 0;
         let streamsThisWeek = 0;
 
         if (streams) {
@@ -72,14 +73,15 @@ const EarningsDashboard = () => {
             const streamDate = new Date(stream.created_at);
             const isThisWeek = streamDate >= weekStart && streamDate <= weekEnd;
 
-            if (stream.payout_status === "pending" && isThisWeek) {
-              pendingThisWeek += Number(stream.amount_artist);
+            if (stream.payout_status === "pending") {
+              pendingAll += Number(stream.amount_artist);
             }
 
             if (stream.payout_status === "paid") {
               paidLifetime += Number(stream.amount_artist);
             }
 
+            streamsAll++;
             if (isThisWeek) {
               streamsThisWeek++;
             }
