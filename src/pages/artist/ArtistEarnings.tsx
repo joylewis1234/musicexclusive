@@ -120,31 +120,28 @@ const ArtistEarnings = () => {
       });
       setLastPayoutDate(lastPaid?.paid_at || null);
       
-      const { data: ledgerData } = await supabase
-        .from("credit_ledger")
-        .select("reference, credits_delta, usd_delta")
-        .eq("user_email", user.email || "")
-        .eq("type", "ARTIST_EARNING");
-        
+      // Aggregate track earnings from stream_ledger (source of truth)
+      const { data: streamsByTrack } = await supabase
+        .from("stream_ledger")
+        .select("track_id, amount_artist")
+        .eq("artist_id", profile.id);
+
       const trackMap = new Map<string, { streams: number; earned: number }>();
-      (ledgerData || []).forEach((entry) => {
-        const trackId = entry.reference?.replace("track:", "") || "";
-        if (trackId) {
-          const existing = trackMap.get(trackId) || { streams: 0, earned: 0 };
-          trackMap.set(trackId, {
-            streams: existing.streams + 1,
-            earned: existing.earned + Math.abs(Number(entry.usd_delta)),
-          });
-        }
+      (streamsByTrack || []).forEach((entry) => {
+        const existing = trackMap.get(entry.track_id) || { streams: 0, earned: 0 };
+        trackMap.set(entry.track_id, {
+          streams: existing.streams + 1,
+          earned: existing.earned + Number(entry.amount_artist),
+        });
       });
-      
+
       const trackIds = Array.from(trackMap.keys());
       if (trackIds.length > 0) {
         const { data: tracks } = await supabase
           .from("tracks")
           .select("id, title, artwork_url")
           .in("id", trackIds);
-          
+
         const earnings: TrackEarning[] = (tracks || []).map((track) => {
           const stats = trackMap.get(track.id) || { streams: 0, earned: 0 };
           return {
@@ -155,7 +152,7 @@ const ArtistEarnings = () => {
             total_earned: stats.earned,
           };
         }).sort((a, b) => b.total_earned - a.total_earned);
-        
+
         setTrackEarnings(earnings);
       }
       
