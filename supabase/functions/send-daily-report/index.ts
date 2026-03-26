@@ -106,7 +106,8 @@ async function generateReport(supabase: any, reportDate: string): Promise<Report
     .from("stream_ledger")
     .select("*")
     .gte("created_at", startUTC)
-    .lt("created_at", endUTC);
+    .lt("created_at", endUTC)
+    .limit(10000);
 
   if (streamsError) {
     logStep("Error fetching streams", { error: streamsError.message });
