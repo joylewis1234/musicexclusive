@@ -21,9 +21,10 @@ interface PayoutBatch {
 }
 
 interface EarningsSummary {
-  pendingThisWeek: number;
+  pendingAll: number;
   paidLifetime: number;
   totalPayouts: number;
+  streamsAll: number;
   streamsThisWeek: number;
 }
 
@@ -33,9 +34,10 @@ const EarningsDashboard = () => {
   const [batches, setBatches] = useState<PayoutBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState<EarningsSummary>({
-    pendingThisWeek: 0,
+    pendingAll: 0,
     paidLifetime: 0,
     totalPayouts: 0,
+    streamsAll: 0,
     streamsThisWeek: 0,
   });
 
