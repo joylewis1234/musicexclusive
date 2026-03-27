@@ -125,7 +125,8 @@ Deno.serve(async (req) => {
               method: "POST",
               headers: { "Content-Type": "application/json", Authorization: `Bearer ${resendKey}` },
               body: JSON.stringify({
-                from: "Music Exclusive <noreply@musicexclusive.co>",
+                from: "Music Exclusive <support@musicexclusive.co>",
+                reply_to: "support@musicexclusive.co",
                 to: artistEmail,
                 subject: `🏆 You placed #${rank} in ${genre} Exclusive Charts!`,
                 html: `<p>Congratulations ${artist.artist_name}!</p>

@@ -15,7 +15,7 @@ interface NotifyApplicationRequest {
   baseUrl?: string;
 }
 
-const APP_URL = "https://musicexclusive.co";
+const APP_URL = "https://www.musicexclusive.co";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -244,7 +244,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const emailResult = await resend.emails.send({
-        from: "Music Exclusive <noreply@musicexclusive.co>",
+        from: "Music Exclusive <support@musicexclusive.co>",
         reply_to: "support@musicexclusive.co",
         to: ["support@musicexclusive.co"],
         subject: `🎵 New Artist Application: ${application.artist_name}`,
@@ -380,7 +380,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const confirmResult = await resend.emails.send({
-        from: "Music Exclusive <noreply@musicexclusive.co>",
+        from: "Music Exclusive <support@musicexclusive.co>",
         reply_to: "support@musicexclusive.co",
         to: [application.contact_email],
         subject: `We Received Your Application, ${application.artist_name}!`,

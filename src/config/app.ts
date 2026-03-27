@@ -1,15 +1,10 @@
-export const APP_URL = "https://musicexclusive.co";
-
-const LOCAL_APP_ORIGINS = new Set([
-  "http://localhost:8080",
-  "http://127.0.0.1:8080",
-]);
+/** Canonical site URL (SSR / email fallbacks). Production uses www. */
+export const APP_URL = "https://www.musicexclusive.co";
 
 export function getAppBaseUrl() {
-  if (typeof window !== "undefined" && LOCAL_APP_ORIGINS.has(window.location.origin)) {
+  if (typeof window !== "undefined") {
     return window.location.origin;
   }
-
   return APP_URL;
 }
 

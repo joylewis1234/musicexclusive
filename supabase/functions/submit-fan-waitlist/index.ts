@@ -99,7 +99,8 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: "Music Exclusive <noreply@musicexclusive.co>",
+            from: "Music Exclusive <support@musicexclusive.co>",
+            reply_to: "support@musicexclusive.co",
             to: [trimmedEmail],
             subject: "You've Secured Lifetime Access to Music Exclusive",
             html: `
@@ -142,7 +143,8 @@ Deno.serve(async (req) => {
           method: "POST",
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            from: "Music Exclusive <noreply@musicexclusive.co>",
+            from: "Music Exclusive <support@musicexclusive.co>",
+            reply_to: "support@musicexclusive.co",
             to: ["support@musicexclusive.co"],
             subject: "New Founding Superfan Signup",
             html: `

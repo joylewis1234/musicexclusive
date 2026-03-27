@@ -10,7 +10,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { APP_URL } from "@/config/app";
+import { getAppBaseUrl } from "@/config/app";
 
 interface LocationState {
   email?: string;
@@ -86,8 +86,9 @@ const LoadCredits = () => {
     setIsProcessing(true);
     
     try {
-      const successUrl = `${APP_URL}/checkout/return?payment=success&credits=${credits}&return_to=%2Fload-credits`;
-      const cancelUrl = `${APP_URL}/load-credits?payment=cancelled`;
+      const base = getAppBaseUrl();
+      const successUrl = `${base}/checkout/return?payment=success&credits=${credits}&return_to=%2Fload-credits`;
+      const cancelUrl = `${base}/load-credits?payment=cancelled`;
 
       const { data, error } = await supabase.functions.invoke("create-checkout", {
         body: {

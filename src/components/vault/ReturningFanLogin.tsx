@@ -17,7 +17,7 @@ import {
 import { KeyRound, ArrowRight, RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { APP_URL } from "@/config/app";
+import { getAppBaseUrl } from "@/config/app";
 
 const returnFormSchema = z.object({
   email: z
@@ -153,15 +153,16 @@ export const ReturningFanLogin = () => {
         return;
       }
 
-      // Send the resend email
-      const returnUrl = `${APP_URL}/vault/submit?email=${encodeURIComponent(email)}&code=${existingCode.code}`;
+      // Send the resend email (use current origin so links match the session domain)
+      const base = getAppBaseUrl();
+      const returnUrl = `${base}/vault/submit?email=${encodeURIComponent(email)}&code=${existingCode.code}`;
 
       const { error: emailError } = await supabase.functions.invoke("send-vault-resend-email", {
         body: {
           email: email,
           name: existingCode.name,
           vaultCode: existingCode.code,
-          appUrl: APP_URL,
+          appUrl: base,
           returnUrl: returnUrl,
         },
       });

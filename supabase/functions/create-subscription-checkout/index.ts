@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const APP_URL = "https://musicexclusive.co";
+const APP_URL = "https://www.musicexclusive.co";
 const SUPERFAN_SUBSCRIPTION_AMOUNT_CENTS = 500;
 
 serve(async (req) => {

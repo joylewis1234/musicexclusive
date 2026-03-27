@@ -11,7 +11,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS, GET",
 };
 
-const DEFAULT_BASE_URL = "https://musicexclusive.co";
+const DEFAULT_BASE_URL = "https://www.musicexclusive.co";
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -152,7 +152,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       const resendClient = new Resend(resendApiKey);
       const emailResult = await resendClient.emails.send({
-        from: "Music Exclusive <noreply@musicexclusive.co>",
+        from: "Music Exclusive <support@musicexclusive.co>",
         reply_to: "support@musicexclusive.co",
         to: [application.contact_email],
         subject: "You're Approved. Welcome to Music Exclusive",

@@ -8,7 +8,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ARTIST_APPLY_URL = "https://musicexclusive.co/artist/apply";
+const ARTIST_APPLY_URL = "https://www.musicexclusive.co/artist/apply";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -88,7 +88,8 @@ serve(async (req) => {
             Authorization: `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "Music Exclusive <noreply@musicexclusive.co>",
+            from: "Music Exclusive <support@musicexclusive.co>",
+            reply_to: "support@musicexclusive.co",
             to: [entry.email],
             subject: "You've Been Approved — Complete Your Artist Application",
             html: `

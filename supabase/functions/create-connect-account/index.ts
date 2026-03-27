@@ -18,10 +18,14 @@ const jsonResponse = (body: unknown, status: number) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const DEFAULT_APP_URL = "https://musicexclusive.co";
+const DEFAULT_APP_URL = "https://www.musicexclusive.co";
 const LOCAL_APP_ORIGINS = new Set([
   "http://localhost:8080",
   "http://127.0.0.1:8080",
+]);
+const PRODUCTION_ORIGINS = new Set([
+  "https://musicexclusive.co",
+  "https://www.musicexclusive.co",
 ]);
 
 const resolveAllowedOrigin = (...candidates: Array<string | null | undefined>) => {
@@ -30,7 +34,7 @@ const resolveAllowedOrigin = (...candidates: Array<string | null | undefined>) =
 
     try {
       const origin = new URL(candidate).origin;
-      if (origin === DEFAULT_APP_URL || LOCAL_APP_ORIGINS.has(origin)) {
+      if (PRODUCTION_ORIGINS.has(origin) || LOCAL_APP_ORIGINS.has(origin)) {
         return origin;
       }
     } catch {

@@ -19,9 +19,9 @@ type ResendErrorPayload = {
 };
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const PRIMARY_FROM = "Music Exclusive <noreply@musicexclusive.co>";
+const PRIMARY_FROM = "Music Exclusive <support@musicexclusive.co>";
 const REPLY_TO = "support@musicexclusive.co";
-const DEFAULT_APP_URL = Deno.env.get("APP_URL") || "https://musicexclusive.co";
+const DEFAULT_APP_URL = Deno.env.get("APP_URL") || "https://www.musicexclusive.co";
 
 async function sendResendEmail(args: {
   resendKey: string;

@@ -25,8 +25,11 @@ supabase/.temp/
 .tools/
 
 # Cursor / agent local config (not shared via repo)
-.cursor/rules/
+.cursor/
 AGENTS.md
+
+# Local checklist (not committed)
+docs/superfan-cancel-checklist.md
 
 # Editor directories and files
 .vscode/*

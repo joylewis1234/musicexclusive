@@ -30,6 +30,18 @@ const rollbackStripeEvent = async (eventId: string, reason: string) => {
   }
 };
 
+async function resolveSubscriptionCustomerEmail(
+  stripe: Stripe,
+  subscription: Stripe.Subscription,
+): Promise<string | null> {
+  const raw = subscription.customer;
+  const customerId = typeof raw === "string" ? raw : raw?.id;
+  if (!customerId) return null;
+  const customer = await stripe.customers.retrieve(customerId);
+  if (customer.deleted) return null;
+  return customer.email ?? null;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -301,14 +313,91 @@ serve(async (req) => {
         break;
       }
 
-      case "customer.subscription.created":
-      case "customer.subscription.updated": {
+      case "customer.subscription.created": {
         const subscription = event.data.object as Stripe.Subscription;
-        logStep("Subscription event", {
-          type: event.type,
+        logStep("Subscription created", {
           subscriptionId: subscription.id,
           status: subscription.status,
         });
+        break;
+      }
+
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription;
+        logStep("Subscription updated", {
+          subscriptionId: subscription.id,
+          status: subscription.status,
+          cancelAtPeriodEnd: subscription.cancel_at_period_end,
+        });
+
+        if (subscription.cancel_at_period_end && subscription.current_period_end) {
+          const cancelAt = new Date(subscription.current_period_end * 1000).toISOString();
+          const email = await resolveSubscriptionCustomerEmail(stripe, subscription);
+          if (email) {
+            const { error: vmError } = await supabaseAdmin
+              .from("vault_members")
+              .update({ subscription_cancel_at: cancelAt })
+              .eq("email", email);
+
+            if (vmError) {
+              logStep("Error syncing subscription_cancel_at", { error: vmError.message, email });
+            } else {
+              logStep("subscription_cancel_at synced", { email, cancelAt });
+            }
+          } else {
+            logStep("Could not resolve customer email for subscription", {
+              subscriptionId: subscription.id,
+            });
+          }
+        } else if (
+          !subscription.cancel_at_period_end &&
+          (subscription.status === "active" || subscription.status === "trialing")
+        ) {
+          const email = await resolveSubscriptionCustomerEmail(stripe, subscription);
+          if (email) {
+            const { error: clearErr } = await supabaseAdmin
+              .from("vault_members")
+              .update({ subscription_cancel_at: null })
+              .eq("email", email);
+
+            if (clearErr) {
+              logStep("Error clearing subscription_cancel_at", { error: clearErr.message, email });
+            } else {
+              logStep("subscription_cancel_at cleared (reactivation)", { email });
+            }
+          }
+        }
+        break;
+      }
+
+      case "customer.subscription.deleted": {
+        const subscription = event.data.object as Stripe.Subscription;
+        logStep("Subscription deleted", { subscriptionId: subscription.id });
+
+        const email = await resolveSubscriptionCustomerEmail(stripe, subscription);
+        if (email) {
+          const { error: delErr } = await supabaseAdmin
+            .from("vault_members")
+            .update({
+              superfan_active: false,
+              membership_type: "pay_as_you_go",
+              subscription_cancel_at: null,
+            })
+            .eq("email", email);
+
+          if (delErr) {
+            logStep("Error updating vault_members on subscription deleted", {
+              error: delErr.message,
+              email,
+            });
+          } else {
+            logStep("Superfan membership ended in vault_members", { email });
+          }
+        } else {
+          logStep("Could not resolve customer email for subscription.deleted", {
+            subscriptionId: subscription.id,
+          });
+        }
         break;
       }
 

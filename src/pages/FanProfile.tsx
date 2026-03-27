@@ -4,16 +4,29 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ChevronLeft, User, Camera, Pencil, Check, X, Loader2, LogOut, Heart, Sparkles, ListMusic, AlertTriangle } from "lucide-react";
+import {
+  ChevronLeft,
+  User,
+  Camera,
+  Pencil,
+  Check,
+  X,
+  Loader2,
+  LogOut,
+  Heart,
+  Sparkles,
+  ListMusic,
+  AlertTriangle,
+  Crown,
+} from "lucide-react";
 import {
   AlertDialog,
+  AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogDescription,
   AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useFanProfile } from "@/hooks/useFanProfile";
 import { useFanTopArtists } from "@/hooks/useFanTopArtists";
@@ -28,6 +41,7 @@ import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getAppBaseUrl } from "@/config/app";
 import { GlowCard } from "@/components/ui/GlowCard";
 
 
@@ -67,12 +81,41 @@ const FanProfile = () => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [isSuperfan, setIsSuperfan] = useState(false);
   const [fanVaultId, setFanVaultId] = useState<string | null>(null);
+  const [isSuperfan, setIsSuperfan] = useState(false);
+  const [subscriptionCancelAt, setSubscriptionCancelAt] = useState<string | null>(null);
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
-  const [cancelAt, setCancelAt] = useState<Date | null>(null);
-  const [isCancelling, setIsCancelling] = useState(false);
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [showCancelSuperfanDialog, setShowCancelSuperfanDialog] = useState(false);
+  const [isCancellingSuperfan, setIsCancellingSuperfan] = useState(false);
+  const [isStartingSuperfanCheckout, setIsStartingSuperfanCheckout] = useState(false);
+
+  // Vault membership: Superfan status + subscription cancel date
+  const refreshVaultMembership = useCallback(async () => {
+    if (!user?.email) return;
+
+    const { data, error } = await supabase
+      .from("vault_members")
+      .select("id, membership_type, superfan_active, subscription_cancel_at")
+      .eq("email", user.email)
+      .maybeSingle();
+
+    if (error) {
+      console.error("[FanProfile] vault_members fetch", error);
+      return;
+    }
+
+    if (data) {
+      setFanVaultId(data.id);
+      const sf =
+        data.superfan_active === true && data.membership_type === "superfan";
+      setIsSuperfan(sf);
+      setSubscriptionCancelAt(data.subscription_cancel_at ?? null);
+    } else {
+      setFanVaultId(null);
+      setIsSuperfan(false);
+      setSubscriptionCancelAt(null);
+    }
+  }, [user?.email]);
 
   // Handle payment success redirect - verify with Stripe and update credits
   useEffect(() => {
@@ -94,6 +137,7 @@ const FanProfile = () => {
           const success = await refetchWithRetry(expectedCredits, 5, 1500);
           
           if (success) {
+            await refreshVaultMembership();
             toast.success(
               creditsAdded 
                 ? `Payment successful! ${creditsAdded} credits added.`
@@ -112,26 +156,11 @@ const FanProfile = () => {
       
       verifyCredits();
     }
-  }, [searchParams, setSearchParams, refetchWithRetry, isVerifyingPayment]);
+  }, [searchParams, setSearchParams, refetchWithRetry, isVerifyingPayment, refreshVaultMembership]);
 
-  // Fetch vault member id for top artists query
   useEffect(() => {
-    const fetchFanVaultId = async () => {
-      if (!user?.email) return;
-      
-      const { data } = await supabase
-        .from("vault_members")
-        .select("id")
-        .eq("email", user.email)
-        .maybeSingle();
-      
-      if (data) {
-        setFanVaultId(data.id);
-      }
-    };
-    
-    fetchFanVaultId();
-  }, [user?.email]);
+    void refreshVaultMembership();
+  }, [refreshVaultMembership]);
 
   const { topArtists, isLoading: isLoadingArtists } = useFanTopArtists(fanVaultId);
   const { playlist, isLoading: isLoadingPlaylist, removeFromPlaylist } = usePlaylist(fanVaultId);
@@ -192,66 +221,6 @@ const FanProfile = () => {
     }
   }, [activeTrackId, lastEndedTrackId]);
 
-  useEffect(() => {
-    const fetchSuperfanStatus = async () => {
-      if (!user?.email) return;
-      
-      // Primary: check vault_members for superfan_active
-      // subscription_cancel_at column may not exist yet — cast to any
-      const { data: vmData } = await supabase
-        .from("vault_members")
-        .select("superfan_active")
-        .eq("email", user.email)
-        .maybeSingle();
-      
-      const vmRecord = vmData as any;
-      
-      if (vmRecord?.superfan_active) {
-        setIsSuperfan(true);
-        // Try to read subscription_cancel_at (will be undefined until column is added)
-        if (vmRecord.subscription_cancel_at) {
-          setCancelAt(new Date(vmRecord.subscription_cancel_at));
-        }
-        return;
-      }
-      
-      // Fallback: check credit_ledger for SUBSCRIPTION_CREDITS
-      const { data, error } = await supabase
-        .from("credit_ledger")
-        .select("id")
-        .eq("user_email", user.email)
-        .eq("type", "SUBSCRIPTION_CREDITS")
-        .limit(1);
-      
-      if (!error) {
-        setIsSuperfan(Array.isArray(data) && data.length > 0);
-      }
-    };
-    
-    fetchSuperfanStatus();
-  }, [user?.email]);
-
-  const handleCancelMembership = async () => {
-    setIsCancelling(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("cancel-superfan");
-      
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      
-      if (data?.cancel_at) {
-        setCancelAt(new Date(data.cancel_at));
-        toast.success("Your Superfan membership has been cancelled. Access continues until your billing period ends.");
-      }
-    } catch (err: any) {
-      console.error("[FanProfile] Cancel membership error:", err);
-      toast.error(err?.message || "Failed to cancel membership. Please try again.");
-    } finally {
-      setIsCancelling(false);
-      setShowCancelDialog(false);
-    }
-  };
-
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -266,6 +235,70 @@ const FanProfile = () => {
     }
   };
 
+  const handleUpgradeSuperfan = async () => {
+    if (!user?.email) {
+      toast.error("Sign in to upgrade");
+      return;
+    }
+    setIsStartingSuperfanCheckout(true);
+    try {
+      const base = getAppBaseUrl();
+      const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
+        body: {
+          email: user.email,
+          successUrl: `${base}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25&return_to=%2Ffan%2Fprofile`,
+          cancelUrl: `${base}/fan/profile`,
+        },
+      });
+      if (error) {
+        console.error(error);
+        toast.error("Could not start checkout. Try again.");
+        return;
+      }
+      const url =
+        data && typeof data === "object" && "url" in data
+          ? (data as { url?: string }).url
+          : undefined;
+      if (url && typeof url === "string") {
+        window.location.href = url;
+      } else {
+        toast.error("Could not start checkout.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Something went wrong.");
+    } finally {
+      setIsStartingSuperfanCheckout(false);
+    }
+  };
+
+  const handleConfirmCancelSuperfan = async () => {
+    setIsCancellingSuperfan(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("cancel-superfan");
+      if (error) {
+        toast.error(error.message || "Could not cancel subscription");
+        return;
+      }
+      const payload = data as { error?: string; success?: boolean } | null;
+      if (payload?.error) {
+        toast.error(payload.error);
+        return;
+      }
+      if (payload?.success) {
+        toast.success("Your Superfan membership will end after the current billing period.");
+        setShowCancelSuperfanDialog(false);
+        await refreshVaultMembership();
+      } else {
+        toast.error("Unexpected response");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Something went wrong.");
+    } finally {
+      setIsCancellingSuperfan(false);
+    }
+  };
 
   // Handle file selection
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -361,19 +394,24 @@ const FanProfile = () => {
             </StatusBadge>
             <Sparkles className="w-5 h-5 text-primary" />
           </div>
-          {isSuperfan && !cancelAt && (
+          {isSuperfan && !subscriptionCancelAt && (
             <StatusBadge variant="superfan" size="default">
               Superfan
             </StatusBadge>
           )}
-          {isSuperfan && cancelAt && (
+          {isSuperfan && subscriptionCancelAt && (
             <div className="flex flex-col items-center gap-1">
               <StatusBadge variant="default" size="default">
                 <AlertTriangle className="w-3 h-3 mr-1" />
                 Cancellation Scheduled
               </StatusBadge>
               <p className="text-xs text-muted-foreground">
-                Access until {cancelAt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                Access until{" "}
+                {new Date(subscriptionCancelAt).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </p>
               <p className="text-[10px] text-muted-foreground/70">
                 You'll move to Pay Per Stream credits after this date
@@ -501,7 +539,7 @@ const FanProfile = () => {
           <WalletBalanceCard externalCredits={credits} externalLoading={false} />
         </section>
 
-        {/* Upgrade to Superfan Upsell */}
+        {/* Upgrade to Superfan + cancel (checkout uses current app origin) */}
         {!isSuperfan && (
           <section className="animate-fade-in" style={{ animationDelay: "210ms" }}>
             <GlowCard glowColor="primary" variant="elevated" className="overflow-hidden">
@@ -525,9 +563,15 @@ const FanProfile = () => {
                 <Button
                   variant="accent"
                   size="sm"
-                  className="w-full"
-                  onClick={() => navigate("/subscribe")}
+                  className="w-full gap-2"
+                  onClick={() => void handleUpgradeSuperfan()}
+                  disabled={isStartingSuperfanCheckout}
                 >
+                  {isStartingSuperfanCheckout ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Crown className="w-4 h-4" />
+                  )}
                   Upgrade to Superfan
                 </Button>
               </div>
@@ -535,17 +579,46 @@ const FanProfile = () => {
           </section>
         )}
 
-        {/* Cancel Membership Button */}
-        {isSuperfan && !cancelAt && (
-          <section className="animate-fade-in" style={{ animationDelay: "220ms" }}>
+        {isSuperfan && !subscriptionCancelAt && (
+          <section className="animate-fade-in space-y-3" style={{ animationDelay: "220ms" }}>
             <Button
               variant="outline"
-              size="sm"
+              size="lg"
               className="w-full text-muted-foreground hover:text-destructive hover:border-destructive"
-              onClick={() => setShowCancelDialog(true)}
+              onClick={() => setShowCancelSuperfanDialog(true)}
             >
-              Cancel Membership
+              Cancel Superfan membership
             </Button>
+            <AlertDialog open={showCancelSuperfanDialog} onOpenChange={setShowCancelSuperfanDialog}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel Superfan membership?</AlertDialogTitle>
+                  <AlertDialogDescription className="space-y-3">
+                    <p>
+                      Your Superfan access stays active until the end of your current billing period.
+                      You will not be charged again.
+                    </p>
+                    <p>
+                      After that, you can keep using the platform with pay-per-stream credits.
+                    </p>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isCancellingSuperfan}>Keep membership</AlertDialogCancel>
+                  <Button
+                    variant="destructive"
+                    onClick={() => void handleConfirmCancelSuperfan()}
+                    disabled={isCancellingSuperfan}
+                  >
+                    {isCancellingSuperfan ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      "Confirm cancel"
+                    )}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </section>
         )}
         {/* Discovery CTA */}
@@ -696,44 +769,6 @@ const FanProfile = () => {
         onConfirm={handleBarStreamConfirm}
         onAddCredits={() => navigate("/fan/add-credits")}
       />
-
-      {/* Cancel Membership Confirmation Dialog */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Superfan Membership?</AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <p>
-                Your Superfan access will remain active until the end of your current billing period. After that, you'll be automatically downgraded to <strong>Pay Per Stream</strong> credits.
-              </p>
-              <p>
-                You'll still have full access to the platform — you'll just pay per stream instead of receiving monthly credits.
-              </p>
-              <p className="text-destructive font-medium">
-                This action cannot be undone.
-              </p>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isCancelling}>
-              Keep Membership
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={(e) => {
-                e.preventDefault();
-                handleCancelMembership();
-              }}
-              disabled={isCancelling}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isCancelling ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : null}
-              Yes, Cancel Membership
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

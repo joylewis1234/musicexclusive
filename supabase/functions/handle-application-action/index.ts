@@ -5,7 +5,7 @@
  const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
  
  // Use production URL by default
- const DEFAULT_BASE_URL = "https://musicexclusive.co";
+ const DEFAULT_BASE_URL = "https://www.musicexclusive.co";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -222,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.log("Attempting to send approval email to:", application.contact_email);
       
       const emailResult = await resend.emails.send({
-        from: "Music Exclusive <noreply@musicexclusive.co>",
+        from: "Music Exclusive <support@musicexclusive.co>",
         reply_to: "support@musicexclusive.co",
         to: [application.contact_email],
         subject: "You're Approved. Welcome to Music Exclusive",
@@ -345,7 +345,7 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         console.log("Attempting to send denial email to:", application.contact_email);
         const emailResult = await resend.emails.send({
-          from: "Music Exclusive <noreply@musicexclusive.co>",
+          from: "Music Exclusive <support@musicexclusive.co>",
           reply_to: "support@musicexclusive.co",
           to: [application.contact_email],
           subject: "Music Exclusive Artist Application Update",

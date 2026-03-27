@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { warmFanAuthRoute } from "@/utils/preloadRoutes";
-import { APP_URL } from "@/config/app";
+import { getAppBaseUrl } from "@/config/app";
 
 interface LocationState {
   email?: string;
@@ -74,8 +74,9 @@ const Subscribe = () => {
     setIsProcessing(true);
     
     try {
-      const successUrl = `${APP_URL}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25&return_to=%2Fsubscribe`;
-      const cancelUrl = `${APP_URL}/subscribe?payment=cancelled`;
+      const base = getAppBaseUrl();
+      const successUrl = `${base}/checkout/return?session_id={CHECKOUT_SESSION_ID}&type=subscription&credits=25&return_to=%2Fsubscribe`;
+      const cancelUrl = `${base}/subscribe?payment=cancelled`;
 
       const { data, error } = await supabase.functions.invoke("create-subscription-checkout", {
         body: {

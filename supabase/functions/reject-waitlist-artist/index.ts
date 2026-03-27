@@ -71,7 +71,8 @@ serve(async (req) => {
             Authorization: `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "Music Exclusive <noreply@musicexclusive.co>",
+            from: "Music Exclusive <support@musicexclusive.co>",
+            reply_to: "support@musicexclusive.co",
             to: [entry.email],
             subject: "Music Exclusive Artist Waitlist Update",
             html: `

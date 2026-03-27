@@ -435,6 +435,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       await audio.play();
       setIsPlaying(true);
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        console.debug("[AudioPlayer] play() interrupted by new load — ignored");
+        return;
+      }
       const msg = err instanceof Error ? err.message : "Failed to play audio";
       console.error("[AudioPlayer] Play failed:", err);
       setError(msg);

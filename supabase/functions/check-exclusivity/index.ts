@@ -169,7 +169,8 @@ Deno.serve(async (req) => {
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
-              from: "Music Exclusive <noreply@musicexclusive.co>",
+              from: "Music Exclusive <support@musicexclusive.co>",
+              reply_to: "support@musicexclusive.co",
               to: [artistEmail],
               subject,
               html: htmlBody,

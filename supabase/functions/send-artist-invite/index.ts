@@ -70,7 +70,7 @@ serve(async (req) => {
 
     // Send the email with proper HTML and text bodies
     const emailResult = await resend.emails.send({
-      from: "Music Exclusive <noreply@musicexclusive.co>",
+      from: "Music Exclusive <support@musicexclusive.co>",
       reply_to: "support@musicexclusive.co",
       to: [recipientEmail],
       subject: `${subjectPrefix}[Private Invitation] You've been spotted as a top tier artist. You're invited.`,

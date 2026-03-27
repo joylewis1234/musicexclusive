@@ -110,7 +110,8 @@ serve(async (req) => {
             Authorization: `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "Music Exclusive <noreply@musicexclusive.co>",
+            from: "Music Exclusive <support@musicexclusive.co>",
+            reply_to: "support@musicexclusive.co",
             to: ["support@musicexclusive.co"],
             subject: "New Artist Waitlist Application",
             html: `
@@ -145,7 +146,8 @@ serve(async (req) => {
             Authorization: `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify({
-            from: "Music Exclusive <noreply@musicexclusive.co>",
+            from: "Music Exclusive <support@musicexclusive.co>",
+            reply_to: "support@musicexclusive.co",
             to: [email],
             subject: "🎉 Congratulations - you're signed up on the waitlist.",
             html: `

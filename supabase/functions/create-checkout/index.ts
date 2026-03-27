@@ -13,7 +13,7 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
 };
 
 const CHECKOUT_SESSION_PLACEHOLDER = "{CHECKOUT_SESSION_ID}";
-const APP_URL = "https://musicexclusive.co";
+const APP_URL = "https://www.musicexclusive.co";
 
 const ensureCheckoutSessionIdInSuccessUrl = (
   url: string,

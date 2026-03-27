@@ -35,7 +35,7 @@ function escapeHtml(value: string) {
 }
 
 function resolveSiteOrigin(req: Request) {
-  const fallback = Deno.env.get("SITE_URL") || "https://musicexclusive.co";
+  const fallback = Deno.env.get("SITE_URL") || "https://www.musicexclusive.co";
   const candidate = req.headers.get("referer") || req.headers.get("origin") || fallback;
 
   try {
@@ -212,7 +212,7 @@ This link will expire automatically. If it stops working, return to the signup s
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      from: "Music Exclusive <noreply@musicexclusive.co>",
+      from: "Music Exclusive <support@musicexclusive.co>",
       reply_to: "support@musicexclusive.co",
       to: [email],
       subject: copy.subject,

@@ -128,7 +128,8 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${resendKey}`,
           },
           body: JSON.stringify({
-            from: "Music Exclusive <noreply@musicexclusive.co>",
+            from: "Music Exclusive <support@musicexclusive.co>",
+            reply_to: "support@musicexclusive.co",
             to: artistEmail,
             subject: `🎉 You earned a $${milestone.prize_usd} Cash Bonus!`,
             html: `<p>Congratulations ${artist.artist_name}!</p>

@@ -15,6 +15,9 @@ verify_jwt = false
 [functions.create-subscription-checkout]
 verify_jwt = false
 
+[functions.cancel-superfan]
+verify_jwt = false
+
 [functions.stripe-webhook]
 verify_jwt = false
 

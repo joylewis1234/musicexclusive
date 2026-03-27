@@ -84,6 +84,7 @@ serve(async (req) => {
     artwork_url: null,
     full_audio_url: null,
     status: "uploading",
+    is_preview_public: true,
   };
   console.log("[create-track-draft] inserting track draft:", JSON.stringify(insertPayload));
 

@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
-const PRIMARY_FROM = "Music Exclusive <noreply@musicexclusive.co>";
+const PRIMARY_FROM = "Music Exclusive <support@musicexclusive.co>";
 const REPLY_TO = "support@musicexclusive.co";
 const COMPANY_EMAIL = "support@musicexclusive.co";
 
