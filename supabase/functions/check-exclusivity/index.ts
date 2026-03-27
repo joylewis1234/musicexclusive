@@ -6,7 +6,16 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-const ARTIST_DASHBOARD_URL = "https://www.musicexclusive.co/login";
+const LOGIN_URL = "https://www.musicexclusive.co/login";
+const ARTIST_DASHBOARD_URL = "https://www.musicexclusive.co/artist/dashboard";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 interface TrackRow {
   id: string;
@@ -62,7 +71,7 @@ Deno.serve(async (req) => {
       const expiresAt = new Date(track.exclusivity_expires_at);
       const daysLeft = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-      // Determine which warning stage this track is at
+      // Most urgent first: expired → 2d → 1w → 2w (8–14 days only; >14 → no email)
       let warningType: string | null = null;
       if (daysLeft <= 0) {
         warningType = "expired";
@@ -70,6 +79,8 @@ Deno.serve(async (req) => {
         warningType = "two_days";
       } else if (daysLeft <= 7) {
         warningType = "one_week";
+      } else if (daysLeft <= 14) {
+        warningType = "two_weeks";
       }
 
       if (!warningType) continue;
@@ -114,46 +125,72 @@ Deno.serve(async (req) => {
 
       // Compose email
       const artistName = artistProfile.artist_name || "Artist";
+      const safeName = escapeHtml(artistName);
+      const safeTitle = escapeHtml(track.title);
       let subject: string;
       let bodyText: string;
 
       switch (warningType) {
+        case "two_weeks":
+          subject = `📅 "${track.title}" — Exclusivity: 2 Weeks Remaining`;
+          bodyText =
+            `Your track "<strong>${safeTitle}</strong>" has between <strong>8 and 14 days</strong> left in its 3-week exclusive release window on Music Exclusive.`;
+          break;
         case "one_week":
           subject = `⏳ "${track.title}" — Exclusivity Expiring in 1 Week`;
-          bodyText = `Your track "<strong>${track.title}</strong>" has <strong>7 days</strong> remaining in its exclusive release window on Music Exclusive.`;
+          bodyText =
+            `Your track "<strong>${safeTitle}</strong>" has <strong>7 days or fewer</strong> remaining in its exclusive release window on Music Exclusive.`;
           break;
         case "two_days":
           subject = `⚠️ "${track.title}" — Exclusivity Expires in 2 Days`;
-          bodyText = `Your track "<strong>${track.title}</strong>" has only <strong>2 days left</strong> in its exclusive release window on Music Exclusive.`;
+          bodyText =
+            `Your track "<strong>${safeTitle}</strong>" has only <strong>2 days left</strong> in its exclusive release window on Music Exclusive.`;
           break;
         case "expired":
           subject = `🔔 "${track.title}" — Exclusivity Period Has Ended`;
-          bodyText = `The 3-week exclusive release window for "<strong>${track.title}</strong>" has ended on Music Exclusive.`;
+          bodyText =
+            `The 3-week exclusive release window for "<strong>${safeTitle}</strong>" has ended on Music Exclusive.`;
           break;
         default:
           continue;
       }
 
       const htmlBody = `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 560px; margin: 0 auto; background: #0a0a0f; color: #e2e2e8; padding: 32px 24px; border-radius: 16px;">
-          <h1 style="font-size: 20px; margin-bottom: 8px; color: #ffffff;">Hey ${artistName},</h1>
-          <p style="font-size: 15px; line-height: 1.6; color: #a0a0b0; margin-bottom: 16px;">
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; background: linear-gradient(180deg, #12121a 0%, #0a0a0f 100%); color: #e8e8ef; padding: 36px 28px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.06);">
+          <p style="font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: #7c7c8f; margin: 0 0 12px 0;">Music Exclusive · Exclusivity</p>
+          <h1 style="font-size: 22px; font-weight: 600; margin: 0 0 16px 0; color: #ffffff; line-height: 1.3;">Hey ${safeName},</h1>
+          <p style="font-size: 15px; line-height: 1.65; color: #b8b8c8; margin: 0 0 20px 0;">
             ${bodyText}
           </p>
-          <p style="font-size: 15px; line-height: 1.6; color: #a0a0b0; margin-bottom: 8px;">
+          <p style="font-size: 15px; line-height: 1.65; color: #b8b8c8; margin: 0 0 8px 0;">
             You have two options:
           </p>
-          <ul style="font-size: 14px; line-height: 1.8; color: #a0a0b0; padding-left: 20px; margin-bottom: 16px;">
-            <li><strong style="color: #4ade80;">Keep on Platform</strong> — Continue earning royalties. You're free to release on other platforms.</li>
+          <ul style="font-size: 14px; line-height: 1.85; color: #b8b8c8; padding-left: 20px; margin: 0 0 20px 0;">
+            <li style="margin-bottom: 6px;"><strong style="color: #4ade80;">Keep on Platform</strong> — Continue earning royalties. You're free to release on other platforms.</li>
             <li><strong style="color: #f87171;">Remove from Platform</strong> — Track removed. You will no longer receive royalties.</li>
           </ul>
-          <p style="font-size: 13px; color: #707080; margin-bottom: 24px;">
-            If you don't take action, your track will remain on the platform and continue to earn royalties until you decide.
+          <div style="background: rgba(168, 85, 247, 0.08); border-left: 3px solid #a855f7; padding: 12px 14px; margin-bottom: 24px; border-radius: 0 8px 8px 0;">
+            <p style="font-size: 13px; line-height: 1.6; color: #a0a0b8; margin: 0;">
+              If you don't take action, your track will remain on the platform and continue to earn royalties until you decide.
+            </p>
+          </div>
+          <table role="presentation" cellpadding="0" cellspacing="0" style="margin-bottom: 10px;">
+            <tr>
+              <td>
+                <a href="${LOGIN_URL}" style="display: inline-block; background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: #ffffff !important; padding: 14px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 14px;">
+                  Sign in to Music Exclusive
+                </a>
+              </td>
+            </tr>
+          </table>
+          <p style="font-size: 13px; color: #8b8b9c; margin: 0 0 20px 0;">
+            After signing in, open your <a href="${ARTIST_DASHBOARD_URL}" style="color: #c4b5fd;">artist dashboard</a> to review this track.
           </p>
-          <a href="${ARTIST_DASHBOARD_URL}" style="display: inline-block; background: hsl(280, 80%, 50%); color: white; padding: 12px 28px; border-radius: 999px; text-decoration: none; font-weight: 600; font-size: 14px;">
-            Go to My Dashboard
-          </a>
-          <p style="font-size: 12px; color: #505060; margin-top: 32px;">
+          <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.08); margin: 28px 0 20px 0;" />
+          <p style="font-size: 12px; line-height: 1.6; color: #6b6b7a; margin: 0 0 8px 0;">
+            Questions? Reply to this email or write <a href="mailto:support@musicexclusive.co" style="color: #a855f7;">support@musicexclusive.co</a> — we read every message.
+          </p>
+          <p style="font-size: 11px; color: #4a4a58; margin: 0;">
             — The Music Exclusive Team
           </p>
         </div>

@@ -133,6 +133,36 @@ Fix after Sections 1 and 2 are verified.
 
 ---
 
+## Section 4 — Exclusivity warning emails (`check-exclusivity`)
+
+Product spec (Lovable): three timed warnings + expired notice; CTA should use **www**; artists can reply to **support@**.
+
+### Implemented in repo (`supabase/functions/check-exclusivity/index.ts`)
+
+- [x] **`from`:** `Music Exclusive <support@musicexclusive.co>` (not noreply)
+- [x] **`reply_to`:** `support@musicexclusive.co`
+- [x] **Primary CTA:** “Sign in to Music Exclusive” → `https://www.musicexclusive.co/login` (`LOGIN_URL`)
+- [x] **Secondary link:** “artist dashboard” → `https://www.musicexclusive.co/artist/dashboard` (`ARTIST_DASHBOARD_URL`)
+- [x] **Stages:** `exclusivity_expired`, `exclusivity_two_days`, `exclusivity_one_week`, `exclusivity_two_weeks` (8–14 days left, after 1-week band)
+- [x] **HTML:** escaped artist/track names (`escapeHtml`), layout + support footer copy
+- [x] **Dedup:** at most one send per `email_type` per track per calendar day (`email_logs`)
+- [x] **Recipient:** artist email via `artist_profiles` → `auth.admin.getUserById`
+
+### Deploy
+
+- [x] **Redeploy** `check-exclusivity` on Supabase so production matches repo
+
+### Reference: `email_type` values (logs / dedup)
+
+| Stage | Suffix (`exclusivity_*`) | In code |
+|-------|-------------------------|--------|
+| 2-week | `two_weeks` | Yes |
+| 1-week | `one_week` | Yes |
+| 2-day | `two_days` | Yes |
+| Expired | `expired` | Yes |
+
+---
+
 ## Master checklist (quick reference)
 
 | # | Fix | Priority |
@@ -152,3 +182,6 @@ Fix after Sections 1 and 2 are verified.
 | [x] 10 | `check-exclusivity` — `reply_to` | Medium |
 | [x] 11a | Update sender to `support@` on all 21 functions | Medium |
 | [x] 11b | Add `reply_to` to the 7 functions missing it | Medium |
+| [x] 12a | Exclusivity: 2-week warning (`exclusivity_two_weeks`) | Medium |
+| [x] 12b | Exclusivity: CTA label + optional `/artist/dashboard` link | Medium |
+| [x] 12c | Exclusivity: redeploy `check-exclusivity` on Supabase | Medium |
