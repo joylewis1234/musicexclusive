@@ -1,34 +1,37 @@
 
 
-# Fix: Share Feature Querying Wrong Database
+# Add Song Timer to Music Players
 
-## Problem
-All sharing and inbox components import `supabase` from `@/integrations/supabase/client` (Lovable Cloud project), but all vault member data lives on the **external** Supabase project (`esgpsapstljgsqpmezzf`). The Lovable Cloud `vault_members` table only has 2 active members (`support@musicexclusive.co` and `demo-fan@test.com`), so after excluding the current user, the list appears empty.
+## What changes
+Add a current time / duration timer display to the two main player components where fans listen to music:
 
-## Root Cause
-Four files use the wrong Supabase client import:
+1. **CompactVaultPlayer** (Artist Profile page) — replace the static duration badge with a live `currentTime / duration` timer when a track is loaded
+2. **MiniPlayer** (bottom bar on fan pages) — add a small timer next to the track info showing elapsed time / total duration
 
-1. `src/components/profile/ShareExclusiveTrackModal.tsx` — line 13
-2. `src/components/ShareTrackModal.tsx` — line 13
-3. `src/components/profile/ShareArtistProfileModal.tsx` — line 12
-4. `src/hooks/useUnreadInboxCount.ts` — line 2
-5. `src/pages/FanInbox.tsx` — line 7
+Both components already have access to `currentTime` and `duration` via `useSharedAudioPlayer()`.
 
-## Fix
-In all five files, change the import from:
-```ts
-import { supabase } from "@/integrations/supabase/client";
-```
-to:
-```ts
-import { supabase } from "@/integrations/supabase/custom-client";
-```
+## Technical details
 
-This is a one-line change per file. No backend changes needed. The custom client points to the external project where all real vault member, shared track, and shared artist profile data lives.
+### Helper
+A shared `formatTime(seconds)` function: `M:SS` format (e.g. `3:42`). Already exists in `MusicPlayer.tsx` — will extract or duplicate inline.
 
-## Impact
-- Share modals will query the correct database and show real vault members
-- Inbox will load shared tracks/artists from the correct database
-- Unread badge count will reflect actual data
-- No effect on any other components or backend functions
+### CompactVaultPlayer.tsx
+- Destructure `currentTime` from `useSharedAudioPlayer()` (already has `duration`)
+- Replace the static duration-only badge (lines 255-263) with a live timer showing `currentTime / duration` when playing/paused, falling back to just duration when idle
+- Add a thin progress bar below the track info area for visual feedback
+
+### MiniPlayer.tsx
+- Destructure `currentTime` and `duration` from `useSharedAudioPlayer()`
+- Add a small `currentTime / duration` text below the artist name
+- Add a thin progress bar at the bottom of the mini player container
+
+### Visual style
+- Timer text: `text-[10px] font-mono text-muted-foreground/70` (matches existing duration badge style)
+- Progress bar: 2px height, primary color fill, placed at the bottom edge of each player container
+
+## Files modified
+1. `src/components/profile/CompactVaultPlayer.tsx`
+2. `src/components/MiniPlayer.tsx`
+
+No backend changes. No new dependencies.
 
