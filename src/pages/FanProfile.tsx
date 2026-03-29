@@ -93,11 +93,11 @@ const FanProfile = () => {
   const refreshVaultMembership = useCallback(async () => {
     if (!user?.email) return;
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from("vault_members")
       .select("id, membership_type, superfan_active, subscription_cancel_at")
       .eq("email", user.email)
-      .maybeSingle();
+      .maybeSingle() as any);
 
     if (error) {
       console.error("[FanProfile] vault_members fetch", error);
