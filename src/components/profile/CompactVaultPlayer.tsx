@@ -1,8 +1,14 @@
 import { useEffect, useCallback, useRef } from "react";
-import { Play, Pause, Heart, Share2, Loader2, AlertCircle, Crown, Clock } from "lucide-react";
+import { Play, Pause, Heart, Share2, Loader2, AlertCircle, Crown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
+
+const formatTime = (s: number) => {
+  const m = Math.floor(s / 60);
+  const sec = Math.floor(s % 60);
+  return `${m}:${sec.toString().padStart(2, "0")}`;
+};
 
 interface Track {
   id: string;
@@ -47,6 +53,7 @@ export const CompactVaultPlayer = ({
 }: CompactVaultPlayerProps) => {
   const {
     isPlaying,
+    currentTime,
     duration,
     isLoading,
     error,
@@ -257,8 +264,7 @@ export const CompactVaultPlayer = ({
                     className="flex items-center gap-1 flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono text-muted-foreground/70"
                     style={{ background: 'hsla(var(--muted), 0.3)' }}
                   >
-                    <Clock className="w-2.5 h-2.5" />
-                    {Math.floor(duration / 60)}:{Math.floor(duration % 60).toString().padStart(2, '0')}
+                    {formatTime(currentTime)} / {formatTime(duration)}
                   </span>
                 )}
               </div>
