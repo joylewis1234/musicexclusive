@@ -303,7 +303,16 @@ export const CompactVaultPlayer = ({
             </button>
           </div>
 
-          {/* Error message */}
+          {/* Progress bar */}
+          {duration > 0 && (
+            <div className="h-[2px] w-full rounded-full bg-muted/30 overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-150"
+                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+              />
+            </div>
+          )}
+
           {error && (
             <div className="mb-3 p-2.5 rounded-lg bg-destructive/10 border border-destructive/30 flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0 mt-0.5" />
