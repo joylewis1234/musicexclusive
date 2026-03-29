@@ -1571,7 +1571,6 @@ export type Database = {
           invite_token_used: string | null
           joined_at: string
           membership_type: string
-          subscription_cancel_at: string | null
           superfan_active: boolean
           superfan_since: string | null
           updated_at: string
@@ -1586,7 +1585,6 @@ export type Database = {
           invite_token_used?: string | null
           joined_at?: string
           membership_type?: string
-          subscription_cancel_at?: string | null
           superfan_active?: boolean
           superfan_since?: string | null
           updated_at?: string
@@ -1601,7 +1599,6 @@ export type Database = {
           invite_token_used?: string | null
           joined_at?: string
           membership_type?: string
-          subscription_cancel_at?: string | null
           superfan_active?: boolean
           superfan_since?: string | null
           updated_at?: string
