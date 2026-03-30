@@ -35,7 +35,7 @@ import { useCredits } from "@/hooks/useCredits";
 import { usePlaylist, PlaylistTrack } from "@/hooks/usePlaylist";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
 import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
-import { PlaylistSection } from "@/components/playlist/PlaylistSection";
+import { PlaylistSection, type PlaylistPaidStream } from "@/components/playlist/PlaylistSection";
 import { PlaylistPlayerBar } from "@/components/playlist/PlaylistPlayerBar";
 import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
@@ -72,6 +72,7 @@ const FanProfile = () => {
     play,
     pause,
     startPaidTrack,
+    loadPaidStream,
     lastEndedTrackId,
   } = useSharedAudioPlayer();
   const [activeTrackId, setActiveTrackId] = useState<string | null>(null);
@@ -168,7 +169,21 @@ const FanProfile = () => {
   const activeTrack = playlist.find((t) => t.track_id === activeTrackId) || null;
 
   const handlePlayTrack = useCallback(
-    (track: PlaylistTrack) => {
+    (track: PlaylistTrack, paidStream?: PlaylistPaidStream) => {
+      setActiveTrackId(track.track_id);
+      setHasSessionEnded(false);
+      if (paidStream?.hlsUrl) {
+        loadPaidStream({
+          trackId: track.track_id,
+          hlsUrl: paidStream.hlsUrl,
+          sessionId: paidStream.sessionId ?? undefined,
+          trackTitle: track.title,
+          artistName: track.artist_name,
+          artworkUrl: track.artwork_url || undefined,
+        });
+        setTimeout(() => void play(), 50);
+        return;
+      }
       void startPaidTrack({
         trackId: track.track_id,
         fileType: "audio",
@@ -176,11 +191,9 @@ const FanProfile = () => {
         artistName: track.artist_name,
         artworkUrl: track.artwork_url || undefined,
       });
-      setActiveTrackId(track.track_id);
-      setHasSessionEnded(false);
-      setTimeout(() => play(), 100);
+      setTimeout(() => void play(), 100);
     },
-    [startPaidTrack, play]
+    [startPaidTrack, loadPaidStream, play]
   );
 
   const handlePlayerPlayPause = useCallback(() => {
@@ -198,22 +211,6 @@ const FanProfile = () => {
       play();
     }
   }, [isPlaying, pause, play, activeTrackId, hasSessionEnded, playlist]);
-
-  const handleNext = useCallback(() => {
-    if (!activeTrackId) return;
-    const idx = playlist.findIndex((t) => t.track_id === activeTrackId);
-    if (idx < playlist.length - 1) {
-      handlePlayTrack(playlist[idx + 1]);
-    }
-  }, [activeTrackId, playlist, handlePlayTrack]);
-
-  const handlePrev = useCallback(() => {
-    if (!activeTrackId) return;
-    const idx = playlist.findIndex((t) => t.track_id === activeTrackId);
-    if (idx > 0) {
-      handlePlayTrack(playlist[idx - 1]);
-    }
-  }, [activeTrackId, playlist, handlePlayTrack]);
 
   useEffect(() => {
     if (activeTrackId && lastEndedTrackId === activeTrackId) {
@@ -352,7 +349,14 @@ const FanProfile = () => {
 
     if (result.success) {
       refetchCredits();
-      handlePlayTrack(pendingBarTrack);
+      if (result.hlsUrl) {
+        handlePlayTrack(pendingBarTrack, {
+          hlsUrl: result.hlsUrl,
+          sessionId: result.sessionId ?? null,
+        });
+      } else {
+        handlePlayTrack(pendingBarTrack);
+      }
     } else if (result.requiresCredits) {
       throw new Error("Insufficient credits");
     } else {

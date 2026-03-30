@@ -13,6 +13,8 @@ const logStep = (step: string, details?: Record<string, unknown>) => {
 };
 
 // ── Timezone helpers ─────────────────────────────────────────────────────
+// Reports aggregate stream_ledger for one calendar day in REPORT_TIMEZONE (Chicago).
+// If totals look "wrong", compare stream created_at (UTC) to that local midnight window.
 
 const REPORT_TIMEZONE = "America/Chicago";
 

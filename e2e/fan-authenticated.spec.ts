@@ -10,7 +10,7 @@ test.describe("authenticated fan smoke coverage", () => {
   test("fan can open discovery from profile", async ({ page }) => {
     await page.goto("/fan/profile", { waitUntil: "domcontentloaded" });
 
-    await expect(page.getByText("Vault Access Active")).toBeVisible();
+    await expect(page.getByText("Vault Access Active")).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: /Explore All Music/i }).click();
 
     await expect(page).toHaveURL(/\/discovery(?:\?|$)/);

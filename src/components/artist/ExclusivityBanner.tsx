@@ -78,9 +78,11 @@ export const ExclusivityBanner = ({
   // If artist chose "deleted", show nothing (card will be hidden by status=disabled)
   if (exclusivityDecision === "deleted") return null;
 
-  // During safe period, show a subtle countdown
+  // During safe period, show a subtle countdown (ceil days to align with check-exclusivity edge function)
   if (warningLevel === "safe") {
-    const daysLeft = differenceInDays(expiresAt, new Date());
+    const daysLeft = Math.ceil(
+      (expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    );
     return (
       <div 
         className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/[0.06] border border-amber-400/25"

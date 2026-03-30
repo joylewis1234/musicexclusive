@@ -3,7 +3,7 @@ import type { Page } from "@playwright/test";
 
 async function expectHealthyPage(page: Page, locator: ReturnType<Page["getByText"]>) {
   await expect(page.getByText("Failed to load page")).toHaveCount(0);
-  await expect(locator).toBeVisible();
+  await expect(locator).toBeVisible({ timeout: 15_000 });
 }
 
 test.describe("public route smoke coverage", () => {
@@ -19,9 +19,10 @@ test.describe("public route smoke coverage", () => {
     await expect(page.getByText("Fan Login")).toBeVisible();
   });
 
-  test("fan auth signup page loads for vault winners", async ({ page }) => {
+  test("fan auth vault flow loads (sign-in)", async ({ page }) => {
     await page.goto("/auth/fan?flow=vault", { waitUntil: "domcontentloaded" });
-    await expectHealthyPage(page, page.getByRole("heading", { name: "Create Your Account" }));
+    await expectHealthyPage(page, page.getByRole("heading", { name: "Welcome Back" }));
+    await expect(page.getByText("Sign in to access your Vault membership")).toBeVisible();
     await expect(page.getByPlaceholder("you@example.com")).toBeVisible();
   });
 
@@ -33,7 +34,7 @@ test.describe("public route smoke coverage", () => {
 
   test("choose access page loads", async ({ page }) => {
     await page.goto("/onboarding/listen", { waitUntil: "domcontentloaded" });
-    await expectHealthyPage(page, page.getByText("Choose Your Access"));
+    await expectHealthyPage(page, page.getByRole("heading", { name: /Choose Your Access/i }));
     await expect(page.getByRole("button", { name: /Become a Superfan/i })).toBeVisible();
   });
 

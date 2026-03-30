@@ -6,8 +6,11 @@ import { PlaylistTrack } from "@/hooks/usePlaylist";
 import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import { useStreamCharge } from "@/hooks/useStreamCharge";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
+import { toast } from "sonner";
 
 import artist1 from "@/assets/artist-1.jpg";
+
+export type PlaylistPaidStream = { hlsUrl: string; sessionId?: string | null };
 
 interface PlaylistSectionProps {
   playlist: PlaylistTrack[];
@@ -20,7 +23,7 @@ interface PlaylistSectionProps {
   activeTrackId: string | null;
   isPlaying: boolean;
   audioLoading: boolean;
-  onPlayTrack: (track: PlaylistTrack) => void;
+  onPlayTrack: (track: PlaylistTrack, paidStream?: PlaylistPaidStream) => void;
   onPause: () => void;
   onResume: () => void;
   canResumeActive: boolean;
@@ -56,6 +59,10 @@ export const PlaylistSection = ({
 
   const handlePlayPause = useCallback(
     (track: PlaylistTrack) => {
+      if (track.track_status && track.track_status !== "ready") {
+        toast.info("This track is still processing — try again in a moment.");
+        return;
+      }
       // If this track is currently playing, just pause
       if (activeTrackId === track.track_id && isPlaying) {
         onPause();
@@ -87,7 +94,14 @@ export const PlaylistSection = ({
 
     if (result.success) {
       onCreditsChanged?.();
-      onPlayTrack(pendingTrack);
+      if (result.hlsUrl) {
+        onPlayTrack(pendingTrack, {
+          hlsUrl: result.hlsUrl,
+          sessionId: result.sessionId ?? null,
+        });
+      } else {
+        onPlayTrack(pendingTrack);
+      }
     } else if (result.requiresCredits) {
       throw new Error("Insufficient credits");
     } else {
@@ -200,6 +214,9 @@ export const PlaylistSection = ({
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
                   {track.artist_name} · {formatDuration(track.duration)}
+                  {track.track_status && track.track_status !== "ready" && (
+                    <span className="text-amber-500/90"> · Processing</span>
+                  )}
                 </p>
               </div>
 

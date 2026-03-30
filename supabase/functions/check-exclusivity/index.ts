@@ -85,6 +85,22 @@ Deno.serve(async (req) => {
 
       if (!warningType) continue;
 
+      // "Expired" notice: send at most once per track (avoid daily emails after period ended with no decision)
+      if (warningType === "expired") {
+        const { data: everExpired } = await supabase
+          .from("email_logs")
+          .select("id")
+          .eq("email_type", "exclusivity_expired")
+          .eq("application_id", track.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (everExpired) {
+          logStep("Already sent exclusivity_expired for track", { trackId: track.id });
+          continue;
+        }
+      }
+
       // Check if we already sent this warning type for this track today
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);

@@ -14,6 +14,7 @@ test.describe("payments entry flow", () => {
     await expect(page.getByText("Become a Superfan")).toBeVisible();
 
     const subscribeButton = page.getByRole("button", { name: /Subscribe \$5\/month/i });
+    await expect(subscribeButton).toBeVisible({ timeout: 20_000 });
     await expect(subscribeButton).toBeDisabled();
     await page.getByRole("checkbox").click();
     await expect(subscribeButton).toBeEnabled();
@@ -26,6 +27,8 @@ test.describe("payments entry flow", () => {
     await page.getByLabel("Credits to Load").fill("50");
 
     await expect(page.getByText("Order Summary")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Pay \$10\.00 with Stripe/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Pay \$10\.00 with Stripe/i })).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });

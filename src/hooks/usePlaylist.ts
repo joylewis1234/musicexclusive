@@ -14,6 +14,8 @@ export interface PlaylistTrack {
   full_audio_url: string | null;
   duration: number;
   added_at: string;
+  /** From `tracks.status` — only `ready` tracks can play */
+  track_status?: string;
 }
 
 export const usePlaylist = (fanId: string | null) => {
@@ -48,8 +50,7 @@ export const usePlaylist = (fanId: string | null) => {
       const { data: tracks, error: tracksError } = await supabase
         .from("tracks")
         .select("id, title, artist_id, artwork_url, full_audio_url, duration, status")
-        .in("id", trackIds)
-        .eq("status", "ready");
+        .in("id", trackIds);
 
       if (tracksError) {
         console.error("[usePlaylist] tracks fetch error:", tracksError);
@@ -88,6 +89,7 @@ export const usePlaylist = (fanId: string | null) => {
           full_audio_url: track.full_audio_url,
           duration: track.duration,
           added_at: entry.created_at,
+          track_status: (track as { status?: string }).status,
         });
         ids.add(track.id);
       }

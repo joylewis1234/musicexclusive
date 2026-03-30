@@ -92,7 +92,8 @@ serve(async (req) => {
     }
 
     try {
-      event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      // Deno / Edge: sync constructEvent can throw (SubtleCrypto in sync context); use async verification.
+      event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
       logStep("Webhook signature verified");
     } catch (err) {
       logStep("Invalid webhook signature", { error: String(err) });

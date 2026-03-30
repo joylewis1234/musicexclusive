@@ -181,10 +181,10 @@ export const ShareTrackModal = ({
               <User className="w-6 h-6 text-muted-foreground" />
             </div>
             <p className="text-foreground font-display mb-2">
-              None of your friends are inside the Vault yet.
+              No other active Vault members to share with yet
             </p>
             <p className="text-sm text-muted-foreground">
-              Sharing is available only between Vault members.
+              When more fans join with Vault access, they will appear here.
             </p>
           </div>
         ) : (
@@ -204,7 +204,7 @@ export const ShareTrackModal = ({
             <div className="max-h-[200px] overflow-y-auto space-y-2">
               {filteredMembers.length === 0 ? (
                 <p className="text-center text-muted-foreground py-4 text-sm">
-                  No members found
+                  No match — try another name, or there are no other active Vault members yet.
                 </p>
               ) : (
                 filteredMembers.map((member) => (

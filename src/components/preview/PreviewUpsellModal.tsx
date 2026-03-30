@@ -1,8 +1,6 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Sparkles, Unlock, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { VaultLockedModal } from "@/components/vault/VaultLockedModal";
 import {
   Dialog,
   DialogContent,
@@ -16,11 +14,9 @@ interface PreviewUpsellModalProps {
 
 export const PreviewUpsellModal = ({ open, onDismiss }: PreviewUpsellModalProps) => {
   const navigate = useNavigate();
-  const [vaultLocked, setVaultLocked] = useState(false);
 
   return (
     <>
-    <VaultLockedModal open={vaultLocked} onOpenChange={setVaultLocked} />
     <Dialog open={open} onOpenChange={(o) => { if (!o) onDismiss(); }}>
       <DialogContent
         className="sm:max-w-[420px] border-0 rounded-2xl p-0 overflow-hidden bg-transparent shadow-none [&>button]:text-white/60 [&>button]:hover:text-white"
@@ -129,7 +125,10 @@ export const PreviewUpsellModal = ({ open, onDismiss }: PreviewUpsellModalProps)
                   animation: 'gradientShift 4s ease infinite',
                   boxShadow: '0 0 24px hsla(var(--primary) / 0.4), 0 0 48px hsla(280, 80%, 50%, 0.2), 0 4px 16px rgba(0,0,0,0.4)',
                 }}
-                onClick={() => setVaultLocked(true)}
+                onClick={() => {
+                  onDismiss();
+                  navigate("/founding-superfan");
+                }}
               >
                 {/* Hover glow intensifier */}
                 <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-white/10" />

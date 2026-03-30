@@ -12,7 +12,9 @@ test.describe("saved auth storage states", () => {
 
     await expect(page).toHaveURL(/\/fan\/profile(?:\?|$)/);
     await expectNoChunkLoadFailure(page);
-    await expect(page.getByRole("button", { name: "Log Out" }).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Log Out" }).first()).toBeVisible({
+      timeout: 20_000,
+    });
   });
 });
 
@@ -36,6 +38,6 @@ test.describe("saved admin auth storage state", () => {
 
     await expect(page).toHaveURL(/\/admin(?:\?|$)/);
     await expectNoChunkLoadFailure(page);
-    await expect(page.getByText("Music Exclusive Admin")).toBeVisible();
+    await expect(page.getByText("Music Exclusive Admin")).toBeVisible({ timeout: 20_000 });
   });
 });

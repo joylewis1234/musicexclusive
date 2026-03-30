@@ -78,12 +78,13 @@ export const VaultMusicPlayer = ({
     if (isPlaying) {
       pause();
     } else {
-      await play();
-      // Trigger stream charge on first play
-      if (!hasCalledOnPlay) {
-        onPlay?.();
+      // Charge/confirm first — parent loads paid stream after charge-stream returns
+      if (!hasCalledOnPlay && onPlay) {
+        onPlay();
         setHasCalledOnPlay(true);
+        return;
       }
+      await play();
     }
   };
 
