@@ -59,6 +59,10 @@ export const PlaylistSection = ({
 
   const handlePlayPause = useCallback(
     (track: PlaylistTrack) => {
+      if (track.detailMissing) {
+        toast.info("This track couldn’t be loaded. Try refreshing the page.");
+        return;
+      }
       if (track.track_status && track.track_status !== "ready") {
         toast.info("This track is still processing — try again in a moment.");
         return;
@@ -160,7 +164,8 @@ export const PlaylistSection = ({
                 "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
                 isActive
                   ? "bg-primary/10"
-                  : "hover:bg-muted/30"
+                  : "hover:bg-muted/30",
+                track.detailMissing && "opacity-90"
               )}
               style={{
                 boxShadow: isActive
@@ -213,9 +218,15 @@ export const PlaylistSection = ({
                   {track.title}
                 </p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {track.artist_name} · {formatDuration(track.duration)}
-                  {track.track_status && track.track_status !== "ready" && (
-                    <span className="text-amber-500/90"> · Processing</span>
+                  {track.detailMissing ? (
+                    <span className="text-amber-500/90">Details unavailable — you can still remove this</span>
+                  ) : (
+                    <>
+                      {track.artist_name} · {formatDuration(track.duration)}
+                      {track.track_status && track.track_status !== "ready" && (
+                        <span className="text-amber-500/90"> · Processing</span>
+                      )}
+                    </>
                   )}
                 </p>
               </div>

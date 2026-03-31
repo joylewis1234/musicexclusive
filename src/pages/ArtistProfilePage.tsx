@@ -17,6 +17,7 @@ import { useStreamCharge } from "@/hooks/useStreamCharge";
 import { useCredits } from "@/hooks/useCredits";
 import { usePlaylist } from "@/hooks/usePlaylist";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchVaultMemberRow } from "@/lib/vaultMemberLookup";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSharedAudioPlayer } from "@/contexts/AudioPlayerContext";
 import { toast } from "sonner";
@@ -90,7 +91,7 @@ const ArtistProfilePage = () => {
   const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
   const { chargeStream, isProcessing: isCharging } = useStreamCharge(user?.email);
   const { credits, refetch: refetchCredits } = useCredits();
-  const { addToPlaylist, isInPlaylist } = usePlaylist(fanId);
+  const { addToPlaylist, isInPlaylist } = usePlaylist();
 
   // No more ensurePublicUrl — audio is now served via signed URLs from mint-playback-url
 
@@ -182,16 +183,16 @@ const ArtistProfilePage = () => {
 
       setViewerContext("fan");
 
-      if (!user?.email) {
+      if (!user?.id && !user?.email) {
         setHasVaultAccess(false);
         return;
       }
 
-      const { data: vaultMember } = await supabase
-        .from("vault_members")
-        .select("id, vault_access_active")
-        .eq("email", user.email)
-        .maybeSingle();
+      const { data: vaultMember } = await fetchVaultMemberRow(
+        supabase,
+        { id: user.id, email: user.email },
+        "id, vault_access_active",
+      );
 
       if (vaultMember?.vault_access_active) {
         setHasVaultAccess(true);

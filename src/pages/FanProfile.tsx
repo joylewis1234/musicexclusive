@@ -41,6 +41,7 @@ import { StreamConfirmModal } from "@/components/player/StreamConfirmModal";
 import WalletBalanceCard from "@/components/WalletBalanceCard";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchVaultMemberRow } from "@/lib/vaultMemberLookup";
 import { getAppBaseUrl } from "@/config/app";
 import { GlowCard } from "@/components/ui/GlowCard";
 
@@ -92,13 +93,13 @@ const FanProfile = () => {
 
   // Vault membership: Superfan status + subscription cancel date
   const refreshVaultMembership = useCallback(async () => {
-    if (!user?.email) return;
+    if (!user?.id && !user?.email) return;
 
-    const { data, error } = await (supabase
-      .from("vault_members")
-      .select("id, membership_type, superfan_active, subscription_cancel_at")
-      .eq("email", user.email)
-      .maybeSingle() as any);
+    const { data, error } = await fetchVaultMemberRow(
+      supabase,
+      { id: user.id, email: user.email },
+      "id, membership_type, superfan_active, subscription_cancel_at",
+    );
 
     if (error) {
       console.error("[FanProfile] vault_members fetch", error);
@@ -110,13 +111,15 @@ const FanProfile = () => {
       const sf =
         data.superfan_active === true && data.membership_type === "superfan";
       setIsSuperfan(sf);
-      setSubscriptionCancelAt(data.subscription_cancel_at ?? null);
+      setSubscriptionCancelAt(
+        (data as { subscription_cancel_at?: string | null }).subscription_cancel_at ?? null,
+      );
     } else {
       setFanVaultId(null);
       setIsSuperfan(false);
       setSubscriptionCancelAt(null);
     }
-  }, [user?.email]);
+  }, [user?.id, user?.email]);
 
   // Handle payment success redirect - verify with Stripe and update credits
   useEffect(() => {
@@ -164,7 +167,7 @@ const FanProfile = () => {
   }, [refreshVaultMembership]);
 
   const { topArtists, isLoading: isLoadingArtists } = useFanTopArtists(fanVaultId);
-  const { playlist, isLoading: isLoadingPlaylist, removeFromPlaylist } = usePlaylist(fanVaultId);
+  const { playlist, isLoading: isLoadingPlaylist, removeFromPlaylist } = usePlaylist();
 
   const activeTrack = playlist.find((t) => t.track_id === activeTrackId) || null;
 

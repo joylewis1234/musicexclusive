@@ -7,7 +7,10 @@ type CredentialKey =
   | "TEST_ARTIST_EMAIL"
   | "TEST_ARTIST_PASSWORD"
   | "TEST_ADMIN_EMAIL"
-  | "TEST_ADMIN_PASSWORD";
+  | "TEST_ADMIN_PASSWORD"
+  /** Optional: long fan journey specs (see `fan-joy-lewis-demo-journey.spec.ts`) */
+  | "FAN_EMAIL"
+  | "FAN_PASSWORD";
 
 export const storageStatePaths = {
   fan: path.resolve(process.cwd(), "playwright/.auth/fan.json"),
@@ -49,7 +52,19 @@ export async function loginFan(page: Page, email: string, password: string) {
   await page.locator('input[type="email"]').first().waitFor({ state: "visible", timeout: 45_000 });
   await page.locator('input[type="email"]').first().fill(email);
   await page.locator('input[type="password"]').first().fill(password);
+
+  const tokenResponsePromise = page.waitForResponse(
+    (res) => res.url().includes("/auth/v1/token") && res.request().method() === "POST",
+    { timeout: 45_000 },
+  );
   await page.getByRole("button", { name: /^Sign In$/i }).click();
+  const tokenResponse = await tokenResponsePromise;
+  if (!tokenResponse.ok()) {
+    const body = await tokenResponse.text().catch(() => "");
+    throw new Error(
+      `Fan sign-in token request failed: HTTP ${tokenResponse.status()} ${tokenResponse.statusText()}. ${body.slice(0, 800)}`,
+    );
+  }
 }
 
 export async function loginArtist(page: Page, email: string, password: string) {

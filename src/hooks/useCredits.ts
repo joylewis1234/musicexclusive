@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { fetchVaultMemberRow } from "@/lib/vaultMemberLookup";
 
 export const useCredits = () => {
   const { user } = useAuth();
@@ -9,17 +10,17 @@ export const useCredits = () => {
   const prevCreditsRef = useRef<number>(0);
 
   const fetchCredits = useCallback(async () => {
-    if (!user?.email) {
+    if (!user?.id && !user?.email) {
       setLoading(false);
       return;
     }
 
     try {
-      const { data, error } = await supabase
-        .from("vault_members")
-        .select("credits")
-        .eq("email", user.email)
-        .maybeSingle();
+      const { data, error } = await fetchVaultMemberRow(
+        supabase,
+        { id: user.id, email: user.email },
+        "credits",
+      );
 
       if (error) {
         console.error("Error fetching credits:", error);
@@ -41,7 +42,7 @@ export const useCredits = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.email, credits]);
+  }, [user?.id, user?.email, credits]);
 
   // Refetch with retry - useful after Stripe webhook processing
   const refetchWithRetry = useCallback(async (expectedIncrease?: number, maxRetries = 5, delayMs = 1500) => {
@@ -76,7 +77,7 @@ export const useCredits = () => {
     
     console.log("[useCredits] Max retries reached, credits may not have updated yet");
     return false;
-  }, [credits, fetchCredits, user?.email]);
+  }, [credits, fetchCredits, user?.id, user?.email]);
 
   const addCredits = async (amount: number, usd: number): Promise<boolean> => {
     if (!user?.email) return false;

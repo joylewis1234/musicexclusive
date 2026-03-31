@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchVaultMemberRow } from "@/lib/vaultMemberLookup";
 import { toast } from "sonner";
 
 const MAX_PLAYLIST_SIZE = 50;
@@ -16,18 +18,69 @@ export interface PlaylistTrack {
   added_at: string;
   /** From `tracks.status` — only `ready` tracks can play */
   track_status?: string;
+  /** True when fan_playlists row exists but tracks join failed or returned no row */
+  detailMissing?: boolean;
 }
 
-export const usePlaylist = (fanId: string | null) => {
+function placeholderEntry(entry: {
+  id: string;
+  track_id: string;
+  created_at: string;
+}): PlaylistTrack {
+  return {
+    id: entry.id,
+    track_id: entry.track_id,
+    title: "Track unavailable",
+    artist_name: "—",
+    artist_id: "",
+    artwork_url: null,
+    full_audio_url: null,
+    duration: 0,
+    added_at: entry.created_at,
+    detailMissing: true,
+  };
+}
+
+/**
+ * Loads `fan_playlists` for the logged-in user by resolving `vault_members` inside the hook
+ * (`user_id` first, then email). Does not depend on the parent passing `fanVaultId`.
+ */
+export const usePlaylist = () => {
+  const { user } = useAuth();
   const [playlist, setPlaylist] = useState<PlaylistTrack[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [playlistTrackIds, setPlaylistTrackIds] = useState<Set<string>>(new Set());
 
-  // Fetch playlist with track details
+  const resolveFanId = useCallback(async (): Promise<string | null> => {
+    if (!user?.id && !user?.email) return null;
+    const { data, error } = await fetchVaultMemberRow(
+      supabase,
+      { id: user.id, email: user.email },
+      "id",
+    );
+    if (error) {
+      console.error("[usePlaylist] vault_members resolve:", error);
+      return null;
+    }
+    return data?.id ?? null;
+  }, [user?.id, user?.email]);
+
   const fetchPlaylist = useCallback(async () => {
-    if (!fanId) return;
+    if (!user) {
+      setPlaylist([]);
+      setPlaylistTrackIds(new Set());
+      return;
+    }
+
     setIsLoading(true);
     try {
+      const fanId = await resolveFanId();
+      if (!fanId) {
+        setPlaylist([]);
+        setPlaylistTrackIds(new Set());
+        return;
+      }
+
       const { data, error } = await supabase
         .from("fan_playlists")
         .select("id, track_id, created_at")
@@ -36,6 +89,8 @@ export const usePlaylist = (fanId: string | null) => {
 
       if (error) {
         console.error("[usePlaylist] fetch error:", error);
+        setPlaylist([]);
+        setPlaylistTrackIds(new Set());
         return;
       }
 
@@ -45,7 +100,8 @@ export const usePlaylist = (fanId: string | null) => {
         return;
       }
 
-      // Fetch track details
+      const idsFromLinks = new Set(data.map((d) => d.track_id));
+
       const trackIds = data.map((d) => d.track_id);
       const { data: tracks, error: tracksError } = await supabase
         .from("tracks")
@@ -54,31 +110,34 @@ export const usePlaylist = (fanId: string | null) => {
 
       if (tracksError) {
         console.error("[usePlaylist] tracks fetch error:", tracksError);
+        setPlaylist(data.map((entry) => placeholderEntry(entry)));
+        setPlaylistTrackIds(idsFromLinks);
         return;
       }
 
-      // Fetch artist names
-      const artistIds = [...new Set((tracks || []).map((t) => t.artist_id))];
-      const { data: artists } = await supabase
-        .from("public_artist_profiles")
-        .select("id, artist_name")
-        .in("id", artistIds);
+      const trackList = tracks || [];
+      const trackMap = new Map(trackList.map((t) => [t.id, t]));
 
-      const artistMap = new Map(
-        (artists || []).map((a) => [a.id, a.artist_name])
-      );
+      const artistIds = [...new Set(trackList.map((t) => t.artist_id))];
+      const { data: artists } =
+        artistIds.length > 0
+          ? await supabase
+              .from("public_artist_profiles")
+              .select("id, artist_name")
+              .in("id", artistIds)
+          : { data: null };
 
-      const trackMap = new Map(
-        (tracks || []).map((t) => [t.id, t])
-      );
+      const artistMap = new Map((artists || []).map((a) => [a.id, a.artist_name]));
 
       const playlistTracks: PlaylistTrack[] = [];
-      const ids = new Set<string>();
 
       for (const entry of data) {
         const track = trackMap.get(entry.track_id);
-        if (!track) continue; // Track was removed or disabled
-        
+        if (!track) {
+          playlistTracks.push(placeholderEntry(entry));
+          continue;
+        }
+
         playlistTracks.push({
           id: entry.id,
           track_id: track.id,
@@ -91,24 +150,26 @@ export const usePlaylist = (fanId: string | null) => {
           added_at: entry.created_at,
           track_status: (track as { status?: string }).status,
         });
-        ids.add(track.id);
       }
 
       setPlaylist(playlistTracks);
-      setPlaylistTrackIds(ids);
+      setPlaylistTrackIds(idsFromLinks);
     } catch (err) {
       console.error("[usePlaylist] error:", err);
+      setPlaylist([]);
+      setPlaylistTrackIds(new Set());
     } finally {
       setIsLoading(false);
     }
-  }, [fanId]);
+  }, [user, resolveFanId]);
 
   useEffect(() => {
-    fetchPlaylist();
+    void fetchPlaylist();
   }, [fetchPlaylist]);
 
   const addToPlaylist = useCallback(
     async (trackId: string) => {
+      const fanId = await resolveFanId();
       if (!fanId) return false;
 
       if (playlistTrackIds.has(trackId)) {
@@ -136,17 +197,16 @@ export const usePlaylist = (fanId: string | null) => {
       }
 
       toast.success("Added to playlist ✓");
-      // Optimistic update
       setPlaylistTrackIds((prev) => new Set(prev).add(trackId));
-      // Refetch for full data
-      fetchPlaylist();
+      void fetchPlaylist();
       return true;
     },
-    [fanId, playlistTrackIds, fetchPlaylist]
+    [resolveFanId, playlistTrackIds, fetchPlaylist],
   );
 
   const removeFromPlaylist = useCallback(
     async (playlistEntryId: string, trackId: string) => {
+      const fanId = await resolveFanId();
       if (!fanId) return false;
 
       const { error } = await supabase
@@ -169,12 +229,12 @@ export const usePlaylist = (fanId: string | null) => {
       });
       return true;
     },
-    [fanId]
+    [resolveFanId],
   );
 
   const isInPlaylist = useCallback(
     (trackId: string) => playlistTrackIds.has(trackId),
-    [playlistTrackIds]
+    [playlistTrackIds],
   );
 
   return {
