@@ -11,6 +11,7 @@ import { VaultAccessGate } from "@/components/profile/VaultAccessGate";
 import { ShareExclusiveTrackModal } from "@/components/profile/ShareExclusiveTrackModal";
 import { useTrackLikesBatch } from "@/hooks/useTrackLikesBatch";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchVaultMemberRow } from "@/lib/vaultMemberLookup";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/hooks/use-toast";
 
@@ -81,25 +82,35 @@ const ArtistProfile = () => {
   const trackIds = tracks.map(t => t.id);
   const { getLikeState, toggleLike, isTrackLoading } = useTrackLikesBatch(trackIds, fanId);
 
-  // Fetch fan's vault membership
+  // Vault membership (fans) + artists viewing their own profile can share without paid Vault access
   useEffect(() => {
-    const fetchFanData = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.email) {
-        const { data: member } = await supabase
-          .from("vault_members")
-          .select("id, vault_access_active")
-          .eq("email", user.email)
-          .maybeSingle();
+    const run = async () => {
+      if (!user?.id && !user?.email) {
+        setFanId(null);
+        setHasVaultAccess(false);
+        return;
+      }
 
-        if (member) {
-          setFanId(member.id);
-          setHasVaultAccess(member.vault_access_active);
-        }
+      const { data: member } = await fetchVaultMemberRow(
+        supabase,
+        { id: user.id, email: user.email },
+        "id, vault_access_active",
+      );
+
+      if (member) {
+        setFanId(member.id);
+        setHasVaultAccess(!!member.vault_access_active);
+      } else {
+        setFanId(null);
+        setHasVaultAccess(false);
+      }
+
+      if (artist && role === "artist" && user?.id === artist.userId) {
+        setHasVaultAccess(true);
       }
     };
-    fetchFanData();
-  }, []);
+    run();
+  }, [user?.id, user?.email, artist?.userId, role]);
 
   // Fetch artist and tracks
   useEffect(() => {
@@ -489,7 +500,7 @@ const ArtistProfile = () => {
       )}
 
       {/* Share Track Modal */}
-      {shareModalOpen && trackToShare && artist && fanId && (
+      {shareModalOpen && trackToShare && artist && (
         <ShareExclusiveTrackModal
           open={shareModalOpen}
           onOpenChange={(open) => {

@@ -8,9 +8,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { GlowCard } from "@/components/ui/GlowCard";
 import { Search, Send, User, Lock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureVaultMemberRow, fetchVaultMemberRow } from "@/lib/vaultMemberLookup";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { Track } from "@/contexts/PlayerContext";
@@ -53,13 +53,13 @@ export const ShareTrackModal = ({
 
     // First get the current user's vault member ID so we can exclude them
     let currentMemberId: string | null = null;
-    if (currentUserEmail) {
-      const { data: self } = await supabase
-        .from("vault_members")
-        .select("id")
-        .eq("email", currentUserEmail)
-        .maybeSingle();
-      currentMemberId = self?.id || null;
+    if (user?.id || currentUserEmail) {
+      const { data: self } = await fetchVaultMemberRow(
+        supabase,
+        { id: user?.id, email: currentUserEmail },
+        "id",
+      );
+      currentMemberId = self?.id ?? null;
     }
 
     // Query the shareable view (bypasses column-level restrictions)
@@ -88,21 +88,19 @@ export const ShareTrackModal = ({
   );
 
   const handleSend = async () => {
-    if (!selectedMember || !track || !currentUserEmail) return;
+    if (!selectedMember || !track || !user) return;
 
     setIsSending(true);
 
-    // Get current user's vault member ID
-    const { data: senderData } = await supabase
-      .from("vault_members")
-      .select("id")
-      .eq("email", currentUserEmail)
-      .maybeSingle();
+    const senderData = await ensureVaultMemberRow(supabase, {
+      id: user.id,
+      email: user.email,
+    });
 
     if (!senderData) {
       toast({
         title: "Error",
-        description: "Could not find your Vault membership",
+        description: "Could not set up your account to send shares. Try again.",
         variant: "destructive",
       });
       setIsSending(false);

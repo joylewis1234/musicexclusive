@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Search, Send, User, Lock, Crown } from "lucide-react";
 import { SignedArtwork } from "@/components/ui/SignedArtwork";
 import { supabase } from "@/integrations/supabase/client";
+import { ensureVaultMemberRow, fetchVaultMemberRow } from "@/lib/vaultMemberLookup";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
@@ -60,13 +61,13 @@ export const ShareExclusiveTrackModal = ({
 
     // Get current user's vault member ID to exclude them
     let currentMemberId: string | null = null;
-    if (currentUserEmail) {
-      const { data: self } = await supabase
-        .from("vault_members")
-        .select("id")
-        .eq("email", currentUserEmail)
-        .maybeSingle();
-      currentMemberId = self?.id || null;
+    if (user?.id || currentUserEmail) {
+      const { data: self } = await fetchVaultMemberRow(
+        supabase,
+        { id: user?.id, email: currentUserEmail },
+        "id",
+      );
+      currentMemberId = self?.id ?? null;
     }
 
     const { data, error } = await supabase
@@ -89,19 +90,17 @@ export const ShareExclusiveTrackModal = ({
   );
 
   const handleSend = async () => {
-    if (!selectedMember || !track || !currentUserEmail) return;
+    if (!selectedMember || !track || !user) return;
 
     setIsSending(true);
 
-    // Get current user's vault member ID
-    const { data: senderData } = await supabase
-      .from("vault_members")
-      .select("id")
-      .eq("email", currentUserEmail)
-      .maybeSingle();
+    const senderData = await ensureVaultMemberRow(supabase, {
+      id: user.id,
+      email: user.email,
+    });
 
     if (!senderData) {
-      toast.error("Could not find your Vault membership");
+      toast.error("Could not set up your account to send shares. Try again.");
       setIsSending(false);
       return;
     }
