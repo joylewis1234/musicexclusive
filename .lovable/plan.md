@@ -1,15 +1,17 @@
 
 
-# Update Step 3 Text on Homepage
+# Change "Try Your Luck" to "GET Access Now"
 
-## Change
-In `src/pages/Index.tsx`, update the `steps` array entry for step 3:
+## Changes
 
-- **Title**: `"TRY AGAIN TOMORROW"` → `"GET INSIDE"`
-- **Description**: Replace with `"When your code is triggered, the Vault opens — revealing exclusive music and artist experiences. If not yet activated, you'll be notified by email as soon as your access is ready."`
+### 1. `src/pages/Index.tsx`
+- **Line 185**: `"TRY YOUR LUCK"` → `"GET ACCESS NOW"`
+- **Line 270**: `"TRY YOUR LUCK"` → `"GET ACCESS NOW"`
+- Update comments on lines 182 and 267
 
-Single file, single array entry change. The StepCard component already handles long descriptions with wrapping text — no layout changes needed.
+### 2. `src/pages/EnterVault.tsx`
+- **Line 225**: `"TRY YOUR LUCK"` → `"GET ACCESS NOW"`
+- Update comment on line 222
 
-## File modified
-`src/pages/Index.tsx` — lines ~73-77 (step 3 object in the `steps` array)
+3 text replacements across 2 files. No structural changes.
 
