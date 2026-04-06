@@ -219,10 +219,10 @@ const EnterVault = () => {
           ))}
         </div>
         
-        {/* Try Your Luck Header with Arrows */}
+        {/* Get Access Now Header with Arrows */}
         <div className="text-center mt-6">
           <p className="text-2xl md:text-3xl font-display font-black tracking-wider text-foreground mb-3 text-glow">
-            TRY YOUR LUCK
+            GET ACCESS NOW
           </p>
           <div className="flex justify-center items-center gap-3">
             <ChevronDown className="w-7 h-7 text-primary animate-bounce" />
