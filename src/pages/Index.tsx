@@ -151,29 +151,30 @@ const Index = () => {
             </Button>
             
             {/* Animated VIP divider */}
-            <div className="flex flex-col items-center gap-1 my-4 opacity-70">
-              <span className="text-[10px] font-display uppercase tracking-[0.3em] text-muted-foreground">or</span>
+            <div className="flex flex-col items-center gap-1 my-2 opacity-80">
+              <span className="text-sm font-display uppercase tracking-[0.3em] text-muted-foreground">or</span>
               <ChevronDown className="w-5 h-5 text-primary animate-bounce" />
             </div>
 
             {/* Superfan CTA — Premium VIP treatment */}
             <div className="relative w-full max-w-xs">
               <div className="flex justify-center mb-2">
-                <span className="text-[10px] font-display uppercase tracking-[0.25em] text-primary/90 border border-primary/30 rounded-full px-3 py-0.5 bg-primary/5">
+                <span className="text-xs font-display uppercase tracking-[0.25em] text-primary/90 border border-primary/30 rounded-full px-4 py-1 bg-primary/5">
                   Instant Access
                 </span>
               </div>
-              <p className="text-sm font-display uppercase tracking-wider text-foreground text-center mb-3">
+              <p className="text-base font-display uppercase tracking-wider text-foreground text-center mb-3">
                 Want instant access?
               </p>
               <Button 
-                size="lg" 
+                size="xl" 
                 className="w-full animate-glow-pulse"
                 onClick={() => navigate("/founding-superfan")}
               >
                 Skip the Vault — Enter Now
               </Button>
-              <p className="text-primary/80 text-xs font-body mt-2 text-center">
+              <p className="text-primary text-sm font-body mt-2 text-center animate-glow-pulse"
+                style={{ textShadow: '0 0 8px hsl(var(--primary) / 0.6), 0 0 20px hsl(var(--primary) / 0.3)' }}>
                 Instant access. No waiting.
               </p>
             </div>
