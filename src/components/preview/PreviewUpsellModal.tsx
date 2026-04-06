@@ -111,7 +111,7 @@ export const PreviewUpsellModal = ({ open, onDismiss }: PreviewUpsellModalProps)
                 exclusive
               </span>{' '}
               to Music Exclusive.
-              Unlock full access through the Vault Lottery or skip straight in as a Superfan.
+              Unlock full access through the Vault or skip straight in as a Superfan.
             </p>
 
             {/* CTAs */}
