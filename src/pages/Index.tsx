@@ -157,7 +157,7 @@ const Index = () => {
               Enter the Vault
             </Button>
             
-            {/* Superfan CTA with skip-lottery highlight */}
+            {/* Superfan CTA with skip-vault highlight */}
             <div className="relative w-full max-w-xs">
               <Button 
                 variant="secondary" 
