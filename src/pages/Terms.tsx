@@ -33,7 +33,7 @@ const Terms = () => {
           every stream counts and every fan matters.
         </p>
         <p>
-          Music Exclusive uses the Vault Lottery System to provide unique access for fans 
+          Music Exclusive uses the Vault Access System to provide unique access for fans 
           and promote authentic discovery. We may use technology tools designed to help 
           prevent fraud, detect fake engagement, and support artists through real fan 
           activity rather than paid advertising.

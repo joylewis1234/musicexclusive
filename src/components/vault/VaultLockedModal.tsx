@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import { Lock, Sparkles } from "lucide-react";
 
-// TEMPORARY: Set to false to disable modal for testing lottery flow
+// TEMPORARY: Set to false to disable modal for testing vault flow
 // Set to true to re-enable the "Vault is Closed" popup
 const VAULT_LOCKED_MODAL_ENABLED = false;
 
