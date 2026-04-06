@@ -467,7 +467,7 @@ const EnterVault = () => {
 
       {/* ========================================
           SUPERFAN ACCESS CTA
-          Skip the lottery option
+          Skip the Vault option
           ======================================== */}
       <section className="my-8">
         <div className="w-full max-w-xs mx-auto">
