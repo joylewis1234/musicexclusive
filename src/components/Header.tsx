@@ -171,13 +171,6 @@ const Header = () => {
             </div>
           </SheetContent>
         </Sheet>
-          <button
-            onClick={() => navigate("/preview")}
-            className="text-xs text-primary hover:underline transition-colors"
-          >
-            Test Out Music Exclusive
-          </button>
-        </div>
 
         {/* Logo (centered) */}
         <button 
