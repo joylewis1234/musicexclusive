@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
                 <p style="color: #ccc; font-size: 14px; line-height: 1.7; margin-bottom: 6px;">Because you joined early, you'll receive:</p>
                 <ul style="color: #ccc; font-size: 14px; line-height: 2; padding-left: 20px; margin-bottom: 20px;">
                   <li>Lifetime access to Music Exclusive</li>
-                  <li>Permanent Vault Lottery bypass</li>
+                  <li>Permanent Vault bypass</li>
                   <li>Early entry at launch</li>
                   <li>Access to exclusive music releases</li>
                   <li>Founding Superfan recognition</li>

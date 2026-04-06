@@ -52,7 +52,7 @@ const PrivacyPolicy = () => {
         <p>We use information to:</p>
         <ul className="list-disc list-outside ml-5 space-y-1.5 mt-2">
           <li>Provide and operate the Services</li>
-          <li>Verify access through the Vault Lottery System</li>
+          <li>Verify access through the Vault Access System</li>
           <li>Process subscriptions and credit purchases</li>
           <li>Track streams and calculate artist earnings</li>
           <li>Improve platform performance, safety, and user experience</li>

@@ -157,7 +157,7 @@ const Index = () => {
               Enter the Vault
             </Button>
             
-            {/* Superfan CTA with skip-lottery highlight */}
+            {/* Superfan CTA with skip-vault highlight */}
             <div className="relative w-full max-w-xs">
               <Button 
                 variant="secondary" 
@@ -168,7 +168,7 @@ const Index = () => {
                 Unlock Superfan Access
               </Button>
               <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
-                ✨ Skip the lottery — guaranteed access
+                ✨ Skip the Vault — Guaranteed access
               </p>
             </div>
             
@@ -322,7 +322,7 @@ const Index = () => {
               Unlock Superfan Access
             </Button>
             <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
-              ✨ Skip the lottery — guaranteed access
+              ✨ Skip the Vault — Guaranteed access
             </p>
           </div>
         </div>
@@ -385,7 +385,7 @@ const Index = () => {
             Want a taste before entering the Vault?
           </h2>
           <p className="text-muted-foreground text-sm font-body mb-8">
-            Listen to previews, then enter the Vault Lottery or join as a Superfan for instant access.
+            Listen to previews, then enter the Vault or join as a Superfan for instant access.
           </p>
           
           <div className="flex flex-col gap-3">

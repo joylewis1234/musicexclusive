@@ -38,7 +38,7 @@ export const PreviewHeader = () => {
 
         {/* CTAs */}
         <div className="flex flex-col items-center gap-3">
-          {/* Vault Lottery */}
+          {/* Vault Access */}
           <Button
             size="lg"
             variant="outline"
@@ -46,12 +46,12 @@ export const PreviewHeader = () => {
             className="w-full max-w-xs"
           >
             <Unlock className="w-4 h-4 mr-2" />
-            Enter the Vault Lottery
+            Enter the Vault
           </Button>
 
           {/* Skip text */}
           <span className="text-[10px] uppercase tracking-[0.2em] text-primary/70 font-display mt-2">
-            Skip the lottery — get access now
+            Skip the Vault — get access now
           </span>
 
           {/* Superfan */}

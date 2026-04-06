@@ -33,7 +33,7 @@ const Terms = () => {
           every stream counts and every fan matters.
         </p>
         <p>
-          Music Exclusive uses the Vault Lottery System to provide unique access for fans 
+          Music Exclusive uses the Vault Access System to provide unique access for fans 
           and promote authentic discovery. We may use technology tools designed to help 
           prevent fraud, detect fake engagement, and support artists through real fan 
           activity rather than paid advertising.
@@ -135,15 +135,15 @@ const Terms = () => {
         </p>
       </LegalSection>
 
-      <LegalSection number="08" title="Vault Lottery System">
+      <LegalSection number="08" title="Vault Access System">
         <p>
-          Music Exclusive uses the Vault Lottery System ("Lottery") to grant fan access 
-          to the platform. Instead of open sign-ups, fans may enter the Lottery for a 
+          Music Exclusive uses the Vault Access System to grant fan access 
+          to the platform. Instead of open sign-ups, fans may enter the Vault for a 
           chance to gain access. Some fans may receive bypass access through approved 
           methods such as Superfan Membership access or platform-issued promotions.
         </p>
         <p>
-          Lottery mechanics may change over time and are not fully disclosed. Company 
+          Access mechanics may change over time and are not fully disclosed. Company 
           may remove access for abuse, fraud, or violations of these Terms.
         </p>
       </LegalSection>

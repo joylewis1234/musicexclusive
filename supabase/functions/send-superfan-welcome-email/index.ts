@@ -58,7 +58,7 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
             <td style="padding-bottom: 24px;">
               <p style="margin: 0; color: #ffffff; font-size: 18px;">Hi ${name},</p>
               <p style="margin: 12px 0 0 0; color: #b8b8c0; font-size: 16px; line-height: 1.7;">
-                Thank you for becoming a <strong style="color: #fbbf24;">Superfan Member</strong>! You now have instant, guaranteed access to Music Exclusive — no lottery needed. 🎶
+                Thank you for becoming a <strong style="color: #fbbf24;">Superfan Member</strong>! You now have instant, guaranteed access to Music Exclusive — no Vault entry needed. 🎶
               </p>
             </td>
           </tr>
@@ -78,7 +78,7 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
               </p>
               <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 16px; padding: 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Guaranteed Vault Access</strong> — No lottery required</td></tr>
+                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Guaranteed Vault Access</strong> — No Vault entry required</td></tr>
                   <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>25 Monthly Credits</strong> — Stream 25 exclusive songs per month</td></tr>
                   <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Early Access to Music</strong> — Hear tracks before they drop anywhere else</td></tr>
                   <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Support Artists Directly</strong> — Every stream pays artists fairly</td></tr>
@@ -141,7 +141,7 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
               </p>
               <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 16px; padding: 24px;">
                 <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
-                  As a Superfan, you get <strong style="color: #fbbf24;">one exclusive invite</strong> each month. Share this link with a friend to give them direct access — no lottery needed!
+                  As a Superfan, you get <strong style="color: #fbbf24;">one exclusive invite</strong> each month. Share this link with a friend to give them direct access — no Vault entry needed!
                 </p>
                 <p style="margin: 12px 0 0 0; word-break: break-all;">
                   <a href="${inviteLink}" style="color: #00d4ff; font-size: 14px; text-decoration: underline;">${inviteLink}</a>

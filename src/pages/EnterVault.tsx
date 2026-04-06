@@ -245,7 +245,7 @@ const EnterVault = () => {
                 />
                 {!isSubmitted && (
                   <span className="mt-3 px-3 py-1 text-[10px] font-display uppercase tracking-widest text-primary/80 bg-primary/10 border border-primary/20 rounded-full">
-                    Vault Lottery access system is Patent Pending
+                    Vault access system is Patent Pending
                   </span>
                 )}
               </div>
@@ -467,7 +467,7 @@ const EnterVault = () => {
 
       {/* ========================================
           SUPERFAN ACCESS CTA
-          Skip the lottery option
+          Skip the Vault option
           ======================================== */}
       <section className="my-8">
         <div className="w-full max-w-xs mx-auto">
@@ -480,7 +480,7 @@ const EnterVault = () => {
             Unlock Superfan Access
           </Button>
           <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
-            ✨ Skip the lottery — guaranteed access
+            ✨ Skip the Vault — Guaranteed access
           </p>
         </div>
       </section>

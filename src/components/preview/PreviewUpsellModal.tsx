@@ -111,7 +111,7 @@ export const PreviewUpsellModal = ({ open, onDismiss }: PreviewUpsellModalProps)
                 exclusive
               </span>{' '}
               to Music Exclusive.
-              Unlock full access through the Vault Lottery or skip straight in as a Superfan.
+              Unlock full access through the Vault or skip straight in as a Superfan.
             </p>
 
             {/* CTAs */}
@@ -143,7 +143,7 @@ export const PreviewUpsellModal = ({ open, onDismiss }: PreviewUpsellModalProps)
                 Immediate access. No waiting.
               </span>
 
-              {/* SECONDARY: Vault Lottery */}
+              {/* SECONDARY: Vault Access */}
               <button
                 className="group relative w-full rounded-xl py-3 px-6 font-display text-sm font-semibold uppercase tracking-wider text-foreground/80 overflow-hidden transition-all duration-300 hover:text-foreground"
                 style={{
@@ -163,7 +163,7 @@ export const PreviewUpsellModal = ({ open, onDismiss }: PreviewUpsellModalProps)
               >
                 <span className="relative flex items-center justify-center gap-2">
                   <Unlock className="h-4 w-4" />
-                  Enter the Vault Lottery
+                  Enter the Vault
                 </span>
               </button>
 

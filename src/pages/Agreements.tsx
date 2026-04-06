@@ -25,13 +25,13 @@ By accessing or using Music Exclusive ("the Platform"), you agree to be bound by
 
 You must be at least 18 years old or the age of majority in your jurisdiction to use this Platform. By using the Platform, you represent and warrant that you meet these requirements.
 
-3. VAULT ACCESS & LOTTERY SYSTEM
+3. VAULT ACCESS SYSTEM
 
-Music Exclusive uses the Vault Lottery System to grant fan access to the Platform. Instead of open sign-ups, fans enter the Lottery for a chance to gain access.
+Music Exclusive uses the Vault Access System to grant fan access to the Platform. Instead of open sign-ups, fans enter the Vault for a chance to gain access.
 
-• If you win the Lottery, you may activate your Vault access by selecting a payment plan.
+• If you win access, you may activate your Vault access by selecting a payment plan.
 • If you do not win, you remain entered for future draws and will receive a re-entry code.
-• Lottery mechanics may change over time and are not fully disclosed.
+• Access mechanics may change over time and are not fully disclosed.
 • Winners can stay active inside the Vault as long as they maintain an active paid plan.
 
 3.1 CONTENT PROTECTION & WATERMARKING
