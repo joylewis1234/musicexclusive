@@ -22,7 +22,7 @@ import {
 
 const benefits = [
   "Lifetime access to Music Exclusive",
-  "Permanent Vault Lottery bypass",
+  "Permanent Vault bypass",
   "Early entry at launch",
   "Access to exclusive releases",
   "Founding Superfan recognition badge",

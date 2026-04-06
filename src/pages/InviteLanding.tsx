@@ -111,7 +111,7 @@ const InviteLanding = () => {
         </p>
 
         <p className="text-muted-foreground text-sm mb-8">
-          Skip the lottery — create your account and start listening to exclusive music.
+          Skip the Vault — create your account and start listening to exclusive music.
         </p>
 
         <div className="space-y-3">

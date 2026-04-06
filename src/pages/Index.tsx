@@ -385,7 +385,7 @@ const Index = () => {
             Want a taste before entering the Vault?
           </h2>
           <p className="text-muted-foreground text-sm font-body mb-8">
-            Listen to previews, then enter the Vault Lottery or join as a Superfan for instant access.
+            Listen to previews, then enter the Vault or join as a Superfan for instant access.
           </p>
           
           <div className="flex flex-col gap-3">

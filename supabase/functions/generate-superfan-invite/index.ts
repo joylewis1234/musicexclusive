@@ -71,7 +71,7 @@ function buildMonthlyInviteEmailHtml(name: string, inviteLink: string): string {
         <tr><td style="padding-bottom:24px;">
           <p style="margin:0;color:#fff;font-size:18px;">Hi ${name},</p>
           <p style="margin:12px 0 0 0;color:#b8b8c0;font-size:16px;line-height:1.7;">
-            As an active Superfan, you get <strong style="color:#fbbf24;">one exclusive invite</strong> each month. Share this link with a friend to give them direct access to Music Exclusive — no lottery needed!
+            As an active Superfan, you get <strong style="color:#fbbf24;">one exclusive invite</strong> each month. Share this link with a friend to give them direct access to Music Exclusive — no Vault entry needed!
           </p>
         </td></tr>
         <tr><td style="padding-bottom:28px;">

@@ -253,7 +253,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Determine lottery outcome
+    // Determine vault outcome
     // forceResult overrides the random outcome for testing
     let isWinner: boolean;
     if (forceResult === "win") {

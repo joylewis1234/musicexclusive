@@ -7,7 +7,7 @@ import { Check, Sparkles, Home } from "lucide-react";
 
 const benefits = [
   "Lifetime access",
-  "Permanent Vault Lottery bypass",
+  "Permanent Vault bypass",
   "Early platform entry",
   "Access to exclusive music",
   "Founding Superfan recognition",

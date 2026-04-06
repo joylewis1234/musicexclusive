@@ -163,7 +163,7 @@ export const PreviewUpsellModal = ({ open, onDismiss }: PreviewUpsellModalProps)
               >
                 <span className="relative flex items-center justify-center gap-2">
                   <Unlock className="h-4 w-4" />
-                  Enter the Vault Lottery
+                  Enter the Vault
                 </span>
               </button>
 

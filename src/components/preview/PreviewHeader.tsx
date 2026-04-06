@@ -51,7 +51,7 @@ export const PreviewHeader = () => {
 
           {/* Skip text */}
           <span className="text-[10px] uppercase tracking-[0.2em] text-primary/70 font-display mt-2">
-            Skip the lottery — get access now
+            Skip the Vault — get access now
           </span>
 
           {/* Superfan */}

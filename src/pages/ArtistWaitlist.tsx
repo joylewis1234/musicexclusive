@@ -88,7 +88,7 @@ const ArtistWaitlist = () => {
                   <div>
                     <h3 className="font-display text-lg text-foreground font-bold mb-2">$0.10 Per Stream — To You</h3>
                     <p className="text-muted-foreground text-sm font-body leading-relaxed">
-                      Superfans pay $0.20 per stream. You earn $0.10 directly. No ad-based pennies, no algorithm lottery.
+                      Superfans pay $0.20 per stream. You earn $0.10 directly. No ad-based pennies, no algorithm games.
                     </p>
                   </div>
                 </div>

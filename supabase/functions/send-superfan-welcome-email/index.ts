@@ -141,7 +141,7 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
               </p>
               <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(251, 191, 36, 0.2); border-radius: 16px; padding: 24px;">
                 <p style="margin: 0 0 8px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">
-                  As a Superfan, you get <strong style="color: #fbbf24;">one exclusive invite</strong> each month. Share this link with a friend to give them direct access — no lottery needed!
+                  As a Superfan, you get <strong style="color: #fbbf24;">one exclusive invite</strong> each month. Share this link with a friend to give them direct access — no Vault entry needed!
                 </p>
                 <p style="margin: 12px 0 0 0; word-break: break-all;">
                   <a href="${inviteLink}" style="color: #00d4ff; font-size: 14px; text-decoration: underline;">${inviteLink}</a>
