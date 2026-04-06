@@ -46,7 +46,7 @@ export const PreviewHeader = () => {
             className="w-full max-w-xs"
           >
             <Unlock className="w-4 h-4 mr-2" />
-            Enter the Vault Lottery
+            Enter the Vault
           </Button>
 
           {/* Skip text */}
