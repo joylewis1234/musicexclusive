@@ -151,10 +151,10 @@ const Index = () => {
             </Button>
             <Button 
               size="lg" 
-              className="w-full max-w-xs text-sm md:text-base whitespace-normal h-auto py-3"
+              className="w-full max-w-xs"
               onClick={() => navigate("/vault/enter")}
             >
-              Enter the Vault for Access to Exclusive Music
+              Enter the Vault
             </Button>
             
             {/* Superfan CTA with skip-lottery highlight */}
