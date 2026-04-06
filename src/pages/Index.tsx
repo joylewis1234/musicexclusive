@@ -384,13 +384,6 @@ const Index = () => {
           <div className="flex flex-col gap-3">
             <Button 
               size="lg" 
-              className="w-full"
-              onClick={() => navigate("/preview")}
-            >
-              Preview Exclusive Music
-            </Button>
-            <Button 
-              size="lg" 
               variant="outline"
               className="w-full animate-glow-pulse"
               onClick={() => navigate("/vault/enter")}
