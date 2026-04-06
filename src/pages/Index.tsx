@@ -154,7 +154,7 @@ const Index = () => {
               className="w-full max-w-xs text-sm md:text-base whitespace-normal h-auto py-3"
               onClick={() => navigate("/vault/enter")}
             >
-              Try Your Luck, Enter the Lottery Vault
+              Enter the Vault for Access to Exclusive Music
             </Button>
             
             {/* Superfan CTA with skip-lottery highlight */}
