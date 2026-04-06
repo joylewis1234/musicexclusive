@@ -58,7 +58,7 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
             <td style="padding-bottom: 24px;">
               <p style="margin: 0; color: #ffffff; font-size: 18px;">Hi ${name},</p>
               <p style="margin: 12px 0 0 0; color: #b8b8c0; font-size: 16px; line-height: 1.7;">
-                Thank you for becoming a <strong style="color: #fbbf24;">Superfan Member</strong>! You now have instant, guaranteed access to Music Exclusive — no lottery needed. 🎶
+                Thank you for becoming a <strong style="color: #fbbf24;">Superfan Member</strong>! You now have instant, guaranteed access to Music Exclusive — no Vault entry needed. 🎶
               </p>
             </td>
           </tr>
