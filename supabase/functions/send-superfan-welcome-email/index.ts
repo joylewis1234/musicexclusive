@@ -78,7 +78,7 @@ function buildSuperfanWelcomeHtml(name: string, email: string, vaultCode: string
               </p>
               <div style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 212, 255, 0.15); border-radius: 16px; padding: 24px;">
                 <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Guaranteed Vault Access</strong> — No lottery required</td></tr>
+                  <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Guaranteed Vault Access</strong> — No Vault entry required</td></tr>
                   <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>25 Monthly Credits</strong> — Stream 25 exclusive songs per month</td></tr>
                   <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Early Access to Music</strong> — Hear tracks before they drop anywhere else</td></tr>
                   <tr><td style="padding: 10px 0; color: #ffffff; font-size: 15px; line-height: 1.6;">✅ <strong>Support Artists Directly</strong> — Every stream pays artists fairly</td></tr>
