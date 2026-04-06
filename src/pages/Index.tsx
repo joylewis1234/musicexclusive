@@ -145,13 +145,6 @@ const Index = () => {
             <Button 
               size="lg" 
               className="w-full max-w-xs"
-              onClick={() => navigate("/preview")}
-            >
-              Preview Exclusive Music
-            </Button>
-            <Button 
-              size="lg" 
-              className="w-full max-w-xs"
               onClick={() => navigate("/vault/enter")}
             >
               Enter the Vault
