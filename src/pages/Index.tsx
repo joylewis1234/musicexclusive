@@ -307,7 +307,7 @@ const Index = () => {
               onClick={() => navigate("/vault/enter")}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
             >
-              Enter the Vault
+              Enter the Vault for Access to Exclusive Music
             </Button>
           </div>
           
