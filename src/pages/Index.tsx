@@ -264,10 +264,10 @@ const Index = () => {
       {/* Second Vault Portal Section */}
       <section className="relative px-4 py-8 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
-          {/* Try Your Luck Header */}
+          {/* Get Access Now Header */}
           <div className="text-center mb-8">
             <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-4 text-glow">
-              TRY YOUR LUCK
+              GET ACCESS NOW
             </p>
             <div className="flex justify-center items-center gap-3">
               <ChevronDown className="w-8 h-8 text-primary animate-bounce" />
