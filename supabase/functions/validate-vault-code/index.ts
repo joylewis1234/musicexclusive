@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // "submit" mode - process the lottery attempt
+    // "submit" mode - process the vault attempt
     // Vault codes are now permanent (no expiry). Check if code is valid for submission.
     // Valid if: not already used as a winner (used_at is null or status is lost/pending)
     const isAlreadyWon = vaultRecord.status === "won" && vaultRecord.used_at;
