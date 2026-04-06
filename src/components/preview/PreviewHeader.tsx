@@ -38,7 +38,7 @@ export const PreviewHeader = () => {
 
         {/* CTAs */}
         <div className="flex flex-col items-center gap-3">
-          {/* Vault Lottery */}
+          {/* Vault Access */}
           <Button
             size="lg"
             variant="outline"
