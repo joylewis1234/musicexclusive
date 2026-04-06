@@ -150,18 +150,31 @@ const Index = () => {
               Enter the Vault
             </Button>
             
-            {/* Superfan CTA with skip-vault highlight */}
+            {/* Animated VIP divider */}
+            <div className="flex flex-col items-center gap-1 my-4 opacity-70">
+              <span className="text-[10px] font-display uppercase tracking-[0.3em] text-muted-foreground">or</span>
+              <ChevronDown className="w-5 h-5 text-primary animate-bounce" />
+            </div>
+
+            {/* Superfan CTA — Premium VIP treatment */}
             <div className="relative w-full max-w-xs">
+              <div className="flex justify-center mb-2">
+                <span className="text-[10px] font-display uppercase tracking-[0.25em] text-primary/90 border border-primary/30 rounded-full px-3 py-0.5 bg-primary/5">
+                  Instant Access
+                </span>
+              </div>
+              <p className="text-sm font-display uppercase tracking-wider text-foreground text-center mb-3">
+                Want instant access?
+              </p>
               <Button 
-                variant="secondary" 
                 size="lg" 
-                className="w-full"
+                className="w-full animate-glow-pulse"
                 onClick={() => navigate("/founding-superfan")}
               >
-                Unlock Superfan Access
+                Skip the Vault — Enter Now
               </Button>
-              <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
-                ✨ Skip the Vault — Guaranteed access
+              <p className="text-primary/80 text-xs font-body mt-2 text-center">
+                Instant access. No waiting.
               </p>
             </div>
             
@@ -304,18 +317,31 @@ const Index = () => {
             </Button>
           </div>
           
-          {/* Superfan CTA under second vault */}
-          <div className="relative w-full max-w-xs mx-auto mt-8">
+          {/* Animated VIP divider */}
+          <div className="flex flex-col items-center gap-1 my-4 opacity-70">
+            <span className="text-[10px] font-display uppercase tracking-[0.3em] text-muted-foreground">or</span>
+            <ChevronDown className="w-5 h-5 text-primary animate-bounce" />
+          </div>
+
+          {/* Superfan CTA — Premium VIP treatment */}
+          <div className="relative w-full max-w-xs mx-auto">
+            <div className="flex justify-center mb-2">
+              <span className="text-[10px] font-display uppercase tracking-[0.25em] text-primary/90 border border-primary/30 rounded-full px-3 py-0.5 bg-primary/5">
+                Instant Access
+              </span>
+            </div>
+            <p className="text-sm font-display uppercase tracking-wider text-foreground text-center mb-3">
+              Want instant access?
+            </p>
             <Button 
-              variant="secondary" 
               size="lg" 
-              className="w-full"
+              className="w-full animate-glow-pulse"
               onClick={() => navigate("/founding-superfan")}
             >
-              Unlock Superfan Access
+              Skip the Vault — Enter Now
             </Button>
-            <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
-              ✨ Skip the Vault — Guaranteed access
+            <p className="text-primary/80 text-xs font-body mt-2 text-center">
+              Instant access. No waiting.
             </p>
           </div>
         </div>
