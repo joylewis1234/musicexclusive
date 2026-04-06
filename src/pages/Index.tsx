@@ -168,7 +168,7 @@ const Index = () => {
                 Unlock Superfan Access
               </Button>
               <p className="text-primary text-xs font-display uppercase tracking-wider mt-2 text-center animate-pulse">
-                ✨ Skip the lottery — guaranteed access
+                ✨ Skip the Vault — Guaranteed access
               </p>
             </div>
             
