@@ -402,7 +402,7 @@ const Index = () => {
               className="w-full animate-glow-pulse"
               onClick={() => navigate("/vault/enter")}
             >
-              Enter the Vault
+              Enter the Vault for Access to Exclusive Music
             </Button>
             <Button 
               variant="outline" 
