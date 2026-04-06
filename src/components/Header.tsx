@@ -99,8 +99,18 @@ const Header = () => {
               </button>
             </div>
 
+            {/* Test Out Link */}
+            <button
+              onClick={() => { setOpen(false); navigate("/preview"); }}
+              className="w-full text-left px-4 py-3 text-xs text-primary hover:underline transition-colors font-body"
+            >
+              ✦ Test Out Music Exclusive
+            </button>
+
+            <div className="border-t border-border/30 my-2" />
+
             {/* Main Navigation */}
-            <nav className="p-4">
+            <nav className="p-4 pt-0">
               <ul className="space-y-1">
                 {mainNavItems.map((item) => (
                   <li key={item.title}>
