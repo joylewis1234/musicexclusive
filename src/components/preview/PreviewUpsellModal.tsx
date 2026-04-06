@@ -143,7 +143,7 @@ export const PreviewUpsellModal = ({ open, onDismiss }: PreviewUpsellModalProps)
                 Immediate access. No waiting.
               </span>
 
-              {/* SECONDARY: Vault Lottery */}
+              {/* SECONDARY: Vault Access */}
               <button
                 className="group relative w-full rounded-xl py-3 px-6 font-display text-sm font-semibold uppercase tracking-wider text-foreground/80 overflow-hidden transition-all duration-300 hover:text-foreground"
                 style={{
