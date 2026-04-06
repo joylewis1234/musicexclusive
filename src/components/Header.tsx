@@ -68,17 +68,16 @@ const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/30">
       <div className="container max-w-lg md:max-w-4xl mx-auto px-4 h-14 flex items-center justify-between">
-        {/* Hamburger Menu + Preview Link */}
-        <div className="flex items-center gap-3">
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <button 
-                className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Open menu"
-              >
-                <Menu className="w-5 h-5" />
-              </button>
-            </SheetTrigger>
+        {/* Hamburger Menu */}
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <button 
+              className="w-10 h-10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </SheetTrigger>
           
           <SheetContent 
             side="left" 
@@ -100,8 +99,18 @@ const Header = () => {
               </button>
             </div>
 
+            {/* Test Out Link */}
+            <button
+              onClick={() => { setOpen(false); navigate("/preview"); }}
+              className="w-full text-left px-4 py-3 text-xs text-primary hover:underline transition-colors font-body"
+            >
+              ✦ Test Out Music Exclusive
+            </button>
+
+            <div className="border-t border-border/30 my-2" />
+
             {/* Main Navigation */}
-            <nav className="p-4">
+            <nav className="p-4 pt-0">
               <ul className="space-y-1">
                 {mainNavItems.map((item) => (
                   <li key={item.title}>
@@ -172,13 +181,6 @@ const Header = () => {
             </div>
           </SheetContent>
         </Sheet>
-          <button
-            onClick={() => navigate("/preview")}
-            className="text-xs text-primary hover:underline transition-colors"
-          >
-            Test Out Music Exclusive
-          </button>
-        </div>
 
         {/* Logo (centered) */}
         <button 
