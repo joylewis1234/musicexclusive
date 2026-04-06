@@ -245,7 +245,7 @@ const EnterVault = () => {
                 />
                 {!isSubmitted && (
                   <span className="mt-3 px-3 py-1 text-[10px] font-display uppercase tracking-widest text-primary/80 bg-primary/10 border border-primary/20 rounded-full">
-                    Vault Lottery access system is Patent Pending
+                    Vault access system is Patent Pending
                   </span>
                 )}
               </div>
