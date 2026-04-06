@@ -58,8 +58,8 @@ const steps = [
   },
   {
     stepNumber: 3,
-    title: "TRY AGAIN TOMORROW",
-    description: "If you win, the Vault opens — revealing exclusive music and artist experiences. If you lose, you're automatically re-entered for the next draw.",
+    title: "GET INSIDE",
+    description: "When your code is triggered, the Vault opens — revealing exclusive music and artist experiences. If not yet activated, you'll be notified by email as soon as your access is ready.",
     icon: RotateCcw,
   },
 ]
