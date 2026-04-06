@@ -1,17 +1,21 @@
 
 
-# Change "Try Your Luck" to "GET Access Now"
+# Move "Preview Exclusive Music" to Header as a Text Link
 
-## Changes
+## What changes
+Remove the "Preview Exclusive Music" buttons from the homepage body and add a small text link saying **"Test Out Music Exclusive"** in the header, positioned below/beside the hamburger menu area.
 
-### 1. `src/pages/Index.tsx`
-- **Line 185**: `"TRY YOUR LUCK"` → `"GET ACCESS NOW"`
-- **Line 270**: `"TRY YOUR LUCK"` → `"GET ACCESS NOW"`
-- Update comments on lines 182 and 267
+## Files modified
 
-### 2. `src/pages/EnterVault.tsx`
-- **Line 225**: `"TRY YOUR LUCK"` → `"GET ACCESS NOW"`
-- Update comment on line 222
+### 1. `src/components/Header.tsx`
+- Add a subtle text link next to the hamburger menu (top-left) that reads **"Test Out Music Exclusive"** and navigates to `/preview`
+- Style as a small, understated link (not a button) — e.g. `text-xs text-primary hover:underline`
 
-3 text replacements across 2 files. No structural changes.
+### 2. `src/pages/Index.tsx`
+- **Lines 144-151**: Remove the "Preview Exclusive Music" button from the hero CTA section
+- **Lines 391-398**: Remove the "Preview Exclusive Music" button from the bottom CTA section
+- Keep all other buttons (Enter the Vault, Superfan) intact
+
+## No backend changes needed
+Everything is frontend text/routing only.
 
