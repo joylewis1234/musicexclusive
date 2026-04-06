@@ -154,7 +154,7 @@ const Index = () => {
               className="w-full max-w-xs text-sm md:text-base whitespace-normal h-auto py-3"
               onClick={() => navigate("/vault/enter")}
             >
-              Try Your Luck, Enter the Lottery Vault
+              Enter the Vault for Access to Exclusive Music
             </Button>
             
             {/* Superfan CTA with skip-lottery highlight */}
@@ -222,7 +222,7 @@ const Index = () => {
               onClick={() => navigate("/vault/enter")}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
             >
-              Enter the Vault
+              Enter the Vault for Access to Exclusive Music
             </Button>
           </div>
           
@@ -307,7 +307,7 @@ const Index = () => {
               onClick={() => navigate("/vault/enter")}
               className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background/30 backdrop-blur-sm border border-primary/50 hover:bg-background/50 hover:border-primary text-foreground shadow-[0_0_20px_hsl(var(--primary)/0.3)] hover:shadow-[0_0_30px_hsl(var(--primary)/0.5)] transition-all duration-300 animate-glow-pulse"
             >
-              Enter the Vault
+              Enter the Vault for Access to Exclusive Music
             </Button>
           </div>
           
@@ -402,7 +402,7 @@ const Index = () => {
               className="w-full animate-glow-pulse"
               onClick={() => navigate("/vault/enter")}
             >
-              Enter the Vault
+              Enter the Vault for Access to Exclusive Music
             </Button>
             <Button 
               variant="outline" 
