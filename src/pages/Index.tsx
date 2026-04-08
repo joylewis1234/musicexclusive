@@ -337,7 +337,7 @@ onClick={() => navigate("/subscribe")}
             <Button 
               size="xl" 
               className="w-full animate-glow-pulse"
-              onClick={() => navigate("/founding-superfan")}
+onClick={() => navigate("/subscribe")}
             >
               Skip the Vault — Enter Now
             </Button>

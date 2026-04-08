@@ -475,7 +475,7 @@ const EnterVault = () => {
             variant="secondary" 
             size="lg" 
             className="w-full"
-            onClick={() => navigate("/founding-superfan")}
+            onClick={() => navigate("/subscribe")}
           >
             Unlock Superfan Access
           </Button>
