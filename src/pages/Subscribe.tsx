@@ -39,17 +39,7 @@ const Subscribe = () => {
     { icon: Gift, text: "Priority access to new drops" },
   ];
 
-  // Redirect to auth if not logged in (but only after auth check is complete)
-  useEffect(() => {
-    const redirectToFanAuth = () => {
-      if (!authLoading && !user) {
-        warmFanAuthRoute();
-        navigate("/auth/fan", { state: { flow: "superfan" }, replace: true });
-      }
-    };
-
-    redirectToFanAuth();
-  }, [user, navigate, authLoading]);
+  // No auto-redirect — let unauthenticated users see benefits first
 
   // Check for payment success from URL params - redirect to proper verification
   useEffect(() => {
