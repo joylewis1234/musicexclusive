@@ -55,7 +55,13 @@ const Subscribe = () => {
   }, [searchParams]);
 
   const handleSubscribe = async () => {
-    const email = user?.email || state?.email;
+    if (!user) {
+      warmFanAuthRoute();
+      navigate("/auth/fan", { state: { flow: "superfan" } });
+      return;
+    }
+
+    const email = user.email;
     if (!email) {
       toast.error("Please log in to subscribe");
       return;
