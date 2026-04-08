@@ -331,7 +331,7 @@ const Subscribe = () => {
           ) : (
             <>
               <Crown className="w-4 h-4 mr-2" />
-              Subscribe $5/month
+              {user ? "Subscribe $5/month" : "Sign Up & Subscribe — $5/month"}
             </>
           )}
         </Button>
