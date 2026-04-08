@@ -39,17 +39,7 @@ const Subscribe = () => {
     { icon: Gift, text: "Priority access to new drops" },
   ];
 
-  // Redirect to auth if not logged in (but only after auth check is complete)
-  useEffect(() => {
-    const redirectToFanAuth = () => {
-      if (!authLoading && !user) {
-        warmFanAuthRoute();
-        navigate("/auth/fan", { state: { flow: "superfan" }, replace: true });
-      }
-    };
-
-    redirectToFanAuth();
-  }, [user, navigate, authLoading]);
+  // No auto-redirect — let unauthenticated users see benefits first
 
   // Check for payment success from URL params - redirect to proper verification
   useEffect(() => {
@@ -65,7 +55,13 @@ const Subscribe = () => {
   }, [searchParams]);
 
   const handleSubscribe = async () => {
-    const email = user?.email || state?.email;
+    if (!user) {
+      warmFanAuthRoute();
+      navigate("/auth/fan", { state: { flow: "superfan" } });
+      return;
+    }
+
+    const email = user.email;
     if (!email) {
       toast.error("Please log in to subscribe");
       return;
@@ -317,7 +313,7 @@ const Subscribe = () => {
         {/* CTA Button */}
         <Button
           onClick={handleSubscribe}
-          disabled={isProcessing || !termsAccepted || authLoading || !user}
+          disabled={isProcessing || !termsAccepted || authLoading}
           className="w-full"
           variant="primary"
           size="lg"
@@ -335,7 +331,7 @@ const Subscribe = () => {
           ) : (
             <>
               <Crown className="w-4 h-4 mr-2" />
-              Subscribe $5/month
+              {user ? "Subscribe $5/month" : "Sign Up & Subscribe — $5/month"}
             </>
           )}
         </Button>
