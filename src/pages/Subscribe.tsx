@@ -313,7 +313,7 @@ const Subscribe = () => {
         {/* CTA Button */}
         <Button
           onClick={handleSubscribe}
-          disabled={isProcessing || !termsAccepted || authLoading || !user}
+          disabled={isProcessing || !termsAccepted || authLoading}
           className="w-full"
           variant="primary"
           size="lg"
