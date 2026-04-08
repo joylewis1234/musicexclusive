@@ -58,7 +58,7 @@ export const PreviewHeader = () => {
           <Button
             size="lg"
             variant="accent"
-            onClick={() => navigate("/founding-superfan")}
+            onClick={() => navigate("/subscribe")}
             className="w-full max-w-xs"
           >
             <Zap className="w-4 h-4 mr-2" />
