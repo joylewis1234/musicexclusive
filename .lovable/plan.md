@@ -1,33 +1,24 @@
 
 
-# Polish Superfan CTA — Larger, Tighter, More Premium
+# Show Benefits First on /subscribe, Then Prompt Login
 
-## File: `src/pages/Index.tsx` — Two identical blocks (hero ~lines 153-178, second vault ~lines 320-345)
+## Problem
+The `/subscribe` page immediately redirects unauthenticated users to `/auth/fan`, so they never see the benefits or pricing. Users should see what they're getting before being asked to create an account.
 
-### Changes to both Superfan blocks:
+## File: `src/pages/Subscribe.tsx`
 
-1. **Tighten divider spacing & enlarge "or"**
-   - Change `my-4` → `my-2` on the divider wrapper
-   - Change `text-[10px]` → `text-sm` on the "or" text
-   - Change `opacity-70` → `opacity-80`
+### 1. Remove the auto-redirect (lines 42-52)
+Delete the `useEffect` that redirects to `/auth/fan` when no user is present. This lets anyone view the page.
 
-2. **Enlarge "Instant Access" badge**
-   - Change `text-[10px]` → `text-xs` and add slightly more padding `px-4 py-1`
+### 2. Gate only the subscribe action, not the page
+In `handleSubscribe`, if `!user`, navigate to `/auth/fan` with `{ state: { flow: "superfan" } }` instead of calling Stripe. The user sees benefits first, clicks "Subscribe", and only then gets sent to login/signup. After auth, they return to `/subscribe` to complete checkout.
 
-3. **Enlarge headline**
-   - Change `text-sm` → `text-base` on "Want instant access?"
+### 3. Update CTA button text for logged-out state
+When `!user`, show "Sign Up & Subscribe — $5/month" instead of "Subscribe $5/month". When logged in, keep the current text.
 
-4. **Make button larger**
-   - Change `size="lg"` → `size="xl"` on the Superfan button
+### 4. Disable terms checkbox requirement awareness
+The button is already disabled when `!termsAccepted`. Keep this — users must accept terms whether logged in or not. The terms acceptance + click triggers either auth redirect (logged out) or Stripe checkout (logged in).
 
-5. **Make "Instant access. No waiting." glow**
-   - Change from `text-primary/80 text-xs` to `text-primary text-sm` with inline `textShadow` for neon glow effect:
-   ```tsx
-   <p className="text-primary text-sm font-body mt-2 text-center animate-glow-pulse"
-     style={{ textShadow: '0 0 8px hsl(var(--primary) / 0.6), 0 0 20px hsl(var(--primary) / 0.3)' }}>
-     Instant access. No waiting.
-   </p>
-   ```
-
-No backend, auth, payment, or route changes.
+## No backend, auth, payment, or route changes
+The only change is removing the redirect and moving the auth gate into the button handler.
 
