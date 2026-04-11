@@ -47,12 +47,6 @@ verify_jwt = false
 [functions.create-subscription-checkout]
 verify_jwt = false
 
-[functions.create-test-artist]
-verify_jwt = false
-
-[functions.create-test-fan]
-verify_jwt = false
-
 [functions.create-track-draft]
 verify_jwt = false
 
@@ -114,9 +108,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.reject-waitlist-artist]
-verify_jwt = false
-
-[functions.reset-test-password]
 verify_jwt = false
 
 [functions.send-artist-invite]
