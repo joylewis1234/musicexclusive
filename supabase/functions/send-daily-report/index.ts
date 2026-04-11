@@ -409,25 +409,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const resendApiKey = Deno.env.get("RESEND_API_KEY");
-  if (!resendApiKey) {
-    logStep("ERROR: RESEND_API_KEY not configured");
-    return new Response(
-      JSON.stringify({ error: "Email service not configured" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  }
-
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
   );
-  const resend = new Resend(resendApiKey);
 
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Default to yesterday in America/Los_Angeles
+    // Default to yesterday in America/Chicago
     const reportDate = body.date || getYesterdayCT();
     const recipientEmail = "support@musicexclusive.co";
     const sendEmail = body.sendEmail !== false;
@@ -471,6 +461,16 @@ serve(async (req) => {
 
     // ── Send email ───────────────────────────────────────────────────
     if (sendEmail) {
+      const resendApiKey = Deno.env.get("RESEND_API_KEY");
+      if (!resendApiKey) {
+        logStep("ERROR: RESEND_API_KEY not configured");
+        return new Response(
+          JSON.stringify({ success: true, report, emailSent: false, emailError: "Email service not configured" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const resend = new Resend(resendApiKey);
+
       const { data: logEntry, error: logError } = await supabaseAdmin
         .from("report_email_logs")
         .insert({ report_date: reportDate, report_type: "daily", recipient_email: recipientEmail, status: "pending" })
