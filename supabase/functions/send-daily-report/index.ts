@@ -92,8 +92,8 @@ interface ReportData {
 async function generateReport(supabase: any, reportDate: string): Promise<ReportData> {
   const startUTC = tzMidnightToUTC(reportDate);
 
-  const nextDay = new Date(reportDate + "T00:00:00");
-  nextDay.setDate(nextDay.getDate() + 1);
+  const [y, m, d] = reportDate.split("-").map(Number);
+  const nextDay = new Date(Date.UTC(y, m - 1, d + 1));
   const nextDayStr = nextDay.toISOString().split("T")[0];
   const endUTC = tzMidnightToUTC(nextDayStr);
 
