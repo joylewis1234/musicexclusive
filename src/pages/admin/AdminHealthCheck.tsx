@@ -111,7 +111,7 @@ const AdminHealthCheck = () => {
       // We check if the edge function that depends on Resend is reachable
       const { error } = await supabase.functions.invoke("send-daily-report", {
         method: "POST",
-        body: { healthCheck: true },
+        body: { healthCheck: true, sendEmail: false },
       });
       checks.push({
         label: "Resend (Email Service)",
