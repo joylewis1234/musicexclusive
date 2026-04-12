@@ -27,13 +27,7 @@ verify_jwt = false
 [functions.verify-connect-status]
 verify_jwt = false
 
-[functions.create-test-artist]
-verify_jwt = false
-
 [functions.upload-avatar]
-verify_jwt = false
-
-[functions.reset-test-password]
 verify_jwt = false
 
 [functions.send-password-reset]
@@ -184,9 +178,6 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.close-annual-cycle]
-verify_jwt = false
-
-[functions.create-test-fan]
 verify_jwt = false
 
 [functions.delete-test-application]
