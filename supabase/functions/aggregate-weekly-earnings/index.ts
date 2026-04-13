@@ -108,113 +108,27 @@ serve(async (req) => {
   try {
     logStep("Function started");
 
-    // Get the previous week's boundaries (last completed week)
     const now = new Date();
     const currentWeekStart = getWeekStart(now);
-    
-    // We aggregate the previous week (already completed)
-    const previousWeekStart = new Date(currentWeekStart);
-    previousWeekStart.setUTCDate(previousWeekStart.getUTCDate() - 7);
-    const previousWeekEnd = getWeekEnd(previousWeekStart);
 
-    logStep("Week boundaries calculated", {
-      weekStart: previousWeekStart.toISOString(),
-      weekEnd: previousWeekEnd.toISOString(),
-    });
-
-    // Aggregate streams from stream_ledger that haven't been batched yet
-    const { data: unbatchedStreams, error: streamFetchError } = await supabaseAdmin
+    // Fetch ALL unbatched streams from completed weeks (before current week)
+    const { data: allUnbatched, error: streamFetchError } = await supabaseAdmin
       .from("stream_ledger")
       .select("*")
       .is("payout_batch_id", null)
-      .gte("created_at", previousWeekStart.toISOString())
-      .lte("created_at", previousWeekEnd.toISOString());
+      .lt("created_at", currentWeekStart.toISOString())
+      .order("created_at", { ascending: true });
 
     if (streamFetchError) {
       throw new Error(`Failed to fetch unbatched streams: ${streamFetchError.message}`);
     }
 
-    logStep("Unbatched streams fetched", { count: unbatchedStreams?.length || 0 });
+    logStep("Unbatched streams from completed weeks", { count: allUnbatched?.length || 0 });
 
-    // Even if there are zero streams, we still create a batch record to track the week
-    const hasStreams = unbatchedStreams && unbatchedStreams.length > 0;
-
-    // Group streams by artist
-    const streamsByArtist: Record<string, { 
-      artistId: string;
-      entries: typeof unbatchedStreams;
-      grossAmount: number;
-      platformFee: number;
-      artistNet: number;
-    }> = {};
-
-    if (hasStreams) {
-      for (const stream of unbatchedStreams!) {
-        const artistId = stream.artist_id;
-        if (!artistId) {
-          logStep("Skipping stream with no artist_id", { id: stream.id });
-          continue;
-        }
-
-        if (!streamsByArtist[artistId]) {
-          streamsByArtist[artistId] = {
-            artistId,
-            entries: [],
-            grossAmount: 0,
-            platformFee: 0,
-            artistNet: 0,
-          };
-        }
-
-        streamsByArtist[artistId].entries.push(stream);
-        streamsByArtist[artistId].grossAmount += Number(stream.amount_total);
-        streamsByArtist[artistId].platformFee += Number(stream.amount_platform);
-        streamsByArtist[artistId].artistNet += Number(stream.amount_artist);
-      }
-    }
-
-    logStep("Streams grouped by artist", { artistCount: Object.keys(streamsByArtist).length });
-
-    // Calculate batch totals
-    let batchTotalGross = 0;
-    let batchTotalPlatformFee = 0;
-    let batchTotalArtistNet = 0;
-
-    for (const data of Object.values(streamsByArtist)) {
-      batchTotalGross += data.grossAmount;
-      batchTotalPlatformFee += data.platformFee;
-      batchTotalArtistNet += data.artistNet;
-    }
-
-    // Check if a batch already exists for this week
-    const { data: existingBatch } = await supabaseAdmin
-      .from("payout_batches")
-      .select("id")
-      .eq("week_start", previousWeekStart.toISOString())
-      .is("artist_user_id", null) // New batch format without artist_user_id at batch level
-      .maybeSingle();
-
-    
-    if (existingBatch) {
-      logStep("Batch already exists for week", { batchId: existingBatch.id });
+    if (!allUnbatched || allUnbatched.length === 0) {
       return new Response(
         JSON.stringify({
-          message: "Batch already exists for this week",
-          batchId: existingBatch.id,
-        }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // If no streams, create a placeholder batch with $0 totals
-    if (!hasStreams || Object.keys(streamsByArtist).length === 0) {
-      logStep("No streams for this week, creating $0 batch");
-      
-      return new Response(
-        JSON.stringify({
-          message: "No streams found for the previous week - no batches created",
-          weekStart: previousWeekStart.toISOString(),
-          weekEnd: previousWeekEnd.toISOString(),
+          message: "No unbatched streams from completed weeks",
           batchesCreated: 0,
           artistPayoutsCreated: 0,
           totals: { gross: 0, platformFee: 0, artistNet: 0 },
@@ -223,12 +137,59 @@ serve(async (req) => {
       );
     }
 
-    // Create batches per artist
+    // Group streams by week AND artist
+    const weekArtistGroups: Record<string, Record<string, {
+      artistId: string;
+      entries: typeof allUnbatched;
+      grossAmount: number;
+      platformFee: number;
+      artistNet: number;
+    }>> = {};
 
+    for (const stream of allUnbatched) {
+      const artistId = stream.artist_id;
+      if (!artistId) {
+        logStep("Skipping stream with no artist_id", { id: stream.id });
+        continue;
+      }
+
+      const streamWeekStart = getWeekStart(new Date(stream.created_at));
+      const weekKey = streamWeekStart.toISOString();
+
+      if (!weekArtistGroups[weekKey]) {
+        weekArtistGroups[weekKey] = {};
+      }
+
+      if (!weekArtistGroups[weekKey][artistId]) {
+        weekArtistGroups[weekKey][artistId] = {
+          artistId,
+          entries: [],
+          grossAmount: 0,
+          platformFee: 0,
+          artistNet: 0,
+        };
+      }
+
+      weekArtistGroups[weekKey][artistId].entries.push(stream);
+      weekArtistGroups[weekKey][artistId].grossAmount += Number(stream.amount_total);
+      weekArtistGroups[weekKey][artistId].platformFee += Number(stream.amount_platform);
+      weekArtistGroups[weekKey][artistId].artistNet += Number(stream.amount_artist);
+    }
+
+    const weekCount = Object.keys(weekArtistGroups).length;
+    logStep("Grouped by week/artist", { weeks: weekCount });
+
+    let batchTotalGross = 0;
+    let batchTotalPlatformFee = 0;
+    let batchTotalArtistNet = 0;
     const batchesCreated: string[] = [];
     const artistPayoutsCreated: string[] = [];
 
-    for (const [artistId, data] of Object.entries(streamsByArtist)) {
+    for (const [weekStartIso, artistGroups] of Object.entries(weekArtistGroups)) {
+      const weekStart = new Date(weekStartIso);
+      const weekEnd = getWeekEnd(weekStart);
+
+      for (const [artistId, data] of Object.entries(artistGroups)) {
         // Get artist user_id from artist_profiles
         const { data: artistProfile } = await supabaseAdmin
           .from("artist_profiles")
@@ -243,11 +204,17 @@ serve(async (req) => {
           .from("payout_batches")
           .select("id")
           .eq("artist_user_id", artistUserId)
-          .eq("week_start", previousWeekStart.toISOString())
+          .eq("week_start", weekStartIso)
           .maybeSingle();
 
         if (existingArtistBatch) {
-          logStep("Batch already exists for artist/week", { artistId, batchId: existingArtistBatch.id });
+          logStep("Batch already exists for artist/week", { artistId, week: weekStartIso.split("T")[0] });
+          // Still link orphaned streams to existing batch
+          const streamIds = data.entries.map(e => e.id);
+          await supabaseAdmin
+            .from("stream_ledger")
+            .update({ payout_batch_id: existingArtistBatch.id })
+            .in("id", streamIds);
           continue;
         }
 
@@ -256,8 +223,8 @@ serve(async (req) => {
           .from("payout_batches")
           .insert({
             artist_user_id: artistUserId,
-            week_start: previousWeekStart.toISOString(),
-            week_end: previousWeekEnd.toISOString(),
+            week_start: weekStartIso,
+            week_end: weekEnd.toISOString(),
             total_credits: data.entries.length,
             total_usd: data.artistNet,
             total_gross: data.grossAmount,
@@ -273,7 +240,7 @@ serve(async (req) => {
           continue;
         }
 
-        logStep("Batch created", { batchId: newBatch.id, artistId, artistNet: data.artistNet });
+        logStep("Batch created", { batchId: newBatch.id, artistId, week: weekStartIso.split("T")[0], artistNet: data.artistNet });
 
         // Create artist_payout record
         const { data: newPayout, error: payoutError } = await supabaseAdmin
@@ -306,89 +273,19 @@ serve(async (req) => {
           logStep("Failed to update stream entries", { batchId: newBatch.id, error: updateError.message });
         }
 
+        batchTotalGross += data.grossAmount;
+        batchTotalPlatformFee += data.platformFee;
+        batchTotalArtistNet += data.artistNet;
         batchesCreated.push(newBatch.id);
+      }
     }
 
     logStep("Aggregation complete", { batchesCreated: batchesCreated.length, artistPayoutsCreated: artistPayoutsCreated.length });
 
-    // Fetch artist application stats for this week
-    let applicationsApproved = 0;
-    let applicationsDenied = 0;
-
-    const { data: approvedApps } = await supabaseAdmin
-      .from("artist_applications")
-      .select("id")
-      .in("status", ["approved_pending_setup", "active"])
-      .gte("updated_at", previousWeekStart.toISOString())
-      .lte("updated_at", previousWeekEnd.toISOString());
-
-    const { data: deniedApps } = await supabaseAdmin
-      .from("artist_applications")
-      .select("id")
-      .eq("status", "rejected")
-      .gte("updated_at", previousWeekStart.toISOString())
-      .lte("updated_at", previousWeekEnd.toISOString());
-
-    applicationsApproved = approvedApps?.length || 0;
-    applicationsDenied = deniedApps?.length || 0;
-
-    logStep("Application stats fetched", { applicationsApproved, applicationsDenied });
-
-    // Fetch artist invitation stats for this week
-    let invitationsGenerated = 0;
-    let invitationsSent = 0;
-    let invitationsApplied = 0;
-    const invitedArtists: Array<{ artist_name: string; contact: string; platform: string; status: string }> = [];
-
-    const { data: weekInvitations } = await supabaseAdmin
-      .from("artist_invitations")
-      .select("artist_name, artist_email, artist_social_handle, platform, status")
-      .gte("created_at", previousWeekStart.toISOString())
-      .lte("created_at", previousWeekEnd.toISOString());
-
-    if (weekInvitations && weekInvitations.length > 0) {
-      for (const inv of weekInvitations) {
-        invitedArtists.push({
-          artist_name: inv.artist_name,
-          contact: inv.artist_email || inv.artist_social_handle || "N/A",
-          platform: inv.platform,
-          status: inv.status,
-        });
-
-        invitationsGenerated++;
-        if (inv.status === "sent") invitationsSent++;
-        if (inv.status === "applied") invitationsApplied++;
-      }
-    }
-
-    logStep("Invitation stats fetched", { invitationsGenerated, invitationsSent, invitationsApplied });
-
-    // Send notification to company about batch creation
-    if (batchesCreated.length > 0) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-      const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-      await sendBatchCreatedNotification(
-        supabaseUrl,
-        anonKey,
-        previousWeekStart.toISOString(),
-        previousWeekEnd.toISOString(),
-        batchesCreated.length,
-        batchTotalGross,
-        batchTotalArtistNet,
-        applicationsApproved,
-        applicationsDenied,
-        invitationsGenerated,
-        invitationsSent,
-        invitationsApplied,
-        invitedArtists
-      );
-    }
-
     return new Response(
       JSON.stringify({
         message: "Weekly earnings aggregation complete",
-        weekStart: previousWeekStart.toISOString(),
-        weekEnd: previousWeekEnd.toISOString(),
+        weeksProcessed: weekCount,
         batchesCreated: batchesCreated.length,
         artistPayoutsCreated: artistPayoutsCreated.length,
         batchIds: batchesCreated,
