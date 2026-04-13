@@ -165,7 +165,7 @@ const AdminLogin = () => {
                   </Link>
                 </div>
 
-                  type="submit"
+                <Button
                   className="w-full"
                   disabled={isLoading}
                 >
