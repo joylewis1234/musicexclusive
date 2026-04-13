@@ -10,6 +10,6 @@ max_batch_size = 1
 max_batch_timeout = 30
 
 [vars]
-# HLS_TRANSCODER_URL = "https://your-transcoder.example.com/transcode"
-# HLS_TRANSCODER_TOKEN = "<optional-bearer-token>"
-# HLS_TRANSCODER_TIMEOUT_MS = "120000"
+HLS_TRANSCODER_URL = "https://hls-transcoder-production-a5a3.up.railway.app/transcode"
+HLS_TRANSCODER_TOKEN = "fbac6953058c22a7a9dfb06f99bf27db68a86f557582cb70ba1ce55b53e90d98"
+HLS_TRANSCODER_TIMEOUT_MS = "120000"

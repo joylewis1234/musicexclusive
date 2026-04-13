@@ -84,6 +84,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const loadStartRef = useRef<number | null>(null);
   const telemetrySentRef = useRef(false);
   const playbackSessionRef = useRef<string | null>(null);
+  const isFallingBackRef = useRef(false);
 
   const currentTrackRef = useRef<{
     trackId: string;
@@ -229,6 +230,11 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
       setLastEndedAt(Date.now());
     };
     const handleError = (e: Event) => {
+      // Suppress errors during HLS→fallback transition
+      if (isFallingBackRef.current) {
+        console.debug("[AudioPlayer] Suppressing error during HLS fallback transition");
+        return;
+      }
       const audioEl = e.target as HTMLAudioElement;
       let errorMessage = "Unknown playback error";
       if (audioEl.error) {
@@ -341,15 +347,19 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
                 console.error("[AudioPlayer] HLS error:", data.type, data.details);
                 if (data.fatal) {
                   console.warn("[AudioPlayer] Fatal HLS error, falling back to signed URL");
+                  isFallingBackRef.current = true;
+                  setError(null);
+                  setIsLoading(true);
                   destroyHls();
                   // Fallback to signed R2 URL
                   audio.src = entry.url;
                   audio.load();
+                  isFallingBackRef.current = false;
                   setDiagnostics((prev) => ({
                     ...prev,
                     hlsActive: false,
                     audioUrl: entry.url,
-                    lastError: `HLS fatal: ${data.details}, fell back to direct URL`,
+                    lastError: null,
                   }));
                 }
               });
@@ -507,6 +517,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
               console.error("[AudioPlayer] HLS error (paid):", data.type, data.details);
               if (data.fatal) {
                 console.warn("[AudioPlayer] Fatal HLS error in paid stream, falling back to signed URL");
+                isFallingBackRef.current = true;
+                setError(null);
+                setIsLoading(true);
                 destroyHls();
                 loadSignedUrl(params.trackId, "audio", true)
                   .then((entry) => {
@@ -516,16 +529,19 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
                       ...prev,
                       audioUrl: entry.url,
                       hlsActive: false,
-                      lastError: `HLS fatal: ${data.details}, fell back to direct URL`,
+                      lastError: null,
                     }));
                     audio.play().catch((playErr) => {
                       console.error("[AudioPlayer] Fallback play failed:", playErr);
                       setError("Playback error — please retry");
                       setIsLoading(false);
+                    }).finally(() => {
+                      isFallingBackRef.current = false;
                     });
                   })
                   .catch((fallbackErr) => {
                     console.error("[AudioPlayer] Signed URL fallback failed:", fallbackErr);
+                    isFallingBackRef.current = false;
                     setError("Playback error — please retry");
                     setIsLoading(false);
                   });
@@ -565,6 +581,9 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
         })
         .catch((err) => {
           console.error("[AudioPlayer] HLS module load failed (paid), falling back to signed URL:", err);
+          isFallingBackRef.current = true;
+          setError(null);
+          setIsLoading(true);
           loadSignedUrl(params.trackId, "audio", true)
             .then((entry) => {
               audio.src = entry.url;
@@ -573,16 +592,19 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
                 ...prev,
                 audioUrl: entry.url,
                 hlsActive: false,
-                lastError: "HLS module failed, fell back to direct URL",
+                lastError: null,
               }));
               audio.play().catch((playErr) => {
                 console.error("[AudioPlayer] Fallback play failed:", playErr);
                 setError("Playback error — please retry");
                 setIsLoading(false);
+              }).finally(() => {
+                isFallingBackRef.current = false;
               });
             })
             .catch((fallbackErr) => {
               console.error("[AudioPlayer] Signed URL fallback failed:", fallbackErr);
+              isFallingBackRef.current = false;
               setError("Playback error — please retry");
               setIsLoading(false);
             });
