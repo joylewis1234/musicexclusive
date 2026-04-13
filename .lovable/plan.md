@@ -1,21 +1,17 @@
 
 
-# Route "Skip the Vault — Enter Now" Buttons Through /subscribe
+## Plan: Add Forgot Password link to Admin Login
 
-## Overview
-Change all "Skip the Vault" CTA buttons so they navigate to `/subscribe` instead of `/founding-superfan`. This lets users see the Superfan benefits page (which we just updated to show benefits before requiring login) rather than going directly to the founding superfan page.
+**What changes:**
 
-## Changes (4 files, frontend only)
+Add a "Forgot password?" link to the admin login form (between the password field and the submit button) that navigates to the existing `/forgot-password?type=admin` page. The existing `ForgotPassword` page already handles any user type and calls the `send-password-reset` edge function. The only change needed is a single `Link` component in `src/pages/auth/AdminLogin.tsx`.
 
-### 1. `src/pages/Index.tsx`
-- **Line 172**: Change `navigate("/founding-superfan")` → `navigate("/subscribe")`
-- **Line 340**: Change `navigate("/founding-superfan")` → `navigate("/subscribe")`
+**Technical details:**
 
-### 2. `src/pages/EnterVault.tsx`
-- **Line 478**: Change `navigate("/founding-superfan")` → `navigate("/subscribe")`
+1. **File: `src/pages/auth/AdminLogin.tsx`**
+   - Import `Link` from `react-router-dom`
+   - After the password field (line 157), add a "Forgot password?" link pointing to `/forgot-password?type=admin`
+   - Style it consistently with the existing forgot-password links on fan/artist auth pages (right-aligned, small text, primary color)
 
-### 3. `src/components/preview/PreviewHeader.tsx`
-- **Line 61**: Change `navigate("/founding-superfan")` → `navigate("/subscribe")`
-
-No backend, auth, payment, or route changes. Only updating navigation targets.
+No backend changes needed. No new pages or edge functions required.
 
