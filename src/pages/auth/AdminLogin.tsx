@@ -156,7 +156,15 @@ const AdminLogin = () => {
                   />
                 </div>
 
-                <Button
+                <div className="flex justify-end">
+                  <Link
+                    to="/forgot-password?type=admin"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                </div>
+
                   type="submit"
                   className="w-full"
                   disabled={isLoading}
