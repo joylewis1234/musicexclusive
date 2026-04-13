@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { verifyAdmin } from "../_shared/verify-admin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,6 +19,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // ── Verify admin access ────────────────────────────────────────
+    const { user: admin, error: adminError } = await verifyAdmin(
+      req.headers.get("Authorization")
+    );
+    if (adminError || !admin) {
+      return new Response(JSON.stringify({ error: adminError || "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const adminClient = createClient(supabaseUrl, serviceRoleKey);

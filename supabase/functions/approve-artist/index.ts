@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.91.1";
 import { Resend } from "npm:resend@2.0.0";
+import { verifyAdmin } from "../_shared/verify-admin.ts";
 
 const VERSION = "v4.0.0";
 
@@ -30,49 +31,22 @@ const handler = async (req: Request): Promise<Response> => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    // ─── Step 1: Verify admin ───────────────────────────────────
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
+    // ─── Step 1: Verify admin (dual check: role + email allowlist) ──
+    const { user: adminUser, error: adminError } = await verifyAdmin(
+      req.headers.get("Authorization")
+    );
+    if (adminError || !adminUser) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing Authorization header", _version: VERSION }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
-
-    const { data: userData, error: userError } = await userClient.auth.getUser();
-    if (userError || !userData?.user) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Invalid or expired token", _version: VERSION }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const adminUserId = userData.user.id;
-
-    const { data: roleData, error: roleError } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", adminUserId)
-      .eq("role", "admin")
-      .maybeSingle();
-
-    if (roleError || !roleData) {
-      return new Response(
-        JSON.stringify({ success: false, error: "Forbidden - Admin access required", _version: VERSION }),
+        JSON.stringify({ success: false, error: adminError || "Forbidden", _version: VERSION }),
         { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    console.log(`[APPROVE-ARTIST ${VERSION}] Authorized admin:`, userData.user.email);
+    const adminUserId = adminUser.id;
+    console.log(`[APPROVE-ARTIST ${VERSION}] Authorized admin:`, adminUser.email);
 
     // ─── Step 2: Parse body ─────────────────────────────────────
     const body = await req.json();
