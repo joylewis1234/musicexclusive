@@ -83,7 +83,10 @@ const AdminPayouts = () => {
   const [batches, setBatches] = useState<PayoutBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState<string | null>(null);
-  
+  const [isAggregating, setIsAggregating] = useState(false);
+  const [unbatchedCount, setUnbatchedCount] = useState(0);
+  const [unbatchedTotal, setUnbatchedTotal] = useState(0);
+
   // Detail modal
   const [selectedBatch, setSelectedBatch] = useState<PayoutBatch | null>(null);
   const [artistPayouts, setArtistPayouts] = useState<ArtistPayout[]>([]);
@@ -122,11 +125,44 @@ const AdminPayouts = () => {
       }));
 
       setBatches(enrichedBatches);
+
+      // Fetch unbatched stream count
+      const { data: unbatched, error: unbatchedError } = await supabase
+        .from("stream_ledger")
+        .select("amount_artist")
+        .is("payout_batch_id", null);
+
+      if (!unbatchedError && unbatched) {
+        setUnbatchedCount(unbatched.length);
+        setUnbatchedTotal(unbatched.reduce((sum, s) => sum + Number(s.amount_artist), 0));
+      }
     } catch (error) {
       console.error("Error fetching payout batches:", error);
       toast.error("Failed to fetch batches");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const runAggregation = async () => {
+    setIsAggregating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("aggregate-weekly-earnings");
+
+      if (error) throw error;
+
+      if (data?.batchesCreated > 0) {
+        toast.success(`Created ${data.batchesCreated} payout batch(es) for week of ${data.weekStart?.split("T")[0]}`);
+      } else {
+        toast.info(data?.message || "No new batches to create");
+      }
+
+      fetchBatches();
+    } catch (error) {
+      console.error("Error running aggregation:", error);
+      toast.error("Failed to aggregate earnings");
+    } finally {
+      setIsAggregating(false);
     }
   };
 
@@ -454,11 +490,46 @@ const AdminPayouts = () => {
             </GlowCard>
           </div>
 
+          {/* Unbatched earnings notice */}
+          {unbatchedCount > 0 && (
+            <GlowCard className="p-4 border-yellow-500/30">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-yellow-400">
+                    {unbatchedCount} unbatched stream{unbatchedCount !== 1 ? "s" : ""} (${unbatchedTotal.toFixed(2)} artist earnings)
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Run aggregation to create weekly payout batches from completed weeks
+                  </p>
+                </div>
+                <Button
+                  onClick={runAggregation}
+                  disabled={isAggregating}
+                  size="sm"
+                  className="gap-2"
+                >
+                  {isAggregating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <DollarSign className="w-4 h-4" />
+                  )}
+                  Generate Weekly Batches
+                </Button>
+              </div>
+            </GlowCard>
+          )}
+
           {/* Actions */}
           <div className="flex justify-between items-center">
-            <Button variant="outline" size="sm" onClick={fetchBatches}>
-              <RefreshCw className="w-4 h-4 mr-1" /> Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={fetchBatches}>
+                <RefreshCw className="w-4 h-4 mr-1" /> Refresh
+              </Button>
+              <Button variant="outline" size="sm" onClick={runAggregation} disabled={isAggregating}>
+                {isAggregating ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <DollarSign className="w-4 h-4 mr-1" />}
+                Aggregate Earnings
+              </Button>
+            </div>
             <Button variant="outline" size="sm" onClick={exportCSV}>
               <Download className="w-4 h-4 mr-1" /> Export CSV
             </Button>
