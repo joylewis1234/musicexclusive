@@ -410,18 +410,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // ── Verify admin access ────────────────────────────────────────
-  const { user: adminUser, error: adminError } = await verifyAdmin(
-    req.headers.get("Authorization")
-  );
-  if (adminError || !adminUser) {
-    logStep("AUTH DENIED", { error: adminError });
-    return new Response(
-      JSON.stringify({ error: adminError || "Forbidden" }),
-      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  // ── Verify access ──────────────────────────────────────────────
+  // Allow service_role callers (Supabase cron jobs) to bypass admin JWT check.
+  // All other callers must be an authenticated admin.
+  const authHeader = req.headers.get("Authorization");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const token = authHeader?.replace("Bearer ", "") ?? "";
+  const isServiceRole = token.length > 0 && token === serviceRoleKey;
+
+  if (!isServiceRole) {
+    const { user: adminUser, error: adminError } = await verifyAdmin(authHeader);
+    if (adminError || !adminUser) {
+      logStep("AUTH DENIED", { error: adminError });
+      return new Response(
+        JSON.stringify({ error: adminError || "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    logStep("Authorized admin", { email: adminUser.email });
+  } else {
+    logStep("Authorized via service_role (cron)");
   }
-  logStep("Authorized admin", { email: adminUser.email });
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
