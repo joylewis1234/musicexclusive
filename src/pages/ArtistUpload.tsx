@@ -8,8 +8,6 @@ import {
   CheckCircle,
   AlertCircle,
   RefreshCw,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   Trash2,
   Info,
@@ -46,9 +44,7 @@ import { useTrackUpload, UPLOAD_HOOK_VERSION } from "@/hooks/useTrackUpload";
 import { useArtistAgreement } from "@/hooks/useArtistAgreement";
 import { useUploadDraft } from "@/hooks/useUploadDraft";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
-import { UploadDiagnosticsPanel } from "@/components/artist/UploadDiagnosticsPanel";
 import { UploadProgressBar } from "@/components/artist/UploadProgressBar";
-import { UploadDebugConsole } from "@/components/artist/UploadDebugConsole";
 import { UploadErrorBoundary } from "@/components/artist/UploadErrorBoundary";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDuration } from "@/utils/audioDuration";
@@ -163,7 +159,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   const audioObjectUrlRef = useRef<string | null>(null);
 
   // --- UI state ---
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // --- Refs ---
@@ -859,32 +854,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
             </div>
           </GlowCard>
         )}
-
-        {/* Diagnostics Panel Toggle */}
-        {(uploadState?.diagnostics?.length ?? 0) > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDiagnostics(!showDiagnostics)}
-            className="w-full flex items-center justify-center gap-2 text-muted-foreground"
-          >
-            {showDiagnostics ? (
-              <><ChevronUp className="h-4 w-4" />Hide Diagnostics</>
-            ) : (
-              <><ChevronDown className="h-4 w-4" />Show Diagnostics</>
-            )}
-          </Button>
-        )}
-
-        {/* Diagnostics Panel */}
-        <UploadDiagnosticsPanel
-          diagnostics={uploadState?.diagnostics ?? []}
-          isVisible={showDiagnostics}
-          isTimedOut={uploadState?.isTimedOut ?? false}
-        />
-
-        {/* Upload Debug Console */}
-        <UploadDebugConsole />
 
         {/* Publish Button */}
         <Button

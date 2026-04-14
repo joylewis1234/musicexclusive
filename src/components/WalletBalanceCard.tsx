@@ -85,7 +85,7 @@ const WalletBalanceCard = ({ externalCredits, externalLoading }: WalletBalanceCa
           variant="accent"
           size="sm"
           className="gap-2 mb-4"
-          onClick={() => navigate("/fan/payment")}
+          onClick={() => navigate("/fan/add-credits")}
         >
           <Plus className="w-4 h-4" />
           Add Credits
@@ -101,7 +101,7 @@ const WalletBalanceCard = ({ externalCredits, externalLoading }: WalletBalanceCa
             <button
               key={amt}
               onClick={() =>
-                navigate("/fan/payment", { state: { topUpCredits: amt } })
+                navigate("/fan/add-credits", { state: { topUpCredits: amt } })
               }
               className="relative px-3 py-1.5 rounded-full text-xs font-display uppercase tracking-wider transition-all duration-200 active:scale-95 hover:-translate-y-0.5 group"
             >
