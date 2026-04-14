@@ -7,10 +7,16 @@ import { Button } from "@/components/ui/button";
 import { PaymentErrorBoundary } from "@/components/error-boundaries";
 import { useCredits } from "@/hooks/useCredits";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 const CREDIT_TO_DOLLAR = 0.20;
+
+function getAppBaseUrl(): string {
+  if (typeof window !== "undefined") return window.location.origin;
+  return "https://www.musicexclusive.co";
+}
 
 interface CreditOption {
   credits: number;
@@ -25,7 +31,7 @@ const QUICK_OPTIONS: CreditOption[] = [
 
 const AddCredits = () => {
   const navigate = useNavigate();
-  const { credits: currentBalance, addCredits, refetch } = useCredits();
+  const { credits: currentBalance, refetch } = useCredits();
   const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedOption, setSelectedOption] = useState<CreditOption | null>(null);
@@ -40,22 +46,37 @@ const AddCredits = () => {
     setSelectedOption(option);
 
     try {
-      const success = await addCredits(option.credits, option.dollars);
+      const base = getAppBaseUrl();
+      const successUrl = `${base}/checkout/return?payment=success&credits=${option.credits}&return_to=%2Ffan%2Fprofile`;
+      const cancelUrl = `${base}/fan/add-credits?payment=cancelled`;
 
-      if (!success) {
-        throw new Error("Failed to add credits");
-      }
-
-      await refetch();
-
-      toast.success(`+${option.credits} credits added! 🎉`, {
-        description: `$${option.dollars.toFixed(2)} • Balance updated`
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: {
+          credits: option.credits,
+          email: user.email,
+          successUrl,
+          cancelUrl,
+        },
       });
 
+      if (error) {
+        console.error("Checkout error:", error);
+        toast.error("Failed to start checkout. Please try again.");
+        setIsProcessing(false);
+        setSelectedOption(null);
+        return;
+      }
+
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error("Failed to create checkout session");
+        setIsProcessing(false);
+        setSelectedOption(null);
+      }
     } catch (err) {
       console.error("Purchase error:", err);
       toast.error("Something went wrong. Please try again.");
-    } finally {
       setIsProcessing(false);
       setSelectedOption(null);
     }
