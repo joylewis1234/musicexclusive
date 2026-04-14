@@ -55,7 +55,7 @@ const ChooseAccess = () => {
   };
 
   const handlePayAsYouGo = () => {
-    navigate("/fan/add-credits", { state: { ...state, flow: "vault" } });
+    navigate("/load-credits", { state: { ...state, flow: "vault" } });
   };
 
   const superfanPerks = [

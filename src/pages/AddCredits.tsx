@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, Coins, Loader2, Wallet } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -43,15 +43,8 @@ const AddCredits = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedOption, setSelectedOption] = useState<CreditOption | null>(null);
 
-  // Auto-trigger purchase if navigated with a specific credit amount
-  useEffect(() => {
-    if (locationState?.topUpCredits && user?.email) {
-      const match = QUICK_OPTIONS.find(o => o.credits === locationState.topUpCredits);
-      if (match) {
-        handlePurchase(match);
-      }
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Pre-select the option matching the topUpCredits from navigation state
+  const preselectedCredits = locationState?.topUpCredits ?? null;
 
   const handlePurchase = async (option: CreditOption) => {
     if (!user?.email) {
@@ -153,6 +146,7 @@ const AddCredits = () => {
             <div className="grid gap-3">
               {QUICK_OPTIONS.map((option) => {
                 const isSelected = selectedOption?.credits === option.credits;
+                const isPreselected = preselectedCredits === option.credits;
                 const isLoading = isProcessing && isSelected;
 
                 return (
@@ -171,7 +165,7 @@ const AddCredits = () => {
                       className={cn(
                         "absolute inset-0 rounded-xl transition-opacity duration-300",
                         "bg-gradient-to-r from-primary via-purple-500 to-pink-500",
-                        isSelected ? "opacity-100" : "opacity-40 group-hover:opacity-70"
+                        isSelected ? "opacity-100" : isPreselected ? "opacity-80" : "opacity-40 group-hover:opacity-70"
                       )}
                       style={{
                         filter: isSelected ? "blur(4px)" : "blur(2px)"
