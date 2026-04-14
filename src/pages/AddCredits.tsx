@@ -61,7 +61,7 @@ const AddCredits = () => {
 
       if (error) {
         console.error("Checkout error:", error);
-        toast.error("Failed to start checkout. Please try again.");
+        toast.error(error.message || "Failed to start checkout. Please try again.");
         setIsProcessing(false);
         setSelectedOption(null);
         return;

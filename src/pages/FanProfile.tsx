@@ -266,7 +266,7 @@ const FanProfile = () => {
       }
     } catch (e) {
       console.error(e);
-      toast.error("Something went wrong.");
+      toast.error(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setIsStartingSuperfanCheckout(false);
     }
@@ -294,7 +294,7 @@ const FanProfile = () => {
       }
     } catch (e) {
       console.error(e);
-      toast.error("Something went wrong.");
+      toast.error(e instanceof Error ? e.message : "Something went wrong.");
     } finally {
       setIsCancellingSuperfan(false);
     }

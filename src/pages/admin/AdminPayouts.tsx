@@ -160,7 +160,7 @@ const AdminPayouts = () => {
       fetchBatches();
     } catch (error) {
       console.error("Error running aggregation:", error);
-      toast.error("Failed to aggregate earnings");
+      toast.error(error instanceof Error ? error.message : "Failed to aggregate earnings");
     } finally {
       setIsAggregating(false);
     }
@@ -311,7 +311,7 @@ const AdminPayouts = () => {
       }
     } catch (error) {
       console.error("Error running payouts:", error);
-      toast.error("Failed to run payouts");
+      toast.error(error instanceof Error ? error.message : "Failed to run payouts");
     } finally {
       setIsProcessing(null);
     }
@@ -366,7 +366,7 @@ const AdminPayouts = () => {
       }
     } catch (error) {
       console.error("Error retrying payout:", error);
-      toast.error("Failed to retry payout");
+      toast.error(error instanceof Error ? error.message : "Failed to retry payout");
     } finally {
       setIsProcessing(null);
     }
