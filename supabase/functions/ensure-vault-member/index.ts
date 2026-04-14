@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
           vault_access_active: false,
           credits: 0,
         },
-        { onConflict: "email", ignoreDuplicates: false }
+        { onConflict: "email", ignoreDuplicates: true }
       )
       .select()
       .single();

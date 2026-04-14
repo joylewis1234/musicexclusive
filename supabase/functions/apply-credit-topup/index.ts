@@ -62,21 +62,17 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Parse body - email is now required in the body (from webhook or admin)
-    const body = await req.json();
-    const email = body.email as string;
+    // Parse body - email, credits, usd all required from webhook or admin
+    const { email, credits, usd } = await req.json();
     if (!email) {
       return new Response(
-        JSON.stringify({ error: "No email in token claims" }),
+        JSON.stringify({ error: "email is required" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
-
-    // Parse body
-    const { credits, usd } = await req.json();
 
     if (!credits || credits <= 0) {
       return new Response(
