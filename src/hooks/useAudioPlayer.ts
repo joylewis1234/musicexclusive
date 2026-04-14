@@ -417,18 +417,10 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
     if (!audioRef.current) { setError("Audio player not initialized"); return; }
     const audio = audioRef.current;
     if (!audio.src || !currentTrack) {
-      // If loadPaidStream is still loading (HLS initializing or fallback in progress),
-      // don't show an error. The source will be set when ready.
-      if (isFallingBackRef.current) return;
-      // Brief wait for async loadPaidStream to set the source
-      await new Promise(r => setTimeout(r, 500));
-      if (!audio.src || !currentTrack) {
-        await new Promise(r => setTimeout(r, 1500));
-        if (!audio.src || !currentTrack) {
-          setError("No audio source loaded");
-          return;
-        }
-      }
+      // loadPaidStream auto-plays via MANIFEST_PARSED or fallback.
+      // Don't show an error here - just return silently and let
+      // the source-setting code handle playback when ready.
+      return;
     }
 
     // If at end, reset to beginning
@@ -561,6 +553,13 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
               }
             });
 
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              audio.play().catch((playErr) => {
+                if (playErr instanceof DOMException && playErr.name === "AbortError") return;
+                console.error("[AudioPlayer] HLS auto-play failed:", playErr);
+              });
+            });
+
             hls.loadSource(params.hlsUrl);
             hls.attachMedia(audio);
 
@@ -577,6 +576,7 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
           } else if (audio.canPlayType("application/vnd.apple.mpegurl")) {
             audio.src = params.hlsUrl;
             audio.load();
+            audio.play().catch(() => {});
             setDiagnostics((prev) => ({
               ...prev,
               trackId: params.trackId,
