@@ -212,7 +212,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
       // Upload hook state
       resetUpload();
-      setShowDiagnostics(false);
+
       setShowClearConfirm(false);
 
       // Draft
@@ -280,13 +280,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasDraft, uploadState.step]);
-
-  // --- Auto-show diagnostics when upload errors occur ---
-  useEffect(() => {
-    if (uploadState.step === "error") {
-      setShowDiagnostics(true);
-    }
-  }, [uploadState.step]);
 
   // --- Forced-redirect fallback ref (mobile hang prevention) ---
   const redirectTimerRef = useRef<number | null>(null);
@@ -505,8 +498,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
       return;
     }
 
-    setShowDiagnostics(true);
-
     try {
       // Extract the 25s preview/hook clip from the full audio
       let previewFile: File | null = null;
@@ -533,7 +524,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
   const handleRetry = async () => {
     if (!user?.id || !coverFile || !audioFileRef.current) return;
-    setShowDiagnostics(true);
 
     let previewFile: File | null = null;
     try {
@@ -556,7 +546,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   /** "Start Over" in the upload-error card – keeps fields, just resets upload state */
   const handleResetUploadState = () => {
     resetUpload();
-    setShowDiagnostics(false);
   };
 
   /** "Start New Upload" – full wipe including draft */
