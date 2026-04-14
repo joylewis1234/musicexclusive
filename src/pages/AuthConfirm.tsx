@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
@@ -26,7 +26,11 @@ const AuthConfirm = () => {
   const [state, setState] = useState<ConfirmState>("verifying");
   const [message, setMessage] = useState("Verifying your email and signing you in…");
 
+  const hasStarted = useRef(false);
+
   useEffect(() => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
     let isMounted = true;
 
     const completeFlow = async () => {

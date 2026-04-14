@@ -95,7 +95,7 @@ const SubmitVaultCode = () => {
 
       if (error) {
         console.error("Error validating vault code:", error);
-        toast.error("Something went wrong. Please try again.");
+        toast.error(error.message || "Something went wrong. Please try again.");
         return;
       }
 
@@ -150,7 +150,7 @@ const SubmitVaultCode = () => {
       }
     } catch (err) {
       console.error("Unexpected error:", err);
-      toast.error("Something went wrong. Please try again.");
+      toast.error(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

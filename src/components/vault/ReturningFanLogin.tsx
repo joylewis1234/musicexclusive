@@ -65,7 +65,7 @@ export const ReturningFanLogin = () => {
 
       if (error) {
         console.error("Error validating vault code:", error);
-        setErrorMessage("Something went wrong. Please try again.");
+        setErrorMessage(error.message || "Something went wrong. Please try again.");
         return;
       }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, Coins, Loader2, Wallet } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -29,12 +29,22 @@ const QUICK_OPTIONS: CreditOption[] = [
   { credits: 100, dollars: 20 },
 ];
 
+interface LocationState {
+  topUpCredits?: number;
+  flow?: string;
+}
+
 const AddCredits = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as LocationState | null;
   const { credits: currentBalance, refetch } = useCredits();
   const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedOption, setSelectedOption] = useState<CreditOption | null>(null);
+
+  // Pre-select the option matching the topUpCredits from navigation state
+  const preselectedCredits = locationState?.topUpCredits ?? null;
 
   const handlePurchase = async (option: CreditOption) => {
     if (!user?.email) {
@@ -61,7 +71,7 @@ const AddCredits = () => {
 
       if (error) {
         console.error("Checkout error:", error);
-        toast.error("Failed to start checkout. Please try again.");
+        toast.error(error.message || "Failed to start checkout. Please try again.");
         setIsProcessing(false);
         setSelectedOption(null);
         return;
@@ -136,6 +146,7 @@ const AddCredits = () => {
             <div className="grid gap-3">
               {QUICK_OPTIONS.map((option) => {
                 const isSelected = selectedOption?.credits === option.credits;
+                const isPreselected = preselectedCredits === option.credits;
                 const isLoading = isProcessing && isSelected;
 
                 return (
@@ -154,7 +165,7 @@ const AddCredits = () => {
                       className={cn(
                         "absolute inset-0 rounded-xl transition-opacity duration-300",
                         "bg-gradient-to-r from-primary via-purple-500 to-pink-500",
-                        isSelected ? "opacity-100" : "opacity-40 group-hover:opacity-70"
+                        isSelected ? "opacity-100" : isPreselected ? "opacity-80" : "opacity-40 group-hover:opacity-70"
                       )}
                       style={{
                         filter: isSelected ? "blur(4px)" : "blur(2px)"

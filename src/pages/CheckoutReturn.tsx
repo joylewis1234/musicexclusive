@@ -18,11 +18,11 @@ const CheckoutReturn = () => {
   const requestedReturnPath = searchParams.get("return_to");
 
   const retryPath = useMemo(() => {
-    const allowedPaths = new Set(["/subscribe", "/load-credits", "/fan/payment"]);
+    const allowedPaths = new Set(["/subscribe", "/fan/add-credits", "/load-credits"]);
     if (requestedReturnPath && allowedPaths.has(requestedReturnPath)) {
       return requestedReturnPath;
     }
-    return "/fan/payment";
+    return "/fan/add-credits";
   }, [requestedReturnPath]);
 
   const profileUrl = useMemo(() => {

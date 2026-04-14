@@ -8,8 +8,6 @@ import {
   CheckCircle,
   AlertCircle,
   RefreshCw,
-  ChevronDown,
-  ChevronUp,
   Loader2,
   Trash2,
   Info,
@@ -46,9 +44,7 @@ import { useTrackUpload, UPLOAD_HOOK_VERSION } from "@/hooks/useTrackUpload";
 import { useArtistAgreement } from "@/hooks/useArtistAgreement";
 import { useUploadDraft } from "@/hooks/useUploadDraft";
 import { useArtistProfile } from "@/hooks/useArtistProfile";
-import { UploadDiagnosticsPanel } from "@/components/artist/UploadDiagnosticsPanel";
 import { UploadProgressBar } from "@/components/artist/UploadProgressBar";
-import { UploadDebugConsole } from "@/components/artist/UploadDebugConsole";
 import { UploadErrorBoundary } from "@/components/artist/UploadErrorBoundary";
 import { PreviewTimeSelector } from "@/components/artist/PreviewTimeSelector";
 import { getAudioDuration } from "@/utils/audioDuration";
@@ -163,7 +159,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   const audioObjectUrlRef = useRef<string | null>(null);
 
   // --- UI state ---
-  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   // --- Refs ---
@@ -217,7 +212,7 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
       // Upload hook state
       resetUpload();
-      setShowDiagnostics(false);
+
       setShowClearConfirm(false);
 
       // Draft
@@ -285,13 +280,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasDraft, uploadState.step]);
-
-  // --- Auto-show diagnostics when upload errors occur ---
-  useEffect(() => {
-    if (uploadState.step === "error") {
-      setShowDiagnostics(true);
-    }
-  }, [uploadState.step]);
 
   // --- Forced-redirect fallback ref (mobile hang prevention) ---
   const redirectTimerRef = useRef<number | null>(null);
@@ -510,8 +498,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
       return;
     }
 
-    setShowDiagnostics(true);
-
     try {
       // Extract the 25s preview/hook clip from the full audio
       let previewFile: File | null = null;
@@ -538,7 +524,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
 
   const handleRetry = async () => {
     if (!user?.id || !coverFile || !audioFileRef.current) return;
-    setShowDiagnostics(true);
 
     let previewFile: File | null = null;
     try {
@@ -561,7 +546,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
   /** "Start Over" in the upload-error card – keeps fields, just resets upload state */
   const handleResetUploadState = () => {
     resetUpload();
-    setShowDiagnostics(false);
   };
 
   /** "Start New Upload" – full wipe including draft */
@@ -859,32 +843,6 @@ function ArtistUploadForm({ resetRef }: ArtistUploadFormProps) {
             </div>
           </GlowCard>
         )}
-
-        {/* Diagnostics Panel Toggle */}
-        {(uploadState?.diagnostics?.length ?? 0) > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowDiagnostics(!showDiagnostics)}
-            className="w-full flex items-center justify-center gap-2 text-muted-foreground"
-          >
-            {showDiagnostics ? (
-              <><ChevronUp className="h-4 w-4" />Hide Diagnostics</>
-            ) : (
-              <><ChevronDown className="h-4 w-4" />Show Diagnostics</>
-            )}
-          </Button>
-        )}
-
-        {/* Diagnostics Panel */}
-        <UploadDiagnosticsPanel
-          diagnostics={uploadState?.diagnostics ?? []}
-          isVisible={showDiagnostics}
-          isTimedOut={uploadState?.isTimedOut ?? false}
-        />
-
-        {/* Upload Debug Console */}
-        <UploadDebugConsole />
 
         {/* Publish Button */}
         <Button

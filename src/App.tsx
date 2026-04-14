@@ -84,8 +84,6 @@ const VaultStatus = lazyWithRetry(() => import("./pages/VaultStatus"));
 const VaultWinCongrats = lazyWithRetry(() => import("./pages/VaultWinCongrats"));
 const ChooseAccess = lazyWithRetry(() => import("./pages/ChooseAccess"));
 const Subscribe = lazyWithRetry(() => import("./pages/Subscribe"));
-const LoadCredits = lazyWithRetry(() => import("./pages/LoadCredits"));
-const Payment = lazyWithRetry(() => import("./pages/Payment"));
 const CheckoutReturn = lazyWithRetry(() => import("./pages/CheckoutReturn"));
 const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
 const Login = lazyWithRetry(() => import("./pages/Login"));
@@ -189,7 +187,7 @@ const App = () => {
                 <Route path="/fan/agreements" element={<FanAgreementStep />} />
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
                 <Route path="/subscribe" element={<PaymentErrorBoundary onBack={() => window.history.back()}><Subscribe /></PaymentErrorBoundary>} />
-                <Route path="/load-credits" element={<LoadCredits />} />
+                <Route path="/load-credits" element={<AddCredits />} />
                 <Route path="/checkout/return" element={<CheckoutReturn />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -227,7 +225,7 @@ const App = () => {
                   <Route path="/fan/dashboard" element={<Navigate to="/fan/profile" replace />} />
                   <Route path="/fan/profile" element={<FanProfile />} />
                   <Route path="/fan/inbox" element={<FanInbox />} />
-                  <Route path="/fan/payment" element={<Payment />} />
+                  <Route path="/fan/payment" element={<Navigate to="/fan/add-credits" replace />} />
                   <Route path="/fan/add-credits" element={<AddCredits />} />
                   <Route path="/discovery" element={<Discovery />} />
                   {/* Fan access to artist profiles */}

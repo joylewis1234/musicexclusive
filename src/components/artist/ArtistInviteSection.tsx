@@ -77,7 +77,7 @@ const ArtistInviteSection = ({ artistProfileId }: ArtistInviteSectionProps) => {
       toast.success("Invite link generated!");
       fetchInvites();
     } catch (err) {
-      toast.error("Something went wrong.");
+      toast.error(err instanceof Error ? err.message : "Something went wrong.");
     } finally {
       setIsGenerating(false);
     }

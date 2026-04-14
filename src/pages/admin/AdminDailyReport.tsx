@@ -106,7 +106,7 @@ const AdminDailyReport = () => {
       setReport(data.report);
     } catch (error) {
       console.error("Error fetching report:", error);
-      toast.error("Failed to load report");
+      toast.error(error instanceof Error ? error.message : "Failed to load report");
     } finally {
       setIsLoading(false);
     }
@@ -141,7 +141,7 @@ const AdminDailyReport = () => {
       }
     } catch (error: any) {
       console.error("Error sending email:", error);
-      toast.error("Failed to send email");
+      toast.error(error?.message || "Failed to send email");
     } finally {
       setIsSendingEmail(false);
     }

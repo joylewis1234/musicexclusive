@@ -84,7 +84,7 @@ const Subscribe = () => {
 
       if (error) {
         console.error("Subscription checkout error:", error);
-        toast.error("Failed to start checkout. Please try again.");
+        toast.error(error.message || "Failed to start checkout. Please try again.");
         setIsProcessing(false);
         return;
       }
@@ -100,7 +100,7 @@ const Subscribe = () => {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Unknown error";
       console.error("Subscription error:", message, err);
-      toast.error("Something went wrong. Please try again.");
+      toast.error(message || "Something went wrong. Please try again.");
       setIsProcessing(false);
     }
   };

@@ -20,14 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Home, 
-  LogOut, 
-  Shield, 
+import { Switch } from "@/components/ui/switch";
+import {
+  Home,
+  LogOut,
+  Shield,
   ArrowLeft,
-  Download, 
-  Loader2, 
-  RefreshCw, 
+  Download,
+  Loader2,
+  RefreshCw,
   ExternalLink,
   CheckCircle,
   Users,
@@ -36,7 +37,8 @@ import {
   Play,
   Pause,
   Search,
-  Eye
+  Eye,
+  Clock
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -86,6 +88,9 @@ const AdminPayouts = () => {
   const [isAggregating, setIsAggregating] = useState(false);
   const [unbatchedCount, setUnbatchedCount] = useState(0);
   const [unbatchedTotal, setUnbatchedTotal] = useState(0);
+  const [autoPayoutsEnabled, setAutoPayoutsEnabled] = useState(() => {
+    return localStorage.getItem("me_auto_payouts") === "true";
+  });
 
   // Detail modal
   const [selectedBatch, setSelectedBatch] = useState<PayoutBatch | null>(null);
@@ -160,7 +165,7 @@ const AdminPayouts = () => {
       fetchBatches();
     } catch (error) {
       console.error("Error running aggregation:", error);
-      toast.error("Failed to aggregate earnings");
+      toast.error(error instanceof Error ? error.message : "Failed to aggregate earnings");
     } finally {
       setIsAggregating(false);
     }
@@ -311,7 +316,7 @@ const AdminPayouts = () => {
       }
     } catch (error) {
       console.error("Error running payouts:", error);
-      toast.error("Failed to run payouts");
+      toast.error(error instanceof Error ? error.message : "Failed to run payouts");
     } finally {
       setIsProcessing(null);
     }
@@ -366,7 +371,7 @@ const AdminPayouts = () => {
       }
     } catch (error) {
       console.error("Error retrying payout:", error);
-      toast.error("Failed to retry payout");
+      toast.error(error instanceof Error ? error.message : "Failed to retry payout");
     } finally {
       setIsProcessing(null);
     }
@@ -489,6 +494,31 @@ const AdminPayouts = () => {
               <p className="text-xs text-muted-foreground">Failed Batches</p>
             </GlowCard>
           </div>
+
+          {/* Payout Automation Toggle */}
+          <GlowCard className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Weekly Auto-Payouts</p>
+                  <p className="text-xs text-muted-foreground">
+                    {autoPayoutsEnabled
+                      ? "Enabled. Cron job will auto-process approved batches weekly once configured."
+                      : "Disabled. Payouts are manual only. Toggle on to opt in to automated weekly processing."}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={autoPayoutsEnabled}
+                onCheckedChange={(checked) => {
+                  setAutoPayoutsEnabled(checked);
+                  localStorage.setItem("me_auto_payouts", String(checked));
+                  toast.info(checked ? "Auto-payouts enabled" : "Auto-payouts disabled");
+                }}
+              />
+            </div>
+          </GlowCard>
 
           {/* Unbatched earnings notice */}
           {unbatchedCount > 0 && (
