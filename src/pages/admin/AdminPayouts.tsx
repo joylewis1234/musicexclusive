@@ -20,14 +20,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { 
-  Home, 
-  LogOut, 
-  Shield, 
+import { Switch } from "@/components/ui/switch";
+import {
+  Home,
+  LogOut,
+  Shield,
   ArrowLeft,
-  Download, 
-  Loader2, 
-  RefreshCw, 
+  Download,
+  Loader2,
+  RefreshCw,
   ExternalLink,
   CheckCircle,
   Users,
@@ -36,7 +37,8 @@ import {
   Play,
   Pause,
   Search,
-  Eye
+  Eye,
+  Clock
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { format } from "date-fns";
@@ -86,6 +88,9 @@ const AdminPayouts = () => {
   const [isAggregating, setIsAggregating] = useState(false);
   const [unbatchedCount, setUnbatchedCount] = useState(0);
   const [unbatchedTotal, setUnbatchedTotal] = useState(0);
+  const [autoPayoutsEnabled, setAutoPayoutsEnabled] = useState(() => {
+    return localStorage.getItem("me_auto_payouts") === "true";
+  });
 
   // Detail modal
   const [selectedBatch, setSelectedBatch] = useState<PayoutBatch | null>(null);
@@ -489,6 +494,31 @@ const AdminPayouts = () => {
               <p className="text-xs text-muted-foreground">Failed Batches</p>
             </GlowCard>
           </div>
+
+          {/* Payout Automation Toggle */}
+          <GlowCard className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-primary" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Weekly Auto-Payouts</p>
+                  <p className="text-xs text-muted-foreground">
+                    {autoPayoutsEnabled
+                      ? "Payouts will be processed automatically each week"
+                      : "Payouts are manual only. Enable to auto-process approved batches weekly."}
+                  </p>
+                </div>
+              </div>
+              <Switch
+                checked={autoPayoutsEnabled}
+                onCheckedChange={(checked) => {
+                  setAutoPayoutsEnabled(checked);
+                  localStorage.setItem("me_auto_payouts", String(checked));
+                  toast.info(checked ? "Auto-payouts enabled" : "Auto-payouts disabled");
+                }}
+              />
+            </div>
+          </GlowCard>
 
           {/* Unbatched earnings notice */}
           {unbatchedCount > 0 && (
