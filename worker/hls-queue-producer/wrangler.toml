@@ -1,17 +1,11 @@
 name = "hls-queue-producer"
 main = "worker.js"
 compatibility_date = "2026-02-22"
+account_id = "2f10df893433e4290bf1e708621baae5"
 
 [[queues.producers]]
 binding = "HLS_TRANSCODE_QUEUE"
 queue = "hls-transcode-queue"
 
 [vars]
-# HLS_QUEUE_PRODUCER_TOKEN = "<your-secret-token>"
-name = "hls-queue-producer"
-main = "worker.js"
-compatibility_date = "2026-02-22"
-
-[[queues.producers]]
-binding = "HLS_TRANSCODE_QUEUE"
-queue = "hls-transcode-queue"
+HLS_QUEUE_PRODUCER_TOKEN = "hls-prod-3d53fcab9d6b3735d319c0b204711e55"
