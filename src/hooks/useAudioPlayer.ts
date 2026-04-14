@@ -416,7 +416,20 @@ export function useAudioPlayer(): UseAudioPlayerReturn {
   const play = useCallback(async () => {
     if (!audioRef.current) { setError("Audio player not initialized"); return; }
     const audio = audioRef.current;
-    if (!audio.src || !currentTrack) { setError("No audio source loaded"); return; }
+    if (!audio.src || !currentTrack) {
+      // If loadPaidStream is still loading (HLS initializing or fallback in progress),
+      // don't show an error. The source will be set when ready.
+      if (isFallingBackRef.current) return;
+      // Brief wait for async loadPaidStream to set the source
+      await new Promise(r => setTimeout(r, 500));
+      if (!audio.src || !currentTrack) {
+        await new Promise(r => setTimeout(r, 1500));
+        if (!audio.src || !currentTrack) {
+          setError("No audio source loaded");
+          return;
+        }
+      }
+    }
 
     // If at end, reset to beginning
     if (duration > 0 && audio.currentTime >= duration - 0.1) {
