@@ -60,8 +60,8 @@ async function isTestModeAllowed(
     }
   }
 
-  // Also allow in preview/dev environments
-  return true; // Safe default for Lovable Cloud preview environments
+  // Production: test mode not allowed for non-admins
+  return false;
 }
 
 Deno.serve(async (req) => {

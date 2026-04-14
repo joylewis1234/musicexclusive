@@ -12,6 +12,8 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Only allow service_role calls (from Stripe webhook or admin).
+    // Direct client calls must go through Stripe Checkout first.
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -20,37 +22,57 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Validate user token
-    const anonClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } =
-      await anonClient.auth.getClaims(token);
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-    if (claimsError || !claimsData?.claims) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    // If the token is the service_role key, allow. Otherwise reject.
+    if (token !== serviceRoleKey) {
+      // Check if caller is an admin (for manual adjustments)
+      const anonClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: userData, error: userError } = await anonClient.auth.getUser();
+      if (userError || !userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Check admin role
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        serviceRoleKey!
+      );
+      const { data: roleData } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userData.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+
+      if (!roleData) {
+        return new Response(
+          JSON.stringify({ error: "Credit topups require payment through Stripe" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
-    const email = claimsData.claims.email as string;
+    // Parse body - email, credits, usd all required from webhook or admin
+    const { email, credits, usd } = await req.json();
     if (!email) {
       return new Response(
-        JSON.stringify({ error: "No email in token claims" }),
+        JSON.stringify({ error: "email is required" }),
         {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
-
-    // Parse body
-    const { credits, usd } = await req.json();
 
     if (!credits || credits <= 0) {
       return new Response(
