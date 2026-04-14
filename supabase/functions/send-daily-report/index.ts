@@ -403,6 +403,29 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
+// ── Auth helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Decode a JWT payload without signature verification and check if it carries
+ * role: service_role (Supabase cron jobs authenticate this way).
+ * Also checks the expiry so stale tokens don't pass.
+ */
+function hasServiceRoleJwt(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    // atob on URL-safe base64 needs padding restoration
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    if (payload.role !== "service_role") return false;
+    if (payload.exp && payload.exp < Date.now() / 1000) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ── Main Handler ─────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -410,18 +433,27 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // ── Verify admin access ────────────────────────────────────────
-  const { user: adminUser, error: adminError } = await verifyAdmin(
-    req.headers.get("Authorization")
-  );
-  if (adminError || !adminUser) {
-    logStep("AUTH DENIED", { error: adminError });
-    return new Response(
-      JSON.stringify({ error: adminError || "Forbidden" }),
-      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+  // ── Verify access ──────────────────────────────────────────────
+  // Allow service_role callers (Supabase cron jobs) to bypass admin JWT check.
+  // Detect service_role by decoding the JWT payload and checking the role claim.
+  // All other callers must be an authenticated admin.
+  const authHeader = req.headers.get("Authorization");
+  const token = authHeader?.replace("Bearer ", "") ?? "";
+  const isServiceRole = hasServiceRoleJwt(token);
+
+  if (!isServiceRole) {
+    const { user: adminUser, error: adminError } = await verifyAdmin(authHeader);
+    if (adminError || !adminUser) {
+      logStep("AUTH DENIED", { error: adminError });
+      return new Response(
+        JSON.stringify({ error: adminError || "Forbidden" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    logStep("Authorized admin", { email: adminUser.email });
+  } else {
+    logStep("Authorized via service_role (cron)");
   }
-  logStep("Authorized admin", { email: adminUser.email });
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
