@@ -187,7 +187,7 @@ const App = () => {
                 <Route path="/fan/agreements" element={<FanAgreementStep />} />
                 <Route path="/onboarding/listen" element={<ChooseAccess />} />
                 <Route path="/subscribe" element={<PaymentErrorBoundary onBack={() => window.history.back()}><Subscribe /></PaymentErrorBoundary>} />
-                <Route path="/load-credits" element={<Navigate to="/fan/add-credits" replace />} />
+                <Route path="/load-credits" element={<AddCredits />} />
                 <Route path="/checkout/return" element={<CheckoutReturn />} />
                 <Route path="/terms" element={<Terms />} />
                 <Route path="/privacy" element={<PrivacyPolicy />} />

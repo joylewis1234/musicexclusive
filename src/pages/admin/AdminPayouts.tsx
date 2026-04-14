@@ -504,8 +504,8 @@ const AdminPayouts = () => {
                   <p className="text-sm font-medium text-foreground">Weekly Auto-Payouts</p>
                   <p className="text-xs text-muted-foreground">
                     {autoPayoutsEnabled
-                      ? "Payouts will be processed automatically each week"
-                      : "Payouts are manual only. Enable to auto-process approved batches weekly."}
+                      ? "Enabled. Cron job will auto-process approved batches weekly once configured."
+                      : "Disabled. Payouts are manual only. Toggle on to opt in to automated weekly processing."}
                   </p>
                 </div>
               </div>

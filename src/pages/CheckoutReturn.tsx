@@ -18,7 +18,7 @@ const CheckoutReturn = () => {
   const requestedReturnPath = searchParams.get("return_to");
 
   const retryPath = useMemo(() => {
-    const allowedPaths = new Set(["/subscribe", "/fan/add-credits"]);
+    const allowedPaths = new Set(["/subscribe", "/fan/add-credits", "/load-credits"]);
     if (requestedReturnPath && allowedPaths.has(requestedReturnPath)) {
       return requestedReturnPath;
     }

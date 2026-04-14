@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, Coins, Loader2, Wallet } from "lucide-react";
 import { GlowCard } from "@/components/ui/GlowCard";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -29,12 +29,29 @@ const QUICK_OPTIONS: CreditOption[] = [
   { credits: 100, dollars: 20 },
 ];
 
+interface LocationState {
+  topUpCredits?: number;
+  flow?: string;
+}
+
 const AddCredits = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const locationState = location.state as LocationState | null;
   const { credits: currentBalance, refetch } = useCredits();
   const { user } = useAuth();
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedOption, setSelectedOption] = useState<CreditOption | null>(null);
+
+  // Auto-trigger purchase if navigated with a specific credit amount
+  useEffect(() => {
+    if (locationState?.topUpCredits && user?.email) {
+      const match = QUICK_OPTIONS.find(o => o.credits === locationState.topUpCredits);
+      if (match) {
+        handlePurchase(match);
+      }
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePurchase = async (option: CreditOption) => {
     if (!user?.email) {

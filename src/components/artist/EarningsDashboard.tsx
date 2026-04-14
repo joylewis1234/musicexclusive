@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, DollarSign, Clock, CheckCircle2, XCircle, TrendingUp, Music } from "lucide-react";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 
-
 interface PayoutBatch {
   id: string;
   week_start: string;
