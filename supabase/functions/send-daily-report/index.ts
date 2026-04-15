@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
-import { verifyAdmin } from "../_shared/verify-admin.ts";
+import { verifyAdmin, hasServiceRoleJwt } from "../_shared/verify-admin.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -403,29 +403,6 @@ function escapeHtml(str: string): string {
     .replace(/'/g, "&#39;");
 }
 
-// ── Auth helpers ──────────────────────────────────────────────────────────
-
-/**
- * Decode a JWT payload without signature verification and check if it carries
- * role: service_role (Supabase cron jobs authenticate this way).
- * Also checks the expiry so stale tokens don't pass.
- */
-function hasServiceRoleJwt(token: string): boolean {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return false;
-    // atob on URL-safe base64 needs padding restoration
-    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
-    const payload = JSON.parse(atob(padded));
-    if (payload.role !== "service_role") return false;
-    if (payload.exp && payload.exp < Date.now() / 1000) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 // ── Main Handler ─────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -434,26 +411,17 @@ serve(async (req) => {
   }
 
   // ── Verify access ──────────────────────────────────────────────
-  // Allow service_role callers (Supabase cron jobs) to bypass admin JWT check.
-  // Detect service_role by decoding the JWT payload and checking the role claim.
-  // All other callers must be an authenticated admin.
+  // verifyAdmin() now handles both admin users AND service_role JWTs (pg_cron).
   const authHeader = req.headers.get("Authorization");
-  const token = authHeader?.replace("Bearer ", "") ?? "";
-  const isServiceRole = hasServiceRoleJwt(token);
-
-  if (!isServiceRole) {
-    const { user: adminUser, error: adminError } = await verifyAdmin(authHeader);
-    if (adminError || !adminUser) {
-      logStep("AUTH DENIED", { error: adminError });
-      return new Response(
-        JSON.stringify({ error: adminError || "Forbidden" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    logStep("Authorized admin", { email: adminUser.email });
-  } else {
-    logStep("Authorized via service_role (cron)");
+  const { user: adminUser, error: adminError } = await verifyAdmin(authHeader);
+  if (adminError || !adminUser) {
+    logStep("AUTH DENIED", { error: adminError });
+    return new Response(
+      JSON.stringify({ error: adminError || "Forbidden" }),
+      { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   }
+  logStep("Authorized", { id: adminUser.id, email: adminUser.email });
 
   const supabaseAdmin = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",

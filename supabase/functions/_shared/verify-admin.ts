@@ -6,12 +6,34 @@ export interface VerifyAdminResult {
 }
 
 /**
- * Verifies that the request is from an authenticated admin user.
+ * Decode a JWT payload (no signature check) and return true when the token
+ * carries `role: "service_role"` and is not expired.  Supabase pg_cron jobs
+ * authenticate with this JWT, so scheduled Edge Functions must accept it.
+ */
+export function hasServiceRoleJwt(token: string): boolean {
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = b64 + "=".repeat((4 - (b64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    if (payload.role !== "service_role") return false;
+    if (payload.exp && payload.exp < Date.now() / 1000) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Verifies that the request is from an authenticated admin user OR a
+ * service_role caller (pg_cron / scheduled jobs).
  *
  * Admin access requires BOTH:
  * 1. A row in user_roles with role='admin'
  * 2. The user's email on the fixed allowlist (is_admin_email)
  *
+ * Service_role callers bypass both checks (they already have full DB access).
  * This prevents privilege escalation even if a rogue role row exists.
  */
 export async function verifyAdmin(authHeader: string | null): Promise<VerifyAdminResult> {
@@ -20,6 +42,11 @@ export async function verifyAdmin(authHeader: string | null): Promise<VerifyAdmi
   }
 
   const token = authHeader.replace("Bearer ", "");
+
+  // Service_role JWTs (pg_cron, scheduled jobs) bypass admin checks
+  if (hasServiceRoleJwt(token)) {
+    return { user: { id: "service_role", email: "cron@system" }, error: null };
+  }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
