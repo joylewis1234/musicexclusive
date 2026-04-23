@@ -185,16 +185,16 @@ onClick={() => navigate("/subscribe")}
             <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
             
             {/* Animated glow orbs behind */}
-            <div className="absolute inset-0 bg-secondary/40 blur-[120px] rounded-full scale-90 animate-pulse" />
-            <div className="absolute inset-0 bg-accent/30 blur-[100px] rounded-full scale-100 animate-pulse [animation-delay:1s]" />
-            <div className="absolute inset-0 bg-primary/30 blur-[90px] rounded-full scale-95 animate-pulse [animation-delay:0.5s]" />
+            <div className="absolute inset-0 bg-secondary/30 blur-[140px] rounded-full scale-110 animate-pulse" />
+            <div className="absolute inset-0 bg-accent/25 blur-[120px] rounded-full scale-[1.15] animate-pulse [animation-delay:1s]" />
+            <div className="absolute inset-0 bg-primary/25 blur-[110px] rounded-full scale-110 animate-pulse [animation-delay:0.5s]" />
 
             {/* Inner radial vignette to brighten background behind portal */}
             <div
-              className="absolute inset-[10%] rounded-full"
+              className="absolute inset-[15%] rounded-full"
               style={{
-                background: 'radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)',
-                filter: 'blur(40px)',
+                background: 'radial-gradient(circle, hsl(var(--primary) / 0.18) 0%, transparent 70%)',
+                filter: 'blur(60px)',
               }}
             />
 
@@ -202,14 +202,15 @@ onClick={() => navigate("/subscribe")}
             <div
               className="relative w-full h-full"
               style={{
-                maskImage: 'radial-gradient(circle at center, black 35%, transparent 72%)',
-                WebkitMaskImage: 'radial-gradient(circle at center, black 35%, transparent 72%)',
+                maskImage: 'radial-gradient(circle at center, black 50%, transparent 82%)',
+                WebkitMaskImage: 'radial-gradient(circle at center, black 50%, transparent 82%)',
               }}
             >
               <img
                 src={vaultPortal}
                 alt="Vault Portal"
-                className="w-full h-full object-contain vault-glow mix-blend-screen"
+                className="w-full h-full object-contain vault-glow mix-blend-lighten"
+                style={{ filter: 'contrast(1.2) saturate(1.25) brightness(1.05)', imageRendering: 'auto' }}
               />
             </div>
             
