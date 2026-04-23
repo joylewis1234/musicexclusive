@@ -90,25 +90,6 @@ const Index = () => {
       <Header />
       <VaultLockedModal open={vaultLocked} onOpenChange={setVaultLocked} />
 
-      {/* Decorative orbital arc — left side */}
-      <svg
-        className="absolute top-[300px] -left-[250px] md:-left-[350px] w-[600px] md:w-[900px] h-[1100px] md:h-[1400px] pointer-events-none z-0"
-        viewBox="0 0 900 1400"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
-        <ellipse
-          cx="450"
-          cy="700"
-          rx="420"
-          ry="650"
-          stroke="hsl(var(--primary))"
-          strokeWidth="1"
-          opacity="0.15"
-          style={{ filter: 'drop-shadow(0 0 15px hsl(var(--primary) / 0.3))' }}
-        />
-      </svg>
-
       {/* Artist Preview Strip - Social Proof */}
       <section className="pt-20 pb-4 overflow-hidden">
         <ArtistPreviewStrip artists={artists} />
