@@ -729,8 +729,7 @@ const ArtistBenefits = () => {
       {/* SECTION 9 — CTA (Strong Close) */}
       <section className="relative px-4 py-20 overflow-hidden">
         <svg
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-spin"
-          style={{ animationDuration: '150s' }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none"
           width="1200"
           height="1200"
           viewBox="0 0 1200 1200"
@@ -744,10 +743,19 @@ const ArtistBenefits = () => {
             fill="none"
             stroke="hsl(var(--primary))"
             strokeWidth="1.25"
-            opacity="0.3"
-            style={{ filter: 'drop-shadow(0 0 20px hsl(var(--primary) / 0.6))' }}
+            opacity="0.4"
+            style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.5))' }}
           />
         </svg>
+        {/* Hotspot for CTA ring (bottom-center arc) */}
+        <div
+          className="absolute left-1/2 top-1/2 z-0 w-[300px] h-[300px] rounded-full blur-2xl pointer-events-none"
+          style={{
+            transform: 'translate(-150px, 420px)',
+            background: 'radial-gradient(circle, hsl(var(--primary) / 0.35) 0%, transparent 70%)',
+          }}
+          aria-hidden="true"
+        />
         <div className="container max-w-lg md:max-w-md mx-auto text-center relative z-10">
           <h2 className="text-2xl md:text-3xl font-display font-black text-foreground mb-6">
             Your Next Release Should{" "}
