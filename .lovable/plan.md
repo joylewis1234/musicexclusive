@@ -1,21 +1,31 @@
 
 
-## Plan: Make orbital rings neon to match page colors
+## Plan: Stationary glowing rings (no rotation)
 
-Update the 3 hero rings (and optional bottom-CTA ring) in `src/pages/ArtistBenefits.tsx` to use the page's neon palette instead of white.
+Update the orbital rings in `src/pages/ArtistBenefits.tsx` to match the reference: stationary thin neon arcs with a concentrated glow hotspot rather than uniformly spinning.
 
-### Color assignment
-Use the existing CSS variables already driving the page's neon look:
-- **Ring 1** (largest, ~1600px) — `stroke="hsl(var(--primary))"` (neon pink), opacity `0.45`, glow `drop-shadow(0 0 25px hsl(var(--primary) / 0.7))`, 180s spin
-- **Ring 2** (~1400px, tilted 15°) — `stroke="hsl(var(--secondary))"` (cyan/blue), opacity `0.4`, glow `drop-shadow(0 0 20px hsl(var(--secondary) / 0.6))`, 140s spin reverse
-- **Ring 3** (~1200px, tilted -25°) — `stroke="hsl(var(--accent))"` (purple), opacity `0.4`, glow `drop-shadow(0 0 20px hsl(var(--accent) / 0.6))`, 100s spin
-- **Ring 4** (bottom CTA, ~1200px) — `stroke="hsl(var(--primary))"`, opacity `0.3`, glow primary, 150s spin
+### Changes
 
-### Other tweaks
-- Bump `strokeWidth` from `1` to `1.25` so the neon strokes read clearly against the dark background.
-- Keep all geometry, sizing, positioning, animation durations, and z-index layering exactly as in the previous orbital-rings update.
-- Keep the demoted glow blobs at `-z-20` so they don't wash out the neon strokes.
+**1. Remove rotation**
+- Strip `animate-spin` and the inline `animationDuration` / `animationDirection` styles from all 4 ring containers (3 in hero + 1 in bottom CTA).
+- Rings stay positioned exactly where they are now — just no motion.
+
+**2. Concentrated glow hotspot (per ring)**
+Instead of a uniform `drop-shadow` on the ellipse, layer two elements per ring inside the same absolutely-positioned container:
+- The thin SVG `<ellipse>` itself: keep stroke color, raise opacity slightly (`0.5` for ring 1, `0.45` for rings 2 & 3), keep `strokeWidth="1.25"`, drop the heavy `drop-shadow` filter (or reduce to `drop-shadow(0 0 6px ...)` for crispness).
+- A small radial-glow `<div>` positioned at one point along the ring's arc (top-left for ring 1, bottom-right for ring 2, top-right for ring 3, bottom-center for the CTA ring). Each glow:
+  - `w-[300px] h-[300px] rounded-full`
+  - Background: `radial-gradient(circle, hsl(var(--primary) / 0.35) 0%, transparent 70%)` (color matches its ring)
+  - `blur-2xl`
+  - `pointer-events-none`
+
+This creates the "bright spot on the arc" look from the reference instead of uniform glow.
+
+**3. Keep everything else**
+- Same ring sizes, tilts, viewBox, positioning, z-index layering (`z-0` rings, `z-10` content).
+- Same neon palette (primary pink, secondary cyan, accent purple).
+- Demoted background blur blobs stay as-is.
 
 ### Scope
-Single file: `src/pages/ArtistBenefits.tsx`. No new imports, no other sections touched, no backend changes.
+Single file: `src/pages/ArtistBenefits.tsx`. No imports added, no other sections changed, no backend.
 
