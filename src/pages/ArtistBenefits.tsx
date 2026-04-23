@@ -703,8 +703,28 @@ const ArtistBenefits = () => {
       </section>
 
       {/* SECTION 9 — CTA (Strong Close) */}
-      <section className="px-4 py-20">
-        <div className="container max-w-lg md:max-w-md mx-auto text-center">
+      <section className="relative px-4 py-20 overflow-hidden">
+        <svg
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none animate-spin"
+          style={{ animationDuration: '150s' }}
+          width="1200"
+          height="1200"
+          viewBox="0 0 1200 1200"
+          aria-hidden="true"
+        >
+          <ellipse
+            cx="600"
+            cy="600"
+            rx="580"
+            ry="580"
+            fill="none"
+            stroke="hsl(var(--primary))"
+            strokeWidth="1.25"
+            opacity="0.3"
+            style={{ filter: 'drop-shadow(0 0 20px hsl(var(--primary) / 0.6))' }}
+          />
+        </svg>
+        <div className="container max-w-lg md:max-w-md mx-auto text-center relative">
           <h2 className="text-2xl md:text-3xl font-display font-black text-foreground mb-6">
             Your Next Release Should{" "}
             <span className="gradient-text">Pay You Twice.</span>
