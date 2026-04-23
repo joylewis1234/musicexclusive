@@ -44,8 +44,8 @@ const ArtistBenefits = () => {
       <section className="relative px-4 pt-28 pb-20 min-h-[700px] overflow-hidden">
         {/* Animated glow background (demoted behind rings) */}
         <div className="absolute inset-0 z-0">
-          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 blur-[100px] rounded-full animate-pulse" />
-          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-secondary/10 blur-[80px] rounded-full animate-pulse [animation-delay:1s]" />
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/8 blur-[100px] rounded-full animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-secondary/8 blur-[80px] rounded-full animate-pulse [animation-delay:1s]" />
         </div>
 
         {/* Decorative orbital ring arcs — neon, viewport-wide, centered on hero */}
@@ -63,9 +63,9 @@ const ArtistBenefits = () => {
             ry="780"
             fill="none"
             stroke="hsl(var(--primary))"
-            strokeWidth="2"
-            opacity="0.85"
-            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.9))' }}
+            strokeWidth="1.5"
+            opacity="0.2"
+            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.3))' }}
           />
         </svg>
         {/* Hotspot for ring 1 (top-left arc) */}
@@ -73,7 +73,7 @@ const ArtistBenefits = () => {
           className="absolute left-1/2 top-1/2 z-0 w-[400px] h-[400px] rounded-full blur-2xl pointer-events-none"
           style={{
             transform: 'translate(-680px, -480px)',
-            background: 'radial-gradient(circle, hsl(var(--primary) / 0.7) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, hsl(var(--primary) / 0.12) 0%, transparent 70%)',
           }}
           aria-hidden="true"
         />
@@ -91,10 +91,10 @@ const ArtistBenefits = () => {
             ry="620"
             fill="none"
             stroke="hsl(var(--secondary))"
-            strokeWidth="2"
-            opacity="0.8"
+            strokeWidth="1.5"
+            opacity="0.18"
             transform="rotate(15 700 700)"
-            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--secondary) / 0.8))' }}
+            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--secondary) / 0.25))' }}
           />
         </svg>
         {/* Hotspot for ring 2 (bottom-right arc) */}
@@ -102,7 +102,7 @@ const ArtistBenefits = () => {
           className="absolute left-1/2 top-1/2 z-0 w-[400px] h-[400px] rounded-full blur-2xl pointer-events-none"
           style={{
             transform: 'translate(420px, 380px)',
-            background: 'radial-gradient(circle, hsl(var(--secondary) / 0.7) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, hsl(var(--secondary) / 0.12) 0%, transparent 70%)',
           }}
           aria-hidden="true"
         />
@@ -120,10 +120,10 @@ const ArtistBenefits = () => {
             ry="540"
             fill="none"
             stroke="hsl(var(--accent))"
-            strokeWidth="2"
-            opacity="0.8"
+            strokeWidth="1.5"
+            opacity="0.15"
             transform="rotate(-25 600 600)"
-            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--accent) / 0.8))' }}
+            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--accent) / 0.25))' }}
           />
         </svg>
         {/* Hotspot for ring 3 (top-right arc) */}
@@ -131,7 +131,7 @@ const ArtistBenefits = () => {
           className="absolute left-1/2 top-1/2 z-0 w-[400px] h-[400px] rounded-full blur-2xl pointer-events-none"
           style={{
             transform: 'translate(380px, -360px)',
-            background: 'radial-gradient(circle, hsl(var(--accent) / 0.7) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, hsl(var(--accent) / 0.12) 0%, transparent 70%)',
           }}
           aria-hidden="true"
         />
@@ -742,9 +742,9 @@ const ArtistBenefits = () => {
             ry="580"
             fill="none"
             stroke="hsl(var(--primary))"
-            strokeWidth="2"
-            opacity="0.75"
-            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.8))' }}
+            strokeWidth="1.5"
+            opacity="0.18"
+            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.25))' }}
           />
         </svg>
         {/* Hotspot for CTA ring (bottom-center arc) */}
@@ -752,7 +752,7 @@ const ArtistBenefits = () => {
           className="absolute left-1/2 top-1/2 z-0 w-[400px] h-[400px] rounded-full blur-2xl pointer-events-none"
           style={{
             transform: 'translate(-150px, 420px)',
-            background: 'radial-gradient(circle, hsl(var(--primary) / 0.7) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, hsl(var(--primary) / 0.12) 0%, transparent 70%)',
           }}
           aria-hidden="true"
         />
