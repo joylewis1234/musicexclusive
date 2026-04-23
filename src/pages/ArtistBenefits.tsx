@@ -742,17 +742,17 @@ const ArtistBenefits = () => {
             ry="580"
             fill="none"
             stroke="hsl(var(--primary))"
-            strokeWidth="1.25"
-            opacity="0.4"
-            style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.5))' }}
+            strokeWidth="2"
+            opacity="0.75"
+            style={{ filter: 'drop-shadow(0 0 10px hsl(var(--primary) / 0.8))' }}
           />
         </svg>
         {/* Hotspot for CTA ring (bottom-center arc) */}
         <div
-          className="absolute left-1/2 top-1/2 z-0 w-[300px] h-[300px] rounded-full blur-2xl pointer-events-none"
+          className="absolute left-1/2 top-1/2 z-0 w-[400px] h-[400px] rounded-full blur-2xl pointer-events-none"
           style={{
             transform: 'translate(-150px, 420px)',
-            background: 'radial-gradient(circle, hsl(var(--primary) / 0.35) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, hsl(var(--primary) / 0.7) 0%, transparent 70%)',
           }}
           aria-hidden="true"
         />
