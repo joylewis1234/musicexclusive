@@ -139,9 +139,9 @@ const Index = () => {
 
             {/* Superfan CTA — Premium VIP treatment */}
             <div className="relative w-full max-w-xs">
-              <p className="text-base font-display uppercase tracking-wider text-foreground text-center mb-3">
-                Want instant access?
-              </p>
+               <p className="text-base font-display uppercase tracking-wider text-foreground text-center mb-3">
+                 GET INSTANT ACCESS
+               </p>
               <Button 
                 size="xl" 
                 className="w-full animate-glow-pulse"
