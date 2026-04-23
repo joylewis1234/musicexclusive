@@ -1,58 +1,37 @@
 
 
-## Plan: Make vault portal fully blend into the page (no visible square)
+## Plan: Sharpen the vault portal
 
-The mask is already wide, but the dark/black corners of `vault-portal.png` still show because `mix-blend-lighten` only hides black against an even darker background — and the mask edge fade is too narrow. Tighten the visible portal area into a true circle and let it dissolve into the page.
+The portal currently looks soft because (a) `mix-blend-screen` washes out detail by adding the dark background to the image, (b) the radial mask cuts in tight at 72%, and (c) heavy `blur` orbs sit close behind it, fogging the edges of the rings.
 
-### Changes — `src/pages/Index.tsx` (vault portal block, ~lines 183–212)
+### Changes — `src/pages/Index.tsx` (vault portal block)
 
-**1. Tighten + circularize the mask** (kills the square corners completely)
+**1. Restore image clarity**
+- Replace `mix-blend-screen` on the `<img>` with `mix-blend-lighten` plus a CSS contrast/saturation boost. `lighten` keeps brighter neon pixels at full strength instead of summing them with the page, while `contrast(1.2) saturate(1.25) brightness(1.05)` brings back crisp ring edges.
+- Add `image-rendering: high-quality` via inline style on the `<img>` to prevent any browser-side downscaling softness.
 
-Replace the mask wrapper with a perfect circular fade that starts fading earlier and ends sooner:
 ```jsx
-<div
-  className="relative w-full h-full"
-  style={{
-    maskImage: 'radial-gradient(circle at center, black 35%, transparent 72%)',
-    WebkitMaskImage: 'radial-gradient(circle at center, black 35%, transparent 72%)',
-  }}
->
-  <img
-    src={vaultPortal}
-    alt="Vault Portal"
-    className="w-full h-full object-contain vault-glow mix-blend-screen"
-  />
-</div>
-```
-Key shifts:
-- `ellipse 85% 85%` → `circle` (forces a true round cutout, not rectangle-shaped ellipse).
-- Fade window `30% → 90%` → `35% → 72%` (steeper but starts well inside the frame, so all corner pixels are fully transparent).
-- `mix-blend-lighten` → `mix-blend-screen` (more aggressively eliminates dark grays, not just pure black, so any near-black halo in the PNG disappears).
-
-**2. Strengthen the surrounding glow so the portal reads as emerging from light, not pasted on**
-
-Update the three glow orbs (lines 188–190):
-- `bg-secondary/30 blur-[100px] scale-75` → `bg-secondary/40 blur-[120px] scale-90`
-- `bg-accent/20 blur-[80px] scale-90` → `bg-accent/30 blur-[100px] scale-100`
-- `bg-primary/20 blur-[70px] scale-80` → `bg-primary/30 blur-[90px] scale-95`
-
-This widens the ambient glow halo so the masked edge of the portal lands on a lit area — eliminating any perceived "edge."
-
-**3. Add an inner radial vignette behind the image**
-
-Insert one more glow layer immediately before the masked image wrapper to brighten the page background where the portal sits, so the blended portal looks like it's emanating from the page:
-```jsx
-<div
-  className="absolute inset-[10%] rounded-full"
-  style={{
-    background: 'radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)',
-    filter: 'blur(40px)',
-  }}
+<img
+  src={vaultPortal}
+  alt="Vault Portal"
+  className="w-full h-full object-contain vault-glow mix-blend-lighten"
+  style={{ filter: 'contrast(1.2) saturate(1.25) brightness(1.05)', imageRendering: 'high-quality' }}
 />
 ```
 
+**2. Widen the visible portal area** so more of the sharp ring detail shows before the fade begins
+- Mask: `circle at center, black 35%, transparent 72%` → `circle at center, black 50%, transparent 82%`. The portal stays fully opaque across its core (rings + center), then dissolves only at the very outer halo.
+
+**3. Pull the heavy blur orbs back** so they no longer fog the rings
+- `bg-secondary/40 blur-[120px] scale-90` → `bg-secondary/30 blur-[140px] scale-110`
+- `bg-accent/30 blur-[100px] scale-100` → `bg-accent/25 blur-[120px] scale-115`
+- `bg-primary/30 blur-[90px] scale-95` → `bg-primary/25 blur-[110px] scale-110`
+- Inner vignette `inset-[10%]` `blur(40px)` → `inset-[15%]` `blur(60px)` and lower alpha from `0.25` to `0.18`.
+
+Net effect: the glow halo gets larger and softer (still emerging from the page), while the portal itself sits in front of it cleanly, looking noticeably sharper and more saturated.
+
 ### Scope
-- Single file: `src/pages/Index.tsx`.
-- No new imports, no other sections touched, no backend, no asset changes.
-- Mobile + desktop layout preserved (all changes are within the existing `aspect-square` container).
+- Single file: `src/pages/Index.tsx`, vault portal section only.
+- No new imports, no asset changes, no other sections touched, no backend.
+- Mobile + desktop layout untouched (all changes inside the existing `aspect-square` container).
 
