@@ -43,14 +43,14 @@ const ArtistBenefits = () => {
       {/* SECTION 1 — HERO */}
       <section className="relative px-4 pt-28 pb-20 min-h-[700px] overflow-hidden">
         {/* Animated glow background (demoted behind rings) */}
-        <div className="absolute inset-0 -z-20">
+        <div className="absolute inset-0 z-0">
           <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 blur-[100px] rounded-full animate-pulse" />
           <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-secondary/10 blur-[80px] rounded-full animate-pulse [animation-delay:1s]" />
         </div>
 
         {/* Decorative orbital ring arcs — neon, viewport-wide, centered on hero */}
         <svg
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none animate-spin"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-spin"
           style={{ animationDuration: '180s' }}
           width="1600"
           height="1600"
@@ -70,7 +70,7 @@ const ArtistBenefits = () => {
           />
         </svg>
         <svg
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none animate-spin"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-spin"
           style={{ animationDuration: '140s', animationDirection: 'reverse' }}
           width="1400"
           height="1400"
@@ -91,7 +91,7 @@ const ArtistBenefits = () => {
           />
         </svg>
         <svg
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none animate-spin"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-spin"
           style={{ animationDuration: '100s' }}
           width="1200"
           height="1200"
@@ -112,7 +112,7 @@ const ArtistBenefits = () => {
           />
         </svg>
 
-        <div className="container max-w-lg md:max-w-2xl mx-auto text-center relative">
+        <div className="container max-w-lg md:max-w-2xl mx-auto text-center relative z-10">
           <h1 className="text-3xl md:text-5xl font-display font-black tracking-tight text-foreground mb-6 animate-fade-up">
             Turn Your Pre-Release Into{" "}
             <span className="gradient-text">Real Weekly Income.</span>
