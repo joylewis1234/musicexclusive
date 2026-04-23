@@ -146,7 +146,7 @@ onClick={() => navigate("/subscribe")}
               >
                 Skip the Vault — Enter Now
               </Button>
-              <p className="text-primary text-sm font-body mt-2 text-center animate-glow-pulse"
+              <p className="text-primary text-sm font-body mt-2 text-center"
                 style={{ textShadow: '0 0 8px hsl(var(--primary) / 0.6), 0 0 20px hsl(var(--primary) / 0.3)' }}>
                 Instant access. No waiting.
               </p>
