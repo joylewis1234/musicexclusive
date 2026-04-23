@@ -11,7 +11,7 @@ import { ARTIST_APPLICATION_ENTRY_ENABLED } from "@/config/artistEntry"
 const mainNavItems: { title: string; href: string; icon: typeof Home; disabled?: boolean }[] = [
   { title: "Home", href: "/", icon: Home },
   { title: "How It Works", href: "/#how-it-works", icon: HelpCircle },
-  { title: "Artist Benefits", href: "/artist-benefits", icon: Crown },
+  { title: "For Artists", href: "/artist-benefits", icon: Crown },
   { title: "Enter the Vault", href: "/vault/enter", icon: KeyRound },
   { title: "Become a Superfan", href: "#vault-locked", icon: Star },
   { title: "Join Fan Waitlist", href: "/founding-superfan", icon: Heart },

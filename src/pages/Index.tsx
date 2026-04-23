@@ -190,11 +190,19 @@ onClick={() => navigate("/subscribe")}
             <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
             
             {/* Static vault portal image with breathing glow */}
-            <img
-              src={vaultPortal}
-              alt="Vault Portal"
-              className="relative w-full h-full object-contain vault-glow mix-blend-screen"
-            />
+            <div
+              className="relative w-full h-full"
+              style={{
+                maskImage: 'radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%)',
+              }}
+            >
+              <img
+                src={vaultPortal}
+                alt="Vault Portal"
+                className="w-full h-full object-contain vault-glow mix-blend-lighten"
+              />
+            </div>
             
             {/* Inner energy lightning effect - overlaid on top with blend mode */}
             <div className="absolute inset-[20%] rounded-full overflow-hidden pointer-events-none mix-blend-screen">
@@ -249,7 +257,6 @@ onClick={() => navigate("/subscribe")}
         </div>
       </section>
 
-      {/* Second Vault Portal Section */}
       {/* Benefits Section */}
       <section className="px-4 py-16">
         <div className="container max-w-lg md:max-w-2xl mx-auto">
@@ -317,14 +324,20 @@ onClick={() => navigate("/subscribe")}
             </Button>
           </div>
 
-          {/* Subtle artist link */}
-          <button
-            onClick={() => navigate("/artist-benefits")}
-            className="text-muted-foreground text-xs hover:text-primary transition-colors cursor-pointer mt-6 mx-auto block"
-          >
-            Are you an artist? Learn how to earn here →
-          </button>
         </div>
+      </section>
+
+      {/* Are You an Artist? */}
+      <section className="px-4 py-8 text-center">
+        <p className="text-muted-foreground text-sm font-body mb-2">Are you an artist?</p>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-primary hover:text-primary/80"
+          onClick={() => navigate("/artist-benefits")}
+        >
+          Learn how to earn on Music Exclusive →
+        </Button>
       </section>
 
       {/* Footer */}
