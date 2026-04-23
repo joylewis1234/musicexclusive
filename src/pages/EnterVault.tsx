@@ -189,12 +189,20 @@ const EnterVault = () => {
         
         {/* Vault Portal Container */}
         <div className="relative mx-auto w-full max-w-sm md:max-w-md aspect-square">
-          {/* Static vault portal image with breathing glow */}
-          <img
-            src={vaultPortal}
-            alt="Vault Portal"
-            className="relative w-full h-full object-contain vault-glow mix-blend-screen z-10"
-          />
+          {/* Static vault portal image with breathing glow + radial mask to hide square edges */}
+          <div
+            className="relative w-full h-full z-10"
+            style={{
+              maskImage: 'radial-gradient(circle at center, black 35%, transparent 72%)',
+              WebkitMaskImage: 'radial-gradient(circle at center, black 35%, transparent 72%)',
+            }}
+          >
+            <img
+              src={vaultPortal}
+              alt="Vault Portal"
+              className="w-full h-full object-contain vault-glow mix-blend-screen"
+            />
+          </div>
           
           {/* Inner energy lightning effect - overlaid on top with blend mode */}
           <div className="absolute inset-[20%] rounded-full overflow-hidden pointer-events-none mix-blend-screen z-20">
