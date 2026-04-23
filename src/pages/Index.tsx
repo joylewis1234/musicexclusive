@@ -139,11 +139,6 @@ const Index = () => {
 
             {/* Superfan CTA — Premium VIP treatment */}
             <div className="relative w-full max-w-xs">
-              <div className="flex justify-center mb-2">
-                <span className="text-xs font-display uppercase tracking-[0.25em] text-primary/90 border border-primary/30 rounded-full px-4 py-1 bg-primary/5">
-                  Instant Access
-                </span>
-              </div>
               <p className="text-base font-display uppercase tracking-wider text-foreground text-center mb-3">
                 Want instant access?
               </p>
