@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
 import { VaultLockedModal } from "@/components/vault/VaultLockedModal"
 import Footer from "@/components/Footer"
-import { ARTIST_APPLICATION_ENTRY_ENABLED } from "@/config/artistEntry"
 import { ArtistCard } from "@/components/ArtistCard"
 import { ArtistPreviewStrip } from "@/components/ArtistPreviewStrip"
 import { ArtistCardCarousel } from "@/components/ArtistCardCarousel"
@@ -79,24 +78,6 @@ const benefits = [
     number: 3,
     title: "Exclusive Access",
     description: "Private releases, early drops, and Vault-only experiences.",
-  },
-]
-
-const artistBenefits = [
-  {
-    number: 1,
-    title: "Own Your Masters",
-    description: "Keep 100% ownership of your music. No label deals required.",
-  },
-  {
-    number: 2,
-    title: "Get Paid Per Stream",
-    description: "Every stream earns you real revenue — transparent and direct.",
-  },
-  {
-    number: 3,
-    title: "Cash Bonus Program",
-    description: "Hit stream milestones and unlock up to $300 in cash bonuses.",
   },
 ]
 
