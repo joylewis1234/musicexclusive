@@ -1,29 +1,33 @@
-## Plan: Add "or" and "Become a superfan" above Superfan CTA
 
-Insert two new lines above the "Superfans don't wait." text in the Superfan CTA section on the homepage.
+
+## Plan: Enlarge "Become a superfan" to match hero headline
+
+Update the "Become a superfan" headline in the Superfan CTA block on the homepage to match the visual weight of the hero headline ("STEP INSIDE THE VAULT: / THE FUTURE OF MUSIC IS HERE.").
 
 ### File
-
 `src/pages/Index.tsx`
 
 ### Change
+Replace the current `<h3>` element:
 
-In the Superfan CTA `<div>` (lines 194-208), add before the existing `<p className="text-lg font-display font-bold text-foreground mb-1">`:
+```tsx
+<h3 className="text-foreground text-xl font-display font-bold text-center mb-3">
+  Become a superfan
+</h3>
+```
 
-1. An "or" divider element (centered text with muted styling)
-2. A "Become a superfan" headline (styled as an H3 with display font, centered)
+With an `<h2>` that inherits the same global heading styles as the hero `<h1>` (Exo2 display font via global `h1, h2, h3` base styles in `index.css`), sized and weighted to match:
 
-The new order inside the Superfan CTA block:
+```tsx
+<h2 className="text-foreground text-center mb-3">
+  Become a superfan
+</h2>
+```
 
-- "or" (muted, medium, centered)
-- "Become a superfan" (H3, display font, centered)
-- "Superfans don't wait." (existing, kept as-is)
-- "Unlimited access..." (existing)
-- Button (existing)
+The global stylesheet already applies the display font and responsive sizing to `<h2>` to match the hero heading scale, so no explicit size classes are needed — it will render at the same size as "STEP INSIDE THE VAULT: / THE FUTURE OF MUSIC IS HERE." while keeping the centered alignment and bottom margin.
 
-### Implementation specifics
+### Scope
+- Single file: `src/pages/Index.tsx`
+- One element changed (`<h3>` → `<h2>`, classes simplified)
+- No other copy, layout, or styling changes
 
-- "or": use `text-muted-foreground text-sm font-body text-center mb-2`
-- "Become a superfan": use `<h3>` with `text-foreground text-xl font-display font-bold text-center mb-3`
-
-No other changes to copy, styling, or functionality.
