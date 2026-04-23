@@ -86,10 +86,29 @@ const Index = () => {
   const [vaultLocked, setVaultLocked] = useState(false)
   
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
       <Header />
       <VaultLockedModal open={vaultLocked} onOpenChange={setVaultLocked} />
-      
+
+      {/* Decorative orbital arc — left side */}
+      <svg
+        className="absolute top-[250px] -left-[100px] md:-left-[200px] w-[500px] md:w-[800px] h-[1000px] md:h-[1200px] pointer-events-none -z-10"
+        viewBox="0 0 800 1200"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <ellipse
+          cx="400"
+          cy="600"
+          rx="380"
+          ry="550"
+          stroke="hsl(var(--primary))"
+          strokeWidth="1.5"
+          opacity="0.3"
+          style={{ filter: 'drop-shadow(0 0 25px hsl(var(--primary) / 0.5))' }}
+        />
+      </svg>
+
       {/* Artist Preview Strip - Social Proof */}
       <section className="pt-20 pb-4 overflow-hidden">
         <ArtistPreviewStrip artists={artists} />
