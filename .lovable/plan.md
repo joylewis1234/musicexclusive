@@ -1,37 +1,29 @@
+## Plan: Add "or" and "Become a superfan" above Superfan CTA
 
-
-## Plan: Move Vault Portal under hero copy (keep "MUSIC EXCLUSIVE™" in place)
-
-Reorder the homepage so the animated Vault Portal appears under the hero supporting copy, but leave the **"MUSIC EXCLUSIVE™"** wordmark where it currently sits (in its original section, after the portal's old location).
+Insert two new lines above the "Superfans don't wait." text in the Superfan CTA section on the homepage.
 
 ### File
+
 `src/pages/Index.tsx`
 
 ### Change
 
-Split the existing **Vault Portal Section** into two pieces:
+In the Superfan CTA `<div>` (lines 194-208), add before the existing `<p className="text-lg font-display font-bold text-foreground mb-1">`:
 
-**Move into the hero `<section>`** (insert between the supporting-copy `<div>` and the CTA `<div className="flex flex-col gap-4 items-center …">`):
-- The "GET ACCESS NOW" header + chevrons
-- The animated portal block (all glow orbs, vault ring, lightning layers, vault image, centered "Enter the Vault" button overlay)
+1. An "or" divider element (centered text with muted styling)
+2. A "Become a superfan" headline (styled as an H3 with display font, centered)
 
-**Leave in place** (stays in its current section, in current position on the page):
-- The `<h2>` "MUSIC EXCLUSIVE™" wordmark
+The new order inside the Superfan CTA block:
 
-The now-emptied outer `<section>` keeps its container wrapper so the wordmark renders in the same spot with the same spacing as today.
+- "or" (muted, medium, centered)
+- "Become a superfan" (H3, display font, centered)
+- "Superfans don't wait." (existing, kept as-is)
+- "Unlimited access..." (existing)
+- Button (existing)
 
-### Result
-New homepage order:
-1. Header
-2. Artist Preview Strip
-3. Hero: micro-explainer → headline → supporting copy → **GET ACCESS NOW + Vault Portal animation** → CTA stack
-4. Section containing only the **MUSIC EXCLUSIVE™** wordmark (unchanged position)
-5. Artists carousel
-6. How It Works
-7. … (rest unchanged)
+### Implementation specifics
 
-### Scope
-- Single file edit, pure reordering. No style, copy, animation, or logic changes.
-- Hero's `flex flex-col items-center gap-6` rhythm spaces the portal consistently with the rest of the hero.
-- "MUSIC EXCLUSIVE™" wordmark stays exactly where it is today.
+- "or": use `text-muted-foreground text-sm font-body text-center mb-2`
+- "Become a superfan": use `<h3>` with `text-foreground text-xl font-display font-bold text-center mb-3`
 
+No other changes to copy, styling, or functionality.
