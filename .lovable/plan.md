@@ -1,38 +1,37 @@
 
 
-## Plan: Equalize vertical spacing in hero CTA stack
+## Plan: Move Vault Portal under hero copy (keep "MUSIC EXCLUSIVE™" in place)
 
-Even out the vertical rhythm between the elements in the hero section on `/` (the homepage), so the micro-explainer, headline, supporting copy, and CTA stack are spaced consistently rather than having uneven gaps.
+Reorder the homepage so the animated Vault Portal appears under the hero supporting copy, but leave the **"MUSIC EXCLUSIVE™"** wordmark where it currently sits (in its original section, after the portal's old location).
 
-### Current state (`src/pages/Index.tsx`, hero section ~lines 108–147)
-
-Each element uses its own ad-hoc bottom margin:
-- Micro-explainer `<p>`: `mb-6`
-- Headline `<h1>`: `mb-6`
-- Copy block `<div>`: `mb-4` outer, `space-y-3` inner
-- CTA stack `<div>`: `gap-4` between buttons, plus `my-2` on the "or" divider
-
-This produces uneven visual gaps (24px, 24px, 16px, then mixed gaps inside the CTA stack).
+### File
+`src/pages/Index.tsx`
 
 ### Change
 
-Wrap the hero's inner content in a single flex column with one consistent gap, and remove the individual `mb-*` / `my-*` spacers so spacing is driven from one place.
+Split the existing **Vault Portal Section** into two pieces:
 
-**File:** `src/pages/Index.tsx` (hero section only, ~lines 107–148)
+**Move into the hero `<section>`** (insert between the supporting-copy `<div>` and the CTA `<div className="flex flex-col gap-4 items-center …">`):
+- The "GET ACCESS NOW" header + chevrons
+- The animated portal block (all glow orbs, vault ring, lightning layers, vault image, centered "Enter the Vault" button overlay)
 
-1. Change the inner `<div className="container max-w-lg md:max-w-2xl mx-auto">` to `<div className="container max-w-lg md:max-w-2xl mx-auto flex flex-col items-center gap-6">`.
-2. Remove `mb-6` from the micro-explainer `<p>`.
-3. Remove `mb-6` from the `<h1>`.
-4. Remove `mb-4` from the supporting-copy `<div>` (keep inner `space-y-3` for the two paragraphs inside it).
-5. Remove `my-2` from the "or" divider so it sits on the same 6-unit rhythm as the rest.
-6. Keep the CTA inner stack's `gap-4` as-is (intentional tighter rhythm between the two buttons).
+**Leave in place** (stays in its current section, in current position on the page):
+- The `<h2>` "MUSIC EXCLUSIVE™" wordmark
+
+The now-emptied outer `<section>` keeps its container wrapper so the wordmark renders in the same spot with the same spacing as today.
 
 ### Result
-- Equal 24px (`gap-6`) vertical gap between: micro-explainer → headline → copy → CTA stack.
-- No layout, color, animation, or copy changes.
-- Buttons inside the CTA stack keep their existing internal spacing.
+New homepage order:
+1. Header
+2. Artist Preview Strip
+3. Hero: micro-explainer → headline → supporting copy → **GET ACCESS NOW + Vault Portal animation** → CTA stack
+4. Section containing only the **MUSIC EXCLUSIVE™** wordmark (unchanged position)
+5. Artists carousel
+6. How It Works
+7. … (rest unchanged)
 
 ### Scope
-- Single file: `src/pages/Index.tsx`
-- ~5 className edits in the hero section. No new components, no backend.
+- Single file edit, pure reordering. No style, copy, animation, or logic changes.
+- Hero's `flex flex-col items-center gap-6` rhythm spaces the portal consistently with the rest of the hero.
+- "MUSIC EXCLUSIVE™" wordmark stays exactly where it is today.
 
