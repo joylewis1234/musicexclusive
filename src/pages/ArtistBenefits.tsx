@@ -756,8 +756,7 @@ const ArtistBenefits = () => {
         </div>
       </section>
 
-      {/* Spacer */}
-      <div className="h-12" />
+      <Footer />
     </div>
   )
 }
