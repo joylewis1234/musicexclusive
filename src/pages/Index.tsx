@@ -190,35 +190,22 @@ const Index = () => {
 
           {/* Primary CTA */}
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
-            <Button 
-              size="lg" 
-              className="w-full max-w-xs"
-              onClick={() => navigate("/vault/enter")}
-            >
-              Enter the Vault
-            </Button>
-            
-            {/* Animated VIP divider */}
-            <div className="flex flex-col items-center gap-1 opacity-80">
-              <span className="text-sm font-display uppercase tracking-[0.3em] text-muted-foreground">or</span>
-              <ChevronDown className="w-5 h-5 text-primary animate-bounce" />
-            </div>
-
-            {/* Superfan CTA — Premium VIP treatment */}
-            <div className="relative w-full max-w-xs">
+            {/* Superfan CTA */}
+            <div className="relative w-full max-w-xs mx-auto mt-8 text-center">
+              <p className="text-lg font-display font-bold text-foreground mb-1">
+                Superfans don't wait.
+              </p>
+              <p className="text-muted-foreground text-sm font-body mb-4">
+                Unlimited access to every exclusive release, starting now.
+              </p>
               <Button 
                 size="xl" 
                 className="w-full animate-glow-pulse"
-onClick={() => navigate("/subscribe")}
+                onClick={() => navigate("/subscribe")}
               >
                 Skip the Vault — Enter Now
               </Button>
-              <p className="text-primary text-sm font-body mt-2 text-center"
-                style={{ textShadow: '0 0 8px hsl(var(--primary) / 0.6), 0 0 20px hsl(var(--primary) / 0.3)' }}>
-                Instant access. No waiting.
-              </p>
             </div>
-            
           </div>
         </div>
       </section>
