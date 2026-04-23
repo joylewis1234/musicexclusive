@@ -193,7 +193,7 @@ const EnterVault = () => {
           <img
             src={vaultPortal}
             alt="Vault Portal"
-            className="relative w-full h-full object-contain vault-glow z-10"
+            className="relative w-full h-full object-contain vault-glow mix-blend-screen z-10"
           />
           
           {/* Inner energy lightning effect - overlaid on top with blend mode */}
