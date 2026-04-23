@@ -210,7 +210,7 @@ onClick={() => navigate("/subscribe")}
                 src={vaultPortal}
                 alt="Vault Portal"
                 className="w-full h-full object-contain vault-glow mix-blend-lighten"
-                style={{ filter: 'contrast(1.2) saturate(1.25) brightness(1.05)', imageRendering: 'high-quality' }}
+                style={{ filter: 'contrast(1.2) saturate(1.25) brightness(1.05)', imageRendering: 'auto' }}
               />
             </div>
             
