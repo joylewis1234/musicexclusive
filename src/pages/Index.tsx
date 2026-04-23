@@ -129,6 +129,8 @@ const Index = () => {
                 TWO WAYS TO GET ACCESS
               </p>
               <h2 className="text-foreground text-center mb-6 max-w-md mx-auto uppercase">
+                <br />
+                <br />
                 ENTER THE VAULT<br />
                 SUBMIT YOUR CODE FOR A CHANCE AT FREE ACCESS.
               </h2>
