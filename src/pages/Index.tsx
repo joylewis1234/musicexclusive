@@ -207,7 +207,7 @@ const Index = () => {
                 className="w-full animate-glow-pulse"
                 onClick={() => navigate("/subscribe")}
               >
-                Skip the Vault — Enter Now
+                Become a Superfan
               </Button>
             </div>
           </div>
