@@ -1,26 +1,29 @@
 
 
-## Plan: Mask the vault portal square on `/vault/enter`
+## Plan: Make the vault portal larger on `/vault/enter`
 
-The home page hides the PNG's dark square background with `mix-blend-screen`. The `/vault/enter` portal image is missing that class, so the square shows. One-line fix.
+Bump the portal container size on `/vault/enter` so the masked vault image reads bigger on both mobile and desktop. Floating fan comments are positioned relative to this container, so they'll scale outward with it automatically.
 
-### Change — `src/pages/EnterVault.tsx` (line 196)
+### Change — `src/pages/EnterVault.tsx`
 
-Add `mix-blend-screen` to the vault portal image className, matching the home page treatment:
-
+**Section wrapper (line ~155)** — widen the outer max-width:
 ```jsx
-<img
-  src={vaultPortal}
-  alt="Vault Portal"
-  className="relative w-full h-full object-contain vault-glow mix-blend-screen z-10"
-/>
+<section className="relative w-full max-w-xl md:max-w-3xl mx-auto mb-8">
 ```
+(was `max-w-lg md:max-w-2xl`)
 
-### Why
-- The PNG has a dark, non-transparent background. `mix-blend-screen` blends the image against the page background so only the bright portal pixels remain visible — same trick already used in `src/pages/Index.tsx` (line 212).
-- Keeps `vault-glow`, sizing, and stacking (`z-10`) untouched so the lightning overlay and floating fan comments still layer correctly.
+**Portal container (line ~163)** — enlarge the square portal:
+```jsx
+<div className="relative mx-auto w-full max-w-md md:max-w-lg aspect-square">
+```
+(was `max-w-sm md:max-w-md`)
+
+### Result
+- Mobile portal: ~384px → ~448px wide
+- Desktop portal: ~448px → ~512px wide
+- Mask, glow, lightning overlays, and floating fan bubbles all scale with the container — no other changes needed.
 
 ### Scope
 - Single file: `src/pages/EnterVault.tsx`
-- One className addition. No other components, no backend.
+- Two className edits. No new assets, no backend.
 
