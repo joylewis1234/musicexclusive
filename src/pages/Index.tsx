@@ -185,16 +185,16 @@ onClick={() => navigate("/subscribe")}
             <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
             
             {/* Animated glow orbs behind */}
-            <div className="absolute inset-0 bg-secondary/30 blur-[80px] rounded-full scale-75 animate-pulse" />
-            <div className="absolute inset-0 bg-accent/20 blur-[60px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
+            <div className="absolute inset-0 bg-secondary/30 blur-[100px] rounded-full scale-75 animate-pulse" />
+            <div className="absolute inset-0 bg-accent/20 blur-[80px] rounded-full scale-90 animate-pulse [animation-delay:1s]" />
             <div className="absolute inset-0 bg-primary/20 blur-[70px] rounded-full scale-80 animate-pulse [animation-delay:0.5s]" />
             
             {/* Static vault portal image with breathing glow */}
             <div
               className="relative w-full h-full"
               style={{
-                maskImage: 'radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%)',
-                WebkitMaskImage: 'radial-gradient(ellipse 70% 70% at center, black 50%, transparent 100%)',
+                maskImage: 'radial-gradient(ellipse 85% 85% at center, black 30%, transparent 90%)',
+                WebkitMaskImage: 'radial-gradient(ellipse 85% 85% at center, black 30%, transparent 90%)',
               }}
             >
               <img
