@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
 import { Header } from "@/components/Header"
+import Footer from "@/components/Footer"
 import { GlowCard } from "@/components/ui/GlowCard"
 import { SectionHeader } from "@/components/ui/SectionHeader"
 import { ARTIST_APPLICATION_ENTRY_ENABLED } from "@/config/artistEntry"
@@ -40,13 +41,77 @@ const ArtistBenefits = () => {
       <Header />
 
       {/* SECTION 1 — HERO */}
-      <section className="relative px-4 pt-24 pb-16 overflow-hidden">
+      <section className="relative px-4 pt-28 pb-20 overflow-hidden">
         <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
           {/* Animated glow background */}
           <div className="absolute inset-0 -z-10">
             <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
             <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-secondary/20 blur-[80px] rounded-full animate-pulse [animation-delay:1s]" />
           </div>
+
+          {/* Decorative orbital ring arcs */}
+          <svg
+            className="absolute -top-40 -left-60 -z-10 pointer-events-none animate-spin"
+            style={{ animationDuration: '120s' }}
+            width="1200"
+            height="1200"
+            viewBox="0 0 1200 1200"
+            aria-hidden="true"
+          >
+            <ellipse
+              cx="600"
+              cy="600"
+              rx="560"
+              ry="220"
+              fill="none"
+              stroke="hsl(var(--primary))"
+              strokeWidth="1.25"
+              opacity="0.3"
+              transform="rotate(-20 600 600)"
+              style={{ filter: 'drop-shadow(0 0 15px hsl(var(--primary) / 0.5))' }}
+            />
+          </svg>
+          <svg
+            className="absolute -bottom-52 -right-52 -z-10 pointer-events-none animate-spin"
+            style={{ animationDuration: '80s', animationDirection: 'reverse' }}
+            width="900"
+            height="900"
+            viewBox="0 0 900 900"
+            aria-hidden="true"
+          >
+            <ellipse
+              cx="450"
+              cy="450"
+              rx="430"
+              ry="180"
+              fill="none"
+              stroke="hsl(var(--accent))"
+              strokeWidth="1.25"
+              opacity="0.3"
+              transform="rotate(35 450 450)"
+              style={{ filter: 'drop-shadow(0 0 15px hsl(var(--accent) / 0.5))' }}
+            />
+          </svg>
+          <svg
+            className="absolute top-1/3 -right-40 -z-10 pointer-events-none animate-spin"
+            style={{ animationDuration: '100s' }}
+            width="800"
+            height="800"
+            viewBox="0 0 800 800"
+            aria-hidden="true"
+          >
+            <ellipse
+              cx="400"
+              cy="400"
+              rx="380"
+              ry="150"
+              fill="none"
+              stroke="hsl(var(--secondary))"
+              strokeWidth="1.25"
+              opacity="0.25"
+              style={{ filter: 'drop-shadow(0 0 15px hsl(var(--secondary) / 0.5))' }}
+            />
+          </svg>
 
           <h1 className="text-3xl md:text-5xl font-display font-black tracking-tight text-foreground mb-6 animate-fade-up">
             Turn Your Pre-Release Into{" "}
@@ -75,6 +140,69 @@ const ArtistBenefits = () => {
               See Earnings Example
               <ChevronDown className="w-4 h-4 ml-2" />
             </Button>
+          </div>
+
+          {/* Social proof strip */}
+          <div className="flex flex-wrap justify-center items-center gap-3 mt-8 animate-fade-up [animation-delay:300ms]">
+            <div className="flex items-center">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-8 h-8 rounded-full bg-muted border-2 border-background ${i > 0 ? '-ml-2' : ''}`}
+                  style={{ background: `linear-gradient(135deg, hsl(var(--primary) / 0.4), hsl(var(--accent) / 0.4))` }}
+                />
+              ))}
+            </div>
+            <p className="text-muted-foreground text-sm font-semibold">
+              Join artists already earning on Music Exclusive
+            </p>
+          </div>
+
+          {/* For Fans link */}
+          <button
+            onClick={() => navigate("/")}
+            className="text-muted-foreground text-xs hover:text-primary transition-colors cursor-pointer mt-4 animate-fade-up [animation-delay:400ms]"
+          >
+            Looking to discover music? → Fan Home
+          </button>
+        </div>
+      </section>
+
+      {/* SECTION — HOW IT WORKS */}
+      <section className="px-4 py-16">
+        <div className="container max-w-lg md:max-w-3xl mx-auto">
+          <SectionHeader title="How It Works" align="center" />
+
+          <div className="grid gap-4 mt-8">
+            {[
+              {
+                num: 1,
+                title: "Apply & Upload",
+                desc: "Submit your application. Once approved, upload your exclusive tracks in minutes.",
+              },
+              {
+                num: 2,
+                title: "Fans Stream With Credits",
+                desc: "Every stream is a direct transaction — fans pay with credits, you earn real revenue per play.",
+              },
+              {
+                num: 3,
+                title: "Get Paid Weekly",
+                desc: "Earnings are calculated transparently and paid out every Monday via Stripe Connect.",
+              },
+            ].map((step) => (
+              <GlowCard key={step.num} glowColor="gradient" className="w-full">
+                <div className="p-6 flex items-start gap-4">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center flex-shrink-0">
+                    <span className="text-primary font-display font-bold">{step.num}</span>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-foreground mb-1">{step.title}</h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed">{step.desc}</p>
+                  </div>
+                </div>
+              </GlowCard>
+            ))}
           </div>
         </div>
       </section>
@@ -628,8 +756,7 @@ const ArtistBenefits = () => {
         </div>
       </section>
 
-      {/* Spacer */}
-      <div className="h-12" />
+      <Footer />
     </div>
   )
 }
