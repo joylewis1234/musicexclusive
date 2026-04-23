@@ -126,7 +126,7 @@ const Index = () => {
             {/* Get Access Now Header */}
             <div className="text-center mb-8">
               <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-4 text-glow">
-                GET ACCESS NOW
+                TWO WAYS TO GET ACCESS
               </p>
               <div className="flex justify-center items-center gap-3">
                 <ChevronDown className="w-8 h-8 text-primary animate-bounce" />
