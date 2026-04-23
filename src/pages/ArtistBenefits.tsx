@@ -50,8 +50,7 @@ const ArtistBenefits = () => {
 
         {/* Decorative orbital ring arcs — neon, viewport-wide, centered on hero */}
         <svg
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-spin"
-          style={{ animationDuration: '180s' }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none"
           width="1600"
           height="1600"
           viewBox="0 0 1600 1600"
@@ -65,13 +64,21 @@ const ArtistBenefits = () => {
             fill="none"
             stroke="hsl(var(--primary))"
             strokeWidth="1.25"
-            opacity="0.45"
-            style={{ filter: 'drop-shadow(0 0 25px hsl(var(--primary) / 0.7))' }}
+            opacity="0.5"
+            style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.6))' }}
           />
         </svg>
+        {/* Hotspot for ring 1 (top-left arc) */}
+        <div
+          className="absolute left-1/2 top-1/2 z-0 w-[300px] h-[300px] rounded-full blur-2xl pointer-events-none"
+          style={{
+            transform: 'translate(-680px, -480px)',
+            background: 'radial-gradient(circle, hsl(var(--primary) / 0.35) 0%, transparent 70%)',
+          }}
+          aria-hidden="true"
+        />
         <svg
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-spin"
-          style={{ animationDuration: '140s', animationDirection: 'reverse' }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none"
           width="1400"
           height="1400"
           viewBox="0 0 1400 1400"
@@ -85,14 +92,22 @@ const ArtistBenefits = () => {
             fill="none"
             stroke="hsl(var(--secondary))"
             strokeWidth="1.25"
-            opacity="0.4"
+            opacity="0.45"
             transform="rotate(15 700 700)"
-            style={{ filter: 'drop-shadow(0 0 20px hsl(var(--secondary) / 0.6))' }}
+            style={{ filter: 'drop-shadow(0 0 6px hsl(var(--secondary) / 0.5))' }}
           />
         </svg>
+        {/* Hotspot for ring 2 (bottom-right arc) */}
+        <div
+          className="absolute left-1/2 top-1/2 z-0 w-[300px] h-[300px] rounded-full blur-2xl pointer-events-none"
+          style={{
+            transform: 'translate(420px, 380px)',
+            background: 'radial-gradient(circle, hsl(var(--secondary) / 0.35) 0%, transparent 70%)',
+          }}
+          aria-hidden="true"
+        />
         <svg
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-spin"
-          style={{ animationDuration: '100s' }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none"
           width="1200"
           height="1200"
           viewBox="0 0 1200 1200"
@@ -106,11 +121,20 @@ const ArtistBenefits = () => {
             fill="none"
             stroke="hsl(var(--accent))"
             strokeWidth="1.25"
-            opacity="0.4"
+            opacity="0.45"
             transform="rotate(-25 600 600)"
-            style={{ filter: 'drop-shadow(0 0 20px hsl(var(--accent) / 0.6))' }}
+            style={{ filter: 'drop-shadow(0 0 6px hsl(var(--accent) / 0.5))' }}
           />
         </svg>
+        {/* Hotspot for ring 3 (top-right arc) */}
+        <div
+          className="absolute left-1/2 top-1/2 z-0 w-[300px] h-[300px] rounded-full blur-2xl pointer-events-none"
+          style={{
+            transform: 'translate(380px, -360px)',
+            background: 'radial-gradient(circle, hsl(var(--accent) / 0.35) 0%, transparent 70%)',
+          }}
+          aria-hidden="true"
+        />
 
         <div className="container max-w-lg md:max-w-2xl mx-auto text-center relative z-10">
           <h1 className="text-3xl md:text-5xl font-display font-black tracking-tight text-foreground mb-6 animate-fade-up">
@@ -705,8 +729,7 @@ const ArtistBenefits = () => {
       {/* SECTION 9 — CTA (Strong Close) */}
       <section className="relative px-4 py-20 overflow-hidden">
         <svg
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none animate-spin"
-          style={{ animationDuration: '150s' }}
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-0 pointer-events-none"
           width="1200"
           height="1200"
           viewBox="0 0 1200 1200"
@@ -720,10 +743,19 @@ const ArtistBenefits = () => {
             fill="none"
             stroke="hsl(var(--primary))"
             strokeWidth="1.25"
-            opacity="0.3"
-            style={{ filter: 'drop-shadow(0 0 20px hsl(var(--primary) / 0.6))' }}
+            opacity="0.4"
+            style={{ filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.5))' }}
           />
         </svg>
+        {/* Hotspot for CTA ring (bottom-center arc) */}
+        <div
+          className="absolute left-1/2 top-1/2 z-0 w-[300px] h-[300px] rounded-full blur-2xl pointer-events-none"
+          style={{
+            transform: 'translate(-150px, 420px)',
+            background: 'radial-gradient(circle, hsl(var(--primary) / 0.35) 0%, transparent 70%)',
+          }}
+          aria-hidden="true"
+        />
         <div className="container max-w-lg md:max-w-md mx-auto text-center relative z-10">
           <h2 className="text-2xl md:text-3xl font-display font-black text-foreground mb-6">
             Your Next Release Should{" "}
