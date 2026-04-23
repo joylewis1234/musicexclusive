@@ -128,8 +128,9 @@ const Index = () => {
               <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-4 text-glow">
                 TWO WAYS TO GET ACCESS
               </p>
-              <h2 className="text-foreground text-center mb-6 max-w-md mx-auto">
-                Submit your code for a chance at free access. Didn't win? You're automatically entered for the next draw.
+              <h2 className="text-foreground text-center mb-6 max-w-md mx-auto uppercase">
+                ENTER THE VAULT<br />
+                SUBMIT YOUR CODE FOR A CHANCE AT FREE ACCESS.
               </h2>
               <div className="flex justify-center items-center gap-3">
                 <ChevronDown className="w-8 h-8 text-primary animate-bounce" />
