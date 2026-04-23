@@ -1,43 +1,58 @@
 
 
-## Plan: Vault portal softening + fan context section
+## Plan: Make vault portal fully blend into the page (no visible square)
 
-Two targeted UI improvements in `src/pages/Index.tsx`.
+The mask is already wide, but the dark/black corners of `vault-portal.png` still show because `mix-blend-lighten` only hides black against an even darker background — and the mask edge fade is too narrow. Tighten the visible portal area into a true circle and let it dissolve into the page.
 
-### 1. Vault portal — soften the blend further
+### Changes — `src/pages/Index.tsx` (vault portal block, ~lines 183–212)
 
-Widen the radial gradient mask and extend the fade range so the glow bleeds further into the background with no visible edge. Also boost the surrounding glow orbs.
+**1. Tighten + circularize the mask** (kills the square corners completely)
 
-**Changes:**
-- Lines 188–190: Increase blur amounts
-  - `blur-[80px]` → `blur-[100px]` on line 188
-  - `blur-[60px]` → `blur-[80px]` on line 189
-- Lines 195–198: Update mask gradient
-  - `ellipse 70% 70%` → `ellipse 85% 85%`
-  - `black 50%, transparent 100%` → `black 30%, transparent 90%`
-
-### 2. Add "Your Streams Make a Difference" section
-
-Insert a new section just above `<CashBonusFeed />` (around line 282) to give fans context before they see the earnings feed.
-
-**Add:**
+Replace the mask wrapper with a perfect circular fade that starts fading earlier and ends sooner:
 ```jsx
-<section className="px-4 py-12">
-  <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
-    <SectionHeader title="Your Streams Make a Difference" align="center" />
-    <p className="text-muted-foreground text-sm font-body mt-4 max-w-md mx-auto leading-relaxed">
-      Every time you stream on Music Exclusive, your support goes directly to the artist — not a faceless algorithm. 
-      Real fans funding real music. Here's what that looks like:
-    </p>
-  </div>
-</section>
+<div
+  className="relative w-full h-full"
+  style={{
+    maskImage: 'radial-gradient(circle at center, black 35%, transparent 72%)',
+    WebkitMaskImage: 'radial-gradient(circle at center, black 35%, transparent 72%)',
+  }}
+>
+  <img
+    src={vaultPortal}
+    alt="Vault Portal"
+    className="w-full h-full object-contain vault-glow mix-blend-screen"
+  />
+</div>
+```
+Key shifts:
+- `ellipse 85% 85%` → `circle` (forces a true round cutout, not rectangle-shaped ellipse).
+- Fade window `30% → 90%` → `35% → 72%` (steeper but starts well inside the frame, so all corner pixels are fully transparent).
+- `mix-blend-lighten` → `mix-blend-screen` (more aggressively eliminates dark grays, not just pure black, so any near-black halo in the PNG disappears).
+
+**2. Strengthen the surrounding glow so the portal reads as emerging from light, not pasted on**
+
+Update the three glow orbs (lines 188–190):
+- `bg-secondary/30 blur-[100px] scale-75` → `bg-secondary/40 blur-[120px] scale-90`
+- `bg-accent/20 blur-[80px] scale-90` → `bg-accent/30 blur-[100px] scale-100`
+- `bg-primary/20 blur-[70px] scale-80` → `bg-primary/30 blur-[90px] scale-95`
+
+This widens the ambient glow halo so the masked edge of the portal lands on a lit area — eliminating any perceived "edge."
+
+**3. Add an inner radial vignette behind the image**
+
+Insert one more glow layer immediately before the masked image wrapper to brighten the page background where the portal sits, so the blended portal looks like it's emanating from the page:
+```jsx
+<div
+  className="absolute inset-[10%] rounded-full"
+  style={{
+    background: 'radial-gradient(circle, hsl(var(--primary) / 0.25) 0%, transparent 70%)',
+    filter: 'blur(40px)',
+  }}
+/>
 ```
 
-**Keep** `<CashBonusFeed />` immediately after this new section.
-
-### Scope confirmation
-- Single file: `src/pages/Index.tsx`
-- No new imports needed (`SectionHeader` already imported)
-- No backend changes
-- Mobile-first layout preserved
+### Scope
+- Single file: `src/pages/Index.tsx`.
+- No new imports, no other sections touched, no backend, no asset changes.
+- Mobile + desktop layout preserved (all changes are within the existing `aspect-square` container).
 
