@@ -193,7 +193,7 @@ onClick={() => navigate("/subscribe")}
             <img
               src={vaultPortal}
               alt="Vault Portal"
-              className="relative w-full h-full object-contain vault-glow"
+              className="relative w-full h-full object-contain vault-glow mix-blend-screen"
             />
             
             {/* Inner energy lightning effect - overlaid on top with blend mode */}
