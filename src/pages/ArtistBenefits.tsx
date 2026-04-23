@@ -41,78 +41,78 @@ const ArtistBenefits = () => {
       <Header />
 
       {/* SECTION 1 — HERO */}
-      <section className="relative px-4 pt-28 pb-20 overflow-hidden">
-        <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
-          {/* Animated glow background */}
-          <div className="absolute inset-0 -z-10">
-            <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/20 blur-[100px] rounded-full animate-pulse" />
-            <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-secondary/20 blur-[80px] rounded-full animate-pulse [animation-delay:1s]" />
-          </div>
+      <section className="relative px-4 pt-28 pb-20 min-h-[700px] overflow-hidden">
+        {/* Animated glow background (demoted behind rings) */}
+        <div className="absolute inset-0 -z-20">
+          <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-primary/10 blur-[100px] rounded-full animate-pulse" />
+          <div className="absolute bottom-1/4 right-1/4 w-48 h-48 bg-secondary/10 blur-[80px] rounded-full animate-pulse [animation-delay:1s]" />
+        </div>
 
-          {/* Decorative orbital ring arcs */}
-          <svg
-            className="absolute -top-40 -left-60 -z-10 pointer-events-none animate-spin"
-            style={{ animationDuration: '120s' }}
-            width="1200"
-            height="1200"
-            viewBox="0 0 1200 1200"
-            aria-hidden="true"
-          >
-            <ellipse
-              cx="600"
-              cy="600"
-              rx="560"
-              ry="220"
-              fill="none"
-              stroke="hsl(var(--primary))"
-              strokeWidth="1.25"
-              opacity="0.3"
-              transform="rotate(-20 600 600)"
-              style={{ filter: 'drop-shadow(0 0 15px hsl(var(--primary) / 0.5))' }}
-            />
-          </svg>
-          <svg
-            className="absolute -bottom-52 -right-52 -z-10 pointer-events-none animate-spin"
-            style={{ animationDuration: '80s', animationDirection: 'reverse' }}
-            width="900"
-            height="900"
-            viewBox="0 0 900 900"
-            aria-hidden="true"
-          >
-            <ellipse
-              cx="450"
-              cy="450"
-              rx="430"
-              ry="180"
-              fill="none"
-              stroke="hsl(var(--accent))"
-              strokeWidth="1.25"
-              opacity="0.3"
-              transform="rotate(35 450 450)"
-              style={{ filter: 'drop-shadow(0 0 15px hsl(var(--accent) / 0.5))' }}
-            />
-          </svg>
-          <svg
-            className="absolute top-1/3 -right-40 -z-10 pointer-events-none animate-spin"
-            style={{ animationDuration: '100s' }}
-            width="800"
-            height="800"
-            viewBox="0 0 800 800"
-            aria-hidden="true"
-          >
-            <ellipse
-              cx="400"
-              cy="400"
-              rx="380"
-              ry="150"
-              fill="none"
-              stroke="hsl(var(--secondary))"
-              strokeWidth="1.25"
-              opacity="0.25"
-              style={{ filter: 'drop-shadow(0 0 15px hsl(var(--secondary) / 0.5))' }}
-            />
-          </svg>
+        {/* Decorative orbital ring arcs — neon, viewport-wide, centered on hero */}
+        <svg
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none animate-spin"
+          style={{ animationDuration: '180s' }}
+          width="1600"
+          height="1600"
+          viewBox="0 0 1600 1600"
+          aria-hidden="true"
+        >
+          <ellipse
+            cx="800"
+            cy="800"
+            rx="780"
+            ry="780"
+            fill="none"
+            stroke="hsl(var(--primary))"
+            strokeWidth="1.25"
+            opacity="0.45"
+            style={{ filter: 'drop-shadow(0 0 25px hsl(var(--primary) / 0.7))' }}
+          />
+        </svg>
+        <svg
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none animate-spin"
+          style={{ animationDuration: '140s', animationDirection: 'reverse' }}
+          width="1400"
+          height="1400"
+          viewBox="0 0 1400 1400"
+          aria-hidden="true"
+        >
+          <ellipse
+            cx="700"
+            cy="700"
+            rx="680"
+            ry="620"
+            fill="none"
+            stroke="hsl(var(--secondary))"
+            strokeWidth="1.25"
+            opacity="0.4"
+            transform="rotate(15 700 700)"
+            style={{ filter: 'drop-shadow(0 0 20px hsl(var(--secondary) / 0.6))' }}
+          />
+        </svg>
+        <svg
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 pointer-events-none animate-spin"
+          style={{ animationDuration: '100s' }}
+          width="1200"
+          height="1200"
+          viewBox="0 0 1200 1200"
+          aria-hidden="true"
+        >
+          <ellipse
+            cx="600"
+            cy="600"
+            rx="580"
+            ry="540"
+            fill="none"
+            stroke="hsl(var(--accent))"
+            strokeWidth="1.25"
+            opacity="0.4"
+            transform="rotate(-25 600 600)"
+            style={{ filter: 'drop-shadow(0 0 20px hsl(var(--accent) / 0.6))' }}
+          />
+        </svg>
 
+        <div className="container max-w-lg md:max-w-2xl mx-auto text-center relative">
           <h1 className="text-3xl md:text-5xl font-display font-black tracking-tight text-foreground mb-6 animate-fade-up">
             Turn Your Pre-Release Into{" "}
             <span className="gradient-text">Real Weekly Income.</span>
