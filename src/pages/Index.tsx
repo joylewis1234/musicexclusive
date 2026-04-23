@@ -92,20 +92,20 @@ const Index = () => {
 
       {/* Decorative orbital arc — left side */}
       <svg
-        className="absolute top-[200px] -left-[80px] md:-left-[150px] w-[520px] md:w-[820px] h-[1000px] md:h-[1200px] pointer-events-none z-0"
-        viewBox="0 0 800 1200"
+        className="absolute top-[300px] -left-[250px] md:-left-[350px] w-[600px] md:w-[900px] h-[1100px] md:h-[1400px] pointer-events-none z-0"
+        viewBox="0 0 900 1400"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
       >
         <ellipse
-          cx="400"
-          cy="600"
-          rx="380"
-          ry="550"
+          cx="450"
+          cy="700"
+          rx="420"
+          ry="650"
           stroke="hsl(var(--primary))"
-          strokeWidth="2"
-          opacity="0.55"
-          style={{ filter: 'drop-shadow(0 0 20px hsl(var(--primary) / 0.7)) drop-shadow(0 0 40px hsl(var(--primary) / 0.4))' }}
+          strokeWidth="1"
+          opacity="0.15"
+          style={{ filter: 'drop-shadow(0 0 15px hsl(var(--primary) / 0.3))' }}
         />
       </svg>
 
