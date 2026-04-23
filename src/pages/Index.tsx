@@ -117,7 +117,7 @@ const Index = () => {
           </h1>
           
           <div className="text-muted-foreground text-base md:text-lg mb-4 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3" style={{ textShadow: '0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.15)' }}>
-            <p>First access. First listen. Before anywhere else.</p>
+            <p>First access. First listen.<br />Before anywhere else.</p>
             <p>Exclusive music from your favorite artists, only on Music Exclusive.</p>
           </div>
           
