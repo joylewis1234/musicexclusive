@@ -181,14 +181,14 @@ const EnterVault = () => {
           VAULT PORTAL SECTION WITH FAN COMMENTS
           Large portal with floating testimonials
           ======================================== */}
-      <section className="relative w-full max-w-lg md:max-w-2xl mx-auto mb-8">
+      <section className="relative w-full max-w-xl md:max-w-3xl mx-auto mb-8">
         {/* Animated glow orbs behind the vault */}
         <div className="absolute inset-0 bg-secondary/30 blur-[100px] rounded-full scale-90 animate-pulse" />
         <div className="absolute inset-0 bg-accent/25 blur-[80px] rounded-full scale-100 animate-pulse [animation-delay:1s]" />
         <div className="absolute inset-0 bg-primary/25 blur-[90px] rounded-full scale-95 animate-pulse [animation-delay:0.5s]" />
         
         {/* Vault Portal Container */}
-        <div className="relative mx-auto w-full max-w-sm md:max-w-md aspect-square">
+        <div className="relative mx-auto w-full max-w-md md:max-w-lg aspect-square">
           {/* Static vault portal image with breathing glow + radial mask to hide square edges */}
           <div
             className="relative w-full h-full z-10"
