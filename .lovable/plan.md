@@ -1,44 +1,41 @@
 
 
-## Plan: Make the orbital arc actually visible
+## Plan: Replace orbital arc SVG with subtler, larger version
 
-The arc was added with `-z-10`, which puts it behind the page background, so it never shows. Also, `overflow-hidden` on the page wrapper plus `top-[250px]` pushes a lot of it off-screen on the current 923px viewport. Two small fixes in `src/pages/Index.tsx`:
+Swap the existing decorative SVG block in `src/pages/Index.tsx` with the version you provided — a larger, fainter ellipse pushed further off-screen for a more subtle background sweep.
 
 ### Changes — `src/pages/Index.tsx`
 
-**1. Remove `-z-10` from the SVG and bump opacity/glow**
+Replace the current decorative SVG (the `{/* Decorative orbital arc — left side */}` block) with:
 
-Replace the existing decorative SVG (lines ~93–110) with:
 ```jsx
+{/* Decorative orbital arc — left side */}
 <svg
-  className="absolute top-[200px] -left-[80px] md:-left-[150px] w-[520px] md:w-[820px] h-[1000px] md:h-[1200px] pointer-events-none z-0"
-  viewBox="0 0 800 1200"
+  className="absolute top-[300px] -left-[250px] md:-left-[350px] w-[600px] md:w-[900px] h-[1100px] md:h-[1400px] pointer-events-none z-0"
+  viewBox="0 0 900 1400"
   fill="none"
   xmlns="http://www.w3.org/2000/svg"
 >
   <ellipse
-    cx="400"
-    cy="600"
-    rx="380"
-    ry="550"
+    cx="450"
+    cy="700"
+    rx="420"
+    ry="650"
     stroke="hsl(var(--primary))"
-    strokeWidth="2"
-    opacity="0.55"
-    style={{ filter: 'drop-shadow(0 0 20px hsl(var(--primary) / 0.7)) drop-shadow(0 0 40px hsl(var(--primary) / 0.4))' }}
+    strokeWidth="1"
+    opacity="0.15"
+    style={{ filter: 'drop-shadow(0 0 15px hsl(var(--primary) / 0.3))' }}
   />
 </svg>
 ```
-Why each change:
-- `-z-10` → `z-0`: `-z-10` was sliding behind the `bg-background` paint of the wrapper, hiding the arc entirely. `z-0` keeps it above the background but still behind all sections (which create their own stacking contexts via `relative`).
-- `strokeWidth 1.5 → 2`, `opacity 0.3 → 0.55`, doubled drop-shadow: makes it actually readable on the dark background.
-- `top-[250px] → top-[200px]` and slightly less negative `left`: nudges more of the arc's right edge into view at the current viewport.
 
-**2. Make sure content sections sit above the arc**
-
-No structural changes needed — every major `<section>` already participates in the normal flow above a `z-0` decorative SVG. The arc will appear as a faint neon sweep behind the hero / vault area without intercepting clicks (`pointer-events-none` retained).
+### What changes vs. current
+- Larger ellipse (`rx 380→420`, `ry 550→650`) and bigger viewBox (`900x1400`).
+- Pushed further off-screen (`-left-[250px] md:-left-[350px]`) so only the right edge sweeps into view.
+- Thinner stroke (`2 → 1`), lower opacity (`0.55 → 0.15`), softer single drop-shadow — much more subtle.
+- Lower start point (`top-[200px] → top-[300px]`).
 
 ### Scope
 - Single file: `src/pages/Index.tsx` (only the decorative SVG block).
-- No new imports, no other sections touched, no backend.
-- Mobile + desktop both covered by responsive `left` / `w` values.
+- No other changes, no new imports, no backend.
 
