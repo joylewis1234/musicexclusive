@@ -180,7 +180,7 @@ onClick={() => navigate("/subscribe")}
           </div>
           
           {/* Vault Portal Image */}
-          <div className="relative mx-auto w-full max-w-md aspect-square">
+          <div className="relative mx-auto w-full max-w-md md:max-w-lg aspect-square">
             {/* Neon pink trailing ring - needs absolute positioning within relative parent */}
             <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
             
