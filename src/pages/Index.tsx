@@ -192,7 +192,7 @@ const Index = () => {
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
             {/* Superfan CTA */}
             <div className="relative w-full max-w-xs mx-auto mt-8 text-center">
-              <p className="text-muted-foreground text-sm font-body text-center mb-2">or</p>
+              <p className="text-muted-foreground text-base font-body text-center mb-2">or</p>
               <h2 className="text-foreground text-center mb-3">
                 Become a superfan
               </h2>
