@@ -97,10 +97,10 @@ const Index = () => {
       
       {/* Hero Section */}
       <section className="relative px-4 pt-4 pb-8 overflow-hidden text-center">
-        <div className="container max-w-lg md:max-w-2xl mx-auto">
+        <div className="container max-w-lg md:max-w-2xl mx-auto flex flex-col items-center gap-6">
           {/* Micro-Explainer */}
           <p 
-            className="text-lg md:text-2xl font-display uppercase tracking-[0.3em] mb-6 animate-fade-up opacity-0 gradient-text animate-glow-pulse"
+            className="text-lg md:text-2xl font-display uppercase tracking-[0.3em] animate-fade-up opacity-0 gradient-text animate-glow-pulse"
             style={{ 
               textShadow: '0 0 10px hsl(var(--primary) / 0.8), 0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.3), 0 0 100px hsl(var(--primary) / 0.15)',
               filter: 'brightness(1.15)',
@@ -110,13 +110,13 @@ const Index = () => {
           </p>
           
           {/* Hero Text */}
-          <h1 className="text-foreground mb-6 animate-fade-up [animation-delay:100ms] opacity-0">
+          <h1 className="text-foreground animate-fade-up [animation-delay:100ms] opacity-0">
             STEP INSIDE THE VAULT:
             <br />
             <span className="text-muted-foreground">THE FUTURE OF MUSIC IS HERE.</span>
           </h1>
           
-          <div className="text-muted-foreground text-base md:text-lg mb-4 font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3" style={{ textShadow: '0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.15)' }}>
+          <div className="text-muted-foreground text-base md:text-lg font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3" style={{ textShadow: '0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.15)' }}>
             <p>First access. First listen.<br />Before anywhere else.</p>
             <p>Exclusive music from your favorite artists, only on Music Exclusive.</p>
           </div>
@@ -132,7 +132,7 @@ const Index = () => {
             </Button>
             
             {/* Animated VIP divider */}
-            <div className="flex flex-col items-center gap-1 my-2 opacity-80">
+            <div className="flex flex-col items-center gap-1 opacity-80">
               <span className="text-sm font-display uppercase tracking-[0.3em] text-muted-foreground">or</span>
               <ChevronDown className="w-5 h-5 text-primary animate-bounce" />
             </div>
