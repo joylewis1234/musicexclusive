@@ -315,17 +315,15 @@ onClick={() => navigate("/subscribe")}
                 Want Access Now?<br />Become a Superfan
               </span>
             </Button>
-            
-            {/* Artist CTA (application or waitlist based on flag) */}
-            <Button 
-              variant="outline" 
-              size="default" 
-              className="mt-4 text-xs tracking-widest"
-              onClick={() => navigate(ARTIST_APPLICATION_ENTRY_ENABLED ? "/artist/apply" : "/artist-waitlist")}
-            >
-              {ARTIST_APPLICATION_ENTRY_ENABLED ? "Apply as an Artist" : "Join the Artist Waitlist"}
-            </Button>
           </div>
+
+          {/* Subtle artist link */}
+          <button
+            onClick={() => navigate("/artist-benefits")}
+            className="text-muted-foreground text-xs hover:text-primary transition-colors cursor-pointer mt-6 mx-auto block"
+          >
+            Are you an artist? Learn how to earn here →
+          </button>
         </div>
       </section>
 
