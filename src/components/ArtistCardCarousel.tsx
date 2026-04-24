@@ -19,12 +19,18 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
   const navigate = useNavigate()
   const [singleSetWidth, setSingleSetWidth] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
-  const [manualOffset, setManualOffset] = useState(0)
-  const dragState = useRef<{ startX: number; startOffset: number; dragging: boolean }>({
+  const offsetRef = useRef(0)
+  const [, forceRender] = useState(0)
+  const dragState = useRef<{ startX: number; startOffset: number; dragging: boolean; moved: number }>({
     startX: 0,
     startOffset: 0,
     dragging: false,
+    moved: 0,
   })
+  const isPausedRef = useRef(false)
+  useEffect(() => {
+    isPausedRef.current = isPaused
+  }, [isPaused])
 
   const duplicated = [...artists, ...artists, ...artists]
 
@@ -44,22 +50,40 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
     setSingleSetWidth(width)
   }, [artists.length])
 
-  // ~12px/s for a slow, ambient drift
-  const duration = singleSetWidth > 0 ? singleSetWidth / 12 : 90
-
   const normalizeOffset = (value: number) => {
     if (singleSetWidth <= 0) return value
     const mod = ((value % singleSetWidth) + singleSetWidth) % singleSetWidth
     return mod
   }
 
+  // rAF-driven auto-scroll (~12px/s) — pauses during hover/drag
+  useEffect(() => {
+    if (singleSetWidth <= 0) return
+    let last = performance.now()
+    let raf = 0
+    const tick = (now: number) => {
+      const dt = (now - last) / 1000
+      last = now
+      if (!isPausedRef.current && !dragState.current.dragging) {
+        offsetRef.current = normalizeOffset(offsetRef.current + dt * 12)
+        if (trackRef.current) {
+          trackRef.current.style.transform = `translateX(-${offsetRef.current}px)`
+        }
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [singleSetWidth])
+
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (singleSetWidth <= 0) return
     ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
     dragState.current = {
       startX: e.clientX,
-      startOffset: manualOffset,
+      startOffset: offsetRef.current,
       dragging: true,
+      moved: 0,
     }
     setIsPaused(true)
   }
@@ -67,7 +91,11 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragState.current.dragging) return
     const delta = e.clientX - dragState.current.startX
-    setManualOffset(normalizeOffset(dragState.current.startOffset - delta))
+    dragState.current.moved = Math.max(dragState.current.moved, Math.abs(delta))
+    offsetRef.current = normalizeOffset(dragState.current.startOffset - delta)
+    if (trackRef.current) {
+      trackRef.current.style.transform = `translateX(-${offsetRef.current}px)`
+    }
   }
 
   const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -78,12 +106,12 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
     } catch {
       // ignore
     }
+    forceRender((n) => n + 1)
   }
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     // Suppress click if it was the end of a drag
-    const moved = Math.abs(e.clientX - dragState.current.startX)
-    if (moved > 5) return
+    if (dragState.current.moved > 5) return
     navigate("/vault/enter")
   }
 
@@ -103,14 +131,7 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
       <div
         ref={trackRef}
         className="flex gap-6"
-        style={{
-          animation:
-            singleSetWidth > 0
-              ? `artist-card-scroll ${duration}s linear infinite`
-              : undefined,
-          animationPlayState: isPaused ? "paused" : "running",
-          transform: isPaused && singleSetWidth > 0 ? `translateX(-${manualOffset}px)` : undefined,
-        }}
+        style={{ willChange: "transform" }}
       >
         {duplicated.map((artist, index) => (
           <ArtistCard
@@ -122,15 +143,6 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
           />
         ))}
       </div>
-
-      {singleSetWidth > 0 && (
-        <style>{`
-          @keyframes artist-card-scroll {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(-${singleSetWidth}px); }
-          }
-        `}</style>
-      )}
     </div>
   )
 }
