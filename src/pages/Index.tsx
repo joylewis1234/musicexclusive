@@ -35,6 +35,7 @@ import coverArtLolaMay from "@/assets/cover-art-lola-may.png"
 import coverArtGraceAbove from "@/assets/cover-art-grace-above.png"
 import coverArtJaydenRios from "@/assets/cover-art-jayden-rios.png"
 import coverArtMelaninAfrobeats from "@/assets/cover-art-melanin-afrobeats.png"
+import coverArtRnbVibes from "@/assets/cover-art-rnb-vibes.png"
 
 const artists = [
   { name: "Nova Rae", genre: "Alt Pop", imageUrl: artistNovaRae },
@@ -47,7 +48,7 @@ const artists = [
   { name: "Raven Cross", genre: "Rock", imageUrl: coverArtAfterhours, fitMode: "contain" as const },
   { name: "Jayden Rios", genre: "Latin", imageUrl: coverArtJaydenRios, fitMode: "contain" as const },
   { name: "Cassidy Lane", genre: "Country", imageUrl: artistCountryFemale },
-  { name: "Miles Ivory", genre: "Jazz", imageUrl: artistJazz },
+  { name: "Miles Ivory", genre: "Jazz", imageUrl: coverArtRnbVibes, fitMode: "contain" as const },
   { name: "Yuki Haze", genre: "Lo-Fi", imageUrl: coverArtLateNights, fitMode: "contain" as const },
 ]
 
