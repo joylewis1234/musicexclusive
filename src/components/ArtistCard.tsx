@@ -47,7 +47,7 @@ const ArtistCard = ({ name, genre, imageUrl, fitMode = "cover" }: ArtistCardProp
         <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
 
         {/* Exclusive Artist Badge */}
-        <div className="absolute top-3 right-3 z-10">
+        <div className="absolute bottom-3 right-3 z-10">
           <div 
             className="flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-md transition-all duration-300 group-hover:shadow-[0_0_12px_hsl(280_80%_70%/0.5)]"
             style={{
