@@ -102,7 +102,7 @@ const Index = () => {
       <VaultLockedModal open={vaultLocked} onOpenChange={setVaultLocked} />
 
       {/* Artist Preview Strip - Social Proof */}
-      <section className="pt-20 pb-4 overflow-hidden">
+      <section className="pt-16 pb-4 overflow-hidden">
         <ArtistPreviewStrip artists={artists} />
       </section>
       
