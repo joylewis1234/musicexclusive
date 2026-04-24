@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils"
 import { useRef, useEffect, useState } from "react"
+import { BadgeCheck } from "lucide-react"
 
 interface Artist {
   name: string
@@ -82,6 +83,25 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
                   }`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+                {/* Exclusive Artist Badge */}
+                <div className="absolute top-2 right-2 z-10">
+                  <div
+                    className="flex items-center gap-1 px-1.5 py-0.5 rounded-full backdrop-blur-md"
+                    style={{
+                      background: "rgba(10, 10, 15, 0.7)",
+                      border: "1px solid hsl(280 80% 70% / 0.6)",
+                      boxShadow: "0 0 8px hsl(280 80% 70% / 0.25), inset 0 0 8px hsl(280 80% 70% / 0.05)",
+                    }}
+                  >
+                    <BadgeCheck className="w-2.5 h-2.5" style={{ color: "hsl(280 80% 70%)" }} />
+                    <span
+                      className="text-[7px] md:text-[8px] font-display font-semibold uppercase tracking-wider"
+                      style={{ color: "hsl(280 80% 70%)" }}
+                    >
+                      Exclusive
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           )
