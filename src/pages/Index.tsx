@@ -33,6 +33,7 @@ import coverArtLateNights from "@/assets/cover-art-late-nights.png"
 import coverArtJulesKade from "@/assets/cover-art-jules-kade.png"
 import coverArtLolaMay from "@/assets/cover-art-lola-may.png"
 import coverArtGraceAbove from "@/assets/cover-art-grace-above.png"
+import coverArtJaydenRios from "@/assets/cover-art-jayden-rios.png"
 
 const artists = [
   { name: "Nova Rae", genre: "Alt Pop", imageUrl: artistNovaRae },
@@ -43,7 +44,7 @@ const artists = [
   { name: "Eden Reign", genre: "Christian", imageUrl: coverArtGraceAbove, fitMode: "contain" as const },
   { name: "Axel Volt", genre: "Electronic", imageUrl: coverArtAxelVolt, fitMode: "contain" as const },
   { name: "Raven Cross", genre: "Rock", imageUrl: coverArtAfterhours, fitMode: "contain" as const },
-  { name: "Marco Sol", genre: "Latin", imageUrl: artistLatinMale },
+  { name: "Jayden Rios", genre: "Latin", imageUrl: coverArtJaydenRios, fitMode: "contain" as const },
   { name: "Cassidy Lane", genre: "Country", imageUrl: artistCountryFemale },
   { name: "Miles Ivory", genre: "Jazz", imageUrl: artistJazz },
   { name: "Yuki Haze", genre: "Lo-Fi", imageUrl: coverArtLateNights, fitMode: "contain" as const },
