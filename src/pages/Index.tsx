@@ -98,16 +98,11 @@ const Index = () => {
       {/* Hero Section */}
       <section className="relative px-4 pt-4 pb-8 overflow-hidden text-center">
         <div className="container max-w-lg md:max-w-2xl mx-auto flex flex-col items-center gap-6">
-          {/* Micro-Explainer */}
-          <p
-            className="text-lg md:text-2xl uppercase tracking-[0.3em] animate-fade-up opacity-0 gradient-text animate-glow-pulse"
-            style={{
-              textShadow: '0 0 10px hsl(var(--primary) / 0.8), 0 0 30px hsl(var(--primary) / 0.5), 0 0 60px hsl(var(--primary) / 0.3), 0 0 100px hsl(var(--primary) / 0.15)',
-              filter: 'brightness(1.15)',
-            }}
-          >
-            Music. Released here first.
-          </p>
+          {/* Micro-Explainer with bouncing dot + word pop */}
+          <BouncingDotHeadline
+            words={["Music.", "Released", "here", "first."]}
+          />
+
           
           {/* Hero Text */}
           <h1 className="text-foreground animate-fade-up [animation-delay:100ms] opacity-0">
