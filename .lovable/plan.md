@@ -1,23 +1,21 @@
+## Goal
+Replace the "Axel Volt / Electronic" artist photo in the homepage carousel with a cinematic cover-art style image to demonstrate how a cover-art card looks alongside the existing artist-photo cards.
 
+## Steps
 
-## Plan: Add neon line divider under hero statement
+1. **Generate cover art** via Lovable AI image gateway (`google/gemini-2.5-flash-image`).
+   - Prompt direction: dark cinematic electronic album cover, neon purple/magenta lighting, abstract synthwave/geometric energy, premium music-exclusive aesthetic, no text, square 3:4 friendly composition.
+   - Save output to `src/assets/cover-art-axel-volt.jpg`.
 
-Add a neon gradient line (matching the SectionHeader underline style) beneath the "Exclusive music from your favorite artists, only on Music Exclusive." text in the hero section.
+2. **Update `src/pages/Index.tsx`:**
+   - Remove the `import artistElectronic from "@/assets/artist-electronic.jpg"` line.
+   - Add `import coverArtAxelVolt from "@/assets/cover-art-axel-volt.jpg"`.
+   - In the `artists` array, change the Axel Volt entry's `imageUrl` from `artistElectronic` to `coverArtAxelVolt`.
 
-### File
-`src/pages/Index.tsx`
+## Out of scope
+- No changes to `ArtistCard.tsx`, `ArtistCardCarousel.tsx`, or `ArtistPreviewStrip.tsx`.
+- No changes to other artists, layout, copy, or styling.
+- No backend changes.
 
-### Change
-After the second `<p>` element on line 121 (the one containing "Exclusive music from your favorite artists..."), insert a centered neon divider span with the same styling as SectionHeader's underline:
-- `h-0.5` height
-- `rounded-full` ends
-- `bg-gradient-to-r from-primary to-purple-500` gradient
-- `shadow-neon-sm` glow effect
-- `w-1/2 mx-auto` centered at half width
-
-### Scope
-- Single file: `src/pages/Index.tsx`
-- One new element inserted after the target paragraph
-- Matches existing SectionHeader neon underline aesthetic
-- No other layout or styling changes
-
+## Result
+The Electronic card in both the top preview strip and the main scrolling carousel will display a stylized cover-art image instead of an artist photo, while everything else remains identical.
