@@ -222,10 +222,10 @@ const Index = () => {
       </section>
 
       {/* Vault Portal Section */}
-      <section className="relative px-4 py-8 overflow-hidden">
+      <section className="relative px-4 py-20 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
           {/* MUSIC EXCLUSIVE Text */}
-          <h2 className="text-center mt-4 text-3xl md:text-5xl font-display font-black tracking-[0.15em] gradient-text text-glow">
+          <h2 className="text-center text-3xl md:text-5xl font-display font-black tracking-[0.15em] gradient-text text-glow">
             MUSIC EXCLUSIVE<span className="text-muted-foreground text-xs md:text-sm align-super ml-1">™</span>
           </h2>
         </div>
@@ -282,7 +282,7 @@ const Index = () => {
       </section>
 
       {/* Cash Bonus Feed */}
-      <section className="px-4 py-12">
+      <section className="px-4 pt-20 pb-8">
         <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
           <SectionHeader title="Your Streams Make a Difference" align="center" />
           <p className="text-muted-foreground text-sm font-body mt-4 max-w-md mx-auto leading-relaxed">
@@ -299,14 +299,14 @@ const Index = () => {
       {/* Bottom CTA Section */}
       <section className="px-4 py-16">
         <div className="container max-w-lg md:max-w-md mx-auto text-center">
-          <h2 className="text-foreground mb-4">
+          <h2 className="text-foreground mb-3">
             Want a taste before entering the Vault?
           </h2>
-          <p className="text-muted-foreground text-sm font-body mb-8">
+          <p className="text-muted-foreground text-sm font-body mb-10">
             Listen to previews, then enter the Vault or join as a Superfan for instant access.
           </p>
           
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             <Button 
               variant="outline" 
               size="lg" 
@@ -339,7 +339,7 @@ const Index = () => {
       </section>
 
       {/* Are You an Artist? */}
-      <section className="px-4 py-8 text-center">
+      <section className="px-4 pt-4 pb-16 text-center">
         <p className="text-muted-foreground text-sm font-body mb-2">Are you an artist?</p>
         <Button
           variant="ghost"
