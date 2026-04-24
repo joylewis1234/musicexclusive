@@ -201,7 +201,7 @@ const Index = () => {
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
             {/* Superfan CTA */}
             <div className="relative w-full max-w-xs mx-auto mt-16 text-center">
-              <p className="text-muted-foreground text-2xl font-body text-center mb-3">or</p>
+              <p className="text-foreground text-2xl font-display text-center mb-3">or</p>
               <div className="flex justify-center items-center mt-2 mb-4">
                 <ChevronDown className="w-6 h-6 text-primary animate-bounce" />
               </div>
