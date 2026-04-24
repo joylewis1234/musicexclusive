@@ -321,14 +321,6 @@ const Index = () => {
               Test Out Music Exclusive
             </Button>
             <Button 
-              size="lg" 
-              variant="outline"
-              className="w-full animate-glow-pulse"
-              onClick={() => navigate("/vault/enter")}
-            >
-              Enter the Vault
-            </Button>
-            <Button 
               variant="outline" 
               size="lg" 
               className="w-full h-auto py-3 whitespace-normal text-amber-400 border-amber-500/50 hover:border-amber-400 hover:bg-amber-500/10 shadow-[0_0_15px_rgba(251,191,36,0.3)] animate-glow-pulse"
