@@ -84,7 +84,7 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
                 {/* Exclusive Artist Badge */}
-                <div className="absolute top-2 right-2 z-10">
+                <div className="absolute bottom-2 right-2 z-10">
                   <div
                     className="flex items-center gap-1 px-1.5 py-0.5 rounded-full backdrop-blur-md"
                     style={{
