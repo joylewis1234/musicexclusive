@@ -130,7 +130,7 @@ const Index = () => {
             
             {/* Get Access Now Header */}
             <div className="text-center mb-8">
-              <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-3 text-glow">
+              <p className="text-3xl md:text-4xl font-black tracking-wider text-foreground mb-3 text-glow uppercase" style={{ fontFamily: "'Exo 2', sans-serif", letterSpacing: '0.06em' }}>
                 TWO WAYS TO GET ACCESS
               </p>
               <h2 className="text-foreground text-center mt-2 mb-8 max-w-md mx-auto uppercase">
