@@ -153,7 +153,7 @@ const Index = () => {
               </p>
               <h2 className="text-foreground text-center mt-2 mb-8 max-w-md mx-auto uppercase">
                 ENTER THE VAULT AND<br />
-                SUBMIT YOUR CODE FOR A CHANCE AT FREE ACCESS.
+                SUBMIT YOUR CODE FOR A CHANCE ACCESS TO EXCLUSIVE MUSIC.
               </h2>
               <div className="flex justify-center items-center gap-3">
                 <ChevronDown className="w-8 h-8 text-primary animate-bounce" />
