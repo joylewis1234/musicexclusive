@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { ArtistCard } from "@/components/ArtistCard"
 
 interface Artist {
@@ -15,6 +16,7 @@ interface ArtistCardCarouselProps {
 const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
   const trackRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
   const [singleSetWidth, setSingleSetWidth] = useState(0)
   const [isPaused, setIsPaused] = useState(false)
   const [manualOffset, setManualOffset] = useState(0)
@@ -78,6 +80,13 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
     }
   }
 
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Suppress click if it was the end of a drag
+    const moved = Math.abs(e.clientX - dragState.current.startX)
+    if (moved > 5) return
+    navigate("/vault/enter")
+  }
+
   return (
     <div
       ref={containerRef}
@@ -89,6 +98,7 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
       onPointerLeave={endDrag}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
+      onClick={handleClick}
     >
       <div
         ref={trackRef}
