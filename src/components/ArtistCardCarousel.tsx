@@ -14,7 +14,15 @@ interface ArtistCardCarouselProps {
 
 const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
   const trackRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const [singleSetWidth, setSingleSetWidth] = useState(0)
+  const [isPaused, setIsPaused] = useState(false)
+  const [manualOffset, setManualOffset] = useState(0)
+  const dragState = useRef<{ startX: number; startOffset: number; dragging: boolean }>({
+    startX: 0,
+    startOffset: 0,
+    dragging: false,
+  })
 
   const duplicated = [...artists, ...artists, ...artists]
 
@@ -34,18 +42,64 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
     setSingleSetWidth(width)
   }, [artists.length])
 
-  // ~30px/s
-  const duration = singleSetWidth > 0 ? singleSetWidth / 30 : 30
+  // ~12px/s for a slow, ambient drift
+  const duration = singleSetWidth > 0 ? singleSetWidth / 12 : 90
+
+  const normalizeOffset = (value: number) => {
+    if (singleSetWidth <= 0) return value
+    const mod = ((value % singleSetWidth) + singleSetWidth) % singleSetWidth
+    return mod
+  }
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (singleSetWidth <= 0) return
+    ;(e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId)
+    dragState.current = {
+      startX: e.clientX,
+      startOffset: manualOffset,
+      dragging: true,
+    }
+    setIsPaused(true)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current.dragging) return
+    const delta = e.clientX - dragState.current.startX
+    setManualOffset(normalizeOffset(dragState.current.startOffset - delta))
+  }
+
+  const endDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragState.current.dragging) return
+    dragState.current.dragging = false
+    try {
+      ;(e.currentTarget as HTMLDivElement).releasePointerCapture(e.pointerId)
+    } catch {
+      // ignore
+    }
+  }
 
   return (
-    <div className="relative overflow-hidden">
+    <div
+      ref={containerRef}
+      className="relative overflow-hidden touch-pan-y select-none cursor-grab active:cursor-grabbing"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onPointerLeave={endDrag}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
       <div
         ref={trackRef}
-        className="flex gap-6 hover:[animation-play-state:paused]"
+        className="flex gap-6"
         style={{
-          animation: singleSetWidth > 0
-            ? `artist-card-scroll ${duration}s linear infinite`
-            : undefined,
+          animation:
+            singleSetWidth > 0
+              ? `artist-card-scroll ${duration}s linear infinite`
+              : undefined,
+          animationPlayState: isPaused ? "paused" : "running",
+          transform: isPaused && singleSetWidth > 0 ? `translateX(-${manualOffset}px)` : undefined,
         }}
       >
         {duplicated.map((artist, index) => (
