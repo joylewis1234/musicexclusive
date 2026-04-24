@@ -37,9 +37,11 @@ import coverArtJaydenRios from "@/assets/cover-art-jayden-rios.png"
 import coverArtMelaninAfrobeats from "@/assets/cover-art-melanin-afrobeats.png"
 import coverArtRnbVibes from "@/assets/cover-art-rnb-vibes.png"
 import coverArtCountry from "@/assets/cover-art-country.png"
+import artistSkater from "@/assets/artist-skater.jpg"
 
 const artists = [
   { name: "Nova Rae", genre: "Alt Pop", imageUrl: artistNovaRae },
+  { name: "Zay Fisheye", genre: "Skate Rap", imageUrl: artistSkater },
   { name: "Kairo Blaze", genre: "Afrobeats", imageUrl: coverArtMelaninAfrobeats, fitMode: "contain" as const },
   { name: "Skye Monroe", genre: "R&B / Soul", imageUrl: artistVinylRecords },
   { name: "Jules Kade", genre: "Hip Hop", imageUrl: coverArtJulesKade, fitMode: "contain" as const },
