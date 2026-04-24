@@ -61,7 +61,7 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
               className="flex-shrink-0 px-2"
             >
               <div
-                className="relative w-20 md:w-24 h-28 md:h-36 rounded-xl overflow-hidden"
+                className="relative w-24 md:w-32 aspect-square overflow-hidden"
                 style={{
                   boxShadow: `0 0 12px hsla(${glowColor.base}, 0.5), 0 0 24px hsla(${glowColor.base}, 0.3), 0 0 40px hsla(${glowColor.base}, 0.15)`,
                 }}
