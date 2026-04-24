@@ -5,6 +5,7 @@ interface Artist {
   name: string
   genre: string
   imageUrl: string
+  fitMode?: "cover" | "contain"
 }
 
 interface ArtistCardCarouselProps {
@@ -53,6 +54,7 @@ const ArtistCardCarousel = ({ artists }: ArtistCardCarouselProps) => {
             name={artist.name}
             genre={artist.genre}
             imageUrl={artist.imageUrl}
+            fitMode={artist.fitMode}
           />
         ))}
       </div>

@@ -4,9 +4,10 @@ interface ArtistCardProps {
   name: string
   genre: string
   imageUrl: string
+  fitMode?: "cover" | "contain"
 }
 
-const ArtistCard = ({ name, genre, imageUrl }: ArtistCardProps) => {
+const ArtistCard = ({ name, genre, imageUrl, fitMode = "cover" }: ArtistCardProps) => {
   return (
     <div 
       className="relative flex-shrink-0 w-[230px] md:w-[275px] aspect-[3/4] rounded-2xl overflow-hidden group cursor-pointer transition-all duration-300 hover:-translate-y-1"
@@ -24,11 +25,22 @@ const ArtistCard = ({ name, genre, imageUrl }: ArtistCardProps) => {
       
       {/* Inner container */}
       <div className="absolute inset-[1px] rounded-2xl overflow-hidden bg-background">
+        {/* Blurred background fill (visible behind contained images) */}
+        {fitMode === "contain" && (
+          <img
+            src={imageUrl}
+            alt=""
+            aria-hidden="true"
+            className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-60"
+          />
+        )}
         {/* Background Image */}
         <img
           src={imageUrl}
           alt={name}
-          className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className={`absolute inset-0 w-full h-full transition-transform duration-500 group-hover:scale-105 ${
+            fitMode === "contain" ? "object-contain" : "object-cover"
+          }`}
         />
         
         {/* Gradient Overlay */}
