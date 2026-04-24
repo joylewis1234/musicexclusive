@@ -5,6 +5,7 @@ interface Artist {
   name: string
   genre: string
   imageUrl: string
+  fitMode?: "cover" | "contain"
 }
 
 interface ArtistPreviewStripProps {
@@ -65,10 +66,20 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
                   boxShadow: `0 0 12px hsla(${glowColor.base}, 0.5), 0 0 24px hsla(${glowColor.base}, 0.3), 0 0 40px hsla(${glowColor.base}, 0.15)`,
                 }}
               >
+                {artist.fitMode === "contain" && (
+                  <img
+                    src={artist.imageUrl}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover scale-110 blur-xl opacity-60"
+                  />
+                )}
                 <img
                   src={artist.imageUrl}
                   alt={artist.name}
-                  className="w-full h-full object-cover"
+                  className={`relative w-full h-full ${
+                    artist.fitMode === "contain" ? "object-contain" : "object-cover"
+                  }`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
                 <div className="absolute bottom-0 left-0 right-0 p-1.5 md:p-2 text-center">
