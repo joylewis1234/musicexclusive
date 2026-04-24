@@ -20,7 +20,7 @@ import artistSkyeMonroe from "@/assets/artist-skye-monroe.jpg"
 import artistZionChase from "@/assets/artist-zion-chase.jpg"
 import artistLunaVale from "@/assets/artist-luna-vale.jpg"
 import artistEdenReign from "@/assets/artist-eden-reign.jpg"
-import artistElectronic from "@/assets/artist-electronic.jpg"
+import coverArtAxelVolt from "@/assets/cover-art-axel-volt.jpg"
 import artistRavenCross from "@/assets/artist-raven-cross.jpg"
 import artistLatinMale from "@/assets/artist-latin-male.jpg"
 import artistCountryFemale from "@/assets/artist-country-female.jpg"
@@ -34,7 +34,7 @@ const artists = [
   { name: "Zion Chase", genre: "Hip Hop", imageUrl: artistZionChase },
   { name: "Luna Vale", genre: "Indie Pop", imageUrl: artistLunaVale },
   { name: "Eden Reign", genre: "Christian", imageUrl: artistEdenReign },
-  { name: "Axel Volt", genre: "Electronic", imageUrl: artistElectronic },
+  { name: "Axel Volt", genre: "Electronic", imageUrl: coverArtAxelVolt },
   { name: "Raven Cross", genre: "Rock", imageUrl: artistRavenCross },
   { name: "Marco Sol", genre: "Latin", imageUrl: artistLatinMale },
   { name: "Cassidy Lane", genre: "Country", imageUrl: artistCountryFemale },
