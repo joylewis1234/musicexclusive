@@ -134,7 +134,7 @@ const Index = () => {
                 TWO WAYS TO GET ACCESS
               </p>
               <h2 className="text-foreground text-center mt-2 mb-8 max-w-md mx-auto uppercase">
-                ENTER THE VAULT<br />
+                ENTER THE VAULT AND<br />
                 SUBMIT YOUR CODE FOR A CHANCE AT FREE ACCESS.
               </h2>
               <div className="flex justify-center items-center gap-3">
