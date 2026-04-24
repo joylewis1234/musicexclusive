@@ -82,11 +82,6 @@ const ArtistPreviewStrip = ({ artists, className }: ArtistPreviewStripProps) => 
                   }`}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-1.5 md:p-2 text-center">
-                  <p className="text-[8px] md:text-[10px] text-primary/80 uppercase tracking-wider truncate">
-                    {artist.genre}
-                  </p>
-                </div>
               </div>
             </div>
           )
