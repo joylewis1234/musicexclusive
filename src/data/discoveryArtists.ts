@@ -1,6 +1,7 @@
 import artist1 from "@/assets/artist-1.jpg";
 import artist2 from "@/assets/artist-2.jpg";
 import artist3 from "@/assets/artist-3.jpg";
+import artistSkater from "@/assets/artist-skater.jpg";
 
 // Re-export genre constants from the single source of truth
 export { DISCOVERY_GENRES as genres } from "@/data/genres";
@@ -17,6 +18,14 @@ export interface DiscoveryArtist {
 }
 
 export const discoveryArtists: DiscoveryArtist[] = [
+  {
+    id: "kane",
+    name: "KANE",
+    genre: "Hip-Hop",
+    imageUrl: artistSkater,
+    isFeatured: true,
+    badge: "New Drop",
+  },
   {
     id: "nova",
     name: "NOVA",
