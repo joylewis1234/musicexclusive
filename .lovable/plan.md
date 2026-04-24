@@ -1,22 +1,35 @@
-## Plan: Enlarge Top Carousel Images
+## Create ME Monogram Favicon
 
-### Changes Required
+**Goal:** Replace the current favicon with the circled "ME" badge design from the header.
 
-**1. Increase Image Sizes**
-- **File:** `src/components/ArtistPreviewStrip.tsx`
-- **Change:** Update the image container from `w-24 md:w-32` to `w-32 md:w-40` (or larger if desired)
-- **Line:** 64
+**Current State:**
+- Header has an 18px circular ME badge with:
+  - Border: `border-primary/50` (teal at 50% opacity)
+  - Background: `hsla(var(--primary) / 0.15)` (teal at 15% opacity)
+  - Glow: `box-shadow: 0 0 6px hsla(var(--primary) / 0.4)`
+  - Text: "ME" in primary color (teal), 7px font, bold
+- Current favicon path: `/favicon.png`
 
-**2. Reduce Section Padding**
-- **File:** `src/pages/Index.tsx`
-- **Change:** Update the section padding from `pt-20 pb-4` to `pt-4 pb-4` (or `pt-0 pb-4` to touch the very top)
-- **Line:** 105
+**Implementation Plan:**
 
-### Visual Impact
-- Images will be 33% larger (128px → 160px on desktop)
-- Carousel will sit closer to the top of the section
-- Genre text will scale proportionally
+1. **Generate Favicon Image**
+   - Create a Python script using PIL/Pillow to generate a 512x512 PNG (high-res for modern browsers)
+   - Match the ME badge aesthetic:
+     - Circular badge design
+     - Teal (#3B82F6 or primary color from CSS)
+     - "ME" text centered
+     - Semi-transparent fill with glow effect
+   - Save to: `public/favicon.png`
 
-### Optional Adjustments
-- If you want the images even larger, we can go up to `w-40 md:w-48`
-- If you want them touching the very top edge, we can use `pt-0`
+2. **Verify Favicon Link**
+   - `index.html` already references `/favicon.png` on line 9
+   - No HTML changes needed
+
+**Technical Details:**
+- The primary color from CSS `hsl(var(--primary))` maps to approximately #3B82F6 (Tailwind blue-500/teal)
+- Will create a clean, scalable version suitable for all device sizes (favicon, Apple touch icon, etc.)
+
+**Files to Modify:**
+- `public/favicon.png` (replace with new ME design)
+
+**Approvals Needed:** None — this is a pure frontend asset update.
