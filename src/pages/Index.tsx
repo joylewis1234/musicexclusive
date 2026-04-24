@@ -124,15 +124,11 @@ const Index = () => {
           {/* Vault Portal (moved under hero copy) */}
           <div className="w-full">
             {/* Get Access Now Header */}
-            <div className="text-center mb-8">
-              <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-4 text-glow">
-                <br />
-                <br />
+            <div className="text-center mb-8 mt-16 md:mt-20">
+              <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-3 text-glow">
                 TWO WAYS TO GET ACCESS
               </p>
-              <h2 className="text-foreground text-center mb-6 max-w-md mx-auto uppercase">
-                <br />
-                <br />
+              <h2 className="text-foreground text-center mt-2 mb-8 max-w-md mx-auto uppercase">
                 ENTER THE VAULT<br />
                 SUBMIT YOUR CODE FOR A CHANCE AT FREE ACCESS.
               </h2>
@@ -144,7 +140,7 @@ const Index = () => {
             </div>
 
             {/* Vault Portal Image */}
-            <div className="relative mx-auto w-full max-w-md md:max-w-lg aspect-square">
+            <div className="relative mx-auto w-full max-w-md md:max-w-lg aspect-square mt-4">
               {/* Neon pink trailing ring - needs absolute positioning within relative parent */}
               <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
 
