@@ -126,6 +126,8 @@ const Index = () => {
             {/* Get Access Now Header */}
             <div className="text-center mb-8">
               <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-4 text-glow">
+                <br />
+                <br />
                 TWO WAYS TO GET ACCESS
               </p>
               <h2 className="text-foreground text-center mb-6 max-w-md mx-auto uppercase">
