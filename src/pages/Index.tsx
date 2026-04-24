@@ -123,9 +123,13 @@ const Index = () => {
 
           {/* Vault Portal (moved under hero copy) */}
           <div className="w-full">
+            {/* Neon divider - evenly spaced between hero and access section */}
+            <div className="mt-12 md:mt-16 mb-8 text-center">
+              <span className="block h-0.5 w-[22rem] max-w-full mx-auto bg-gradient-to-r from-primary to-purple-500 rounded-full shadow-neon-sm" />
+            </div>
+            
             {/* Get Access Now Header */}
-            <div className="text-center mb-8 mt-16 md:mt-20">
-              <span className="block h-0.5 w-[22rem] max-w-full mx-auto bg-gradient-to-r from-primary to-purple-500 rounded-full shadow-neon-sm mb-8" />
+            <div className="text-center mb-8">
               <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-3 text-glow">
                 TWO WAYS TO GET ACCESS
               </p>
