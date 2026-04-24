@@ -1,21 +1,22 @@
-## Goal
-Replace the "Axel Volt / Electronic" artist photo in the homepage carousel with a cinematic cover-art style image to demonstrate how a cover-art card looks alongside the existing artist-photo cards.
+## Plan: Enlarge Top Carousel Images
 
-## Steps
+### Changes Required
 
-1. **Generate cover art** via Lovable AI image gateway (`google/gemini-2.5-flash-image`).
-   - Prompt direction: dark cinematic electronic album cover, neon purple/magenta lighting, abstract synthwave/geometric energy, premium music-exclusive aesthetic, no text, square 3:4 friendly composition.
-   - Save output to `src/assets/cover-art-axel-volt.jpg`.
+**1. Increase Image Sizes**
+- **File:** `src/components/ArtistPreviewStrip.tsx`
+- **Change:** Update the image container from `w-24 md:w-32` to `w-32 md:w-40` (or larger if desired)
+- **Line:** 64
 
-2. **Update `src/pages/Index.tsx`:**
-   - Remove the `import artistElectronic from "@/assets/artist-electronic.jpg"` line.
-   - Add `import coverArtAxelVolt from "@/assets/cover-art-axel-volt.jpg"`.
-   - In the `artists` array, change the Axel Volt entry's `imageUrl` from `artistElectronic` to `coverArtAxelVolt`.
+**2. Reduce Section Padding**
+- **File:** `src/pages/Index.tsx`
+- **Change:** Update the section padding from `pt-20 pb-4` to `pt-4 pb-4` (or `pt-0 pb-4` to touch the very top)
+- **Line:** 105
 
-## Out of scope
-- No changes to `ArtistCard.tsx`, `ArtistCardCarousel.tsx`, or `ArtistPreviewStrip.tsx`.
-- No changes to other artists, layout, copy, or styling.
-- No backend changes.
+### Visual Impact
+- Images will be 33% larger (128px → 160px on desktop)
+- Carousel will sit closer to the top of the section
+- Genre text will scale proportionally
 
-## Result
-The Electronic card in both the top preview strip and the main scrolling carousel will display a stylized cover-art image instead of an artist photo, while everything else remains identical.
+### Optional Adjustments
+- If you want the images even larger, we can go up to `w-40 md:w-48`
+- If you want them touching the very top edge, we can use `pt-0`
