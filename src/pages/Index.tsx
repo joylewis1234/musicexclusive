@@ -151,10 +151,10 @@ const Index = () => {
               <p className="text-3xl md:text-4xl font-black tracking-wider text-foreground mb-3 text-glow uppercase" style={{ fontFamily: "'Exo 2', sans-serif", letterSpacing: '0.06em' }}>
                 TWO WAYS TO GET ACCESS
               </p>
-              <h2 className="text-foreground text-center mt-2 mb-8 max-w-md mx-auto uppercase">
-                ENTER THE VAULT AND<br />
-                SUBMIT YOUR CODE FOR A CHANCE ACCESS TO EXCLUSIVE MUSIC.
-              </h2>
+               <h2 className="text-foreground text-center mt-2 mb-8 max-w-md mx-auto uppercase">
+                 ENTER THE VAULT AND<br />
+                 SUBMIT YOUR CODE FOR ACCESS TO EXCLUSIVE MUSIC.
+               </h2>
               <div className="flex justify-center items-center gap-3">
                 <ChevronDown className="w-8 h-8 text-primary animate-bounce" />
                 <ChevronDown className="w-8 h-8 text-primary animate-bounce [animation-delay:150ms]" />
