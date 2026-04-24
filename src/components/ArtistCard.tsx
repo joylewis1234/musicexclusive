@@ -56,10 +56,7 @@ const ArtistCard = ({ name, genre, imageUrl }: ArtistCardProps) => {
         
         {/* Content */}
         <div className="absolute bottom-0 left-0 right-0 p-4">
-          <h4 className="font-display text-lg font-bold text-foreground tracking-wide">
-            {name}
-          </h4>
-          <p className="text-primary text-xs font-display uppercase tracking-wider mt-0.5">
+          <p className="text-primary text-xs font-display uppercase tracking-wider">
             {genre}
           </p>
         </div>
