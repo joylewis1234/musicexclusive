@@ -29,6 +29,7 @@ import artistLofi from "@/assets/artist-lofi.jpg"
 import artistVinylSeeker from "@/assets/artist-vinyl-seeker.jpg"
 import artistVinylRecords from "@/assets/artist-vinyl-records.jpg"
 import coverArtAfterhours from "@/assets/cover-art-afterhours.png"
+import coverArtLateNights from "@/assets/cover-art-late-nights.png"
 
 const artists = [
   { name: "Nova Rae", genre: "Alt Pop", imageUrl: artistNovaRae },
@@ -42,7 +43,7 @@ const artists = [
   { name: "Marco Sol", genre: "Latin", imageUrl: artistLatinMale },
   { name: "Cassidy Lane", genre: "Country", imageUrl: artistCountryFemale },
   { name: "Miles Ivory", genre: "Jazz", imageUrl: artistJazz },
-  { name: "Yuki Haze", genre: "Lo-Fi", imageUrl: artistLofi },
+  { name: "Yuki Haze", genre: "Lo-Fi", imageUrl: coverArtLateNights, fitMode: "contain" as const },
 ]
 
 const steps = [
