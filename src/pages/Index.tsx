@@ -307,10 +307,9 @@ const Index = () => {
       {/* Cash Bonus Feed */}
       <section className="px-4 pt-20 pb-8">
         <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
-          <SectionHeader title="Your Streams Make a Difference" align="center" />
-          <p className="text-muted-foreground text-sm font-body mt-4 max-w-md mx-auto leading-relaxed">
-            Every time you stream on Music Exclusive, your support goes directly to the artist — not a faceless algorithm.
-            Real fans funding real music. Here's what that looks like:
+          <SectionHeader title={"YOUR STREAMS MAKE A DIFFERENCE\n\n"} align="center" />
+          <p className="whitespace-pre-line text-muted-foreground text-sm font-body mt-4 max-w-md mx-auto leading-relaxed">
+            {"\n\nEvery time you stream on Music Exclusive, your support goes directly to the artist — not a faceless algorithm. Real fans funding real music. Here's what that looks like:"}
           </p>
         </div>
       </section>
