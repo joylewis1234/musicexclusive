@@ -30,12 +30,13 @@ import artistVinylSeeker from "@/assets/artist-vinyl-seeker.jpg"
 import artistVinylRecords from "@/assets/artist-vinyl-records.jpg"
 import coverArtAfterhours from "@/assets/cover-art-afterhours.png"
 import coverArtLateNights from "@/assets/cover-art-late-nights.png"
+import coverArtJulesKade from "@/assets/cover-art-jules-kade.png"
 
 const artists = [
   { name: "Nova Rae", genre: "Alt Pop", imageUrl: artistNovaRae },
   { name: "Kairo Blaze", genre: "Afrobeats", imageUrl: artistKairoBlaze },
   { name: "Skye Monroe", genre: "R&B / Soul", imageUrl: artistVinylRecords },
-  { name: "Zion Chase", genre: "Hip Hop", imageUrl: artistZionChase },
+  { name: "Jules Kade", genre: "Hip Hop", imageUrl: coverArtJulesKade, fitMode: "contain" as const },
   { name: "Luna Vale", genre: "Indie Pop", imageUrl: artistLunaVale },
   { name: "Eden Reign", genre: "Christian", imageUrl: artistEdenReign },
   { name: "Axel Volt", genre: "Electronic", imageUrl: coverArtAxelVolt, fitMode: "contain" as const },
