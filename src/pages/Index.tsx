@@ -40,10 +40,12 @@ import coverArtCountry from "@/assets/cover-art-country.png"
 import artistSkater from "@/assets/artist-skater.jpg"
 import coverArtBetter from "@/assets/cover-art-better.png"
 import coverArtMyHeart from "@/assets/cover-art-my-heart.png"
+import coverArtSayLess from "@/assets/cover-art-say-less.png"
 
 const artists = [
   { name: "Joy Lewis", genre: "R&B", imageUrl: coverArtBetter, fitMode: "contain" as const },
   { name: "Joy Lewis", genre: "Pop", imageUrl: coverArtMyHeart, fitMode: "contain" as const },
+  { name: "Say Less", genre: "Hip Hop", imageUrl: coverArtSayLess, fitMode: "contain" as const },
   { name: "Zay Fisheye", genre: "Skate Rap", imageUrl: artistSkater },
   { name: "Kairo Blaze", genre: "Afrobeats", imageUrl: coverArtMelaninAfrobeats, fitMode: "contain" as const },
   { name: "Skye Monroe", genre: "R&B / Soul", imageUrl: artistVinylRecords },
