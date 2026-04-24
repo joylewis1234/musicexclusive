@@ -124,15 +124,11 @@ const Index = () => {
           {/* Vault Portal (moved under hero copy) */}
           <div className="w-full">
             {/* Get Access Now Header */}
-            <div className="text-center mb-8">
-              <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-4 text-glow">
-                <br />
-                <br />
+            <div className="text-center mb-8 mt-16 md:mt-20">
+              <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-3 text-glow">
                 TWO WAYS TO GET ACCESS
               </p>
-              <h2 className="text-foreground text-center mb-6 max-w-md mx-auto uppercase">
-                <br />
-                <br />
+              <h2 className="text-foreground text-center mt-2 mb-8 max-w-md mx-auto uppercase">
                 ENTER THE VAULT<br />
                 SUBMIT YOUR CODE FOR A CHANCE AT FREE ACCESS.
               </h2>
@@ -144,7 +140,7 @@ const Index = () => {
             </div>
 
             {/* Vault Portal Image */}
-            <div className="relative mx-auto w-full max-w-md md:max-w-lg aspect-square">
+            <div className="relative mx-auto w-full max-w-md md:max-w-lg aspect-square mt-4">
               {/* Neon pink trailing ring - needs absolute positioning within relative parent */}
               <div className="animate-vault-ring absolute inset-[35px] rounded-full" style={{ zIndex: 20 }} />
 
@@ -199,18 +195,18 @@ const Index = () => {
           {/* Primary CTA */}
           <div className="flex flex-col gap-4 items-center animate-fade-up [animation-delay:300ms] opacity-0">
             {/* Superfan CTA */}
-            <div className="relative w-full max-w-xs mx-auto mt-8 text-center">
-<p className="text-muted-foreground text-xl font-body text-center mb-2">or</p>
-              <div className="flex justify-center items-center mb-4">
+            <div className="relative w-full max-w-xs mx-auto mt-16 text-center">
+              <p className="text-muted-foreground text-2xl font-body text-center mb-3">or</p>
+              <div className="flex justify-center items-center mt-2 mb-4">
                 <ChevronDown className="w-6 h-6 text-primary animate-bounce" />
               </div>
-              <h2 className="text-foreground text-center mb-3">
+              <h2 className="text-foreground text-center mt-2 mb-3">
                 Become a superfan
               </h2>
-              <p className="text-lg font-display font-bold text-foreground mb-1">
+              <p className="text-lg font-display font-bold text-foreground mb-2">
                 Superfans don't wait.
               </p>
-              <p className="text-muted-foreground text-sm font-body mb-4">
+              <p className="text-muted-foreground text-sm font-body mb-6">
                 Unlimited access to every exclusive release, starting now.
               </p>
               <Button 
@@ -226,10 +222,10 @@ const Index = () => {
       </section>
 
       {/* Vault Portal Section */}
-      <section className="relative px-4 py-8 overflow-hidden">
+      <section className="relative px-4 py-20 overflow-hidden">
         <div className="container max-w-lg md:max-w-4xl mx-auto">
           {/* MUSIC EXCLUSIVE Text */}
-          <h2 className="text-center mt-4 text-3xl md:text-5xl font-display font-black tracking-[0.15em] gradient-text text-glow">
+          <h2 className="text-center text-3xl md:text-5xl font-display font-black tracking-[0.15em] gradient-text text-glow">
             MUSIC EXCLUSIVE<span className="text-muted-foreground text-xs md:text-sm align-super ml-1">™</span>
           </h2>
         </div>
@@ -286,7 +282,7 @@ const Index = () => {
       </section>
 
       {/* Cash Bonus Feed */}
-      <section className="px-4 py-12">
+      <section className="px-4 pt-20 pb-8">
         <div className="container max-w-lg md:max-w-2xl mx-auto text-center">
           <SectionHeader title="Your Streams Make a Difference" align="center" />
           <p className="text-muted-foreground text-sm font-body mt-4 max-w-md mx-auto leading-relaxed">
@@ -303,14 +299,14 @@ const Index = () => {
       {/* Bottom CTA Section */}
       <section className="px-4 py-16">
         <div className="container max-w-lg md:max-w-md mx-auto text-center">
-          <h2 className="text-foreground mb-4">
+          <h2 className="text-foreground mb-3">
             Want a taste before entering the Vault?
           </h2>
-          <p className="text-muted-foreground text-sm font-body mb-8">
+          <p className="text-muted-foreground text-sm font-body mb-10">
             Listen to previews, then enter the Vault or join as a Superfan for instant access.
           </p>
           
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-4">
             <Button 
               variant="outline" 
               size="lg" 
@@ -343,7 +339,7 @@ const Index = () => {
       </section>
 
       {/* Are You an Artist? */}
-      <section className="px-4 py-8 text-center">
+      <section className="px-4 pt-4 pb-16 text-center">
         <p className="text-muted-foreground text-sm font-body mb-2">Are you an artist?</p>
         <Button
           variant="ghost"
