@@ -124,7 +124,7 @@ const Index = () => {
           {/* Vault Portal (moved under hero copy) */}
           <div className="w-full">
             {/* Neon divider - evenly spaced between hero and access section */}
-            <div className="mt-12 md:mt-16 mb-8 text-center">
+            <div className="mt-6 md:mt-8 mb-8 text-center">
               <span className="block h-0.5 w-[22rem] max-w-full mx-auto bg-gradient-to-r from-primary to-purple-500 rounded-full shadow-neon-sm" />
             </div>
             
