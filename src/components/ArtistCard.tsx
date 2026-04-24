@@ -49,17 +49,17 @@ const ArtistCard = ({ name, genre, imageUrl, fitMode = "cover" }: ArtistCardProp
         {/* Exclusive Artist Badge */}
         <div className="absolute bottom-3 right-3 z-10">
           <div 
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-md transition-all duration-300 group-hover:shadow-[0_0_12px_hsl(280_80%_70%/0.5)]"
+            className="flex items-center gap-1 px-2 py-0.5 rounded-full backdrop-blur-md transition-all duration-300 group-hover:shadow-[0_0_12px_hsl(180_100%_50%/0.5)]"
             style={{
               background: "rgba(10, 10, 15, 0.7)",
-              border: "1px solid hsl(280 80% 70% / 0.6)",
-              boxShadow: "0 0 8px hsl(280 80% 70% / 0.25), inset 0 0 8px hsl(280 80% 70% / 0.05)",
+              border: "1px solid hsl(180 100% 50% / 0.6)",
+              boxShadow: "0 0 8px hsl(180 100% 50% / 0.25), inset 0 0 8px hsl(180 100% 50% / 0.05)",
             }}
           >
-            <BadgeCheck className="w-3 h-3" style={{ color: "hsl(280 80% 70%)" }} />
+            <BadgeCheck className="w-3 h-3" style={{ color: "hsl(180 100% 50%)" }} />
             <span 
               className="text-[9px] font-display font-semibold uppercase tracking-wider"
-              style={{ color: "hsl(280 80% 70%)" }}
+              style={{ color: "hsl(180 100% 50%)" }}
             >
               Exclusive
             </span>
