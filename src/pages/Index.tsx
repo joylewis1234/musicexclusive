@@ -38,7 +38,7 @@ const artists = [
   { name: "Luna Vale", genre: "Indie Pop", imageUrl: artistLunaVale },
   { name: "Eden Reign", genre: "Christian", imageUrl: artistEdenReign },
   { name: "Axel Volt", genre: "Electronic", imageUrl: coverArtAxelVolt },
-  { name: "Raven Cross", genre: "Rock", imageUrl: coverArtAfterhours },
+  { name: "Raven Cross", genre: "Rock", imageUrl: coverArtAfterhours, fitMode: "contain" as const },
   { name: "Marco Sol", genre: "Latin", imageUrl: artistLatinMale },
   { name: "Cassidy Lane", genre: "Country", imageUrl: artistCountryFemale },
   { name: "Miles Ivory", genre: "Jazz", imageUrl: artistJazz },
