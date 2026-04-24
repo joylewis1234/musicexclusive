@@ -10,21 +10,21 @@ interface ArtistCardProps {
 const ArtistCard = ({ name, genre, imageUrl, fitMode = "cover" }: ArtistCardProps) => {
   return (
     <div 
-      className="relative flex-shrink-0 w-[230px] md:w-[275px] aspect-[3/4] rounded-2xl overflow-hidden group cursor-pointer transition-all duration-300 hover:-translate-y-1"
+      className="relative flex-shrink-0 w-[230px] md:w-[275px] aspect-square overflow-hidden group cursor-pointer transition-all duration-300 hover:-translate-y-1"
       style={{
         boxShadow: "0 0 25px hsl(var(--primary) / 0.25), 0 0 50px hsl(var(--primary) / 0.12)",
       }}
     >
       {/* Glow border */}
       <div 
-        className="absolute inset-0 rounded-2xl p-[1px] pointer-events-none"
+        className="absolute inset-0 p-[1px] pointer-events-none"
         style={{
           background: "linear-gradient(135deg, hsl(var(--primary) / 0.5), hsl(var(--accent) / 0.3), hsl(var(--primary) / 0.5))",
         }}
       />
       
       {/* Inner container */}
-      <div className="absolute inset-[1px] rounded-2xl overflow-hidden bg-background">
+      <div className="absolute inset-[1px] overflow-hidden bg-background">
         {/* Blurred background fill (visible behind contained images) */}
         {fitMode === "contain" && (
           <img
@@ -44,7 +44,7 @@ const ArtistCard = ({ name, genre, imageUrl, fitMode = "cover" }: ArtistCardProp
         />
         
         {/* Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
 
         {/* Exclusive Artist Badge */}
         <div className="absolute top-3 right-3 z-10">
@@ -81,7 +81,7 @@ const ArtistCard = ({ name, genre, imageUrl, fitMode = "cover" }: ArtistCardProp
       
       {/* Hover glow intensify */}
       <div 
-        className="absolute inset-0 rounded-2xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        className="absolute inset-0 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         style={{
           boxShadow: "0 0 30px hsl(var(--primary) / 0.4), 0 0 60px hsl(var(--primary) / 0.2)",
         }}
