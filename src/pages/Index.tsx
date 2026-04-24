@@ -119,13 +119,13 @@ const Index = () => {
           <div className="text-muted-foreground text-base md:text-lg font-body animate-fade-up [animation-delay:200ms] opacity-0 max-w-sm mx-auto space-y-3" style={{ textShadow: '0 0 20px hsl(var(--primary) / 0.3), 0 0 40px hsl(var(--primary) / 0.15)' }}>
             <p>First access. First listen.<br />Before anywhere else.</p>
             <p>Exclusive music from your favorite artists, only on Music Exclusive.</p>
-            <span className="block h-0.5 w-1/2 mx-auto bg-gradient-to-r from-primary to-purple-500 rounded-full shadow-neon-sm mt-3" />
           </div>
 
           {/* Vault Portal (moved under hero copy) */}
           <div className="w-full">
             {/* Get Access Now Header */}
             <div className="text-center mb-8 mt-16 md:mt-20">
+              <span className="block h-0.5 w-[22rem] max-w-full mx-auto bg-gradient-to-r from-primary to-purple-500 rounded-full shadow-neon-sm mb-8" />
               <p className="text-3xl md:text-4xl font-display font-black tracking-wider text-foreground mb-3 text-glow">
                 TWO WAYS TO GET ACCESS
               </p>
