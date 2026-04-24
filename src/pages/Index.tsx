@@ -26,16 +26,17 @@ import artistLatinMale from "@/assets/artist-latin-male.jpg"
 import artistCountryFemale from "@/assets/artist-country-female.jpg"
 import artistJazz from "@/assets/artist-jazz.jpg"
 import artistLofi from "@/assets/artist-lofi.jpg"
+import artistVinylSeeker from "@/assets/artist-vinyl-seeker.jpg"
 
 const artists = [
   { name: "Nova Rae", genre: "Alt Pop", imageUrl: artistNovaRae },
   { name: "Kairo Blaze", genre: "Afrobeats", imageUrl: artistKairoBlaze },
-  { name: "Skye Monroe", genre: "R&B / Soul", imageUrl: artistSkyeMonroe },
+  { name: "Skye Monroe", genre: "R&B / Soul", imageUrl: artistVinylSeeker },
   { name: "Zion Chase", genre: "Hip Hop", imageUrl: artistZionChase },
   { name: "Luna Vale", genre: "Indie Pop", imageUrl: artistLunaVale },
   { name: "Eden Reign", genre: "Christian", imageUrl: artistEdenReign },
   { name: "Axel Volt", genre: "Electronic", imageUrl: coverArtAxelVolt },
-  { name: "Raven Cross", genre: "Rock", imageUrl: artistRavenCross },
+  { name: "Raven Cross", genre: "Rock", imageUrl: artistVinylSeeker },
   { name: "Marco Sol", genre: "Latin", imageUrl: artistLatinMale },
   { name: "Cassidy Lane", genre: "Country", imageUrl: artistCountryFemale },
   { name: "Miles Ivory", genre: "Jazz", imageUrl: artistJazz },
